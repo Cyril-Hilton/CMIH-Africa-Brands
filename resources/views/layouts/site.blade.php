@@ -47,6 +47,10 @@
         <div class="min-h-screen flex flex-col bg-inked">
             @include('partials.site-header')
 
+            @if(request()->routeIs('brands-platform.*'))
+                @include('brands-platform.partials.notifications')
+            @endif
+
             <main class="flex-1">
                 @yield('content')
             </main>

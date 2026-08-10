@@ -49,6 +49,15 @@ Route::post('/surveys/{survey:slug}/submit', [\App\Http\Controllers\SiteControll
 
 Route::prefix('brands')->name('brands-platform.')->group(function () {
     Route::get('/', [BrandsPlatformController::class, 'index'])->name('index');
+    Route::get('/notifications', [BrandsPlatformController::class, 'notifications'])
+        ->middleware(['auth', 'active'])
+        ->name('notifications');
+    Route::post('/notifications/read-all', [BrandsPlatformController::class, 'markAllNotificationsAsRead'])
+        ->middleware(['auth', 'active'])
+        ->name('notifications.readAll');
+    Route::get('/notifications/{notification}/read', [BrandsPlatformController::class, 'markNotificationAsRead'])
+        ->middleware(['auth', 'active'])
+        ->name('notifications.read');
     Route::get('/gallery', [BrandsPlatformController::class, 'gallery'])
         ->middleware(['auth', 'active'])
         ->name('gallery');

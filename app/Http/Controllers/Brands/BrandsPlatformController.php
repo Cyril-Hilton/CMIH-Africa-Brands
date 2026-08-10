@@ -10,6 +10,7 @@ use App\Models\BrandConsumerEntry;
 use App\Models\BrandFieldActivity;
 use App\Models\BrandPublication;
 use App\Models\BrandStaffAssignment;
+use App\Models\Notification;
 use App\Models\User;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
@@ -266,6 +267,42 @@ class BrandsPlatformController extends Controller
             ]);
 
         return response()->json(['data' => $staff]);
+    }
+
+    public function notifications(Request $request): View
+    {
+        $notifications = Notification::where('user_id', $request->user()->id)
+            ->latest()
+            ->paginate(20);
+        $unreadCount = Notification::where('user_id', $request->user()->id)
+            ->whereNull('read_at')
+            ->count();
+
+        return view('brands-platform.notifications', compact('notifications', 'unreadCount'));
+    }
+
+    public function markNotificationAsRead(Request $request, Notification $notification): RedirectResponse
+    {
+        if ($notification->user_id !== $request->user()->id) {
+            abort(403);
+        }
+
+        if (is_null($notification->read_at)) {
+            $notification->update(['read_at' => now()]);
+        }
+
+        return $notification->url
+            ? redirect($notification->url)
+            : back()->with('status', 'Notification marked as read.');
+    }
+
+    public function markAllNotificationsAsRead(Request $request): RedirectResponse
+    {
+        Notification::where('user_id', $request->user()->id)
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
+
+        return back()->with('status', 'All notifications marked as read.');
     }
 
     public function storeBrand(Request $request): RedirectResponse

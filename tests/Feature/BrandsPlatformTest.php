@@ -59,6 +59,22 @@ class BrandsPlatformTest extends TestCase
             'user_id' => $staff->id,
             'title' => 'Brand access granted',
         ]);
+
+        $notification = Notification::where('user_id', $staff->id)
+            ->where('title', 'Brand access granted')
+            ->firstOrFail();
+
+        $this->actingAs($staff)
+            ->get(route('brands-platform.index'))
+            ->assertOk()
+            ->assertSee('Brands Notifications')
+            ->assertSee('Brand access granted');
+
+        $this->actingAs($staff)
+            ->get(route('brands-platform.notifications.read', $notification))
+            ->assertRedirect($notification->url);
+
+        $this->assertNotNull($notification->refresh()->read_at);
     }
 
     public function test_regular_admin_cannot_open_brands_admin_console(): void
