@@ -31,6 +31,9 @@
                 a { color: inherit; text-decoration: none; }
             </style>
         @endif
+        @if(request()->routeIs('brands-platform.*'))
+            @include('brands-platform.partials.prototype-styles')
+        @endif
         @stack('head')
 
         @if (config('services.ga4.id'))

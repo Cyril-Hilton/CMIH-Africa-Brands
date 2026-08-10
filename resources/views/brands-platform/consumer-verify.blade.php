@@ -3,7 +3,10 @@
 @section('title', $brand->name.' Consumer Verification')
 
 @section('content')
-    <section class="min-h-[calc(100vh-88px)] bg-brand-black">
+    @php
+        $brandStyle = "--bp: ".($brand->primary_color ?: '#00656c')."; --bbg: ".($brand->secondary_color ?: '#170004')."; --bs: ".($brand->accent_color ?: '#18e7ef')."; --ba: ".($brand->accent_color ?: '#ff2ba6')."; --bink: #082126;";
+    @endphp
+    <section class="brands-role-dashboard min-h-[calc(100vh-88px)]" style="{{ $brandStyle }}">
         <div class="mx-auto flex w-full max-w-3xl flex-col px-5 py-10 sm:px-8 lg:px-10">
             <a href="{{ route('brands-platform.show', $brand->slug ?: $brand->id) }}" class="text-xs font-bold uppercase tracking-[0.25em] text-brand-white/50 transition hover:text-brand-white">Back to activation</a>
 

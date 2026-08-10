@@ -3,7 +3,10 @@
 @section('title', $brand->name.' Client Report')
 
 @section('content')
-    <section class="bg-brand-black">
+    @php
+        $brandStyle = "--bp: ".($brand->primary_color ?: '#00656c')."; --bbg: ".($brand->secondary_color ?: '#170004')."; --bs: ".($brand->accent_color ?: '#18e7ef')."; --ba: ".($brand->accent_color ?: '#ff2ba6')."; --bink: #082126;";
+    @endphp
+    <section class="brands-role-dashboard" style="{{ $brandStyle }}">
         <div class="mx-auto w-full max-w-6xl px-5 py-8 sm:px-8 lg:px-10">
             <div class="rounded-lg border border-brand-white/10 bg-brand-white/[0.045] p-6">
                 <div class="flex flex-wrap items-start justify-between gap-4">

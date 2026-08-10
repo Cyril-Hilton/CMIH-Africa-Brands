@@ -4,7 +4,7 @@
 @section('description', 'CMIH Brands Platform notifications for assignments, activations, publications, reports, and approvals.')
 
 @section('content')
-    <section class="bg-brand-black">
+    <section class="brands-role-dashboard" style="--bp:#ff1020; --bbg:#170004; --bs:#d4aa45; --ba:#ff2ba6; --bink:#171115;">
         <div class="mx-auto w-full max-w-5xl px-5 py-8 sm:px-8 lg:px-10">
             <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
                 <div>

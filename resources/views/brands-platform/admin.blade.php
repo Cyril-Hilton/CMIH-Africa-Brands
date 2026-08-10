@@ -3,7 +3,7 @@
 @section('title', 'Brands Platform Admin')
 
 @section('content')
-    <section class="bg-brand-black">
+    <section class="brands-role-dashboard" style="--bp:#ff1020; --bbg:#170004; --bs:#d4aa45; --ba:#ff2ba6; --bink:#171115;">
         <div class="mx-auto w-full max-w-7xl px-5 py-8 sm:px-8 lg:px-10">
             <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
                 <div>
