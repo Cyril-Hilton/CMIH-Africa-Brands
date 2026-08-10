@@ -158,6 +158,33 @@ class BrandsPlatformTest extends TestCase
             ->assertDontSee($staff->name);
     }
 
+    public function test_public_brand_prototype_flow_routes_render(): void
+    {
+        $brand = Brand::where('slug', 'rexona')->firstOrFail();
+
+        $this->get(route('brands-platform.show', $brand->slug))
+            ->assertOk()
+            ->assertSee('Stay fresh. Keep moving.')
+            ->assertSee('Publication')
+            ->assertSee('Activation');
+
+        $this->get(route('brands-platform.publications', $brand->slug))
+            ->assertOk()
+            ->assertSee('Rexona Publications')
+            ->assertSee('Campaign updates');
+
+        $this->get(route('brands-platform.activation', $brand->slug))
+            ->assertOk()
+            ->assertSee('Consumers')
+            ->assertSee('Support Staff')
+            ->assertSee('Agency');
+
+        $this->get(route('brands-platform.consumer', $brand->slug))
+            ->assertOk()
+            ->assertSee('CONSUMER JOURNEY')
+            ->assertSee('Consumer Registration');
+    }
+
     public function test_consumer_capture_saves_to_brand_activation(): void
     {
         $brand = Brand::where('slug', 'omo')->firstOrFail();

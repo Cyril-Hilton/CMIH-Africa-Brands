@@ -371,5 +371,77 @@
                 }
             }
         </style>
+        <link rel="stylesheet" href="{{ asset('brands-platform-reference/styles.css') }}">
+        <style>
+            body:has(.brands-prototype) header.sticky,
+            body:has(.brands-prototype) footer {
+                display: none !important;
+            }
+
+            body:has(.brands-prototype) .bg-inked {
+                background: #0b0809 !important;
+            }
+
+            .brands-prototype {
+                font-family: Arial, Helvetica, sans-serif;
+            }
+
+            .brands-prototype a {
+                color: inherit;
+                text-decoration: none;
+            }
+
+            .brands-prototype .home-admin,
+            .brands-prototype .merch-btn,
+            .brands-prototype .btn,
+            .brands-prototype .brand-entry,
+            .brands-prototype .role-card .btn,
+            .brands-prototype .proto-nav {
+                align-items: center;
+                display: inline-flex;
+                justify-content: center;
+                text-decoration: none;
+            }
+
+            .brands-prototype .brand-entry {
+                align-items: flex-start;
+                display: block;
+            }
+
+            .brands-prototype .role-card .btn,
+            .brands-prototype .phone-bottom .btn {
+                width: 100%;
+            }
+
+            .brands-prototype .proto-nav {
+                border: 0;
+                background: rgba(255, 255, 255, .07);
+                color: #fff;
+                border-radius: 11px;
+                padding: 9px 12px;
+                font-size: 9px;
+                font-weight: 900;
+                text-transform: uppercase;
+            }
+
+            .brands-prototype .home-notifications {
+                margin-left: 8px;
+            }
+
+            .brands-prototype .carousel-arrow[disabled] {
+                opacity: .38;
+                pointer-events: none;
+            }
+
+            .brands-prototype .field-error {
+                border: 1px solid rgba(255, 16, 32, .35);
+                border-radius: 14px;
+                background: rgba(255, 16, 32, .12);
+                color: #fff;
+                font-size: 12px;
+                line-height: 1.5;
+                padding: 12px 14px;
+            }
+        </style>
     @endpush
 @endonce

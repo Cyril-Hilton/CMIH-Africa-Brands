@@ -76,6 +76,45 @@ class BrandsPlatformController extends Controller
         return view('brands-platform.show', compact('brand', 'activation', 'metrics', 'publications'));
     }
 
+    public function publications(Request $request, string $brand): View
+    {
+        $brand = $this->resolveBrand($brand);
+        $this->hydrateBrandPresentation($brand);
+        $activation = $this->primaryActivation($brand);
+        $publications = $brand->publications()
+            ->where('status', 'published')
+            ->latest('published_at')
+            ->latest()
+            ->take(12)
+            ->get();
+
+        $this->logBrandActivity($request, $brand, $activation, 'page_view', 'publications');
+
+        return view('brands-platform.publications', compact('brand', 'activation', 'publications'));
+    }
+
+    public function activation(Request $request, string $brand): View
+    {
+        $brand = $this->resolveBrand($brand);
+        $this->hydrateBrandPresentation($brand);
+        $activation = $this->primaryActivation($brand);
+
+        $this->logBrandActivity($request, $brand, $activation, 'page_view', 'activation_gateway');
+
+        return view('brands-platform.activation', compact('brand', 'activation'));
+    }
+
+    public function consumer(Request $request, string $brand): View
+    {
+        $brand = $this->resolveBrand($brand);
+        $this->hydrateBrandPresentation($brand);
+        $activation = $this->primaryActivation($brand);
+
+        $this->logBrandActivity($request, $brand, $activation, 'page_view', 'consumer_capture');
+
+        return view('brands-platform.consumer', compact('brand', 'activation'));
+    }
+
     public function agency(Request $request, string $brand): View
     {
         $brand = $this->resolveBrand($brand);
@@ -904,6 +943,18 @@ class BrandsPlatformController extends Controller
         $brand->setAttribute('public_primary_color', $presentation['primary'] ?? ($brand->primary_color ?: '#ff1020'));
         $brand->setAttribute('public_secondary_color', $presentation['secondary'] ?? ($brand->secondary_color ?: '#9d000d'));
         $brand->setAttribute('public_accent_color', $presentation['accent'] ?? ($brand->accent_color ?: ($presentation['primary'] ?? '#ff1020')));
+        $brand->setAttribute('prototype_logo_url', $this->assetForPresentation($presentation['prototype_logo'] ?? null) ?: $brand->getAttribute('public_logo_dark_url'));
+        $brand->setAttribute('prototype_headline', $presentation['headline'] ?? ($brand->headline ?: null));
+        $brand->setAttribute('prototype_description', $presentation['desc'] ?? ($brand->description ?: null));
+        $brand->setAttribute('prototype_activation', $presentation['activation'] ?? ($brand->activation_name ?: null));
+        $brand->setAttribute('prototype_activation_description', $presentation['activation_desc'] ?? ($brand->activation_description ?: null));
+        $brand->setAttribute('prototype_type', $presentation['type'] ?? ($brand->activation_type ?: 'sampling'));
+        $brand->setAttribute('prototype_result', $presentation['result'] ?? 'Campaign Activity');
+        $brand->setAttribute('prototype_hero', $presentation['hero'] ?? null);
+        $brand->setAttribute('prototype_bg', $presentation['bg'] ?? ($presentation['secondary'] ?? '#003e46'));
+        $brand->setAttribute('prototype_soft', $presentation['soft'] ?? '#e9fbfb');
+        $brand->setAttribute('prototype_ink', $presentation['ink'] ?? '#082126');
+        $brand->setAttribute('prototype_display_font', $presentation['display'] ?? 'Arial, Helvetica, sans-serif');
 
         return $brand;
     }
@@ -936,47 +987,107 @@ class BrandsPlatformController extends Controller
             'rexona' => [
                 'name' => 'Rexona',
                 'class' => 'rexona',
-                'logo' => $lightBase.'Rexona black.png',
-                'dark_logo' => $darkBase.'Rexona white.png',
-                'primary' => '#009c9f',
-                'secondary' => '#003a42',
-                'accent' => '#18e7ef',
+                'logo' => 'brands-platform-reference/assets/asset_02_abc887d8505b.png',
+                'dark_logo' => 'brands-platform-reference/assets/asset_02_abc887d8505b.png',
+                'prototype_logo' => 'brands-platform-reference/assets/asset_02_abc887d8505b.png',
+                'primary' => '#00656c',
+                'secondary' => '#18e7ef',
+                'accent' => '#ff2ba6',
+                'bg' => '#003e46',
+                'soft' => '#e9fbfb',
+                'ink' => '#082126',
+                'display' => 'Arial, Helvetica, sans-serif',
+                'headline' => 'Stay fresh. Keep moving.',
+                'desc' => 'Movement-led consumer sampling, trial and retail conversion experiences.',
+                'activation' => 'Campus & Gym Sampling Activation 2026',
+                'type' => 'sampling',
+                'activation_desc' => 'September-December sampling activation across selected campuses and gym centres, with a campaign target of 200,000 samples.',
+                'result' => 'Sample + Coupon',
+                'hero' => 'Your Rexona experience starts here.',
             ],
             'guinness' => [
                 'name' => 'Guinness',
                 'class' => 'guinness',
-                'logo' => $lightBase.'Guinness dark.png',
-                'dark_logo' => $darkBase.'Guinness light.png',
-                'primary' => '#211d18',
-                'secondary' => '#080807',
-                'accent' => '#d4aa45',
+                'logo' => 'brands-platform-reference/assets/asset_03_105eafce25ff.png',
+                'dark_logo' => 'brands-platform-reference/assets/asset_03_105eafce25ff.png',
+                'prototype_logo' => 'brands-platform-reference/assets/asset_03_105eafce25ff.png',
+                'primary' => '#17130e',
+                'secondary' => '#d7b45a',
+                'accent' => '#f2e7d0',
+                'bg' => '#070706',
+                'soft' => '#e8dcc3',
+                'ink' => '#17130e',
+                'display' => 'Georgia, serif',
+                'headline' => 'Good things come together.',
+                'desc' => 'Premium social experiences, selected bars and event partnership sales activations.',
+                'activation' => 'Night Trade Sales Activation',
+                'type' => 'sales',
+                'activation_desc' => 'Selected bars, event partnerships, bottle-sales tracking and reward fulfilment.',
+                'result' => 'Bottle Sales + Rewards',
+                'hero' => 'Buy. Enjoy. Get rewarded.',
             ],
             'gino' => [
                 'name' => 'Gino',
                 'class' => 'gino',
-                'logo' => $lightBase.'Gino dark .png',
-                'dark_logo' => $lightBase.'Gino dark .png',
-                'primary' => '#ce2b20',
-                'secondary' => '#5b0d09',
-                'accent' => '#f5b82d',
+                'logo' => 'brands-platform-reference/assets/asset_04_ce025664ebbe.png',
+                'dark_logo' => 'brands-platform-reference/assets/asset_04_ce025664ebbe.png',
+                'prototype_logo' => 'brands-platform-reference/assets/asset_04_ce025664ebbe.png',
+                'primary' => '#cf2920',
+                'secondary' => '#f2c94c',
+                'accent' => '#159447',
+                'bg' => '#8e1d17',
+                'soft' => '#fce6c8',
+                'ink' => '#5c1d18',
+                'display' => 'Arial, Helvetica, sans-serif',
+                'headline' => 'Flavour lives here.',
+                'desc' => 'Warm market and shopper experiences built around product trial and conversion.',
+                'activation' => 'Flavour Market Tour',
+                'type' => 'sampling',
+                'activation_desc' => 'Market sampling, shopper profiling and retailer conversion.',
+                'result' => 'Sampling + Sales',
+                'hero' => 'Taste it. Love it.',
             ],
             'dove' => [
                 'name' => 'Dove',
                 'class' => 'dove',
-                'logo' => $lightBase.'Dove black.png',
-                'dark_logo' => $darkBase.'Dove white.png',
-                'primary' => '#07519b',
-                'secondary' => '#071c43',
-                'accent' => '#e5c263',
+                'logo' => 'brands-platform-reference/assets/asset_07_d69c6c8dbda2.png',
+                'dark_logo' => 'brands-platform-reference/assets/asset_07_d69c6c8dbda2.png',
+                'prototype_logo' => 'brands-platform-reference/assets/asset_07_d69c6c8dbda2.png',
+                'primary' => '#07569f',
+                'secondary' => '#e4ba51',
+                'accent' => '#dbeafb',
+                'bg' => '#eaf3fb',
+                'soft' => '#eff5fa',
+                'ink' => '#1d4c75',
+                'display' => 'Georgia, serif',
+                'headline' => 'Care that feels real.',
+                'desc' => 'Human-centred beauty, confidence, care and product trial experiences.',
+                'activation' => 'Real Beauty Pop-up',
+                'type' => 'sampling',
+                'activation_desc' => 'Product trial, stories, registration and engagement.',
+                'result' => 'Sampling + Engagement',
+                'hero' => 'A little more care.',
             ],
             'omo' => [
                 'name' => 'OMO',
                 'class' => 'omo',
-                'logo' => 'images/brand-platform/omo.png',
-                'dark_logo' => 'images/brand-platform/omo.png',
-                'primary' => '#18aee0',
-                'secondary' => '#0e4c99',
-                'accent' => '#ef4444',
+                'logo' => 'brands-platform-reference/assets/asset_05_24150f4ad95f.png',
+                'dark_logo' => 'brands-platform-reference/assets/asset_05_24150f4ad95f.png',
+                'prototype_logo' => 'brands-platform-reference/assets/asset_05_24150f4ad95f.png',
+                'primary' => '#0a3d8f',
+                'secondary' => '#ff4428',
+                'accent' => '#15a6e8',
+                'bg' => '#06295f',
+                'soft' => '#e8f3ff',
+                'ink' => '#10213c',
+                'display' => 'Arial, Helvetica, sans-serif',
+                'headline' => 'Get out. Get dirty. Learn.',
+                'desc' => 'High-energy product demonstrations and retail trial experiences.',
+                'activation' => 'Clean Futures Tour',
+                'type' => 'sampling',
+                'activation_desc' => 'Retail demonstrations, product trial and family engagement.',
+                'result' => 'Demo + Trial',
+                'hero' => 'Ready for the OMO challenge?',
             ],
             'baileys' => [
                 'name' => 'Baileys',
@@ -1053,29 +1164,65 @@ class BrandsPlatformController extends Controller
             'lush-hair' => [
                 'name' => 'Lush Hair',
                 'class' => 'lush',
-                'logo' => $lightBase.'Lush hair.png',
-                'dark_logo' => $lightBase.'Lush hair.png',
-                'primary' => '#ed3e98',
-                'secondary' => '#9c145b',
+                'logo' => 'brands-platform-reference/assets/asset_06_9a557fa50385.png',
+                'dark_logo' => 'brands-platform-reference/assets/asset_06_9a557fa50385.png',
+                'prototype_logo' => 'brands-platform-reference/assets/asset_06_9a557fa50385.png',
+                'primary' => '#e93b96',
+                'secondary' => '#f5cf65',
                 'accent' => '#ffffff',
+                'bg' => '#a91662',
+                'soft' => '#fde1ef',
+                'ink' => '#611240',
+                'display' => 'Georgia, serif',
+                'headline' => 'Your hair. Your crown. Your power.',
+                'desc' => 'Festival, campus and salon experiences around confidence and self-expression.',
+                'activation' => 'Campus Festival',
+                'type' => 'sampling',
+                'activation_desc' => 'Hair trial, games, photo moments and product conversion.',
+                'result' => 'Trial + Engagement',
+                'hero' => 'Good hair days start here.',
             ],
             'ovaltine' => [
                 'name' => 'Ovaltine',
                 'class' => 'ovaltine',
-                'logo' => 'images/brand-platform/ovaltine.png',
-                'dark_logo' => 'images/brand-platform/ovaltine.png',
-                'primary' => '#143a88',
-                'secondary' => '#081c4b',
-                'accent' => '#f1a51c',
+                'logo' => 'brands-platform-reference/assets/asset_08_0054798b49c1.png',
+                'dark_logo' => 'brands-platform-reference/assets/asset_08_0054798b49c1.png',
+                'prototype_logo' => 'brands-platform-reference/assets/asset_08_0054798b49c1.png',
+                'primary' => '#153d8f',
+                'secondary' => '#f7a928',
+                'accent' => '#ffd74a',
+                'bg' => '#ea8c15',
+                'soft' => '#fff0c7',
+                'ink' => '#173468',
+                'display' => 'Arial, Helvetica, sans-serif',
+                'headline' => 'Power up. Play on.',
+                'desc' => 'School and family energy activations with sampling and participation.',
+                'activation' => 'Energy Schools Tour',
+                'type' => 'sampling',
+                'activation_desc' => 'School sampling, games, product education and family conversion.',
+                'result' => 'Sampling + Schools',
+                'hero' => 'Ready to power your day?',
             ],
             'mtn' => [
                 'name' => 'MTN',
                 'class' => 'mtn',
-                'logo' => 'images/brand-platform/mtn.png',
-                'dark_logo' => 'images/brand-platform/mtn.png',
-                'primary' => '#ffe000',
-                'secondary' => '#111827',
-                'accent' => '#ffbe00',
+                'logo' => 'brands-platform-reference/assets/asset_09_70a273b9f593.png',
+                'dark_logo' => 'brands-platform-reference/assets/asset_09_70a273b9f593.png',
+                'prototype_logo' => 'brands-platform-reference/assets/asset_09_70a273b9f593.png',
+                'primary' => '#111111',
+                'secondary' => '#ffdc00',
+                'accent' => '#ffffff',
+                'bg' => '#f4cd00',
+                'soft' => '#fff8bf',
+                'ink' => '#151515',
+                'display' => 'Arial, Helvetica, sans-serif',
+                'headline' => 'Connect home. Go further.',
+                'desc' => 'Fibre Broadband acquisition through coverage checks, lead qualification and sales follow-up.',
+                'activation' => 'Fibre Broadband Connect',
+                'type' => 'sales',
+                'activation_desc' => 'Neighbourhood coverage checks, qualified leads and installation intent.',
+                'result' => 'Fibre Leads + Sales',
+                'hero' => 'Is fibre available at your home?',
             ],
             'malta-guinness' => [
                 'name' => 'Malta Guinness',

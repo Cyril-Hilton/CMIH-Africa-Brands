@@ -50,7 +50,7 @@
         <div class="min-h-screen flex flex-col bg-inked">
             @include('partials.site-header')
 
-            @if(request()->routeIs('brands-platform.*'))
+            @if(request()->routeIs('brands-platform.*') && ! request()->routeIs('brands-platform.index', 'brands-platform.show', 'brands-platform.publications', 'brands-platform.activation', 'brands-platform.consumer'))
                 @include('brands-platform.partials.notifications')
             @endif
 

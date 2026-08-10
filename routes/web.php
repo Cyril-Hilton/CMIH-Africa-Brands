@@ -62,6 +62,9 @@ Route::prefix('brands')->name('brands-platform.')->group(function () {
         ->middleware(['auth', 'active'])
         ->name('gallery');
     Route::get('/client/report/{token}', [BrandsPlatformController::class, 'clientReport'])->name('client-report');
+    Route::get('/{brand}/publications', [BrandsPlatformController::class, 'publications'])->name('publications');
+    Route::get('/{brand}/activation', [BrandsPlatformController::class, 'activation'])->name('activation');
+    Route::get('/{brand}/consumer', [BrandsPlatformController::class, 'consumer'])->name('consumer');
     Route::get('/{brand}', [BrandsPlatformController::class, 'show'])->name('show');
     Route::post('/{brand}/consumer-entry', [BrandsPlatformController::class, 'storeConsumerEntry'])
         ->middleware('throttle:30,1')
