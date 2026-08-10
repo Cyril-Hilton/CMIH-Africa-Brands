@@ -1,24 +1,26 @@
 @extends('layouts.site')
 
-@section('title', $brand->name.' - CMIH Brands Platform')
+@section('title', ($brand->display_name ?: $brand->name).' - CMIH Brands Platform')
 
 @section('content')
 @php
-    $brandKey = $brand->slug ?: $brand->id;
-    $brandLogo = $brand->logoUrl('dark') ?: $brand->logoUrl();
-    $primary = $brand->primary_color ?: '#00656c';
-    $secondary = $brand->secondary_color ?: '#003e46';
-    $accent = $brand->accent_color ?: '#18e7ef';
+    $brandKey = $brand->slug ?: $brand->presentation_key ?: $brand->id;
+    $displayName = $brand->display_name ?: $brand->name;
+    $brandLogo = $brand->public_logo_dark_url ?: $brand->public_logo_url;
+    $companyLogo = asset('images/CMIH WEB ASSETS/Company logo/CMIH Logo_light theme.png');
+    $primary = $brand->public_primary_color ?: '#00656c';
+    $secondary = $brand->public_secondary_color ?: '#003e46';
+    $accent = $brand->public_accent_color ?: '#18e7ef';
     $style = "--bp: {$primary}; --bbg: {$secondary}; --bs: {$accent}; --ba: {$accent}; --bink: #082126; --bsoft: #e9fbfb;";
 @endphp
 
 <section class="brand-page" style="{{ $style }}">
     <div class="internal-header">
         <a href="{{ route('brands-platform.index') }}" style="display:flex;align-items:center;gap:10px;background:transparent;padding:0;">
-            <img src="{{ asset('images/logo/icon-192.png') }}" alt="CMIH Africa">
+            <img class="internal-lockup-logo" src="{{ $companyLogo }}" alt="CMIH Africa">
             <span>
                 <strong>CMIH Brands Platform</strong>
-                <small>{{ $brand->name }} Workspace</small>
+                <small>{{ $displayName }} Workspace</small>
             </span>
         </a>
         <div class="spacer"></div>
@@ -33,34 +35,34 @@
 
     <div class="brand-main">
         @if($brandLogo)
-            <img class="brand-logo-main" src="{{ $brandLogo }}" alt="{{ $brand->name }} logo">
+            <img class="brand-logo-main" src="{{ $brandLogo }}" alt="{{ $displayName }} logo" data-no-fallback="true" onerror="this.hidden=true;">
         @endif
 
         <div class="brand-copy">
             <p class="eyebrow">{{ $brand->category ?: 'Brand Activation' }}</p>
-            <h1>{{ $brand->name }}</h1>
+            <h1>{{ $displayName }}</h1>
             <p>{{ $brand->description ?: $brand->headline ?: 'A dedicated brand activation workspace for consumer journeys, field teams, retail actions, evidence capture and client-ready reporting.' }}</p>
 
             <div class="brand-entry-buttons">
                 <a href="#consumer-capture" class="brand-entry">
                     <span class="ico">C</span>
                     <strong>Consumer</strong>
-                    <small>Capture consumer entries, OTP confirmation, consent and conversion intent.</small>
+                    <small>Register, answer brand questions, verify phone numbers, consent, and submit conversion intent.</small>
                 </a>
                 <a href="{{ auth()->check() ? route('brands-platform.agency', $brandKey) : route('login') }}" class="brand-entry">
                     <span class="ico">A</span>
                     <strong>Agency Staff</strong>
-                    <small>Open metrics, reports, exports, field evidence, activation progress and client outputs.</small>
+                    <small>Open metrics, charts, exports, field evidence, activation progress and client-ready outputs.</small>
                 </a>
                 <a href="{{ auth()->check() ? route('brands-platform.support', $brandKey) : route('login') }}" class="brand-entry">
                     <span class="ico">S</span>
                     <strong>Supporting Staff</strong>
-                    <small>Promoters, sales personnel and field teams can record work and evidence.</small>
+                    <small>Promoters, sales personnel and field teams record assigned work, images, and location updates.</small>
                 </a>
                 <a href="{{ auth()->check() ? route('brands-platform.retail', $brandKey) : route('login') }}" class="brand-entry">
                     <span class="ico">R</span>
                     <strong>Retail</strong>
-                    <small>Retail partner scans, redemptions, stock issues and location-level actions.</small>
+                    <small>Manage partner scans, redemptions, stock issues, outlet actions and retail intelligence.</small>
                 </a>
             </div>
         </div>
@@ -87,12 +89,14 @@
         <article class="role-card">
             <div>
                 <div class="icon">03</div>
-                <h3>Merchandising</h3>
-                <p>Jump into the merchandising portal while keeping the brands platform flow connected.</p>
+                <h3>Merchandiser Portal</h3>
+                <p>Open the separate merchandiser workspace for route work, store visits, perfect-store checks and field execution.</p>
             </div>
-            <a href="{{ route('merchandisers.portal') }}">Enter Portal</a>
+            <a href="{{ route('merchandisers.portal') }}">Open Merchandiser Portal</a>
         </article>
     </div>
+
+    <p class="brand-privacy-note">Field updates are restricted to assigned teams. Public visitors can only use consumer capture, publications and approved brand entry points.</p>
 
     <div id="consumer-capture" class="brand-consumer-card">
         <div style="display:flex;justify-content:space-between;gap:18px;align-items:flex-start;flex-wrap:wrap;">
@@ -101,7 +105,7 @@
                 <h2 style="font-family:Impact,'Arial Narrow Bold',Arial,sans-serif;font-size:clamp(32px,4vw,54px);line-height:.9;text-transform:uppercase;margin:8px 0 6px;">{{ $activation?->name ?: $brand->activation_name ?: 'Consumer Capture' }}</h2>
                 <p style="max-width:680px;color:rgba(255,255,255,.68);font-size:13px;line-height:1.55;">Capture consumers, validate consent, record conversion intent, and feed the brand dashboard instantly.</p>
             </div>
-            <div style="display:grid;grid-template-columns:repeat(4,minmax(90px,1fr));gap:10px;min-width:min(100%,520px);">
+            <div class="consumer-metrics">
                 @foreach([
                     'Reach' => number_format($metrics['reached']),
                     'Target' => number_format($metrics['target']),
@@ -120,7 +124,7 @@
             <div style="margin-top:18px;border:1px solid rgba(255,16,32,.45);background:rgba(255,16,32,.12);border-radius:14px;padding:13px;color:#fff;font-size:12px;">{{ $errors->first() }}</div>
         @endif
 
-        <form method="POST" action="{{ route('brands-platform.consumer-entry.store', $brandKey) }}" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:20px;">
+        <form method="POST" action="{{ route('brands-platform.consumer-entry.store', $brandKey) }}" class="consumer-form-grid">
             @csrf
             <input name="name" required value="{{ old('name') }}" placeholder="Full name">
             <input name="phone" required value="{{ old('phone') }}" placeholder="Phone number">
@@ -171,7 +175,7 @@
     @if($publications->isNotEmpty())
         <div class="brand-consumer-card" style="margin-top:-38px;">
             <p class="eyebrow" style="color:var(--bs);">Brand Publications</p>
-            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:16px;">
+            <div class="brand-publication-grid">
                 @foreach($publications as $publication)
                     <article style="border:1px solid rgba(255,255,255,.12);border-radius:18px;background:rgba(255,255,255,.055);padding:16px;">
                         <small style="color:rgba(255,255,255,.45);font-size:8px;text-transform:uppercase;letter-spacing:.08em;">{{ $publication->category ?: 'Publication' }} - {{ $publication->published_at?->format('M d, Y') }}</small>

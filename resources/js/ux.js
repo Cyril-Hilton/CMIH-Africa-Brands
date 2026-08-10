@@ -129,7 +129,7 @@ const initImageFallbacks = () => {
         if (!(target instanceof HTMLImageElement)) return;
 
         const src = target.getAttribute('src') || '';
-        if (!src || target.dataset.imageFallbackApplied === 'true') return;
+        if (!src || target.dataset.imageFallbackApplied === 'true' || target.dataset.noFallback === 'true') return;
 
         target.dataset.imageFallbackApplied = 'true';
         target.src = target.dataset.fallbackSrc || fallbackUrl;

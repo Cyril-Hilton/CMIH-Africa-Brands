@@ -34,6 +34,7 @@ class BrandsPlatformController extends Controller
             ->withCount(['activations', 'consumerEntries', 'fieldActivities', 'staffAssignments'])
             ->orderBy('name')
             ->get();
+        $brands = $this->preparePublicBrands($brands);
 
         $stats = [
             'brands' => $brands->count(),
@@ -48,6 +49,11 @@ class BrandsPlatformController extends Controller
             ->latest()
             ->take(6)
             ->get();
+        $recentPublications->each(function (BrandPublication $publication) {
+            if ($publication->brand) {
+                $this->hydrateBrandPresentation($publication->brand);
+            }
+        });
 
         return view('brands-platform.index', compact('brands', 'stats', 'recentPublications'));
     }
@@ -55,6 +61,7 @@ class BrandsPlatformController extends Controller
     public function show(Request $request, string $brand): View
     {
         $brand = $this->resolveBrand($brand);
+        $this->hydrateBrandPresentation($brand);
         $activation = $this->primaryActivation($brand);
         $metrics = $this->brandMetrics($brand);
         $publications = $brand->publications()
@@ -336,13 +343,16 @@ class BrandsPlatformController extends Controller
         ]);
 
         $slug = Str::slug($validated['name']);
-        $brand = Brand::where('slug', $slug)->first();
+        $brand = Brand::query()
+            ->where('slug', $slug)
+            ->orWhere('name', $validated['name'])
+            ->first();
 
         if (! $brand) {
             $brand = new Brand([
                 'slug' => $slug,
-                'logo_path' => 'images/logo/icon-192.png',
-                'logo_dark_path' => 'images/logo/icon-192.png',
+                'logo_path' => '',
+                'logo_dark_path' => '',
             ]);
         }
 
@@ -848,10 +858,280 @@ class BrandsPlatformController extends Controller
 
     private function resolveBrand(string $brand): Brand
     {
-        return Brand::query()
+        $resolved = Brand::query()
             ->where('slug', $brand)
             ->when(ctype_digit($brand), fn ($query) => $query->orWhere('id', (int) $brand))
-            ->firstOrFail();
+            ->first();
+
+        if ($resolved) {
+            return $resolved;
+        }
+
+        $key = Str::slug($brand);
+        $resolved = Brand::query()
+            ->where('platform_status', 'active')
+            ->get()
+            ->first(fn (Brand $candidate) => $this->brandPresentationKey($candidate) === $key);
+
+        abort_unless($resolved, 404);
+
+        return $resolved;
+    }
+
+    private function preparePublicBrands($brands)
+    {
+        $order = array_flip(array_keys($this->brandPresentationCatalog()));
+
+        return $brands
+            ->reject(fn (Brand $brand) => $this->brandPresentationKey($brand) === 'cmih')
+            ->map(fn (Brand $brand) => $this->hydrateBrandPresentation($brand))
+            ->unique(fn (Brand $brand) => $brand->getAttribute('presentation_key'))
+            ->sortBy(fn (Brand $brand) => $order[$brand->getAttribute('presentation_key')] ?? 999)
+            ->values();
+    }
+
+    private function hydrateBrandPresentation(Brand $brand): Brand
+    {
+        $key = $this->brandPresentationKey($brand);
+        $catalog = $this->brandPresentationCatalog();
+        $presentation = $catalog[$key] ?? [];
+
+        $brand->setAttribute('presentation_key', $key);
+        $brand->setAttribute('display_name', $presentation['name'] ?? Str::headline($brand->name));
+        $brand->setAttribute('tile_class', $presentation['class'] ?? $key);
+        $brand->setAttribute('public_logo_url', $this->assetForPresentation($presentation['logo'] ?? null) ?: $brand->logoUrl());
+        $brand->setAttribute('public_logo_dark_url', $this->assetForPresentation($presentation['dark_logo'] ?? null) ?: $brand->logoUrl('dark') ?: $brand->logoUrl());
+        $brand->setAttribute('public_primary_color', $presentation['primary'] ?? ($brand->primary_color ?: '#ff1020'));
+        $brand->setAttribute('public_secondary_color', $presentation['secondary'] ?? ($brand->secondary_color ?: '#9d000d'));
+        $brand->setAttribute('public_accent_color', $presentation['accent'] ?? ($brand->accent_color ?: ($presentation['primary'] ?? '#ff1020')));
+
+        return $brand;
+    }
+
+    private function brandPresentationKey(Brand $brand): string
+    {
+        $slug = Str::slug($brand->slug ?: $brand->name);
+
+        return match ($slug) {
+            'cm' => 'castle-milk-stout',
+            'jw' => 'johnnie-walker',
+            'lush-hair', 'lush' => 'lush-hair',
+            'malta-guinness' => 'malta-guinness',
+            'smirnoff-ice' => 'smirnoff-ice',
+            default => $slug,
+        };
+    }
+
+    private function assetForPresentation(?string $path): ?string
+    {
+        return $path ? asset($path) : null;
+    }
+
+    private function brandPresentationCatalog(): array
+    {
+        $darkBase = 'images/CMIH WEB ASSETS/BRAND LOGOS/DARK THEME/';
+        $lightBase = 'images/CMIH WEB ASSETS/BRAND LOGOS/LIGHT THEME/';
+
+        return [
+            'rexona' => [
+                'name' => 'Rexona',
+                'class' => 'rexona',
+                'logo' => $lightBase.'Rexona black.png',
+                'dark_logo' => $darkBase.'Rexona white.png',
+                'primary' => '#009c9f',
+                'secondary' => '#003a42',
+                'accent' => '#18e7ef',
+            ],
+            'guinness' => [
+                'name' => 'Guinness',
+                'class' => 'guinness',
+                'logo' => $lightBase.'Guinness dark.png',
+                'dark_logo' => $darkBase.'Guinness light.png',
+                'primary' => '#211d18',
+                'secondary' => '#080807',
+                'accent' => '#d4aa45',
+            ],
+            'gino' => [
+                'name' => 'Gino',
+                'class' => 'gino',
+                'logo' => $lightBase.'Gino dark .png',
+                'dark_logo' => $lightBase.'Gino dark .png',
+                'primary' => '#ce2b20',
+                'secondary' => '#5b0d09',
+                'accent' => '#f5b82d',
+            ],
+            'dove' => [
+                'name' => 'Dove',
+                'class' => 'dove',
+                'logo' => $lightBase.'Dove black.png',
+                'dark_logo' => $darkBase.'Dove white.png',
+                'primary' => '#07519b',
+                'secondary' => '#071c43',
+                'accent' => '#e5c263',
+            ],
+            'omo' => [
+                'name' => 'OMO',
+                'class' => 'omo',
+                'logo' => 'images/brand-platform/omo.png',
+                'dark_logo' => 'images/brand-platform/omo.png',
+                'primary' => '#18aee0',
+                'secondary' => '#0e4c99',
+                'accent' => '#ef4444',
+            ],
+            'baileys' => [
+                'name' => 'Baileys',
+                'class' => 'baileys',
+                'logo' => $lightBase.'Baileys logo.png',
+                'dark_logo' => $lightBase.'Baileys logo.png',
+                'primary' => '#3c2315',
+                'secondary' => '#170b06',
+                'accent' => '#d7b58a',
+            ],
+            'axe' => [
+                'name' => 'AXE',
+                'class' => 'axe',
+                'logo' => $lightBase.'AXE.png',
+                'dark_logo' => $darkBase.'AXE.png',
+                'primary' => '#202020',
+                'secondary' => '#050505',
+                'accent' => '#aeb4bc',
+            ],
+            'castle-milk-stout' => [
+                'name' => 'Castle Milk Stout',
+                'class' => 'castle-milk-stout',
+                'logo' => $lightBase.'CM DARK.png',
+                'dark_logo' => $darkBase.'CM LIGHT.png',
+                'primary' => '#24120b',
+                'secondary' => '#080403',
+                'accent' => '#cfb072',
+            ],
+            'diageo' => [
+                'name' => 'Diageo',
+                'class' => 'diageo',
+                'logo' => $lightBase.'diageo.png',
+                'dark_logo' => $lightBase.'diageo.png',
+                'primary' => '#1c1c1f',
+                'secondary' => '#050505',
+                'accent' => '#a98145',
+            ],
+            'friesland' => [
+                'name' => 'Friesland',
+                'class' => 'friesland',
+                'logo' => $lightBase.'Friesland.png',
+                'dark_logo' => $lightBase.'Friesland.png',
+                'primary' => '#d11f2f',
+                'secondary' => '#1c4f9a',
+                'accent' => '#ffffff',
+            ],
+            'gordons' => [
+                'name' => "Gordon's",
+                'class' => 'gordons',
+                'logo' => $lightBase."Gordon's dark.png",
+                'dark_logo' => $darkBase."Gordon's white.png",
+                'primary' => '#0c6b37',
+                'secondary' => '#05351d',
+                'accent' => '#ffffff',
+            ],
+            'johnnie-walker' => [
+                'name' => 'Johnnie Walker',
+                'class' => 'johnnie-walker',
+                'logo' => $lightBase.'JW_Logo_WithoutDescriptor_SmallSize_Black_cmyk.png',
+                'dark_logo' => $darkBase.'JW_Logo_WithoutDescriptor_SmallSize_white_cmyk.png',
+                'primary' => '#1f1a12',
+                'secondary' => '#070604',
+                'accent' => '#d4aa45',
+            ],
+            'kpmg' => [
+                'name' => 'KPMG',
+                'class' => 'kpmg',
+                'logo' => $lightBase.'KPMG.png',
+                'dark_logo' => $lightBase.'KPMG.png',
+                'primary' => '#00338d',
+                'secondary' => '#001d52',
+                'accent' => '#6fb5ff',
+            ],
+            'lush-hair' => [
+                'name' => 'Lush Hair',
+                'class' => 'lush',
+                'logo' => $lightBase.'Lush hair.png',
+                'dark_logo' => $lightBase.'Lush hair.png',
+                'primary' => '#ed3e98',
+                'secondary' => '#9c145b',
+                'accent' => '#ffffff',
+            ],
+            'ovaltine' => [
+                'name' => 'Ovaltine',
+                'class' => 'ovaltine',
+                'logo' => 'images/brand-platform/ovaltine.png',
+                'dark_logo' => 'images/brand-platform/ovaltine.png',
+                'primary' => '#143a88',
+                'secondary' => '#081c4b',
+                'accent' => '#f1a51c',
+            ],
+            'mtn' => [
+                'name' => 'MTN',
+                'class' => 'mtn',
+                'logo' => 'images/brand-platform/mtn.png',
+                'dark_logo' => 'images/brand-platform/mtn.png',
+                'primary' => '#ffe000',
+                'secondary' => '#111827',
+                'accent' => '#ffbe00',
+            ],
+            'malta-guinness' => [
+                'name' => 'Malta Guinness',
+                'class' => 'malta-guinness',
+                'logo' => $lightBase.'Malta guinness.png',
+                'dark_logo' => $darkBase.'Malta guinness light.png',
+                'primary' => '#2a1711',
+                'secondary' => '#080403',
+                'accent' => '#d4aa45',
+            ],
+            'orijin' => [
+                'name' => 'Orijin',
+                'class' => 'orijin',
+                'logo' => $lightBase.'Orijin .png',
+                'dark_logo' => $lightBase.'Orijin .png',
+                'primary' => '#161616',
+                'secondary' => '#050505',
+                'accent' => '#ff6b1a',
+            ],
+            'peak' => [
+                'name' => 'PEAK',
+                'class' => 'peak',
+                'logo' => $lightBase.'PEAK LOGO.png',
+                'dark_logo' => $lightBase.'PEAK LOGO.png',
+                'primary' => '#0a4b8f',
+                'secondary' => '#031b3f',
+                'accent' => '#e51b2d',
+            ],
+            'smirnoff-ice' => [
+                'name' => 'Smirnoff Ice',
+                'class' => 'smirnoff-ice',
+                'logo' => $lightBase.'Smirnoff ice.png',
+                'dark_logo' => $lightBase.'Smirnoff ice.png',
+                'primary' => '#a6d7e8',
+                'secondary' => '#11394c',
+                'accent' => '#ffffff',
+            ],
+            'unilever' => [
+                'name' => 'Unilever',
+                'class' => 'unilever',
+                'logo' => $lightBase.'Unilever black.png',
+                'dark_logo' => $darkBase.'Unilever white.png',
+                'primary' => '#004b93',
+                'secondary' => '#002859',
+                'accent' => '#7cbcff',
+            ],
+            'bii' => [
+                'name' => 'BII',
+                'class' => 'bii',
+                'logo' => $lightBase.'BII Logo.png',
+                'dark_logo' => $darkBase.'BII Logo LIGHT.png',
+                'primary' => '#211d18',
+                'secondary' => '#080807',
+                'accent' => '#d4aa45',
+            ],
+        ];
     }
 
     private function primaryActivation(Brand $brand): ?BrandActivation

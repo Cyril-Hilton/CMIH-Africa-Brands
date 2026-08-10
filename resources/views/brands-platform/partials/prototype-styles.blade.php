@@ -27,6 +27,12 @@
                 width: 43px;
             }
 
+            .internal-header .internal-lockup-logo {
+                height: auto;
+                max-height: 46px;
+                width: 178px;
+            }
+
             .internal-header strong {
                 font-size: 11px;
             }
@@ -60,10 +66,25 @@
             }
 
             .brand-main {
+                align-content: center;
+                display: grid;
                 min-height: calc(100vh - 72px);
                 overflow: hidden;
-                padding: 70px 6vw 80px;
+                padding: 58px 6vw 78px;
                 position: relative;
+            }
+
+            .brand-main:before {
+                background:
+                    linear-gradient(90deg, rgba(255, 255, 255, .035) 1px, transparent 1px),
+                    linear-gradient(0deg, rgba(255, 255, 255, .035) 1px, transparent 1px);
+                background-size: 44px 44px;
+                content: "";
+                inset: 0;
+                mask-image: linear-gradient(180deg, #000, transparent 78%);
+                opacity: .5;
+                pointer-events: none;
+                position: absolute;
             }
 
             .brand-main:after {
@@ -79,15 +100,16 @@
             }
 
             .brand-logo-main {
-                max-height: 78px;
-                max-width: 220px;
+                filter: drop-shadow(0 22px 45px rgba(0, 0, 0, .28));
+                max-height: 118px;
+                max-width: 320px;
                 object-fit: contain;
                 position: relative;
                 z-index: 2;
             }
 
             .brand-copy {
-                margin-top: 70px;
+                margin-top: 52px;
                 max-width: 820px;
                 position: relative;
                 z-index: 2;
@@ -104,7 +126,7 @@
             .brand-copy h1 {
                 font-family: Impact, 'Arial Narrow Bold', Arial, sans-serif;
                 font-size: clamp(56px, 7vw, 94px);
-                letter-spacing: -.04em;
+                letter-spacing: 0;
                 line-height: .88;
                 margin: 13px 0 15px;
                 text-transform: uppercase;
@@ -136,6 +158,27 @@
                 position: relative;
                 text-align: left;
                 transition: .22s ease;
+            }
+
+            .consumer-metrics {
+                display: grid;
+                gap: 10px;
+                grid-template-columns: repeat(4, minmax(90px, 1fr));
+                min-width: min(100%, 520px);
+            }
+
+            .consumer-form-grid {
+                display: grid;
+                gap: 12px;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                margin-top: 20px;
+            }
+
+            .brand-publication-grid {
+                display: grid;
+                gap: 14px;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                margin-top: 16px;
             }
 
             .brand-entry:hover {
@@ -241,6 +284,18 @@
                 z-index: 2;
             }
 
+            .brand-privacy-note {
+                color: rgba(255, 255, 255, .62);
+                font-size: 11px;
+                font-weight: 800;
+                letter-spacing: .06em;
+                margin: -34px 6vw 48px;
+                max-width: 780px;
+                position: relative;
+                text-transform: uppercase;
+                z-index: 2;
+            }
+
             .brand-consumer-card input,
             .brand-consumer-card select,
             .brand-consumer-card textarea,
@@ -294,12 +349,25 @@
 
             @media(max-width:900px) {
                 .brand-entry-buttons,
-                .activation-roles {
+                .activation-roles,
+                .brand-publication-grid,
+                .consumer-form-grid,
+                .consumer-metrics {
                     grid-template-columns: 1fr;
                 }
 
                 .brand-main {
                     padding-top: 45px;
+                }
+
+                .internal-header {
+                    height: auto;
+                    min-height: 72px;
+                    overflow-x: auto;
+                }
+
+                .internal-header .internal-lockup-logo {
+                    width: 150px;
                 }
             }
         </style>
