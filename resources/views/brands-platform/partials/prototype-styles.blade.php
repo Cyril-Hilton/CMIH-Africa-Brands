@@ -184,7 +184,7 @@ button{cursor:pointer}
 }
 
 /* 7-Card Ascending Staircase Arc Rules ( Rexona = Center Peak, 3-1-3 Symmetrical Balance ) */
-.liquid-tile.arc-0 { transform: translateY(60px) rotate(-10deg); scale: 0.70; z-index: 1; opacity: 0.80; }
+.liquid-tile.arc-0 { transform: translateX(50px) translateY(60px) rotate(-10deg); scale: 0.70; z-index: 1; opacity: 0.80; }
 .liquid-tile.arc-1 { transform: translateY(36px) rotate(-6deg); scale: 0.85; z-index: 3; opacity: 0.90; }
 .liquid-tile.arc-2 { transform: translateY(14px) rotate(-2.5deg); scale: 0.98; z-index: 5; opacity: 0.97; }
 
@@ -202,16 +202,16 @@ button{cursor:pointer}
 
 .liquid-tile.arc-4 { transform: translateY(14px) rotate(2.5deg); scale: 0.98; z-index: 5; opacity: 0.97; }
 .liquid-tile.arc-5 { transform: translateY(36px) rotate(6deg); scale: 0.85; z-index: 3; opacity: 0.90; }
-.liquid-tile.arc-6 { transform: translateY(60px) rotate(10deg); scale: 0.70; z-index: 1; opacity: 0.80; }
+.liquid-tile.arc-6 { transform: translateX(-50px) translateY(60px) rotate(10deg); scale: 0.70; z-index: 1; opacity: 0.80; }
 
 /* Hover States */
-.liquid-tile.arc-0:hover { transform: translateY(46px) rotate(-10deg); scale: 0.78; z-index: 20; opacity: 1; }
+.liquid-tile.arc-0:hover { transform: translateX(50px) translateY(46px) rotate(-10deg); scale: 0.78; z-index: 20; opacity: 1; }
 .liquid-tile.arc-1:hover { transform: translateY(24px) rotate(-6deg); scale: 0.93; z-index: 20; opacity: 1; }
 .liquid-tile.arc-2:hover { transform: translateY(4px) rotate(-2.5deg); scale: 1.06; z-index: 20; opacity: 1; }
 .liquid-tile.arc-3:hover { transform: translateY(-12px) rotate(0deg); scale: 1.28; z-index: 20; opacity: 1; }
 .liquid-tile.arc-4:hover { transform: translateY(4px) rotate(2.5deg); scale: 1.06; z-index: 20; opacity: 1; }
 .liquid-tile.arc-5:hover { transform: translateY(24px) rotate(6deg); scale: 0.93; z-index: 20; opacity: 1; }
-.liquid-tile.arc-6:hover { transform: translateY(46px) rotate(10deg); scale: 0.78; z-index: 20; opacity: 1; }
+.liquid-tile.arc-6:hover { transform: translateX(-50px) translateY(46px) rotate(10deg); scale: 0.78; z-index: 20; opacity: 1; }
 
 .liquid-tile .tile-category{display:none}
 .liquid-tile .tile-bottom small{display:none}
