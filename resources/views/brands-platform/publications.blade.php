@@ -41,7 +41,6 @@
 
 <section class="brands-prototype view active publications" id="view-publications" style="{{ $style }}">
     <header class="internal-header">
-        <img src="{{ $companyLogo }}" alt="CMIH logo">
         <div>
             <strong>{{ $displayName }} Publications</strong>
             <small>Public brand updates</small>

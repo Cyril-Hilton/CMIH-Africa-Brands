@@ -24,7 +24,6 @@
 
 <section class="brands-prototype view active activation-page" id="view-activation" style="{{ $style }}">
     <header class="internal-header">
-        <img src="{{ $companyLogo }}" alt="CMIH logo">
         <div>
             <strong>{{ $displayName }} - {{ $activationName }}</strong>
             <small>Role gateway</small>

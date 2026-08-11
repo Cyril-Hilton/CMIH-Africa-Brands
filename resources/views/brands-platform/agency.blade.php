@@ -21,7 +21,6 @@
     <div class="big-shell">
         <aside class="big-side">
             <div class="logo-lock">
-                <img src="{{ asset('brands-platform-reference/assets/asset_01_abc0e3abce39.png') }}" alt="CMIH Agency" style="max-height:36px; object-fit:contain;">
                 <div>
                     <strong>CMIH AGENCY</strong>
                     <small style="display:block; color:#9f858c; font-size:8px;">COMMAND CENTRE</small>

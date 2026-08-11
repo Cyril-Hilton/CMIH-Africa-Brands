@@ -14,10 +14,9 @@
 <section class="brands-prototype view active home" id="view-home">
     <div class="home-top">
         <a href="{{ route('brands-platform.index') }}" class="public-lockup" aria-label="CMIH Brands Platform">
-            <img src="{{ $companyLogo }}" alt="CMIH logo">
             <div>
-                <strong>CONCEPTS MAKE IT HAPPEN</strong>
-                <small>BRANDS PLATFORM</small>
+                <strong>CMIH BRANDS PLATFORM</strong>
+                <small>Interactive Portfolio &amp; Activations</small>
             </div>
         </a>
 

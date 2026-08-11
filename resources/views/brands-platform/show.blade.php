@@ -21,7 +21,6 @@
 
 <section class="brands-prototype view active brand-page" id="view-brand" style="{{ $style }}">
     <header class="internal-header">
-        <img src="{{ $companyLogo }}" alt="CMIH logo">
         <div>
             <strong>CMIH BRANDS</strong>
             <small>{{ $displayName }}</small>

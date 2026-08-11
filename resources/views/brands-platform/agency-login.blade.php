@@ -21,8 +21,7 @@
 <section class="brands-prototype view active auth-page" id="view-agency-login" style="{{ $style }}">
     @include('brands-platform.partials.breadcrumbs')
     <div class="auth-card">
-        <img src="{{ $companyLogo }}" alt="CMIH logo" style="max-height:54px; object-fit:contain;">
-        <div class="eyebrow" style="margin-top:20px">AGENCY ACCESS</div>
+        <div class="eyebrow">AGENCY ACCESS</div>
         <h2>Sign in to the agency dashboard.</h2>
         <p>Agency access is only available from the selected brand activation. Your credentials determine the reporting scope and permissions available after sign in.</p>
         
