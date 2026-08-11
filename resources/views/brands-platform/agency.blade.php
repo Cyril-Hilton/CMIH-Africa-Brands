@@ -172,6 +172,21 @@
         '--bsoft: '.($brand->prototype_soft ?: '#e9fbfb').';',
         '--display: '.($brand->prototype_display_font ?: 'Arial, Helvetica, sans-serif').';',
     ]);
+    $formatNumber = fn ($value) => number_format((float) $value, fmod((float) $value, 1.0) === 0.0 ? 0 : 1);
+    $formatPercent = fn ($value) => rtrim(rtrim(number_format((float) $value, 1), '0'), '.').'%';
+    $statusBadge = function (?string $status) {
+        $status = $status ?: 'not set';
+        $key = strtolower(str_replace(' ', '_', $status));
+        $style = match ($key) {
+            'live', 'active', 'published', 'approved', 'completed', 'assigned', 'online' => 'background:#dcfce7; color:#15803d;',
+            'draft', 'pending', 'in_progress', 'processing' => 'background:#fef3c7; color:#b45309;',
+            'failed', 'invalid', 'rejected', 'cancelled' => 'background:#ffe4e6; color:#e11d48;',
+            default => 'background:#f4edf0; color:#6f5a60;',
+        };
+
+        return '<span style="'.$style.' padding:3px 10px; border-radius:12px; font-size:9px; font-weight:900;">'.e(strtoupper(str_replace('_', ' ', $status))).'</span>';
+    };
+    $activationOptions = $allBrands->flatMap(fn ($b) => $b->activations)->filter()->unique('id')->values();
 @endphp
 
 <section class="brands-prototype view active big-dashboard" id="view-agency" style="{{ $brandStyle }}">
@@ -252,9 +267,9 @@
                         </select>
                         <select class="filter-select">
                             <option value="">All Activations</option>
-                            <option value="1">Campus & Gym Sampling</option>
-                            <option value="2">Night Trade Sales</option>
-                            <option value="3">Flavour Market Tour</option>
+                            @foreach($activationOptions as $optionActivation)
+                                <option value="{{ $optionActivation->id }}" @selected($activation?->id === $optionActivation->id)>{{ $optionActivation->name }}</option>
+                            @endforeach
                         </select>
                         <select class="filter-select">
                             <option value="30">Last 30 days</option>
@@ -269,27 +284,27 @@
                 <div style="display:grid; grid-template-columns:repeat(6, 1fr); gap:12px; margin:20px 0;">
                     <div class="stat-card-6">
                         <small>ACTIVE BRANDS</small>
-                        <strong>8</strong>
+                        <strong>{{ $formatNumber($portfolioStats['active_brands']) }}</strong>
                     </div>
                     <div class="stat-card-6">
                         <small>LIVE ACTIVATIONS</small>
-                        <strong>6</strong>
+                        <strong>{{ $formatNumber($portfolioStats['live_activations']) }}</strong>
                     </div>
                     <div class="stat-card-6">
                         <small>CONSUMERS</small>
-                        <strong>186,640</strong>
+                        <strong>{{ $formatNumber($portfolioStats['consumers']) }}</strong>
                     </div>
                     <div class="stat-card-6">
                         <small>SUPPORT STAFF</small>
-                        <strong>202</strong>
+                        <strong>{{ $formatNumber($portfolioStats['support_staff']) }}</strong>
                     </div>
                     <div class="stat-card-6">
                         <small>RETAIL PARTNERS</small>
-                        <strong>50</strong>
+                        <strong>{{ $formatNumber($portfolioStats['retail_partners']) }}</strong>
                     </div>
                     <div class="stat-card-6">
                         <small>CONVERSIONS</small>
-                        <strong>31,530</strong>
+                        <strong>{{ $formatNumber($portfolioStats['conversions']) }}</strong>
                     </div>
                 </div>
 
@@ -324,30 +339,18 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr style="border-bottom:1px solid #f0e6e9;">
-                                    <td style="padding:10px 4px; font-weight:800; color:#8b747a;">#1</td>
-                                    <td style="padding:10px 4px; font-weight:800;">Akosua Darko</td>
-                                    <td style="padding:10px 4px; color:#8b747a;">Rexona</td>
-                                    <td style="padding:10px 4px; text-align:right; font-weight:900; color:#ff1020;">301</td>
-                                </tr>
-                                <tr style="border-bottom:1px solid #f0e6e9;">
-                                    <td style="padding:10px 4px; font-weight:800; color:#8b747a;">#2</td>
-                                    <td style="padding:10px 4px; font-weight:800;">Michael Tetteh</td>
-                                    <td style="padding:10px 4px; color:#8b747a;">Guinness</td>
-                                    <td style="padding:10px 4px; text-align:right; font-weight:900; color:#ff1020;">288</td>
-                                </tr>
-                                <tr style="border-bottom:1px solid #f0e6e9;">
-                                    <td style="padding:10px 4px; font-weight:800; color:#8b747a;">#3</td>
-                                    <td style="padding:10px 4px; font-weight:800;">Priscilla Ofori</td>
-                                    <td style="padding:10px 4px; color:#8b747a;">Gino</td>
-                                    <td style="padding:10px 4px; text-align:right; font-weight:900; color:#ff1020;">251</td>
-                                </tr>
-                                <tr>
-                                    <td style="padding:10px 4px; font-weight:800; color:#8b747a;">#4</td>
-                                    <td style="padding:10px 4px; font-weight:800;">Kwame Asante</td>
-                                    <td style="padding:10px 4px; color:#8b747a;">Retail</td>
-                                    <td style="padding:10px 4px; text-align:right; font-weight:900; color:#ff1020;">244</td>
-                                </tr>
+                                @forelse($portfolioLeaderboard as $row)
+                                    <tr style="border-bottom:1px solid #f0e6e9;">
+                                        <td style="padding:10px 4px; font-weight:800; color:#8b747a;">#{{ $loop->iteration }}</td>
+                                        <td style="padding:10px 4px; font-weight:800;">{{ $row->user?->name ?: 'Unassigned staff' }}</td>
+                                        <td style="padding:10px 4px; color:#8b747a;">{{ $row->brand?->name ?: 'Unassigned brand' }}</td>
+                                        <td style="padding:10px 4px; text-align:right; font-weight:900; color:#ff1020;">{{ $formatNumber($row->units) }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="4" style="padding:22px 4px; color:#8b747a; text-align:center; font-size:12px;">No support staff activity has been logged for the selected period.</td>
+                                    </tr>
+                                @endforelse
                             </tbody>
                         </table>
                     </div>
@@ -358,7 +361,7 @@
                     <div class="panel-head">
                         <div>
                             <h3 style="font-size:16px; font-weight:900; color:#171115;">Brand & activation summary</h3>
-                            <small style="color:#8b747a;">8 brands — Last 30 days</small>
+                            <small style="color:#8b747a;">{{ $portfolioBrandSummaries->count() }} active brands from live records</small>
                         </div>
                     </div>
                     <table class="leader" style="width:100%; margin-top:15px; color:#171115;">
@@ -375,86 +378,22 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr style="border-bottom:1px solid #f0e6e9;">
-                                <td style="padding:12px 6px; font-weight:900;">Rexona</td>
-                                <td style="padding:12px 6px;">Campus & Gym Sampling Activation 2026</td>
-                                <td style="padding:12px 6px;"><span style="background:#e0f2fe; color:#0369a1; padding:3px 8px; border-radius:12px; font-size:9px; font-weight:800;">SAMPLING</span></td>
-                                <td style="padding:12px 6px; text-align:right; font-weight:800;">43,892</td>
-                                <td style="padding:12px 6px; text-align:right;">44</td>
-                                <td style="padding:12px 6px; text-align:right;">8</td>
-                                <td style="padding:12px 6px; color:#555;">Sample + Coupon</td>
-                                <td style="padding:12px 6px; text-align:right;"><span style="background:#dcfce7; color:#15803d; padding:3px 10px; border-radius:12px; font-size:9px; font-weight:900;">LIVE</span></td>
-                            </tr>
-                            <tr style="border-bottom:1px solid #f0e6e9;">
-                                <td style="padding:12px 6px; font-weight:900;">Guinness</td>
-                                <td style="padding:12px 6px;">Night Trade Sales Activation</td>
-                                <td style="padding:12px 6px;"><span style="background:#fef3c7; color:#b45309; padding:3px 8px; border-radius:12px; font-size:9px; font-weight:800;">SALES</span></td>
-                                <td style="padding:12px 6px; text-align:right; font-weight:800;">38,405</td>
-                                <td style="padding:12px 6px; text-align:right;">36</td>
-                                <td style="padding:12px 6px; text-align:right;">12</td>
-                                <td style="padding:12px 6px; color:#555;">Bottle Sales + Rewards</td>
-                                <td style="padding:12px 6px; text-align:right;"><span style="background:#dcfce7; color:#15803d; padding:3px 10px; border-radius:12px; font-size:9px; font-weight:900;">LIVE</span></td>
-                            </tr>
-                            <tr style="border-bottom:1px solid #f0e6e9;">
-                                <td style="padding:12px 6px; font-weight:900;">Gino</td>
-                                <td style="padding:12px 6px;">Flavour Market Tour</td>
-                                <td style="padding:12px 6px;"><span style="background:#e0f2fe; color:#0369a1; padding:3px 8px; border-radius:12px; font-size:9px; font-weight:800;">SAMPLING</span></td>
-                                <td style="padding:12px 6px; text-align:right; font-weight:800;">31,772</td>
-                                <td style="padding:12px 6px; text-align:right;">31</td>
-                                <td style="padding:12px 6px; text-align:right;">10</td>
-                                <td style="padding:12px 6px; color:#555;">Sample + Recipe Card</td>
-                                <td style="padding:12px 6px; text-align:right;"><span style="background:#dcfce7; color:#15803d; padding:3px 10px; border-radius:12px; font-size:9px; font-weight:900;">LIVE</span></td>
-                            </tr>
-                            <tr style="border-bottom:1px solid #f0e6e9;">
-                                <td style="padding:12px 6px; font-weight:900;">OMO</td>
-                                <td style="padding:12px 6px;">Clean Futures Tour</td>
-                                <td style="padding:12px 6px;"><span style="background:#e0f2fe; color:#0369a1; padding:3px 8px; border-radius:12px; font-size:9px; font-weight:800;">SAMPLING</span></td>
-                                <td style="padding:12px 6px; text-align:right; font-weight:800;">24,910</td>
-                                <td style="padding:12px 6px; text-align:right;">28</td>
-                                <td style="padding:12px 6px; text-align:right;">7</td>
-                                <td style="padding:12px 6px; color:#555;">Trial Wash + Coupon</td>
-                                <td style="padding:12px 6px; text-align:right;"><span style="background:#dcfce7; color:#15803d; padding:3px 10px; border-radius:12px; font-size:9px; font-weight:900;">LIVE</span></td>
-                            </tr>
-                            <tr style="border-bottom:1px solid #f0e6e9;">
-                                <td style="padding:12px 6px; font-weight:900;">Lush Hair</td>
-                                <td style="padding:12px 6px;">Campus Festival</td>
-                                <td style="padding:12px 6px;"><span style="background:#f3e8ff; color:#6b21a8; padding:3px 8px; border-radius:12px; font-size:9px; font-weight:800;">EVENT</span></td>
-                                <td style="padding:12px 6px; text-align:right; font-weight:800;">18,206</td>
-                                <td style="padding:12px 6px; text-align:right;">22</td>
-                                <td style="padding:12px 6px; text-align:right;">5</td>
-                                <td style="padding:12px 6px; color:#555;">Styling Demo</td>
-                                <td style="padding:12px 6px; text-align:right;"><span style="background:#fef3c7; color:#d97706; padding:3px 10px; border-radius:12px; font-size:9px; font-weight:900;">COMPLETED</span></td>
-                            </tr>
-                            <tr style="border-bottom:1px solid #f0e6e9;">
-                                <td style="padding:12px 6px; font-weight:900;">Dove</td>
-                                <td style="padding:12px 6px;">Real Beauty Pop-Up</td>
-                                <td style="padding:12px 6px;"><span style="background:#fce7f3; color:#be185d; padding:3px 8px; border-radius:12px; font-size:9px; font-weight:800;">EXPERIENTIAL</span></td>
-                                <td style="padding:12px 6px; text-align:right; font-weight:800;">12,117</td>
-                                <td style="padding:12px 6px; text-align:right;">18</td>
-                                <td style="padding:12px 6px; text-align:right;">4</td>
-                                <td style="padding:12px 6px; color:#555;">Skin Consultation</td>
-                                <td style="padding:12px 6px; text-align:right;"><span style="background:#dcfce7; color:#15803d; padding:3px 10px; border-radius:12px; font-size:9px; font-weight:900;">LIVE</span></td>
-                            </tr>
-                            <tr style="border-bottom:1px solid #f0e6e9;">
-                                <td style="padding:12px 6px; font-weight:900;">Ovaltine</td>
-                                <td style="padding:12px 6px;">Energy Schools Tour</td>
-                                <td style="padding:12px 6px;"><span style="background:#e0f2fe; color:#0369a1; padding:3px 8px; border-radius:12px; font-size:9px; font-weight:800;">SAMPLING</span></td>
-                                <td style="padding:12px 6px; text-align:right; font-weight:800;">9,128</td>
-                                <td style="padding:12px 6px; text-align:right;">15</td>
-                                <td style="padding:12px 6px; text-align:right;">2</td>
-                                <td style="padding:12px 6px; color:#555;">Cup Sampling</td>
-                                <td style="padding:12px 6px; text-align:right;"><span style="background:#fef3c7; color:#d97706; padding:3px 10px; border-radius:12px; font-size:9px; font-weight:900;">COMPLETED</span></td>
-                            </tr>
-                            <tr>
-                                <td style="padding:12px 6px; font-weight:900;">MTN</td>
-                                <td style="padding:12px 6px;">Fibre Broadband Connect</td>
-                                <td style="padding:12px 6px;"><span style="background:#dcfce7; color:#15803d; padding:3px 8px; border-radius:12px; font-size:9px; font-weight:800;">DIRECT SALES</span></td>
-                                <td style="padding:12px 6px; text-align:right; font-weight:800;">8,210</td>
-                                <td style="padding:12px 6px; text-align:right;">12</td>
-                                <td style="padding:12px 6px; text-align:right;">2</td>
-                                <td style="padding:12px 6px; color:#555;">Sign-ups</td>
-                                <td style="padding:12px 6px; text-align:right;"><span style="background:#dcfce7; color:#15803d; padding:3px 10px; border-radius:12px; font-size:9px; font-weight:900;">LIVE</span></td>
-                            </tr>
+                            @forelse($portfolioBrandSummaries as $summary)
+                                <tr style="border-bottom:1px solid #f0e6e9;">
+                                    <td style="padding:12px 6px; font-weight:900;">{{ $summary['name'] }}</td>
+                                    <td style="padding:12px 6px;">{{ $summary['activation_name'] }}</td>
+                                    <td style="padding:12px 6px;"><span style="background:#e0f2fe; color:#0369a1; padding:3px 8px; border-radius:12px; font-size:9px; font-weight:800;">{{ strtoupper($summary['activation_type']) }}</span></td>
+                                    <td style="padding:12px 6px; text-align:right; font-weight:800;">{{ $formatNumber($summary['consumer_count']) }}</td>
+                                    <td style="padding:12px 6px; text-align:right;">{{ $formatNumber($summary['promoters']) }}</td>
+                                    <td style="padding:12px 6px; text-align:right;">{{ $formatNumber($summary['retail_partners']) }}</td>
+                                    <td style="padding:12px 6px; color:#555;">{{ $summary['primary_result'] }}</td>
+                                    <td style="padding:12px 6px; text-align:right;">{!! $statusBadge($summary['status']) !!}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="8" style="padding:24px 6px; color:#8b747a; text-align:center;">No active brand records are available yet.</td>
+                                </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
@@ -542,105 +481,24 @@
                     </div>
                 </div>
 
-                <!-- 8 BRAND CARDS GRID -->
+                                <!-- BRAND CARDS GRID -->
                 <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:16px; margin:20px 0;">
-                    <div class="brand-perf-card">
-                        <div>
-                            <strong style="font-size:16px; font-weight:900; color:#171115;">Rexona</strong>
-                            <small style="display:block; color:#8b747a; font-size:11px; margin-top:2px;">Campus & Gym Sampling Activation 2026</small>
-                        </div>
-                        <div style="font-size:32px; font-weight:900; color:#171115; margin:16px 0 8px;">43,892</div>
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="background:#dcfce7; color:#15803d; padding:3px 10px; border-radius:12px; font-size:9px; font-weight:900;">LIVE</span>
-                            <small style="color:#8b747a; font-size:11px; font-weight:700;">21.3% target</small>
-                        </div>
-                    </div>
-
-                    <div class="brand-perf-card">
-                        <div>
-                            <strong style="font-size:16px; font-weight:900; color:#171115;">Guinness</strong>
-                            <small style="display:block; color:#8b747a; font-size:11px; margin-top:2px;">Night Trade Sales Activation</small>
-                        </div>
-                        <div style="font-size:32px; font-weight:900; color:#171115; margin:16px 0 8px;">38,405</div>
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="background:#dcfce7; color:#15803d; padding:3px 10px; border-radius:12px; font-size:9px; font-weight:900;">LIVE</span>
-                            <small style="color:#8b747a; font-size:11px; font-weight:700;">68.6% target</small>
-                        </div>
-                    </div>
-
-                    <div class="brand-perf-card">
-                        <div>
-                            <strong style="font-size:16px; font-weight:900; color:#171115;">Gino</strong>
-                            <small style="display:block; color:#8b747a; font-size:11px; margin-top:2px;">Flavour Market Tour</small>
-                        </div>
-                        <div style="font-size:32px; font-weight:900; color:#171115; margin:16px 0 8px;">31,772</div>
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="background:#dcfce7; color:#15803d; padding:3px 10px; border-radius:12px; font-size:9px; font-weight:900;">LIVE</span>
-                            <small style="color:#8b747a; font-size:11px; font-weight:700;">65.1% target</small>
-                        </div>
-                    </div>
-
-                    <div class="brand-perf-card">
-                        <div>
-                            <strong style="font-size:16px; font-weight:900; color:#171115;">OMO</strong>
-                            <small style="display:block; color:#8b747a; font-size:11px; margin-top:2px;">Clean Futures Tour</small>
-                        </div>
-                        <div style="font-size:32px; font-weight:900; color:#171115; margin:16px 0 8px;">24,910</div>
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="background:#dcfce7; color:#15803d; padding:3px 10px; border-radius:12px; font-size:9px; font-weight:900;">LIVE</span>
-                            <small style="color:#8b747a; font-size:11px; font-weight:700;">63.2% target</small>
-                        </div>
-                    </div>
-
-                    <div class="brand-perf-card">
-                        <div>
-                            <strong style="font-size:16px; font-weight:900; color:#171115;">Lush Hair</strong>
-                            <small style="display:block; color:#8b747a; font-size:11px; margin-top:2px;">Campus Festival</small>
-                        </div>
-                        <div style="font-size:32px; font-weight:900; color:#171115; margin:16px 0 8px;">18,206</div>
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="background:#fef3c7; color:#d97706; padding:3px 10px; border-radius:12px; font-size:9px; font-weight:900;">COMPLETED</span>
-                            <small style="color:#8b747a; font-size:11px; font-weight:700;">70% target</small>
-                        </div>
-                    </div>
-
-                    <div class="brand-perf-card">
-                        <div>
-                            <strong style="font-size:16px; font-weight:900; color:#171115;">Dove</strong>
-                            <small style="display:block; color:#8b747a; font-size:11px; margin-top:2px;">Real Beauty Pop-Up</small>
-                        </div>
-                        <div style="font-size:32px; font-weight:900; color:#171115; margin:16px 0 8px;">12,117</div>
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="background:#dcfce7; color:#15803d; padding:3px 10px; border-radius:12px; font-size:9px; font-weight:900;">LIVE</span>
-                            <small style="color:#8b747a; font-size:11px; font-weight:700;">67.2% target</small>
-                        </div>
-                    </div>
-
-                    <div class="brand-perf-card">
-                        <div>
-                            <strong style="font-size:16px; font-weight:900; color:#171115;">Ovaltine</strong>
-                            <small style="display:block; color:#8b747a; font-size:11px; margin-top:2px;">Energy Schools Tour</small>
-                        </div>
-                        <div style="font-size:32px; font-weight:900; color:#171115; margin:16px 0 8px;">9,128</div>
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="background:#fef3c7; color:#d97706; padding:3px 10px; border-radius:12px; font-size:9px; font-weight:900;">COMPLETED</span>
-                            <small style="color:#8b747a; font-size:11px; font-weight:700;">78.3% target</small>
-                        </div>
-                    </div>
-
-                    <div class="brand-perf-card">
-                        <div>
-                            <strong style="font-size:16px; font-weight:900; color:#171115;">MTN</strong>
-                            <small style="display:block; color:#8b747a; font-size:11px; margin-top:2px;">Fibre Broadband Connect</small>
-                        </div>
-                        <div style="font-size:32px; font-weight:900; color:#171115; margin:16px 0 8px;">8,210</div>
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="background:#dcfce7; color:#15803d; padding:3px 10px; border-radius:12px; font-size:9px; font-weight:900;">LIVE</span>
-                            <small style="color:#8b747a; font-size:11px; font-weight:700;">68.4% target</small>
-                        </div>
-                    </div>
+                    @forelse($portfolioBrandSummaries as $summary)
+                        <a href="{{ route('brands-platform.agency', $summary['slug']) }}" class="brand-perf-card" style="text-decoration:none;">
+                            <div>
+                                <strong style="font-size:16px; font-weight:900; color:#171115;">{{ $summary['name'] }}</strong>
+                                <small style="display:block; color:#8b747a; font-size:11px; margin-top:2px;">{{ $summary['activation_name'] }}</small>
+                            </div>
+                            <div style="font-size:32px; font-weight:900; color:#171115; margin:16px 0 8px;">{{ $formatNumber($summary['consumer_count']) }}</div>
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                {!! $statusBadge($summary['status']) !!}
+                                <small style="color:#8b747a; font-size:11px; font-weight:700;">{{ $formatPercent($summary['target_rate']) }} target</small>
+                            </div>
+                        </a>
+                    @empty
+                        <div class="brand-perf-card" style="grid-column:1/-1; text-align:center; color:#8b747a;">No active brand records are available yet.</div>
+                    @endforelse
                 </div>
-
                 <!-- BRAND COMPARISON TABLE -->
                 <div class="panel">
                     <div class="panel-head">
@@ -662,33 +520,21 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr style="border-bottom:1px solid #f0e6e9;">
-                                <td style="padding:12px 6px; font-weight:900;">Rexona</td>
-                                <td style="padding:12px 6px;">Campus & Gym Sampling Activation 2026</td>
-                                <td style="padding:12px 6px; color:#666;">sampling</td>
-                                <td style="padding:12px 6px; text-align:right; font-weight:800;">43,892</td>
-                                <td style="padding:12px 6px; text-align:right;">7,091</td>
-                                <td style="padding:12px 6px; text-align:right;">44</td>
-                                <td style="padding:12px 6px; text-align:right;"><span style="background:#dcfce7; color:#15803d; padding:3px 10px; border-radius:12px; font-size:9px; font-weight:900;">LIVE</span></td>
-                            </tr>
-                            <tr style="border-bottom:1px solid #f0e6e9;">
-                                <td style="padding:12px 6px; font-weight:900;">Guinness</td>
-                                <td style="padding:12px 6px;">Night Trade Sales Activation</td>
-                                <td style="padding:12px 6px; color:#666;">sales</td>
-                                <td style="padding:12px 6px; text-align:right; font-weight:800;">38,405</td>
-                                <td style="padding:12px 6px; text-align:right;">9,442</td>
-                                <td style="padding:12px 6px; text-align:right;">36</td>
-                                <td style="padding:12px 6px; text-align:right;"><span style="background:#dcfce7; color:#15803d; padding:3px 10px; border-radius:12px; font-size:9px; font-weight:900;">LIVE</span></td>
-                            </tr>
-                            <tr style="border-bottom:1px solid #f0e6e9;">
-                                <td style="padding:12px 6px; font-weight:900;">Gino</td>
-                                <td style="padding:12px 6px;">Flavour Market Tour</td>
-                                <td style="padding:12px 6px; color:#666;">sampling</td>
-                                <td style="padding:12px 6px; text-align:right; font-weight:800;">31,772</td>
-                                <td style="padding:12px 6px; text-align:right;">4,810</td>
-                                <td style="padding:12px 6px; text-align:right;">31</td>
-                                <td style="padding:12px 6px; text-align:right;"><span style="background:#dcfce7; color:#15803d; padding:3px 10px; border-radius:12px; font-size:9px; font-weight:900;">LIVE</span></td>
-                            </tr>
+                            @forelse($portfolioBrandSummaries as $summary)
+                                <tr style="border-bottom:1px solid #f0e6e9;">
+                                    <td style="padding:12px 6px; font-weight:900;">{{ $summary['name'] }}</td>
+                                    <td style="padding:12px 6px;">{{ $summary['activation_name'] }}</td>
+                                    <td style="padding:12px 6px; color:#666;">{{ $summary['activation_type'] }}</td>
+                                    <td style="padding:12px 6px; text-align:right; font-weight:800;">{{ $formatNumber($summary['consumer_count']) }}</td>
+                                    <td style="padding:12px 6px; text-align:right;">{{ $formatNumber($summary['conversions']) }}</td>
+                                    <td style="padding:12px 6px; text-align:right;">{{ $formatNumber($summary['staff']) }}</td>
+                                    <td style="padding:12px 6px; text-align:right;">{!! $statusBadge($summary['status']) !!}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="7" style="padding:24px 6px; color:#8b747a; text-align:center;">No active brand records are available yet.</td>
+                                </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
@@ -718,34 +564,15 @@
                     </div>
                 </div>
 
-                <!-- 6 STAT CARDS -->
+                                <!-- PROMOTER STAT CARDS -->
                 <div style="display:grid; grid-template-columns:repeat(6, 1fr); gap:12px; margin:20px 0;">
-                    <div class="stat-card-6">
-                        <small>PROMOTERS</small>
-                        <strong>55</strong>
-                    </div>
-                    <div class="stat-card-6">
-                        <small>CHECKED IN</small>
-                        <strong>54</strong>
-                    </div>
-                    <div class="stat-card-6">
-                        <small>AVAILABLE / ACTIVE</small>
-                        <strong>55</strong>
-                    </div>
-                    <div class="stat-card-6">
-                        <small>AVG CONVERSION</small>
-                        <strong>77%</strong>
-                    </div>
-                    <div class="stat-card-6">
-                        <small>TOP ACTIVITY</small>
-                        <strong>301</strong>
-                    </div>
-                    <div class="stat-card-6">
-                        <small>LOCATIONS COVERED</small>
-                        <strong>10</strong>
-                    </div>
+                    <div class="stat-card-6"><small>PROMOTERS</small><strong>{{ $formatNumber($promoterStats['promoters']) }}</strong></div>
+                    <div class="stat-card-6"><small>CHECKED IN</small><strong>{{ $formatNumber($promoterStats['checked_in']) }}</strong></div>
+                    <div class="stat-card-6"><small>AVAILABLE / ACTIVE</small><strong>{{ $formatNumber($promoterStats['active']) }}</strong></div>
+                    <div class="stat-card-6"><small>AVG CONVERSION</small><strong>{{ $formatPercent($promoterStats['avg_conversion']) }}</strong></div>
+                    <div class="stat-card-6"><small>TOP ACTIVITY</small><strong>{{ $formatNumber($promoterStats['top_activity']) }}</strong></div>
+                    <div class="stat-card-6"><small>LOCATIONS COVERED</small><strong>{{ $formatNumber($promoterStats['locations_covered']) }}</strong></div>
                 </div>
-
                 <!-- PROMOTER PERFORMANCE TABLE -->
                 <div class="panel">
                     <div class="panel-head">
@@ -768,56 +595,25 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr style="border-bottom:1px solid #f0e6e9;">
-                                <td style="padding:12px 6px; font-weight:900;">Akosua Darko</td>
-                                <td style="padding:12px 6px; color:#8b747a; font-weight:700;">PROMO014</td>
-                                <td style="padding:12px 6px;">Rexona</td>
-                                <td style="padding:12px 6px;">Fresh Campus 2026</td>
-                                <td style="padding:12px 6px; color:#555;">University of Ghana</td>
-                                <td style="padding:12px 6px; text-align:right; font-weight:800;">301</td>
-                                <td style="padding:12px 6px; text-align:right;">84%</td>
-                                <td style="padding:12px 6px; text-align:right;"><span style="background:#dcfce7; color:#15803d; padding:3px 10px; border-radius:12px; font-size:9px; font-weight:900;">ASSIGNED</span></td>
-                            </tr>
-                            <tr style="border-bottom:1px solid #f0e6e9;">
-                                <td style="padding:12px 6px; font-weight:900;">Michael Tetteh</td>
-                                <td style="padding:12px 6px; color:#8b747a; font-weight:700;">PROMO001</td>
-                                <td style="padding:12px 6px;">Guinness</td>
-                                <td style="padding:12px 6px;">Night Trade Sales Activation</td>
-                                <td style="padding:12px 6px; color:#555;">Secondary Partner Location</td>
-                                <td style="padding:12px 6px; text-align:right; font-weight:800;">288</td>
-                                <td style="padding:12px 6px; text-align:right;">82%</td>
-                                <td style="padding:12px 6px; text-align:right;"><span style="background:#dcfce7; color:#15803d; padding:3px 10px; border-radius:12px; font-size:9px; font-weight:900;">ASSIGNED</span></td>
-                            </tr>
-                            <tr style="border-bottom:1px solid #f0e6e9;">
-                                <td style="padding:12px 6px; font-weight:900;">Priscilla Ofori</td>
-                                <td style="padding:12px 6px; color:#8b747a; font-weight:700;">PROMO021</td>
-                                <td style="padding:12px 6px;">Gino</td>
-                                <td style="padding:12px 6px;">Flavour Market Tour</td>
-                                <td style="padding:12px 6px; color:#555;">Primary Activation Location</td>
-                                <td style="padding:12px 6px; text-align:right; font-weight:800;">251</td>
-                                <td style="padding:12px 6px; text-align:right;">78%</td>
-                                <td style="padding:12px 6px; text-align:right;"><span style="background:#dcfce7; color:#15803d; padding:3px 10px; border-radius:12px; font-size:9px; font-weight:900;">ASSIGNED</span></td>
-                            </tr>
-                            <tr style="border-bottom:1px solid #f0e6e9;">
-                                <td style="padding:12px 6px; font-weight:900;">Daniel Owusu</td>
-                                <td style="padding:12px 6px; color:#8b747a; font-weight:700;">PROMO022</td>
-                                <td style="padding:12px 6px;">Rexona</td>
-                                <td style="padding:12px 6px;">Campus & Gym Sampling Activation 2026</td>
-                                <td style="padding:12px 6px; color:#555;">KNUST</td>
-                                <td style="padding:12px 6px; text-align:right; font-weight:800;">244</td>
-                                <td style="padding:12px 6px; text-align:right;">79%</td>
-                                <td style="padding:12px 6px; text-align:right;"><span style="background:#dcfce7; color:#15803d; padding:3px 10px; border-radius:12px; font-size:9px; font-weight:900;">ASSIGNED</span></td>
-                            </tr>
-                            <tr style="border-bottom:1px solid #f0e6e9;">
-                                <td style="padding:12px 6px; font-weight:900;">Esi Badu</td>
-                                <td style="padding:12px 6px; color:#8b747a; font-weight:700;">PROMO023</td>
-                                <td style="padding:12px 6px;">Rexona</td>
-                                <td style="padding:12px 6px;">Campus & Gym Sampling Activation 2026</td>
-                                <td style="padding:12px 6px; color:#555;">Achimota Fitness Centre</td>
-                                <td style="padding:12px 6px; text-align:right; font-weight:800;">228</td>
-                                <td style="padding:12px 6px; text-align:right;">74%</td>
-                                <td style="padding:12px 6px; text-align:right;"><span style="background:#dcfce7; color:#15803d; padding:3px 10px; border-radius:12px; font-size:9px; font-weight:900;">ASSIGNED</span></td>
-                            </tr>
+                            @forelse($promoterRows as $row)
+                                @php
+                                    $conversionRate = (int) $row->units > 0 ? (($row->conversions / $row->units) * 100) : 0;
+                                @endphp
+                                <tr style="border-bottom:1px solid #f0e6e9;">
+                                    <td style="padding:12px 6px; font-weight:900;">{{ $row->user?->name ?: 'Unassigned staff' }}</td>
+                                    <td style="padding:12px 6px; color:#8b747a; font-weight:700;">{{ $row->user?->staff_id_number ?: 'No ID' }}</td>
+                                    <td style="padding:12px 6px;">{{ $brand->name }}</td>
+                                    <td style="padding:12px 6px;">{{ $row->activation?->name ?: 'No activation linked' }}</td>
+                                    <td style="padding:12px 6px; color:#555;">{{ $row->location_label }}</td>
+                                    <td style="padding:12px 6px; text-align:right; font-weight:800;">{{ $formatNumber($row->units) }}</td>
+                                    <td style="padding:12px 6px; text-align:right;">{{ $formatPercent($conversionRate) }}</td>
+                                    <td style="padding:12px 6px; text-align:right;">{!! $statusBadge($row->status) !!}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="8" style="padding:24px 6px; color:#8b747a; text-align:center;">No promoter activity has been logged for this brand and filter period.</td>
+                                </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
@@ -847,63 +643,21 @@
                     </div>
                 </div>
 
-                <!-- 6 OUTLET CARDS GRID -->
+                                <!-- RETAIL / PARTNER CARDS GRID -->
                 <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; margin:20px 0;">
-                    <div class="brand-perf-card">
-                        <div>
-                            <strong style="font-size:16px; font-weight:900; color:#171115;">Shoprite &bull; Accra Mall</strong>
-                            <small style="display:block; color:#8b747a; font-size:11px; margin-top:2px;">Rexona - Campus & Gym Sampling Activation 2026</small>
+                    @forelse($retailRows->take(6) as $row)
+                        <div class="brand-perf-card">
+                            <div>
+                                <strong style="font-size:16px; font-weight:900; color:#171115;">{{ $row->location_label }}</strong>
+                                <small style="display:block; color:#8b747a; font-size:11px; margin-top:2px;">{{ $brand->name }} - {{ $row->activation?->name ?: 'No activation linked' }}</small>
+                            </div>
+                            <div style="font-size:32px; font-weight:900; color:#171115; margin:18px 0 4px;">{{ $formatNumber($row->units) }}</div>
+                            <small style="color:#8b747a; font-weight:700;">Transactions / actions</small>
                         </div>
-                        <div style="font-size:32px; font-weight:900; color:#171115; margin:18px 0 4px;">684</div>
-                        <small style="color:#8b747a; font-weight:700;">Transactions / actions</small>
-                    </div>
-
-                    <div class="brand-perf-card">
-                        <div>
-                            <strong style="font-size:16px; font-weight:900; color:#171115;">Melcom &bull; Achimota</strong>
-                            <small style="display:block; color:#8b747a; font-size:11px; margin-top:2px;">Rexona - Campus & Gym Sampling Activation 2026</small>
-                        </div>
-                        <div style="font-size:32px; font-weight:900; color:#171115; margin:18px 0 4px;">522</div>
-                        <small style="color:#8b747a; font-weight:700;">Transactions / actions</small>
-                    </div>
-
-                    <div class="brand-perf-card">
-                        <div>
-                            <strong style="font-size:16px; font-weight:900; color:#171115;">Alley Bar</strong>
-                            <small style="display:block; color:#8b747a; font-size:11px; margin-top:2px;">Guinness - Night Trade Sales Activation</small>
-                        </div>
-                        <div style="font-size:32px; font-weight:900; color:#171115; margin:18px 0 4px;">742</div>
-                        <small style="color:#8b747a; font-weight:700;">Transactions / actions</small>
-                    </div>
-
-                    <div class="brand-perf-card">
-                        <div>
-                            <strong style="font-size:16px; font-weight:900; color:#171115;">Garage</strong>
-                            <small style="display:block; color:#8b747a; font-size:11px; margin-top:2px;">Guinness - Night Trade Sales Activation</small>
-                        </div>
-                        <div style="font-size:32px; font-weight:900; color:#171115; margin:18px 0 4px;">634</div>
-                        <small style="color:#8b747a; font-weight:700;">Transactions / actions</small>
-                    </div>
-
-                    <div class="brand-perf-card">
-                        <div>
-                            <strong style="font-size:16px; font-weight:900; color:#171115;">Palace Mall</strong>
-                            <small style="display:block; color:#8b747a; font-size:11px; margin-top:2px;">OMO - Clean Futures Tour</small>
-                        </div>
-                        <div style="font-size:32px; font-weight:900; color:#171115; margin:18px 0 4px;">436</div>
-                        <small style="color:#8b747a; font-weight:700;">Transactions / actions</small>
-                    </div>
-
-                    <div class="brand-perf-card">
-                        <div>
-                            <strong style="font-size:16px; font-weight:900; color:#171115;">East Legon Estate</strong>
-                            <small style="display:block; color:#8b747a; font-size:11px; margin-top:2px;">MTN - Fibre Broadband Connect</small>
-                        </div>
-                        <div style="font-size:32px; font-weight:900; color:#171115; margin:18px 0 4px;">188</div>
-                        <small style="color:#8b747a; font-weight:700;">Transactions / actions</small>
-                    </div>
+                    @empty
+                        <div class="brand-perf-card" style="grid-column:1/-1; text-align:center; color:#8b747a;">No retail or partner activity has been logged for this brand and filter period.</div>
+                    @endforelse
                 </div>
-
                 <!-- RETAIL / PARTNER PERFORMANCE TABLE -->
                 <div class="panel">
                     <div class="panel-head">
@@ -925,42 +679,21 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr style="border-bottom:1px solid #f0e6e9;">
-                                <td style="padding:12px 6px; font-weight:900;">Shoprite &bull; Accra Mall</td>
-                                <td style="padding:12px 6px;">Rexona</td>
-                                <td style="padding:12px 6px;">Campus & Gym Sampling Activation 2026</td>
-                                <td style="padding:12px 6px; text-align:right; font-weight:800;">684</td>
-                                <td style="padding:12px 6px; text-align:right; font-weight:800;">GHS 3,420</td>
-                                <td style="padding:12px 6px; text-align:right; color:#8b747a;">28</td>
-                                <td style="padding:12px 6px; text-align:right;"><span style="background:#fef3c7; color:#d97706; padding:3px 10px; border-radius:12px; font-size:9px; font-weight:900;">ONLINE</span></td>
-                            </tr>
-                            <tr style="border-bottom:1px solid #f0e6e9;">
-                                <td style="padding:12px 6px; font-weight:900;">Melcom &bull; Achimota</td>
-                                <td style="padding:12px 6px;">Rexona</td>
-                                <td style="padding:12px 6px;">Campus & Gym Sampling Activation 2026</td>
-                                <td style="padding:12px 6px; text-align:right; font-weight:800;">522</td>
-                                <td style="padding:12px 6px; text-align:right; font-weight:800;">GHS 2,610</td>
-                                <td style="padding:12px 6px; text-align:right; color:#8b747a;">19</td>
-                                <td style="padding:12px 6px; text-align:right;"><span style="background:#fef3c7; color:#d97706; padding:3px 10px; border-radius:12px; font-size:9px; font-weight:900;">ONLINE</span></td>
-                            </tr>
-                            <tr style="border-bottom:1px solid #f0e6e9;">
-                                <td style="padding:12px 6px; font-weight:900;">Alley Bar</td>
-                                <td style="padding:12px 6px;">Guinness</td>
-                                <td style="padding:12px 6px;">Night Trade Sales Activation</td>
-                                <td style="padding:12px 6px; text-align:right; font-weight:800;">742</td>
-                                <td style="padding:12px 6px; text-align:right; font-weight:800;">742 bottles</td>
-                                <td style="padding:12px 6px; text-align:right; color:#8b747a;">4</td>
-                                <td style="padding:12px 6px; text-align:right;"><span style="background:#ffe4e6; color:#e11d48; padding:3px 10px; border-radius:12px; font-size:9px; font-weight:900;">LIVE</span></td>
-                            </tr>
-                            <tr style="border-bottom:1px solid #f0e6e9;">
-                                <td style="padding:12px 6px; font-weight:900;">Garage</td>
-                                <td style="padding:12px 6px;">Guinness</td>
-                                <td style="padding:12px 6px;">Night Trade Sales Activation</td>
-                                <td style="padding:12px 6px; text-align:right; font-weight:800;">634</td>
-                                <td style="padding:12px 6px; text-align:right; font-weight:800;">634 bottles</td>
-                                <td style="padding:12px 6px; text-align:right; color:#8b747a;">7</td>
-                                <td style="padding:12px 6px; text-align:right;"><span style="background:#ffe4e6; color:#e11d48; padding:3px 10px; border-radius:12px; font-size:9px; font-weight:900;">LIVE</span></td>
-                            </tr>
+                            @forelse($retailRows as $row)
+                                <tr style="border-bottom:1px solid #f0e6e9;">
+                                    <td style="padding:12px 6px; font-weight:900;">{{ $row->location_label }}</td>
+                                    <td style="padding:12px 6px;">{{ $brand->name }}</td>
+                                    <td style="padding:12px 6px;">{{ $row->activation?->name ?: 'No activation linked' }}</td>
+                                    <td style="padding:12px 6px; text-align:right; font-weight:800;">{{ $formatNumber($row->units) }}</td>
+                                    <td style="padding:12px 6px; text-align:right; font-weight:800;">{{ $row->transaction_value > 0 ? 'GHS '.$formatNumber($row->transaction_value) : $formatNumber($row->conversions).' conversions' }}</td>
+                                    <td style="padding:12px 6px; text-align:right; color:#8b747a;">{{ $formatNumber($row->failed_count) }}</td>
+                                    <td style="padding:12px 6px; text-align:right;">{!! $statusBadge($row->status) !!}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="7" style="padding:24px 6px; color:#8b747a; text-align:center;">No retail or partner activity has been logged for this brand and filter period.</td>
+                                </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
@@ -994,30 +727,29 @@
                     Consumer insights uses verified consumer records captured during each activation. Brand, activation status and date filters above also update this view.
                 </p>
 
-                <!-- 4 TOP STAT CARDS -->
+                                <!-- TOP STAT CARDS -->
                 <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:16px; margin-bottom:20px;">
                     <div class="stat-card-6" style="padding:20px;">
                         <small>LEADING GENDER</small>
-                        <strong style="font-size:24px;">Female &bull; 58%</strong>
+                        <strong style="font-size:24px;">{{ $consumerInsightStats['leading_gender'] }} &bull; {{ $formatPercent($consumerInsightStats['leading_gender_rate']) }}</strong>
                         <p style="margin:6px 0 0; color:#8b747a; font-size:11px;">Largest verified audience segment.</p>
                     </div>
                     <div class="stat-card-6" style="padding:20px;">
                         <small>LARGEST AGE GROUP</small>
-                        <strong style="font-size:24px;">18–22 &bull; 31%</strong>
+                        <strong style="font-size:24px;">{{ $consumerInsightStats['largest_age_group'] }} &bull; {{ $formatPercent($consumerInsightStats['largest_age_group_rate']) }}</strong>
                         <p style="margin:6px 0 0; color:#8b747a; font-size:11px;">Age group with the highest verified participation.</p>
                     </div>
                     <div class="stat-card-6" style="padding:20px;">
                         <small>HIGH INTENT</small>
-                        <strong style="font-size:24px;">68%</strong>
+                        <strong style="font-size:24px;">{{ $formatPercent($consumerInsightStats['high_intent_rate']) }}</strong>
                         <p style="margin:6px 0 0; color:#8b747a; font-size:11px;">Definitely / high-intent response after activation.</p>
                     </div>
                     <div class="stat-card-6" style="padding:20px;">
                         <small>NEW / ACQUISITION AUDIENCE</small>
-                        <strong style="font-size:24px;">42%</strong>
+                        <strong style="font-size:24px;">{{ $formatPercent($consumerInsightStats['new_audience_rate']) }}</strong>
                         <p style="margin:6px 0 0; color:#8b747a; font-size:11px;">Consumers who are new to the brand, product or service proposition.</p>
                     </div>
                 </div>
-
                 <!-- CHARTS ROW: GENDER & AGE -->
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;">
                     <div class="panel">
@@ -1031,31 +763,19 @@
                             <div style="height:170px; position:relative;">
                                 <canvas id="insightsGenderDonutChart"></canvas>
                             </div>
-                            <div style="display:flex; flex-direction:column; gap:12px;">
-                                <div>
-                                    <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:700;">
-                                        <span>Female</span><span>58%</span>
+                                                        <div style="display:flex; flex-direction:column; gap:12px;">
+                                @forelse($genderDistribution as $row)
+                                    <div>
+                                        <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:700;">
+                                            <span>{{ $row['label'] }}</span><span>{{ $formatPercent($row['percentage']) }}</span>
+                                        </div>
+                                        <div style="height:8px; background:#f0e6e9; border-radius:999px; overflow:hidden; margin-top:4px;">
+                                            <div style="width:{{ min(100, $row['percentage']) }}%; height:100%; background:#ff1020; border-radius:999px;"></div>
+                                        </div>
                                     </div>
-                                    <div style="height:8px; background:#f0e6e9; border-radius:999px; overflow:hidden; margin-top:4px;">
-                                        <div style="width:58%; height:100%; background:#ff1020; border-radius:999px;"></div>
-                                    </div>
-                                </div>
-                                <div>
-                                    <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:700;">
-                                        <span>Male</span><span>41%</span>
-                                    </div>
-                                    <div style="height:8px; background:#f0e6e9; border-radius:999px; overflow:hidden; margin-top:4px;">
-                                        <div style="width:41%; height:100%; background:#171115; border-radius:999px;"></div>
-                                    </div>
-                                </div>
-                                <div>
-                                    <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:700;">
-                                        <span>Other / Prefer not</span><span>1%</span>
-                                    </div>
-                                    <div style="height:8px; background:#f0e6e9; border-radius:999px; overflow:hidden; margin-top:4px;">
-                                        <div style="width:1%; height:100%; background:#8b747a; border-radius:999px;"></div>
-                                    </div>
-                                </div>
+                                @empty
+                                    <div style="color:#8b747a; font-size:12px;">No gender records yet.</div>
+                                @endforelse
                             </div>
                         </div>
                     </div>
@@ -1073,21 +793,21 @@
                     </div>
                 </div>
 
-                <!-- BOTTOM 3 CARDS -->
+                                <!-- BOTTOM 3 CARDS -->
                 <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:16px;">
                     <div class="stat-card-6" style="padding:20px;">
                         <small>CURRENT CHOICE / COMPETITOR</small>
-                        <strong style="font-size:22px; margin-top:10px;">Varies by Brand</strong>
-                        <p style="margin:8px 0 0; color:#8b747a; font-size:11px; line-height:1.4;">Current choice varies by brand. Select a single brand above for the specific leading competitor or existing choice.</p>
+                        <strong style="font-size:22px; margin-top:10px;">{{ $consumerInsightStats['current_choice'] }}</strong>
+                        <p style="margin:8px 0 0; color:#8b747a; font-size:11px; line-height:1.4;">Leading current choice from captured consumer records for the selected brand and period.</p>
                     </div>
                     <div class="stat-card-6" style="padding:20px;">
                         <small>PREFERRED OUTLET / CHANNEL</small>
-                        <strong style="font-size:22px; margin-top:10px;">Multi-channel</strong>
-                        <p style="margin:8px 0 0; color:#8b747a; font-size:11px; line-height:1.4;">Preferred purchase and follow-up channel varies across the selected brand portfolio.</p>
+                        <strong style="font-size:22px; margin-top:10px;">{{ $consumerInsightStats['preferred_channel'] }}</strong>
+                        <p style="margin:8px 0 0; color:#8b747a; font-size:11px; line-height:1.4;">Top preferred purchase or follow-up channel from captured consumer records.</p>
                     </div>
                     <div class="stat-card-6" style="padding:20px;">
                         <small>MARKETING CONSENT</small>
-                        <strong style="font-size:22px; margin-top:10px;">64%</strong>
+                        <strong style="font-size:22px; margin-top:10px;">{{ $formatPercent($consumerInsightStats['marketing_consent_rate']) }}</strong>
                         <p style="margin:8px 0 0; color:#8b747a; font-size:11px; line-height:1.4;">Share of verified consumers who opted into separate marketing communication.</p>
                     </div>
                 </div>
@@ -1137,7 +857,7 @@
                         <div>
                             <div style="display:flex; justify-content:space-between; font-size:10px; color:#8b747a; border-top:1px solid #f0e6e9; padding-top:10px; margin-bottom:12px;">
                                 <span>Current-day view</span>
-                                <span>CSV / Prototype Export</span>
+                                <span>CSV Export</span>
                             </div>
                             <div style="display:flex; gap:8px;">
                                 <button style="flex:1; padding:9px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:11px; font-weight:800; cursor:pointer;">Preview</button>
@@ -1158,7 +878,7 @@
                         <div>
                             <div style="display:flex; justify-content:space-between; font-size:10px; color:#8b747a; border-top:1px solid #f0e6e9; padding-top:10px; margin-bottom:12px;">
                                 <span>7-day summary</span>
-                                <span>CSV / Prototype Export</span>
+                                <span>CSV Export</span>
                             </div>
                             <div style="display:flex; gap:8px;">
                                 <button style="flex:1; padding:9px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:11px; font-weight:800; cursor:pointer;">Preview</button>
@@ -1221,7 +941,7 @@
                         <div>
                             <div style="display:flex; justify-content:space-between; font-size:10px; color:#8b747a; border-top:1px solid #f0e6e9; padding-top:10px; margin-bottom:12px;">
                                 <span>Verified consumers</span>
-                                <span>CSV / Presentation Data</span>
+                                <span>CSV Export</span>
                             </div>
                             <div style="display:flex; gap:8px;">
                                 <button onclick="switchAgencyTab('insights')" style="flex:1; padding:9px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:11px; font-weight:800; cursor:pointer;">Open Insights</button>
@@ -1242,7 +962,7 @@
                         <div>
                             <div style="display:flex; justify-content:space-between; font-size:10px; color:#8b747a; border-top:1px solid #f0e6e9; padding-top:10px; margin-bottom:12px;">
                                 <span>Close / Archive</span>
-                                <span>CSV + Structure Preview</span>
+                                <span>CSV Export</span>
                             </div>
                             <div style="display:flex; gap:8px;">
                                 <button style="flex:1; padding:9px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:11px; font-weight:800; cursor:pointer;">Preview</button>
@@ -1834,16 +1554,19 @@ function switchAgencyTab(tabId) {
 
 // ── CHARTS INITIALISATION ─────────────────────────────────────────────────
 function initAgencyCharts() {
-    // Chart 1: Activation Performance Bar Chart (Overview Tab)
+        const activationPerformanceData = @json($portfolioChart);
+    const genderDistributionData = @json($genderChart);
+    const ageDistributionData = @json($ageChart);
+// Chart 1: Activation Performance Bar Chart (Overview Tab)
     const ctx1 = document.getElementById('activationPerformanceChart');
     if (ctx1) {
         new Chart(ctx1.getContext('2d'), {
             type: 'bar',
             data: {
-                labels: ['Rexona', 'Guinness', 'Gino', 'OMO', 'Lush Hair', 'Dove', 'Ovaltine', 'MTN'],
+                labels: activationPerformanceData.labels,
                 datasets: [{
                     label: 'Consumers Reached',
-                    data: [44000, 35000, 22000, 15000, 10000, 13000, 5000, 2000],
+                    data: activationPerformanceData.data,
                     backgroundColor: [
                         '#ff1020', '#ff1020', '#ff1020', '#ff1020',
                         '#ff1020', '#ff1020', '#ff1020', '#ff1020'
@@ -1869,9 +1592,9 @@ function initAgencyCharts() {
         new Chart(ctx2.getContext('2d'), {
             type: 'doughnut',
             data: {
-                labels: ['Female', 'Male', 'Other / Prefer not'],
+                labels: genderDistributionData.labels,
                 datasets: [{
-                    data: [58, 41, 1],
+                    data: genderDistributionData.data,
                     backgroundColor: ['#ff1020', '#171115', '#8b747a'],
                     borderWidth: 2,
                     borderColor: '#ffffff'
@@ -1892,10 +1615,10 @@ function initAgencyCharts() {
         new Chart(ctx3.getContext('2d'), {
             type: 'bar',
             data: {
-                labels: ['18–22', '23–27', '28–35', '36+'],
+                labels: ageDistributionData.labels,
                 datasets: [{
-                    label: 'Participation %',
-                    data: [31, 30, 26, 13],
+                    label: 'Participation',
+                    data: ageDistributionData.data,
                     backgroundColor: '#ff1020',
                     borderRadius: 6
                 }]

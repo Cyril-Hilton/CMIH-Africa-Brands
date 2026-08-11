@@ -161,22 +161,26 @@ class BrandsPlatformController extends Controller
         $filters = $this->reportFilters($request);
         $metrics = $this->brandMetrics($brand, $activation, $filters);
         $entriesByGender = $this->consumerEntryQuery($brand, $activation, $filters)
+            ->reorder()
             ->selectRaw("COALESCE(NULLIF(gender, ''), 'Unspecified') as label, COUNT(*) as total")
             ->groupBy('label')
             ->orderByDesc('total')
             ->get();
         $entriesByAge = $this->consumerEntryQuery($brand, $activation, $filters)
+            ->reorder()
             ->selectRaw("COALESCE(NULLIF(age_band, ''), 'Unspecified') as label, COUNT(*) as total")
             ->groupBy('label')
             ->orderByDesc('total')
             ->get();
         $competitorShare = $this->consumerEntryQuery($brand, $activation, $filters)
+            ->reorder()
             ->selectRaw("COALESCE(NULLIF(current_choice, ''), 'None/Generic') as label, COUNT(*) as total")
             ->groupBy('label')
             ->orderByDesc('total')
             ->take(6)
             ->get();
         $locationPerformance = $this->fieldActivityQuery($brand, $activation, $filters)
+            ->reorder()
             ->selectRaw("COALESCE(NULLIF(location, ''), 'Unspecified') as label, SUM(units) as units, SUM(conversion_count) as conversions, COUNT(*) as updates")
             ->groupBy('label')
             ->orderByDesc('units')
@@ -188,15 +192,8 @@ class BrandsPlatformController extends Controller
             ->paginate(15)
             ->withQueryString();
         $leaderboard = $this->fieldActivityQuery($brand, $activation, $filters)
+            ->reorder()
             ->with('user')
-            ->selectRaw('user_id, SUM(units) as units, SUM(conversion_count) as conversions, COUNT(*) as updates')
-            ->whereNotNull('user_id')
-            ->groupBy('user_id')
-            ->orderByDesc('units')
-            ->take(10)
-            ->get();
-            
-        $portfolioLeaderboard = BrandFieldActivity::with('user')
             ->selectRaw('user_id, SUM(units) as units, SUM(conversion_count) as conversions, COUNT(*) as updates')
             ->whereNotNull('user_id')
             ->groupBy('user_id')
@@ -238,6 +235,94 @@ class BrandsPlatformController extends Controller
             ->take(50)
             ->get();
 
+        $portfolioBrandSummaries = $this->portfolioBrandSummaries($filters);
+        $portfolioStats = $this->portfolioStats($portfolioBrandSummaries);
+        $portfolioLeaderboard = $this->portfolioSupportStaffLeaderboard($filters);
+        $portfolioChart = [
+            'labels' => $portfolioBrandSummaries->pluck('name')->values()->all(),
+            'data' => $portfolioBrandSummaries->pluck('consumer_count')->map(fn ($value) => (int) $value)->values()->all(),
+        ];
+
+        $promoterRoles = [
+            BrandStaffAssignment::ROLE_PROMOTER,
+            BrandStaffAssignment::ROLE_SUPPORT,
+            BrandStaffAssignment::ROLE_SALES,
+            BrandStaffAssignment::ROLE_SUPERVISOR,
+        ];
+        $promoterRows = $this->fieldActivityQuery($brand, $activation, $filters)
+            ->reorder()
+            ->with(['user', 'activation'])
+            ->whereIn('staff_role', $promoterRoles)
+            ->whereNotNull('user_id')
+            ->selectRaw("user_id, brand_activation_id, staff_role, COALESCE(NULLIF(location, ''), 'Unspecified') as location_label, SUM(units) as units, SUM(conversion_count) as conversions, COUNT(*) as updates, MAX(status) as status")
+            ->groupByRaw("user_id, brand_activation_id, staff_role, COALESCE(NULLIF(location, ''), 'Unspecified')")
+            ->orderByDesc('units')
+            ->take(20)
+            ->get();
+        $promoterUnits = (int) $promoterRows->sum('units');
+        $promoterConversions = (int) $promoterRows->sum('conversions');
+        $promoterUserIds = $enrolledPromoters->pluck('user_id')->filter()->map(fn ($id) => (int) $id)->values()->all();
+        $promoterStats = [
+            'promoters' => $enrolledPromoters->count(),
+            'checked_in' => $todayAttendances
+                ->where('status', 'clocked_in')
+                ->filter(fn ($attendance) => in_array((int) $attendance->user_id, $promoterUserIds, true))
+                ->count(),
+            'active' => $enrolledPromoters->where('is_active', true)->count(),
+            'avg_conversion' => $promoterUnits > 0 ? round(($promoterConversions / $promoterUnits) * 100, 1) : 0.0,
+            'top_activity' => (int) $promoterRows->max('units'),
+            'locations_covered' => $promoterRows->pluck('location_label')->filter()->unique()->count(),
+        ];
+
+        $retailRows = $this->fieldActivityQuery($brand, $activation, $filters)
+            ->reorder()
+            ->with(['activation'])
+            ->where(function ($query) {
+                $query->where('staff_role', BrandStaffAssignment::ROLE_RETAIL)
+                    ->orWhereIn('activity_type', ['retail_update', 'retail_scan', 'retail_sale', 'reward_redeemed', 'sale_recorded']);
+            })
+            ->selectRaw("brand_activation_id, COALESCE(NULLIF(location, ''), 'Unspecified') as location_label, SUM(units) as units, SUM(conversion_count) as conversions, SUM(transaction_value) as transaction_value, SUM(CASE WHEN status IN ('failed', 'invalid', 'rejected') THEN 1 ELSE 0 END) as failed_count, MAX(status) as status")
+            ->groupByRaw("brand_activation_id, COALESCE(NULLIF(location, ''), 'Unspecified')")
+            ->orderByDesc('units')
+            ->take(20)
+            ->get();
+        $retailStats = [
+            'partners' => $enrolledRetail->count(),
+            'transactions' => (int) $retailRows->sum('units'),
+            'conversions' => (int) $retailRows->sum('conversions'),
+            'locations' => $retailRows->pluck('location_label')->filter()->unique()->count(),
+            'value' => (float) $retailRows->sum('transaction_value'),
+            'failed' => (int) $retailRows->sum('failed_count'),
+        ];
+
+        $genderDistribution = $this->distributionRows($entriesByGender, (int) $entriesByGender->sum('total'));
+        $ageDistribution = $this->distributionRows($entriesByAge, (int) $entriesByAge->sum('total'));
+        $topChannel = $this->consumerEntryQuery($brand, $activation, $filters)
+            ->reorder()
+            ->selectRaw("COALESCE(NULLIF(preferred_channel, ''), 'Unspecified') as label, COUNT(*) as total")
+            ->groupBy('label')
+            ->orderByDesc('total')
+            ->first();
+        $consumerInsightStats = [
+            'leading_gender' => $genderDistribution->first()['label'] ?? 'No data yet',
+            'leading_gender_rate' => $genderDistribution->first()['percentage'] ?? 0,
+            'largest_age_group' => $ageDistribution->first()['label'] ?? 'No data yet',
+            'largest_age_group_rate' => $ageDistribution->first()['percentage'] ?? 0,
+            'high_intent_rate' => $metrics['high_intent_rate'],
+            'new_audience_rate' => $metrics['new_audience_rate'],
+            'current_choice' => $competitorShare->first()->label ?? 'No data yet',
+            'preferred_channel' => $topChannel?->label ?: 'No data yet',
+            'marketing_consent_rate' => $metrics['marketing_consent_rate'],
+        ];
+        $genderChart = [
+            'labels' => $genderDistribution->pluck('label')->values()->all(),
+            'data' => $genderDistribution->pluck('total')->map(fn ($value) => (int) $value)->values()->all(),
+        ];
+        $ageChart = [
+            'labels' => $ageDistribution->pluck('label')->values()->all(),
+            'data' => $ageDistribution->pluck('total')->map(fn ($value) => (int) $value)->values()->all(),
+        ];
+
         $publications = $brand->publications()
             ->with(['activation', 'creator'])
             ->latest('published_at')
@@ -245,7 +330,7 @@ class BrandsPlatformController extends Controller
             ->take(12)
             ->get();
 
-        $allBrands = Brand::orderBy('name')->get();
+        $allBrands = Brand::with('activations')->orderBy('name')->get();
 
         $this->logBrandActivity($request, $brand, $activation, 'page_view', 'agency_dashboard');
 
@@ -273,6 +358,19 @@ class BrandsPlatformController extends Controller
             'alreadyEnrolledUserIds',
             'availableUsers',
             'todayAttendances',
+            'portfolioStats',
+            'portfolioBrandSummaries',
+            'portfolioLeaderboard',
+            'portfolioChart',
+            'promoterStats',
+            'promoterRows',
+            'retailStats',
+            'retailRows',
+            'genderDistribution',
+            'ageDistribution',
+            'consumerInsightStats',
+            'genderChart',
+            'ageChart',
             'publications'
         ));
     }
@@ -1770,6 +1868,125 @@ class BrandsPlatformController extends Controller
             'new_audience_rate' => $consumerEntries > 0 ? round(($newAudience / $consumerEntries) * 100, 1) : 0.0,
             'marketing_consent_rate' => $consumerEntries > 0 ? round(($marketingConsent / $consumerEntries) * 100, 1) : 0.0,
         ];
+    }
+
+    private function portfolioBrandSummaries(array $filters)
+    {
+        return Brand::query()
+            ->where('platform_status', 'active')
+            ->orderBy('name')
+            ->get()
+            ->map(function (Brand $brand) use ($filters) {
+                $activation = $this->primaryActivation($brand);
+                $consumerCount = (clone $this->consumerEntryQuery($brand, null, $filters))->count();
+                $fieldActivityQuery = $this->fieldActivityQuery($brand, null, $filters);
+                $conversions = (int) (clone $fieldActivityQuery)->sum('conversion_count');
+                $units = (int) (clone $fieldActivityQuery)->sum('units');
+                $updates = (int) (clone $fieldActivityQuery)->count();
+                $target = (int) $brand->activations()->sum('target_reach');
+                $actualReach = (int) $brand->activations()->sum('actual_reach');
+                $reached = max($actualReach, $consumerCount);
+                $activeAssignments = $brand->staffAssignments()->where('is_active', true);
+                $promoters = (clone $activeAssignments)
+                    ->where(function ($query) {
+                        $query->where('enrollment_type', BrandStaffAssignment::TYPE_PROMOTER)
+                            ->orWhereIn('role', [
+                                BrandStaffAssignment::ROLE_PROMOTER,
+                                BrandStaffAssignment::ROLE_SUPPORT,
+                                BrandStaffAssignment::ROLE_SALES,
+                                BrandStaffAssignment::ROLE_SUPERVISOR,
+                            ]);
+                    })
+                    ->count();
+                $retail = (clone $activeAssignments)
+                    ->where(function ($query) {
+                        $query->where('enrollment_type', BrandStaffAssignment::TYPE_RETAIL_TERMINAL)
+                            ->orWhere('role', BrandStaffAssignment::ROLE_RETAIL);
+                    })
+                    ->count();
+                $staff = (clone $activeAssignments)->distinct('user_id')->count('user_id');
+
+                return [
+                    'id' => $brand->id,
+                    'name' => $brand->display_name ?: $brand->name,
+                    'slug' => $brand->slug ?: $brand->id,
+                    'activation_name' => $activation?->name ?: ($brand->activation_name ?: 'No activation configured'),
+                    'activation_type' => $activation?->activation_type ?: ($brand->activation_type ?: 'Not set'),
+                    'consumer_count' => $consumerCount,
+                    'conversions' => $conversions,
+                    'units' => $units,
+                    'updates' => $updates,
+                    'promoters' => $promoters,
+                    'retail_partners' => $retail,
+                    'staff' => $staff,
+                    'primary_result' => $activation?->target_unit ?: 'No target unit set',
+                    'status' => $activation?->status ?: $brand->platform_status,
+                    'target_rate' => $target > 0 ? round(min(100, ($reached / $target) * 100), 1) : 0.0,
+                ];
+            })
+            ->values();
+    }
+
+    private function portfolioStats($portfolioBrandSummaries): array
+    {
+        return [
+            'active_brands' => $portfolioBrandSummaries->count(),
+            'live_activations' => BrandActivation::where('status', 'live')->count(),
+            'consumers' => (int) $portfolioBrandSummaries->sum('consumer_count'),
+            'support_staff' => BrandStaffAssignment::where('is_active', true)
+                ->where(function ($query) {
+                    $query->where('enrollment_type', BrandStaffAssignment::TYPE_PROMOTER)
+                        ->orWhereIn('role', [
+                            BrandStaffAssignment::ROLE_PROMOTER,
+                            BrandStaffAssignment::ROLE_SUPPORT,
+                            BrandStaffAssignment::ROLE_SALES,
+                            BrandStaffAssignment::ROLE_SUPERVISOR,
+                            BrandStaffAssignment::ROLE_MERCHANDISER,
+                        ]);
+                })
+                ->count(),
+            'retail_partners' => BrandStaffAssignment::where('is_active', true)
+                ->where(function ($query) {
+                    $query->where('enrollment_type', BrandStaffAssignment::TYPE_RETAIL_TERMINAL)
+                        ->orWhere('role', BrandStaffAssignment::ROLE_RETAIL);
+                })
+                ->count(),
+            'conversions' => (int) $portfolioBrandSummaries->sum('conversions'),
+        ];
+    }
+
+    private function portfolioSupportStaffLeaderboard(array $filters)
+    {
+        $query = BrandFieldActivity::query()
+            ->with(['user', 'brand'])
+            ->whereNotNull('user_id')
+            ->when($filters['from'] ?? null, fn ($q, $from) => $q->where('created_at', '>=', $from))
+            ->when($filters['to'] ?? null, fn ($q, $to) => $q->where('created_at', '<=', $to))
+            ->when($filters['status'] ?? null, fn ($q, $status) => $q->where('status', $status))
+            ->when($filters['location'] ?? null, fn ($q, $loc) => $q->where('location', 'like', "%{$loc}%"))
+            ->when($filters['activity_type'] ?? null, fn ($q, $act) => $q->where('activity_type', $act));
+
+        return $query
+            ->selectRaw('user_id, brand_id, SUM(units) as units, SUM(conversion_count) as conversions, COUNT(*) as updates')
+            ->groupBy('user_id', 'brand_id')
+            ->orderByDesc('units')
+            ->take(10)
+            ->get();
+    }
+
+    private function distributionRows($rows, int $total)
+    {
+        return collect($rows)
+            ->map(function ($row) use ($total) {
+                $rowTotal = (int) $row->total;
+
+                return [
+                    'label' => $row->label,
+                    'total' => $rowTotal,
+                    'percentage' => $total > 0 ? round(($rowTotal / $total) * 100, 1) : 0.0,
+                ];
+            })
+            ->values();
     }
 
     private function consumerEntryQuery(Brand $brand, ?BrandActivation $activation = null, array $filters = [])

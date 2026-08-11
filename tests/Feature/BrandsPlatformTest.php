@@ -149,6 +149,42 @@ class BrandsPlatformTest extends TestCase
         ]);
     }
 
+    public function test_agency_dashboard_does_not_render_demo_metrics_or_rows(): void
+    {
+        $admin = User::factory()->create([
+            'status' => 'active',
+            'access_role' => 'super_admin',
+        ]);
+        $staff = User::factory()->create([
+            'status' => 'active',
+            'access_role' => 'staff',
+        ]);
+        $brand = Brand::where('slug', 'rexona')->firstOrFail();
+
+        BrandStaffAssignment::create([
+            'brand_id' => $brand->id,
+            'user_id' => $staff->id,
+            'role' => BrandStaffAssignment::ROLE_AGENCY,
+            'assigned_by' => $admin->id,
+        ]);
+
+        $this->actingAs($staff)
+            ->get(route('brands-platform.agency', $brand->slug))
+            ->assertOk()
+            ->assertDontSee('Akosua Darko')
+            ->assertDontSee('186,640')
+            ->assertDontSee('43,892')
+            ->assertDontSee('PROMO014')
+            ->assertDontSee('Shoprite &bull; Accra Mall', false)
+            ->assertDontSee('Female &bull; 58%', false)
+            ->assertDontSee('CSV / Prototype Export');
+
+        $this->get(route('brands-platform.publications', $brand->slug))
+            ->assertOk()
+            ->assertDontSee('12 AUG 2026')
+            ->assertDontSee('Upcoming Activation');
+    }
+
     public function test_assigned_agency_staff_can_post_publications(): void
     {
         $admin = User::factory()->create([

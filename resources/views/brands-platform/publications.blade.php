@@ -17,26 +17,6 @@
         '--bsoft: '.($brand->prototype_soft ?: '#e9fbfb').';',
         '--display: '.($brand->prototype_display_font ?: 'Arial, Helvetica, sans-serif').';',
     ]);
-    $fallbackItems = collect([
-        [
-            'category' => 'Upcoming Activation',
-            'title' => ($brand->prototype_activation ?: 'Current activation').' expands to new locations',
-            'summary' => 'See the next venues, activation dates and what consumers should expect.',
-            'date' => '12 AUG 2026',
-        ],
-        [
-            'category' => 'Promotion Update',
-            'title' => ($brand->prototype_type === 'sales') ? 'New reward mechanic announced' : 'Consumer offer now available',
-            'summary' => 'The latest campaign promotion, eligibility and participation information.',
-            'date' => '18 AUG 2026',
-        ],
-        [
-            'category' => 'Activation Recap',
-            'title' => 'What happened at the last activation',
-            'summary' => 'Highlights, consumer participation and moments from the field.',
-            'date' => '24 AUG 2026',
-        ],
-    ]);
 @endphp
 
 <section class="brands-prototype view active publications" id="view-publications" style="{{ $style }}">
@@ -74,16 +54,14 @@
                 </div>
             </article>
         @empty
-            @foreach($fallbackItems as $item)
-                <article class="pub-card">
-                    <div class="pub-image"></div>
-                    <div class="pub-body">
-                        <div class="date">{{ $item['date'] }} - {{ $item['category'] }}</div>
-                        <h3>{{ $item['title'] }}</h3>
-                        <p>{{ $item['summary'] }}</p>
-                    </div>
-                </article>
-            @endforeach
+            <article class="pub-card">
+                <div class="pub-image"></div>
+                <div class="pub-body">
+                    <div class="date">No Publications</div>
+                    <h3>No public updates yet</h3>
+                    <p>This brand has not published any live public updates yet.</p>
+                </div>
+            </article>
         @endforelse
     </div>
 </section>
