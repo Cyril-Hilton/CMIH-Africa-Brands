@@ -162,49 +162,51 @@ button{cursor:pointer}
    ========================================================== */
 .brand-carousel-wrap{position:relative;overflow:visible;}
 .brand-carousel-viewport{
-  overflow:visible;padding:95px 15px 55px;
+  overflow:visible;padding:85px 20px 45px;max-width:1320px;margin:0 auto;
 }
 .liquid-grid{
-  display:grid !important;
-  grid-template-columns:repeat(7,minmax(0,1fr)) !important;
-  gap:4px !important;
-  align-items:end;
+  display:flex !important;
+  justify-content:center;
+  align-items:flex-end;
+  position:relative;
+  width:100%;
 }
 .liquid-tile {
   min-width: 0;
-  width: 100%;
-  aspect-ratio: 1.40 / 1;
-  border-radius: 18px;
+  flex: 0 0 168px;
+  height: 195px;
+  border-radius: 20px;
+  margin: 0 -12px;
   transform-origin: 50% 100%;
   transition: transform .35s cubic-bezier(0.25, 1, 0.5, 1), scale .35s cubic-bezier(0.25, 1, 0.5, 1), box-shadow .28s ease, border-color .28s ease;
 }
 
-/* 7-Card Arc Perspective Rules - Closed Gap & Landscape Rectangular Cards */
-.liquid-tile.arc-0 { transform: translateX(255px) translateY(72px) rotate(-14deg); scale: 0.62; z-index: 1; opacity: 0.76; }
-.liquid-tile.arc-1 { transform: translateX(155px) translateY(46px) rotate(-9.5deg); scale: 0.80; z-index: 3; opacity: 0.88; }
-.liquid-tile.arc-2 { transform: translateX(40px) translateY(20px) rotate(-4.5deg); scale: 0.96; z-index: 5; opacity: 0.97; }
+/* 7-Card Arc Perspective Rules - Centered Flexbox Arc */
+.liquid-tile.arc-0 { transform: translateY(70px) rotate(-14deg); scale: 0.68; z-index: 1; opacity: 0.78; }
+.liquid-tile.arc-1 { transform: translateY(42px) rotate(-9.5deg); scale: 0.84; z-index: 3; opacity: 0.88; }
+.liquid-tile.arc-2 { transform: translateY(18px) rotate(-4.5deg); scale: 0.98; z-index: 5; opacity: 0.96; }
 
-/* Center Card (Rexona) - Extra Wide Landscape Rectangular */
-.liquid-tile.arc-3 { transform: translateX(0px) translateY(0px) rotate(0deg); scale: 1.56 1.18; z-index: 10; opacity: 1; filter: drop-shadow(0 22px 40px rgba(0,0,0,0.55)); }
+/* Center Card (Rexona) - Extra Wide & Prominent */
+.liquid-tile.arc-3 { flex: 0 0 215px; height: 215px; transform: translateY(-10px) rotate(0deg); scale: 1.18; z-index: 10; opacity: 1; filter: drop-shadow(0 25px 45px rgba(0,0,0,0.6)); }
 
-.liquid-tile.arc-4 { transform: translateX(-40px) translateY(20px) rotate(4.5deg); scale: 0.96; z-index: 5; opacity: 0.97; }
-.liquid-tile.arc-5 { transform: translateX(-155px) translateY(46px) rotate(9.5deg); scale: 0.80; z-index: 3; opacity: 0.88; }
-.liquid-tile.arc-6 { transform: translateX(-255px) translateY(72px) rotate(14deg); scale: 0.62; z-index: 1; opacity: 0.76; }
+.liquid-tile.arc-4 { transform: translateY(18px) rotate(4.5deg); scale: 0.98; z-index: 5; opacity: 0.96; }
+.liquid-tile.arc-5 { transform: translateY(42px) rotate(9.5deg); scale: 0.84; z-index: 3; opacity: 0.88; }
+.liquid-tile.arc-6 { transform: translateY(70px) rotate(14deg); scale: 0.68; z-index: 1; opacity: 0.78; }
 
 /* Hover States */
-.liquid-tile.arc-0:hover { transform: translateX(255px) translateY(58px) rotate(-14deg); scale: 0.72; z-index: 20; opacity: 1; }
-.liquid-tile.arc-1:hover { transform: translateX(155px) translateY(32px) rotate(-9.5deg); scale: 0.90; z-index: 20; opacity: 1; }
-.liquid-tile.arc-2:hover { transform: translateX(40px) translateY(8px) rotate(-4.5deg); scale: 1.06; z-index: 20; opacity: 1; }
-.liquid-tile.arc-3:hover { transform: translateX(0px) translateY(-10px) rotate(0deg); scale: 1.62 1.24; z-index: 20; opacity: 1; }
-.liquid-tile.arc-4:hover { transform: translateX(-40px) translateY(8px) rotate(4.5deg); scale: 1.06; z-index: 20; opacity: 1; }
-.liquid-tile.arc-5:hover { transform: translateX(-155px) translateY(32px) rotate(9.5deg); scale: 0.90; z-index: 20; opacity: 1; }
-.liquid-tile.arc-6:hover { transform: translateX(-255px) translateY(58px) rotate(14deg); scale: 0.72; z-index: 20; opacity: 1; }
+.liquid-tile.arc-0:hover { transform: translateY(54px) rotate(-14deg); scale: 0.78; z-index: 20; opacity: 1; }
+.liquid-tile.arc-1:hover { transform: translateY(28px) rotate(-9.5deg); scale: 0.94; z-index: 20; opacity: 1; }
+.liquid-tile.arc-2:hover { transform: translateY(6px) rotate(-4.5deg); scale: 1.08; z-index: 20; opacity: 1; }
+.liquid-tile.arc-3:hover { transform: translateY(-22px) rotate(0deg); scale: 1.25; z-index: 20; opacity: 1; }
+.liquid-tile.arc-4:hover { transform: translateY(6px) rotate(4.5deg); scale: 1.08; z-index: 20; opacity: 1; }
+.liquid-tile.arc-5:hover { transform: translateY(28px) rotate(9.5deg); scale: 0.94; z-index: 20; opacity: 1; }
+.liquid-tile.arc-6:hover { transform: translateY(54px) rotate(14deg); scale: 0.78; z-index: 20; opacity: 1; }
 
 .liquid-tile .tile-category{display:none}
 .liquid-tile .tile-bottom small{display:none}
 .liquid-tile .tile-bottom{align-items:center; padding: 10px 14px;}
-.liquid-tile .tile-logo-wrap{height: 68%; display: flex; align-items: center; justify-content: center;}
-.liquid-tile .tile-logo{max-width: 82%; max-height: 68px; object-fit: contain;}
+.liquid-tile .tile-logo-wrap{height: 64%; display: flex; align-items: center; justify-content: center;}
+.liquid-tile .tile-logo{max-width: 84%; max-height: 72px; object-fit: contain;}
 .carousel-controls{
   display:flex;align-items:center;justify-content:center;gap:12px;margin-top:28px
 }

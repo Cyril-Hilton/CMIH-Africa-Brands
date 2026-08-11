@@ -82,12 +82,12 @@
                         </div>
                         <div class="phone-field">
                             <label>Email address</label>
-                            <input name="email" type="email" value="{{ old('email') }}" required>
+                            <input name="email" type="email" value="{{ old('email') }}">
                         </div>
                         <div class="phone-grid">
                             <div class="phone-field">
                                 <label>Age range</label>
-                                <select name="age_band" required>
+                                <select name="age_band">
                                     <option value="">Select age</option>
                                     @foreach(['18-22', '23-27', '28-35', '36+'] as $option)
                                         <option value="{{ $option }}" @selected(old('age_band') === $option)>{{ $option }}</option>
@@ -96,7 +96,7 @@
                             </div>
                             <div class="phone-field">
                                 <label>Gender</label>
-                                <select name="gender" required>
+                                <select name="gender">
                                     <option value="">Select gender</option>
                                     @foreach(['Female', 'Male', 'Prefer not to say'] as $option)
                                         <option value="{{ $option }}" @selected(old('gender') === $option)>{{ $option }}</option>
@@ -120,7 +120,7 @@
                         </div>
                         <div class="phone-field">
                             <label>Current choice / competitor</label>
-                            <input name="current_choice" value="{{ old('current_choice') }}" required placeholder="e.g. Rival brand / service">
+                            <input name="current_choice" value="{{ old('current_choice') }}" placeholder="e.g. Rival brand / service">
                         </div>
 
                         @if($brand->slug === 'mtn')
@@ -263,7 +263,7 @@
                         @else
                             <div class="phone-field">
                                 <label>Purchase / conversion intent</label>
-                                <select name="purchase_intent" required>
+                                <select name="purchase_intent">
                                     <option value="">Select intent</option>
                                     @foreach(['Definitely', 'Very likely', 'Likely', 'Maybe', 'Not interested'] as $option)
                                         <option value="{{ $option }}" @selected(old('purchase_intent') === $option)>{{ $option }}</option>
@@ -276,7 +276,7 @@
                             </div>
                             <div class="phone-field">
                                 <label>Result / reward</label>
-                                <select name="result_type" required>
+                                <select name="result_type">
                                     <option value="">Select result</option>
                                     @foreach(['Sample Distributed', 'Bottle Sale / Conversion', 'Coupon Issued', 'Reward Issued', 'Qualified Lead'] as $option)
                                         <option value="{{ $option }}" @selected(old('result_type') === $option)>{{ $option }}</option>
@@ -312,7 +312,7 @@
                         </label>
 
                         <div class="phone-bottom">
-                            <button type="submit" class="btn brand">Send OTP</button>
+                            <button type="submit" class="btn brand" id="btn-submit-otp">Send OTP</button>
                         </div>
                     </div>
                 </form>
@@ -327,11 +327,13 @@
 (() => {
     const landing = document.querySelector('[data-consumer-screen="landing"]');
     const formScreen = document.querySelector('[data-consumer-screen="form"]');
+    const consumerForm = document.querySelector('form.phone-page');
     const stepPersonal = document.getElementById('step-personal');
     const stepProfile = document.getElementById('step-profile');
     const stepConsent = document.getElementById('step-consent');
     const stepLabel = document.querySelector('.step');
     const progressBar = document.querySelector('.progress span');
+    const submitBtn = document.getElementById('btn-submit-otp');
 
     const showForm = () => {
         landing?.classList.remove('active');
@@ -371,6 +373,8 @@
         const phoneInput = document.querySelector('input[name="phone"]');
         if (!nameInput?.value.trim() || !phoneInput?.value.trim()) {
             alert('Please enter your full name and phone number.');
+            if (!nameInput?.value.trim()) nameInput?.focus();
+            else phoneInput?.focus();
             return;
         }
         goToStep(2);
@@ -387,6 +391,33 @@
             goToStep(1);
         } else if (stepConsent && !stepConsent.classList.contains('hidden')) {
             goToStep(2);
+        }
+    });
+
+    consumerForm?.addEventListener('submit', (e) => {
+        const nameInput = document.querySelector('input[name="name"]');
+        const phoneInput = document.querySelector('input[name="phone"]');
+        const dataConsentInput = document.querySelector('input[name="data_consent"]');
+
+        if (!nameInput?.value.trim() || !phoneInput?.value.trim()) {
+            e.preventDefault();
+            alert('Please enter your full name and phone number on step 1.');
+            goToStep(1);
+            if (!nameInput?.value.trim()) nameInput?.focus();
+            else phoneInput?.focus();
+            return false;
+        }
+
+        if (dataConsentInput && !dataConsentInput.checked) {
+            e.preventDefault();
+            alert('Please check the data consent box to proceed.');
+            dataConsentInput.focus();
+            return false;
+        }
+
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Sending OTP...';
         }
     });
 
