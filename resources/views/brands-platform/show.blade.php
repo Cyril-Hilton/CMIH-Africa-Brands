@@ -30,6 +30,8 @@
         <a href="{{ route('brands-platform.index') }}" class="proto-nav">Home</a>
     </header>
 
+    @include('brands-platform.partials.breadcrumbs')
+
     <main class="brand-main">
         @if($brandLogo)
             <img class="brand-logo-main" src="{{ $brandLogo }}" alt="{{ $displayName }} logo" data-no-fallback="true" onerror="this.hidden=true;">

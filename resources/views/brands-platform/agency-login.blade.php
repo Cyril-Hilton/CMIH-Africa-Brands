@@ -19,6 +19,7 @@
 @endphp
 
 <section class="brands-prototype view active auth-page" id="view-agency-login" style="{{ $style }}">
+    @include('brands-platform.partials.breadcrumbs')
     <div class="auth-card">
         <img src="{{ $companyLogo }}" alt="CMIH logo" style="max-height:54px; object-fit:contain;">
         <div class="eyebrow" style="margin-top:20px">AGENCY ACCESS</div>
@@ -43,32 +44,7 @@
             <button type="submit" class="btn red" style="width:100%">Sign In</button>
         </form>
 
-        <div class="demo-logins" style="margin-top:14px;">
-            <button type="button" class="btn light" id="btn-demo-agency" style="width:100%; font-size:9px; font-weight:900; padding:10px;">Use Agency Demo Account</button>
-        </div>
-        <div class="agency-login-note" id="agencyDemoHint" style="margin-top:10px;">
-            For the presentation demo, click above to populate credentials.
-        </div>
-
-        <a href="{{ route('brands-platform.activation', $brandKey) }}" class="btn light" style="width:100%; margin-top:10px; text-align:center;">Back to Activation</a>
+        <a href="{{ route('brands-platform.activation', $brandKey) }}" class="btn light" style="width:100%; margin-top:14px; text-align:center;">Back to Activation</a>
     </div>
 </section>
 @endsection
-
-@push('scripts')
-<script>
-(() => {
-    const userField = document.getElementById('agencyUser');
-    const passField = document.getElementById('agencyPass');
-    const hintField = document.getElementById('agencyDemoHint');
-
-    document.getElementById('btn-demo-agency')?.addEventListener('click', () => {
-        if (userField) userField.value = 'agency@cmih.africa';
-        if (passField) passField.value = 'Password@123';
-        if (hintField) {
-            hintField.innerHTML = '<b>Agency Demo:</b> agency@cmih.africa / Password@123<br><span style="font-size:7px">Click Sign In to open the agency command centre.</span>';
-        }
-    });
-})();
-</script>
-@endpush

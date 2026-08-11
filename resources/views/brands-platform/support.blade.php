@@ -31,7 +31,6 @@
             </div>
             <div class="side-label">Workspace</div>
             <a href="{{ route('brands-platform.support', $brandKey) }}" class="side-btn active" style="text-decoration:none; display:block;">My Dashboard</a>
-            <a href="{{ route('brands-platform.show', $brandKey) }}" class="side-btn" style="text-decoration:none; display:block;">Brand Page</a>
             <a href="{{ route('brands-platform.activation', $brandKey) }}" class="side-btn" style="text-decoration:none; display:block;">Activation Hub</a>
 
             <div class="side-label" style="margin-top:20px;">Account</div>
@@ -42,7 +41,9 @@
         </aside>
 
         <main class="work-main">
-            <div class="work-top">
+            @include('brands-platform.partials.breadcrumbs')
+
+            <div class="work-top" style="margin-top:15px;">
                 <div>
                     <div class="eyebrow">SUPPORT STAFF WORKSPACE</div>
                     <h1>{{ $activation?->name ?: $brand->activation_name ?: 'Brand Activation' }}</h1>

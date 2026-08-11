@@ -31,6 +31,8 @@
         </div>
     </div>
 
+    @include('brands-platform.partials.breadcrumbs')
+
     @auth
         <div class="sr-only" aria-live="polite">
             Brands Notifications

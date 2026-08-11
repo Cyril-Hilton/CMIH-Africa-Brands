@@ -31,7 +31,7 @@ button{cursor:pointer}
 
 /* ===== PUBLIC HOME ===== */
 .home{
-  min-height:100vh;color:#fff;overflow:hidden;
+  min-height:100vh;color:#fff;overflow-x:hidden;overflow-y:visible;
   background:
     radial-gradient(circle at 85% 10%,rgba(255,16,32,.24),transparent 23%),
     radial-gradient(circle at 10% 85%,rgba(153,0,13,.20),transparent 27%),
@@ -160,33 +160,33 @@ button{cursor:pointer}
    HOME BRAND CAROUSEL — SINGLE CURVED ROW
    Total visual bend is kept subtle (about 15 degrees).
    ========================================================== */
-.brand-carousel-wrap{position:relative}
+.brand-carousel-wrap{position:relative;overflow:visible;}
 .brand-carousel-viewport{
-  overflow:hidden;padding:55px 10px 42px;
+  overflow:visible;padding:95px 15px 55px;
 }
 .liquid-grid{
   display:grid !important;
   grid-template-columns:repeat(5,minmax(0,1fr)) !important;
-  gap:16px !important;
-  align-items:start;
+  gap:20px !important;
+  align-items:end;
 }
 .liquid-tile {
   min-width: 0;
   min-height: 190px;
-  transform-origin: 50% 115%;
-  transition: transform .32s ease, scale .32s ease, box-shadow .28s ease, border-color .28s ease;
+  transform-origin: 50% 100%;
+  transition: transform .35s cubic-bezier(0.25, 1, 0.5, 1), scale .35s cubic-bezier(0.25, 1, 0.5, 1), box-shadow .28s ease, border-color .28s ease;
 }
-.liquid-tile.arc-0 { transform: translateY(45px) rotate(-9deg); scale: 0.78; }
-.liquid-tile.arc-1 { transform: translateY(16px) rotate(-4.5deg); scale: 0.93; }
-.liquid-tile.arc-2 { transform: translateY(0) rotate(0deg); scale: 1.25; z-index: 2; }
-.liquid-tile.arc-3 { transform: translateY(16px) rotate(4.5deg); scale: 0.93; }
-.liquid-tile.arc-4 { transform: translateY(45px) rotate(9deg); scale: 0.78; }
+.liquid-tile.arc-0 { transform: translateX(22px) translateY(65px) rotate(-10deg); scale: 0.74; z-index: 1; opacity: 0.82; }
+.liquid-tile.arc-1 { transform: translateX(8px) translateY(30px) rotate(-5deg); scale: 0.93; z-index: 3; opacity: 0.95; }
+.liquid-tile.arc-2 { transform: translateX(0px) translateY(0px) rotate(0deg); scale: 1.26; z-index: 10; opacity: 1; filter: drop-shadow(0 20px 35px rgba(0,0,0,0.45)); }
+.liquid-tile.arc-3 { transform: translateX(-8px) translateY(30px) rotate(5deg); scale: 0.93; z-index: 3; opacity: 0.95; }
+.liquid-tile.arc-4 { transform: translateX(-22px) translateY(65px) rotate(10deg); scale: 0.74; z-index: 1; opacity: 0.82; }
 
-.liquid-tile.arc-0:hover { scale: 0.88; z-index: 5; }
-.liquid-tile.arc-1:hover { scale: 1.05; z-index: 5; }
-.liquid-tile.arc-2:hover { scale: 1.38; z-index: 5; }
-.liquid-tile.arc-3:hover { scale: 1.05; z-index: 5; }
-.liquid-tile.arc-4:hover { scale: 0.88; z-index: 5; }
+.liquid-tile.arc-0:hover { transform: translateX(22px) translateY(50px) rotate(-10deg); scale: 0.84; z-index: 20; opacity: 1; }
+.liquid-tile.arc-1:hover { transform: translateX(8px) translateY(18px) rotate(-5deg); scale: 1.03; z-index: 20; opacity: 1; }
+.liquid-tile.arc-2:hover { transform: translateX(0px) translateY(-8px) rotate(0deg); scale: 1.32; z-index: 20; opacity: 1; }
+.liquid-tile.arc-3:hover { transform: translateX(-8px) translateY(18px) rotate(5deg); scale: 1.03; z-index: 20; opacity: 1; }
+.liquid-tile.arc-4:hover { transform: translateX(-22px) translateY(50px) rotate(10deg); scale: 0.84; z-index: 20; opacity: 1; }
 
 .liquid-tile .tile-category{display:none}
 .liquid-tile .tile-bottom small{display:none}
@@ -194,7 +194,7 @@ button{cursor:pointer}
 .liquid-tile .tile-logo-wrap{height:126px}
 .liquid-tile .tile-logo{max-width:88%;max-height:104px}
 .carousel-controls{
-  display:flex;align-items:center;justify-content:center;gap:12px;margin-top:-8px
+  display:flex;align-items:center;justify-content:center;gap:12px;margin-top:28px
 }
 .carousel-arrow{
   width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.14);
@@ -210,19 +210,19 @@ button{cursor:pointer}
 }
 @media(max-width:1050px){
   .liquid-grid{grid-template-columns:repeat(3,minmax(0,1fr)) !important}
-  .liquid-tile.arc-0{transform:translateY(20px) rotate(-7.5deg); scale: 0.92;}
-  .liquid-tile.arc-1{transform:translateY(0) rotate(0deg); scale: 1.12; z-index: 2;}
-  .liquid-tile.arc-2{transform:translateY(20px) rotate(7.5deg); scale: 0.92;}
+  .liquid-tile.arc-0{transform:translateY(30px) rotate(-7.5deg); scale: 0.88; z-index: 1;}
+  .liquid-tile.arc-1{transform:translateY(0) rotate(0deg); scale: 1.20; z-index: 10;}
+  .liquid-tile.arc-2{transform:translateY(30px) rotate(7.5deg); scale: 0.88; z-index: 1;}
   
-  .liquid-tile.arc-0:hover{scale: 1.02; z-index: 5;}
-  .liquid-tile.arc-1:hover{scale: 1.22; z-index: 5;}
-  .liquid-tile.arc-2:hover{scale: 1.02; z-index: 5;}
+  .liquid-tile.arc-0:hover{transform:translateY(18px) rotate(-7.5deg); scale: 0.98; z-index: 20;}
+  .liquid-tile.arc-1:hover{transform:translateY(-6px) rotate(0deg); scale: 1.28; z-index: 20;}
+  .liquid-tile.arc-2:hover{transform:translateY(18px) rotate(7.5deg); scale: 0.98; z-index: 20;}
 }
 @media(max-width:620px){
   .liquid-grid{grid-template-columns:1fr !important}
   .liquid-tile{transform:none !important; scale: 1 !important;}
   .liquid-tile:hover{scale: 1.05 !important; z-index: 5;}
-  .brand-carousel-viewport{padding-left:16px;padding-right:16px}
+  .brand-carousel-viewport{padding:30px 16px 30px}
 }
 
 /* Agency sign-in has no public-home presence; only Activation > Agency. */

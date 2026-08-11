@@ -781,11 +781,10 @@ class BrandsPlatformController extends Controller
             ->where('verification_token', $token)
             ->firstOrFail();
 
-        if ($entry->otp_verified_at) {
-            return view('brands-platform.consumer-verify', compact('brand', 'entry'));
-        }
+        $discountPercentage = $brand->discount_percentage ?: ($brand->prototype_discount ?: '20% OFF');
+        $barcodeSvg = $entry->reward_code ? \App\Services\BarcodeGeneratorService::generateSvg($entry->reward_code, 280, 80) : '';
 
-        return view('brands-platform.consumer-verify', compact('brand', 'entry'));
+        return view('brands-platform.consumer-verify', compact('brand', 'entry', 'discountPercentage', 'barcodeSvg'));
     }
 
     public function completeConsumerVerification(Request $request, string $brand, string $token): RedirectResponse
@@ -804,10 +803,20 @@ class BrandsPlatformController extends Controller
         }
 
         if (! $entry->otp_verified_at) {
+            $code = strtoupper(Str::slug(Str::limit($brand->name, 3, ''), '')).'-'.Str::upper(Str::random(8));
             $entry->forceFill([
                 'otp_verified_at' => now(),
-                'reward_code' => strtoupper(Str::slug(Str::limit($brand->name, 3, ''), '')).'-'.Str::upper(Str::random(8)),
+                'reward_code' => $code,
             ])->save();
+
+            if ($entry->email) {
+                try {
+                    $discountPct = $brand->discount_percentage ?: ($brand->prototype_discount ?: '20% OFF');
+                    \Illuminate\Support\Facades\Mail::to($entry->email)->send(new \App\Mail\ConsumerDiscountMail($brand, $entry, $discountPct));
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning("Failed to send consumer discount mail: " . $e->getMessage());
+                }
+            }
         }
 
         $this->logBrandActivity($request, $brand, $entry->activation, 'consumer_verified', 'consumer', [
@@ -822,7 +831,7 @@ class BrandsPlatformController extends Controller
 
         return redirect()
             ->route('brands-platform.consumer-entry.verify', [$brand->slug ?: $brand->id, $entry->verification_token])
-            ->with('status', 'Phone verified. Reward code issued.');
+            ->with('status', 'Phone verified. Reward code & barcode issued and sent to your email.');
     }
 
     public function storeFieldActivity(Request $request, string $brand): RedirectResponse

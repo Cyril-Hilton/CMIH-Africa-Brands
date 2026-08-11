@@ -31,7 +31,6 @@
             </div>
             <div class="side-label">Workspace</div>
             <a href="{{ route('brands-platform.retail', $brandKey) }}" class="side-btn active" style="text-decoration:none; display:block;">Dashboard</a>
-            <a href="{{ route('brands-platform.show', $brandKey) }}" class="side-btn" style="text-decoration:none; display:block;">Brand Page</a>
             
             <form method="POST" action="{{ route('logout') }}" id="logout-form" style="display:none;">
                 @csrf
@@ -40,7 +39,9 @@
         </aside>
 
         <main class="work-main">
-            <div class="work-top">
+            @include('brands-platform.partials.breadcrumbs')
+
+            <div class="work-top" style="margin-top: 15px;">
                 <div>
                     <div class="eyebrow">RETAIL OPERATIONS</div>
                     <h1>Redemption Dashboard</h1>
@@ -162,17 +163,37 @@
                 <div class="panel">
                     <div class="panel-head">
                         <div>
-                            <h3>Scanner Status</h3>
-                            <small>Simulated verification status</small>
+                            <h3>Camera Barcode &amp; Coupon Scanner</h3>
+                            <small>Use your phone camera to scan consumer barcodes</small>
                         </div>
                     </div>
                     
-                    <div style="margin-top:20px; display:flex; flex-direction:column; align-items:center; justify-content:center; border:2px dashed rgba(255,255,255,0.1); border-radius:14px; padding:30px; text-align:center; min-height:220px; background:rgba(255,255,255,0.01);">
-                        <div style="font-size:36px; margin-bottom:10px;">🛡️</div>
-                        <h4 style="margin:0; font-size:16px;">Scanner Ready</h4>
-                        <p style="margin:8px 0 0; font-size:11px; color:rgba(255,255,255,0.5); line-height:1.4;">Submit a reward token reference in the form to check verification and redeem details.</p>
+                    <div id="cameraScannerBox" style="margin-top:15px; display:flex; flex-direction:column; align-items:center; justify-content:center; border:2px dashed var(--bs); border-radius:18px; padding:20px; text-align:center; min-height:240px; background:rgba(0,0,0,0.3); position:relative; overflow:hidden;">
+                        <video id="scannerVideo" style="width:100%; height:200px; object-fit:cover; border-radius:12px; display:none;" playsinline muted></video>
+                        <canvas id="scannerCanvas" style="display:none;"></canvas>
+                        
+                        <div id="scannerOverlay" style="display:none; position:absolute; inset:0; pointer-events:none; border:2px solid var(--bs); border-radius:18px;">
+                            <div style="position:absolute; top:25%; left:10%; right:10%; height:2px; background:linear-gradient(90deg,transparent,#ff1020,var(--bs),transparent); animation:scanline 2s linear infinite;"></div>
+                        </div>
+
+                        <div id="scannerPlaceholder" style="display:flex; flex-direction:column; align-items:center;">
+                            <div style="font-size:44px; margin-bottom:8px;">📷</div>
+                            <h4 style="margin:0; font-size:15px; font-weight:800;">Scan Barcode with Phone Camera</h4>
+                            <p style="margin:6px 0 16px; font-size:11px; color:rgba(255,255,255,0.6); max-width:260px; line-height:1.4;">Attendants can scan consumer barcodes directly using their mobile browser camera without extra hardware.</p>
+                        </div>
+
+                        <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; z-index:2; margin-top:8px;">
+                            <button type="button" id="btnStartScanner" class="btn brand" style="padding:10px 18px; font-size:11px; font-weight:900;">📷 Start Camera Scanner</button>
+                            <button type="button" id="btnStopScanner" class="btn dark" style="padding:10px 18px; font-size:11px; display:none;">Stop Camera</button>
+                        </div>
+
+                        <div id="scanStatusMsg" style="margin-top:10px; font-size:11px; font-weight:800; color:var(--bs);"></div>
                     </div>
                 </div>
+
+                <style>
+                @keyframes scanline { 0% { top: 20%; } 50% { top: 75%; } 100% { top: 20%; } }
+                </style>
             </div>
 
             <div class="panel" style="margin-top:20px;">
@@ -339,6 +360,106 @@
             });
         }
     });
+
+    // ===== CAMERA BARCODE SCANNER LOGIC =====
+    const video = document.getElementById('scannerVideo');
+    const canvas = document.getElementById('scannerCanvas');
+    const btnStart = document.getElementById('btnStartScanner');
+    const btnStop = document.getElementById('btnStopScanner');
+    const placeholder = document.getElementById('scannerPlaceholder');
+    const overlay = document.getElementById('scannerOverlay');
+    const statusMsg = document.getElementById('scanStatusMsg');
+    const refInput = document.querySelector('input[name="reference_code"]');
+    let mediaStream = null;
+    let scanInterval = null;
+
+    const playBeep = () => {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, ctx.currentTime);
+            gain.gain.setValueAtTime(0.1, ctx.currentTime);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.15);
+        } catch(e) {}
+    };
+
+    const handleDetectedCode = (code) => {
+        if (!code) return;
+        playBeep();
+        if (refInput) {
+            refInput.value = code;
+            refInput.focus();
+            refInput.style.border = '2px solid #0a9d70';
+        }
+        if (statusMsg) {
+            statusMsg.textContent = '✓ Scanned Barcode: ' + code;
+            statusMsg.style.color = '#0a9d70';
+        }
+        stopScanner();
+    };
+
+    const startScanner = async () => {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            alert('Camera access is not supported on this browser or environment.');
+            return;
+        }
+
+        try {
+            mediaStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { ideal: 'environment' } }
+            });
+            video.srcObject = mediaStream;
+            await video.play();
+
+            video.style.display = 'block';
+            overlay.style.display = 'block';
+            placeholder.style.display = 'none';
+            btnStart.style.display = 'none';
+            btnStop.style.display = 'inline-block';
+            if (statusMsg) statusMsg.textContent = 'Align barcode inside viewfinder...';
+
+            if ('BarcodeDetector' in window) {
+                const barcodeDetector = new BarcodeDetector({
+                    formats: ['code_128', 'code_39', 'qr_code', 'ean_13', 'ean_8', 'upc_a']
+                });
+                scanInterval = setInterval(async () => {
+                    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                        try {
+                            const barcodes = await barcodeDetector.detect(video);
+                            if (barcodes.length > 0) {
+                                handleDetectedCode(barcodes[0].rawValue);
+                            }
+                        } catch (err) {}
+                    }
+                }, 300);
+            } else {
+                if (statusMsg) statusMsg.textContent = 'Camera active. Position barcode in frame or type code below.';
+            }
+        } catch (err) {
+            alert('Could not access camera: ' + err.message);
+        }
+    };
+
+    const stopScanner = () => {
+        if (scanInterval) clearInterval(scanInterval);
+        if (mediaStream) {
+            mediaStream.getTracks().forEach(track => track.stop());
+            mediaStream = null;
+        }
+        video.style.display = 'none';
+        overlay.style.display = 'none';
+        placeholder.style.display = 'flex';
+        btnStart.style.display = 'inline-block';
+        btnStop.style.display = 'none';
+    };
+
+    btnStart?.addEventListener('click', startScanner);
+    btnStop?.addEventListener('click', stopScanner);
 })();
 </script>
 @endpush

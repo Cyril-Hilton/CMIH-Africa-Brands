@@ -50,6 +50,8 @@
         <a href="{{ route('brands-platform.show', $brandKey) }}" class="proto-nav">Back</a>
     </header>
 
+    @include('brands-platform.partials.breadcrumbs')
+
     <div class="pub-hero">
         @if($brandLogo)
             <img src="{{ $brandLogo }}" alt="{{ $displayName }} logo" data-no-fallback="true" onerror="this.hidden=true;">

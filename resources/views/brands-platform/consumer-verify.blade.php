@@ -21,6 +21,8 @@
 @endphp
 
 <section class="brands-prototype view active consumer-page" id="view-consumer" style="{{ $style }}">
+    @include('brands-platform.partials.breadcrumbs')
+
     <div class="consumer-wrap">
         <div class="consumer-intro">
             <div class="eyebrow" style="color:var(--bs)">CONSUMER JOURNEY</div>
@@ -40,16 +42,28 @@
         <div class="phone" id="phone">
             @if($entry->otp_verified_at)
                 <!-- SUCCESS SCREEN -->
-                <section class="phone-screen active" style="background:#fff; color:var(--bink);">
-                    <div class="phone-page success-center">
-                        <div class="success-circle" style="width:82px; height:82px; border-radius:50%; display:grid; place-items:center; margin:auto; background:var(--bs); color:var(--bink); font-size:36px; font-weight:950; margin-top: 40px;">✓</div>
-                        <h3 style="margin-top:24px; font-family:var(--display,Arial); font-size:31px; font-weight:900; line-height: 1.1;">Registration complete.</h3>
-                        <p style="font-size:11px; color:#78898c; line-height:1.45; margin-top:8px;">Your registration has been verified and your activation reward is ready.</p>
+                <section class="phone-screen active" style="background:#fff; color:var(--bink); overflow-y:auto;">
+                    <div class="phone-page success-center" style="padding-bottom: 90px;">
+                        <div class="success-circle" style="width:72px; height:72px; border-radius:50%; display:grid; place-items:center; margin:auto; background:var(--bs); color:var(--bink); font-size:32px; font-weight:950; margin-top: 20px;">✓</div>
+                        <h3 style="margin-top:16px; font-family:var(--display,Arial); font-size:26px; font-weight:900; line-height: 1.1;">Registration Complete</h3>
+                        <p style="font-size:11px; color:#78898c; line-height:1.45; margin-top:6px;">Your registration has been verified and your activation reward is ready.</p>
                         
-                        <div class="reward" style="margin-top:24px; background:var(--bsoft); border-radius:18px; padding:16px; text-align:left; border:1px dashed var(--bp);">
-                            <small style="display:block; color:#678086; font-size:8px; text-transform:uppercase; font-weight: 800;">Campaign Token</small>
-                            <strong style="display:block; margin-top:6px; font-size:16px; font-family: monospace; word-break:break-all;">{{ $entry->reward_code }}</strong>
+                        <div class="reward" style="margin-top:18px; background:var(--bsoft); border-radius:18px; padding:16px; text-align:center; border:1px dashed var(--bp);">
+                            <div style="display: inline-block; background: var(--bp); color: #fff; font-size: 11px; font-weight: 900; padding: 4px 12px; border-radius: 999px; text-transform: uppercase; margin-bottom: 8px;">
+                                {{ $discountPercentage ?? '20% OFF' }}
+                            </div>
+                            <small style="display:block; color:#678086; font-size:8px; text-transform:uppercase; font-weight: 800; margin-top:4px;">Unique Discount Code</small>
+                            <strong style="display:block; margin-top:4px; font-size:18px; font-family: monospace; word-break:break-all; letter-spacing:1px; color:#111;">{{ $entry->reward_code }}</strong>
+
+                            <div style="margin-top:14px; background:#fff; padding:10px; border-radius:12px; border:1px solid #e0e0e0; display:inline-block; width:100%;">
+                                <div style="font-size:8px; color:#888; text-transform:uppercase; font-weight:800; margin-bottom:6px;">Scan Barcode At Retail Outlet</div>
+                                {!! $barcodeSvg !!}
+                            </div>
                         </div>
+
+                        <p style="font-size:10px; color:#666; margin-top:12px; line-height:1.4;">
+                            ✉️ A copy of your code &amp; barcode has been sent to <b>{{ $entry->email ?: $entry->phone }}</b> so you can redeem it anytime!
+                        </p>
 
                         <div class="phone-bottom">
                             <a href="{{ route('brands-platform.consumer', $brandKey) }}" class="btn brand" style="width: 100%; display: block; text-align: center; text-decoration: none;">Done</a>

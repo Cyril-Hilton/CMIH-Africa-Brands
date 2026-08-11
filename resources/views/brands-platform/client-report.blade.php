@@ -45,8 +45,10 @@
         </aside>
 
         <main class="work-main">
+            @include('brands-platform.partials.breadcrumbs')
+
             <!-- Header -->
-            <div class="work-top">
+            <div class="work-top" style="margin-top:15px;">
                 <div>
                     <div class="eyebrow">CLIENT LIVE REPORT</div>
                     <h1>{{ $brand->name }}</h1>

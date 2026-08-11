@@ -21,6 +21,7 @@
 @endphp
 
 <section class="brands-prototype view active consumer-page" id="view-consumer" style="{{ $style }}">
+    @include('brands-platform.partials.breadcrumbs')
     <div class="consumer-wrap">
         <div class="consumer-intro">
             <div class="eyebrow" style="color:var(--bs)">CONSUMER JOURNEY</div>

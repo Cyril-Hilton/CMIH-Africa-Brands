@@ -27,13 +27,11 @@
         @else
             <style>
                 * { box-sizing: border-box; }
-                body { margin: 0; font-family: 'Sora', sans-serif; background: #000; color: #fff; }
+                body { margin: 0; font-family: 'Sora', sans-serif; background: #0b0809; color: #fff; }
                 a { color: inherit; text-decoration: none; }
             </style>
         @endif
-        @if(request()->routeIs('brands-platform.*'))
-            @include('brands-platform.partials.prototype-styles')
-        @endif
+        @include('brands-platform.partials.prototype-styles')
         @stack('head')
 
         @if (config('services.ga4.id'))

@@ -43,7 +43,9 @@
         </aside>
 
         <main class="work-main">
-            <div class="work-top">
+            @include('brands-platform.partials.breadcrumbs')
+
+            <div class="work-top" style="margin-top: 15px;">
                 <div>
                     <div class="eyebrow">FIELD EVIDENCE</div>
                     <h1>{{ $selectedBrand?->name ?: 'Brand Evidence Gallery' }}</h1>

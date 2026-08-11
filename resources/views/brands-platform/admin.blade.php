@@ -40,7 +40,9 @@
         </aside>
 
         <main class="work-main">
-            <div class="work-top">
+            @include('brands-platform.partials.breadcrumbs')
+
+            <div class="work-top" style="margin-top: 15px;">
                 <div>
                     <div class="eyebrow">CMIH AGENCY ADMIN CONSOLE</div>
                     <h1>Brand Platform Control</h1>

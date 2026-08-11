@@ -46,7 +46,9 @@
         </aside>
 
         <main class="big-main">
-            <div class="big-top">
+            @include('brands-platform.partials.breadcrumbs')
+
+            <div class="big-top" style="margin-top: 15px;">
                 <div>
                     <div class="eyebrow">AGENCY COMMAND CENTRE</div>
                     <h1 style="color:#171115; font-size:28px; font-weight:900; margin:5px 0 0;">Portfolio Performance</h1>
