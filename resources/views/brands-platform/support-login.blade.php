@@ -9,6 +9,7 @@
     $brandLogo = $brand->prototype_logo_url ?: $brand->public_logo_dark_url ?: $brand->public_logo_url;
     $activationName = $activation?->name ?: $brand->prototype_activation ?: $brand->activation_name ?: 'Current Brand Activation';
     $requestedPortal = request('portal', '');
+    $showForm = $requestedPortal || $errors->any() || old('email');
     $style = implode(' ', [
         '--bp: '.($brand->public_primary_color ?: '#00656c').';',
         '--bbg: '.($brand->prototype_bg ?: $brand->public_secondary_color ?: '#003e46').';',
@@ -23,7 +24,7 @@
 <section class="brands-prototype view active auth-page" id="view-staff-login" style="{{ $style }}">
     @include('brands-platform.partials.breadcrumbs')
     
-    <div class="auth-card" style="max-width: {{ $requestedPortal ? '460px' : '680px' }}; transition: all 0.3s ease;">
+    <div class="auth-card" style="max-width: {{ $showForm ? '460px' : '680px' }}; transition: all 0.3s ease;">
         @if($brandLogo)
             <img src="{{ $brandLogo }}" alt="{{ $displayName }} logo" data-no-fallback="true" onerror="this.hidden=true;" style="max-height:54px; object-fit:contain; margin-bottom:10px;">
         @endif
@@ -32,11 +33,13 @@
         <p>Select your assigned support role below to proceed to your workspace sign in.</p>
 
         @if($errors->any())
-            <div class="field-error" style="margin-bottom:16px;">{{ $errors->first() }}</div>
+            <div class="field-error" style="background:#fee2e2; border:1px solid #ef4444; color:#991b1b; padding:10px 14px; border-radius:8px; font-size:12px; font-weight:700; margin-bottom:16px;">
+                {{ $errors->first() }}
+            </div>
         @endif
 
         <!-- Portal Choice Options Cards -->
-        <div id="portal-selector" style="display: {{ $requestedPortal ? 'none' : 'grid' }}; grid-template-columns: 1fr 1fr; gap:16px; margin: 20px 0;">
+        <div id="portal-selector" style="display: {{ $showForm ? 'none' : 'grid' }}; grid-template-columns: 1fr 1fr; gap:16px; margin: 20px 0;">
             <!-- Option 1: Promoter Portal -->
             <div onclick="selectSupportPortal('promoter')" style="background:#fcf8f9; border:2px solid #e4dadd; border-radius:14px; padding:20px; text-align:left; cursor:pointer; transition:all 0.2s ease;" onmouseover="this.style.borderColor='#ff1020'; this.style.transform='translateY(-2px)';" onmouseout="this.style.borderColor='#e4dadd'; this.style.transform='translateY(0)';">
                 <div style="font-size:32px; margin-bottom:10px;">📣</div>
@@ -55,7 +58,7 @@
         </div>
 
         <!-- Login Form Container -->
-        <div id="login-form-container" style="display: {{ $requestedPortal ? 'block' : 'none' }}; margin-top:15px;">
+        <div id="login-form-container" style="display: {{ $showForm ? 'block' : 'none' }}; margin-top:15px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; background:#f4f5f8; padding:10px 14px; border-radius:10px; border:1px solid #e2e8f0;">
                 <span id="selected-portal-badge" style="font-size:12px; font-weight:800; color:#171115;">
                     {{ $requestedPortal === 'retail' ? '📷 Retail Redemption Terminal' : '📣 Promoter Portal' }}
