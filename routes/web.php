@@ -89,6 +89,7 @@ Route::middleware(['auth', 'active'])->prefix('brands')->name('brands-platform.'
     Route::delete('/admin/assignments/{assignment}', [BrandsPlatformController::class, 'destroyAssignment'])->name('admin.assignments.destroy');
     Route::get('/{brand}/gallery', [BrandsPlatformController::class, 'gallery'])->name('brand-gallery');
     Route::get('/{brand}/agency', [BrandsPlatformController::class, 'agency'])->name('agency');
+    Route::post('/{brand}/agency/publications', [BrandsPlatformController::class, 'storeAgencyPublication'])->name('agency.publications.store');
     Route::get('/{brand}/support', [BrandsPlatformController::class, 'support'])->name('support');
     Route::get('/{brand}/retail', [BrandsPlatformController::class, 'retail'])->name('retail');
     Route::get('/{brand}/export/{type}', [BrandsPlatformController::class, 'exportReport'])

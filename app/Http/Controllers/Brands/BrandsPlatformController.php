@@ -238,6 +238,13 @@ class BrandsPlatformController extends Controller
             ->take(50)
             ->get();
 
+        $publications = $brand->publications()
+            ->with(['activation', 'creator'])
+            ->latest('published_at')
+            ->latest()
+            ->take(12)
+            ->get();
+
         $allBrands = Brand::orderBy('name')->get();
 
         $this->logBrandActivity($request, $brand, $activation, 'page_view', 'agency_dashboard');
@@ -265,7 +272,8 @@ class BrandsPlatformController extends Controller
             'enrolledAgencyStaff',
             'alreadyEnrolledUserIds',
             'availableUsers',
-            'todayAttendances'
+            'todayAttendances',
+            'publications'
         ));
     }
 
@@ -695,6 +703,23 @@ class BrandsPlatformController extends Controller
         $this->guardPlatformAdmin($request->user());
         $brand = $this->resolveBrand($brand);
 
+        $publication = $this->createBrandPublication($request, $brand, 'admin');
+
+        return back()->with('status', "{$publication->title} publication saved.");
+    }
+
+    public function storeAgencyPublication(Request $request, string $brand): RedirectResponse
+    {
+        $brand = $this->resolveBrand($brand);
+        $this->guardBrandAccess($request->user(), $brand);
+
+        $publication = $this->createBrandPublication($request, $brand, 'agency');
+
+        return back()->with('status', "{$publication->title} publication posted.");
+    }
+
+    private function createBrandPublication(Request $request, Brand $brand, string $context): BrandPublication
+    {
         $validated = $request->validate([
             'brand_activation_id' => ['nullable', 'integer', Rule::exists('brand_activations', 'id')->where('brand_id', $brand->id)],
             'title' => ['required', 'string', 'max:255'],
@@ -721,7 +746,7 @@ class BrandsPlatformController extends Controller
             ])->save();
         }
 
-        $this->logBrandActivity($request, $brand, $publication->activation, 'publication_saved', 'admin');
+        $this->logBrandActivity($request, $brand, $publication->activation, 'publication_saved', $context);
         $this->notifyAssignedBrandStaff(
             $brand,
             'Brand publication posted',
@@ -730,7 +755,7 @@ class BrandsPlatformController extends Controller
             $request->user()->id
         );
 
-        return back()->with('status', 'Brand publication saved.');
+        return $publication;
     }
 
     public function generateClientLink(Request $request, BrandActivation $activation): RedirectResponse

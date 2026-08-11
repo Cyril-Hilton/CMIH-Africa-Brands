@@ -149,6 +149,58 @@ class BrandsPlatformTest extends TestCase
         ]);
     }
 
+    public function test_assigned_agency_staff_can_post_publications(): void
+    {
+        $admin = User::factory()->create([
+            'status' => 'active',
+            'access_role' => 'super_admin',
+        ]);
+        $staff = User::factory()->create([
+            'status' => 'active',
+            'access_role' => 'staff',
+        ]);
+        $brand = Brand::where('slug', 'rexona')->firstOrFail();
+        $activation = $brand->activations()->firstOrFail();
+
+        BrandStaffAssignment::create([
+            'brand_id' => $brand->id,
+            'user_id' => $staff->id,
+            'role' => BrandStaffAssignment::ROLE_AGENCY,
+            'assigned_by' => $admin->id,
+        ]);
+
+        $this->actingAs($staff)
+            ->get(route('brands-platform.agency', $brand->slug).'#publications')
+            ->assertOk()
+            ->assertSee('Publications')
+            ->assertSee('Create Publication');
+
+        $this->actingAs($staff)
+            ->post(route('brands-platform.agency.publications.store', $brand->slug), [
+                'brand_activation_id' => $activation->id,
+                'title' => 'Weekend Discount Alert',
+                'category' => 'Discount Alert',
+                'summary' => 'Consumers can enjoy the new weekend discount.',
+                'body' => 'Activation teams should share the approved offer details.',
+                'status' => 'published',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('brand_publications', [
+            'brand_id' => $brand->id,
+            'brand_activation_id' => $activation->id,
+            'title' => 'Weekend Discount Alert',
+            'category' => 'Discount Alert',
+            'status' => 'published',
+            'created_by' => $staff->id,
+        ]);
+
+        $this->get(route('brands-platform.publications', $brand->slug))
+            ->assertOk()
+            ->assertSee('Weekend Discount Alert')
+            ->assertSee('Consumers can enjoy the new weekend discount.');
+    }
+
     public function test_public_brand_page_does_not_expose_field_activity_details(): void
     {
         $staff = User::factory()->create([
@@ -198,6 +250,82 @@ class BrandsPlatformTest extends TestCase
             ->assertOk()
             ->assertSee('CONSUMER JOURNEY')
             ->assertSee('Registration');
+    }
+
+    public function test_all_brands_render_for_consumer_staff_agency_promoter_retail_and_superadmin_roles(): void
+    {
+        $superAdmin = User::factory()->create([
+            'status' => 'active',
+            'access_role' => 'super_admin',
+        ]);
+        $staff = User::factory()->create([
+            'status' => 'active',
+            'access_role' => 'staff',
+        ]);
+        $agency = User::factory()->create([
+            'status' => 'active',
+            'access_role' => 'staff',
+        ]);
+        $promoter = User::factory()->create([
+            'status' => 'active',
+            'access_role' => 'staff',
+        ]);
+        $retailTerminal = User::factory()->create([
+            'status' => 'active',
+            'access_role' => 'staff',
+        ]);
+
+        $brands = Brand::orderBy('slug')->get();
+        $this->assertGreaterThanOrEqual(20, $brands->count());
+
+        foreach ($brands as $brand) {
+            $brandKey = $brand->slug ?: $brand->id;
+
+            BrandStaffAssignment::create([
+                'brand_id' => $brand->id,
+                'user_id' => $staff->id,
+                'role' => BrandStaffAssignment::ROLE_SUPPORT,
+                'assigned_by' => $superAdmin->id,
+            ]);
+            BrandStaffAssignment::create([
+                'brand_id' => $brand->id,
+                'user_id' => $agency->id,
+                'role' => BrandStaffAssignment::ROLE_AGENCY,
+                'assigned_by' => $superAdmin->id,
+            ]);
+            BrandStaffAssignment::create([
+                'brand_id' => $brand->id,
+                'user_id' => $promoter->id,
+                'role' => BrandStaffAssignment::ROLE_PROMOTER,
+                'enrollment_type' => BrandStaffAssignment::TYPE_PROMOTER,
+                'assigned_by' => $superAdmin->id,
+            ]);
+            BrandStaffAssignment::create([
+                'brand_id' => $brand->id,
+                'user_id' => $retailTerminal->id,
+                'role' => BrandStaffAssignment::ROLE_RETAIL,
+                'enrollment_type' => BrandStaffAssignment::TYPE_RETAIL_TERMINAL,
+                'assigned_by' => $superAdmin->id,
+            ]);
+
+            $this->get(route('brands-platform.show', $brandKey))->assertOk();
+            $this->get(route('brands-platform.publications', $brandKey))->assertOk();
+            $this->get(route('brands-platform.activation', $brandKey))->assertOk();
+            $this->get(route('brands-platform.consumer', $brandKey))->assertOk();
+            $this->get(route('brands-platform.support-login', $brandKey))->assertOk();
+            $this->get(route('brands-platform.agency-login', $brandKey))->assertOk();
+
+            $this->actingAs($staff)->get(route('brands-platform.support', $brandKey))->assertOk();
+            $this->actingAs($staff)->get(route('brands-platform.agency', $brandKey))->assertOk();
+            $this->actingAs($agency)->get(route('brands-platform.agency', $brandKey))->assertOk();
+            $this->actingAs($promoter)->get(route('brands-platform.support', $brandKey))->assertOk();
+            $this->actingAs($retailTerminal)->get(route('brands-platform.retail', $brandKey))->assertOk();
+
+            $this->actingAs($superAdmin)->get(route('brands-platform.agency', $brandKey))->assertOk();
+            $this->actingAs($superAdmin)->get(route('brands-platform.support', $brandKey))->assertOk();
+            $this->actingAs($superAdmin)->get(route('brands-platform.retail', $brandKey))->assertOk();
+            $this->actingAs($superAdmin)->get(route('brands-platform.brand-gallery', $brandKey))->assertOk();
+        }
     }
 
     public function test_consumer_capture_saves_to_brand_activation(): void

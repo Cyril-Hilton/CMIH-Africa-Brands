@@ -110,6 +110,38 @@
             transform: translateY(-3px);
             box-shadow: 0 12px 32px rgba(0,0,0,0.08);
         }
+        .publication-card-grid {
+            display: grid;
+            grid-template-columns: 0.8fr 1.2fr;
+            gap: 16px;
+            align-items: start;
+        }
+        .publication-list {
+            display: grid;
+            gap: 10px;
+        }
+        .publication-list article {
+            display: grid;
+            grid-template-columns: 92px 1fr;
+            gap: 12px;
+            align-items: center;
+            padding: 12px;
+            border: 1px solid #eadde0;
+            border-radius: 14px;
+            background: #fff;
+        }
+        .publication-thumb {
+            width: 92px;
+            aspect-ratio: 1.25;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--bp), var(--ba));
+            object-fit: cover;
+        }
+        @media (max-width: 980px) {
+            .publication-card-grid { grid-template-columns: 1fr; }
+            .publication-list article { grid-template-columns: 72px 1fr; }
+            .publication-thumb { width: 72px; }
+        }
         .report-icon-badge {
             width: 40px;
             height: 40px;
@@ -166,6 +198,7 @@
             <a href="#retailers" onclick="switchAgencyTab('retailers'); return false;" id="nav-retailers" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Retailers</a>
             <a href="#insights" onclick="switchAgencyTab('insights'); return false;" id="nav-insights" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Consumer Insights</a>
             <a href="#reports" onclick="switchAgencyTab('reports'); return false;" id="nav-reports" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Reports</a>
+            <a href="#publications" onclick="switchAgencyTab('publications'); return false;" id="nav-publications" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Publications</a>
             <a href="#enrollment" onclick="switchAgencyTab('enrollment'); return false;" id="nav-enrollment" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Staff Enrollment</a>
 
             <!-- OTHER WORKSPACES -->
@@ -1222,7 +1255,106 @@
 
 
             <!-- ========================================================================= -->
-            <!-- TAB 7: STAFF ENROLLMENT (STAFF ENROLLMENT CENTRE) -->
+            <!-- TAB 7: PUBLICATIONS -->
+            <!-- ========================================================================= -->
+            <div id="tab-publications" class="agency-tab-content">
+                <div class="big-top" style="margin-top: 15px;">
+                    <div>
+                        <div class="eyebrow" style="color:#ff1020;">PUBLICATION DESK</div>
+                        <h1 style="color:#171115; font-size:32px; font-weight:900; margin:4px 0 0;">Publications</h1>
+                        <p style="margin:6px 0 0; color:#8b747a; font-size:12px;">Post fliers, promos, discount alerts and activation call-outs for the public brand page.</p>
+                    </div>
+                    <a href="{{ route('brands-platform.publications', $brandKey) }}" target="_blank" class="filter-btn-export" style="text-decoration:none;">Open Public Page</a>
+                </div>
+
+                <div class="publication-card-grid">
+                    <div class="panel">
+                        <div class="panel-head">
+                            <div>
+                                <h3 style="color:#171115; font-size:18px; font-weight:900; margin:0;">Create Publication</h3>
+                                <small style="color:#8b747a;">Published items show immediately on the public Publications page.</small>
+                            </div>
+                        </div>
+                        <form method="POST" action="{{ route('brands-platform.agency.publications.store', $brandKey) }}" enctype="multipart/form-data" style="display:flex; flex-direction:column; gap:12px;">
+                            @csrf
+                            <input type="hidden" name="brand_activation_id" value="{{ $activation?->id }}">
+                            <div class="field">
+                                <label>Title</label>
+                                <input name="title" required maxlength="255" placeholder="e.g. Weekend Discount Alert">
+                            </div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                                <div class="field" style="margin:0;">
+                                    <label>Category</label>
+                                    <select name="category">
+                                        <option value="Flier">Flier</option>
+                                        <option value="Promo">Promo</option>
+                                        <option value="Discount Alert">Discount Alert</option>
+                                        <option value="Activation Call-Out">Activation Call-Out</option>
+                                        <option value="Brand Update">Brand Update</option>
+                                    </select>
+                                </div>
+                                <div class="field" style="margin:0;">
+                                    <label>Status</label>
+                                    <select name="status">
+                                        <option value="published">Publish Now</option>
+                                        <option value="draft">Save Draft</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="field">
+                                <label>Short Summary</label>
+                                <textarea name="summary" maxlength="1000" placeholder="Short public preview for the publication card."></textarea>
+                            </div>
+                            <div class="field">
+                                <label>Full Details</label>
+                                <textarea name="body" placeholder="Promo rules, dates, venues, call-out details, terms, or campaign context."></textarea>
+                            </div>
+                            <div class="field">
+                                <label>Flier / Promo Image</label>
+                                <input type="file" name="image" accept="image/*">
+                            </div>
+                            <button type="submit" class="btn-custom-report" style="width:100%; padding:12px;">Post Publication</button>
+                        </form>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-head">
+                            <div>
+                                <h3 style="color:#171115; font-size:18px; font-weight:900; margin:0;">Latest Publications</h3>
+                                <small style="color:#8b747a;">Drafts stay internal. Published items are visible to consumers.</small>
+                            </div>
+                        </div>
+                        <div class="publication-list">
+                            @forelse($publications as $publication)
+                                <article>
+                                    @if($publication->image_path)
+                                        <img class="publication-thumb" src="{{ asset('storage/'.$publication->image_path) }}" alt="{{ $publication->title }}">
+                                    @else
+                                        <div class="publication-thumb"></div>
+                                    @endif
+                                    <div>
+                                        <div style="display:flex; gap:7px; flex-wrap:wrap; align-items:center; margin-bottom:5px;">
+                                            <span style="font-size:8px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; color:#ff1020;">{{ $publication->category ?: 'Publication' }}</span>
+                                            <span style="font-size:8px; font-weight:900; color:{{ $publication->status === 'published' ? '#0aa777' : '#b7791f' }};">{{ strtoupper($publication->status) }}</span>
+                                        </div>
+                                        <strong style="display:block; color:#171115; font-size:13px;">{{ $publication->title }}</strong>
+                                        <small style="display:block; color:#8b747a; margin-top:4px;">{{ $publication->published_at?->format('d M Y H:i') ?: $publication->created_at?->format('d M Y H:i') }} by {{ $publication->creator?->name ?: 'Agency' }}</small>
+                                        <p style="margin:7px 0 0; color:#6f5a60; font-size:11px; line-height:1.45;">{{ \Illuminate\Support\Str::limit($publication->summary ?: strip_tags($publication->body), 150) }}</p>
+                                    </div>
+                                </article>
+                            @empty
+                                <div style="padding:28px; border:1px dashed #d7bac2; border-radius:14px; text-align:center; color:#8b747a; font-size:12px;">
+                                    No publications yet for this brand.
+                                </div>
+                            @endforelse
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- ========================================================================= -->
+            <!-- TAB 8: STAFF ENROLLMENT (STAFF ENROLLMENT CENTRE) -->
             <!-- ========================================================================= -->
             <div id="tab-enrollment" class="agency-tab-content">
                 <div id="team-privileges" class="dash-grid" style="margin-top:15px;">
@@ -1664,7 +1796,7 @@ let agencyStaffMarkers = {};
 document.addEventListener('DOMContentLoaded', function() {
     // 1. Initialise Tab Switching based on Hash
     const hash = window.location.hash.replace('#', '');
-    if (['overview', 'brands', 'promoters', 'retailers', 'insights', 'reports', 'enrollment'].includes(hash)) {
+    if (['overview', 'brands', 'promoters', 'retailers', 'insights', 'reports', 'publications', 'enrollment'].includes(hash)) {
         switchAgencyTab(hash);
     } else {
         switchAgencyTab('overview');

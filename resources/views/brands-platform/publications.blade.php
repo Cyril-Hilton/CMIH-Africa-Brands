@@ -62,7 +62,11 @@
     <div class="pub-grid">
         @forelse($publications as $publication)
             <article class="pub-card">
-                <div class="pub-image"></div>
+                @if($publication->image_path)
+                    <img class="pub-image" src="{{ asset('storage/'.$publication->image_path) }}" alt="{{ $publication->title }}">
+                @else
+                    <div class="pub-image"></div>
+                @endif
                 <div class="pub-body">
                     <div class="date">{{ $publication->published_at?->format('d M Y') ?: 'Brand Update' }} - {{ $publication->category ?: 'Publication' }}</div>
                     <h3>{{ $publication->title }}</h3>
