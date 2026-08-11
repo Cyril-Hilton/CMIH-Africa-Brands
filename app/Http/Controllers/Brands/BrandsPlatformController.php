@@ -405,7 +405,16 @@ class BrandsPlatformController extends Controller
         $assignments = BrandStaffAssignment::with(['brand', 'user', 'assigner'])
             ->when($request->filled('filter_brand'), fn ($q) => $q->where('brand_id', $request->input('filter_brand')))
             ->when($request->filled('filter_role'), fn ($q) => $q->where('role', $request->input('filter_role')))
-            ->when($request->filled('search_staff'), fn ($q) => $q->whereHas('user', fn ($sub) => $sub->where('name', 'like', '%'.$request->input('search_staff').'%')))
+            ->when($request->filled('filter_status'), fn ($q) => match ($request->input('filter_status')) {
+                'assigned'   => $q->where('is_active', true),
+                'unassigned' => $q->where('is_active', false),
+                default      => $q,
+            })
+            ->when($request->filled('search_staff'), fn ($q) => $q->where(function ($sub) use ($request) {
+                $term = '%'.$request->input('search_staff').'%';
+                $sub->whereHas('user', fn ($u) => $u->where('name', 'like', $term))
+                    ->orWhere('external_name', 'like', $term);
+            }))
             ->latest()
             ->paginate(20, ['*'], 'assignments_page')
             ->withQueryString();
@@ -413,20 +422,54 @@ class BrandsPlatformController extends Controller
         $activityLogs = BrandActivityLog::with(['brand', 'activation', 'user'])
             ->when($request->filled('filter_brand'), fn ($q) => $q->where('brand_id', $request->input('filter_brand')))
             ->when($request->filled('filter_action'), fn ($q) => $q->where('action', $request->input('filter_action')))
+            ->when($request->filled('search_log'), fn ($q) => $q->where(function ($sub) use ($request) {
+                $term = '%'.$request->input('search_log').'%';
+                $sub->where('action', 'like', $term)->orWhere('context', 'like', $term);
+            }))
             ->latest()
-            ->paginate(20, ['*'], 'logs_page')
+            ->paginate(25, ['*'], 'logs_page')
             ->withQueryString();
+
         $roleProductivity = BrandFieldActivity::query()
             ->selectRaw('staff_role, COUNT(*) as updates, SUM(units) as units, SUM(conversion_count) as conversions')
             ->groupBy('staff_role')
             ->orderByDesc('updates')
             ->get();
-        $availableStaff = $staff->count() - BrandStaffAssignment::query()
+
+        $availableStaff = max(0, $staff->count() - BrandStaffAssignment::query()
             ->where('is_active', true)
             ->distinct('user_id')
-            ->count('user_id');
+            ->count('user_id'));
 
-        return view('brands-platform.admin', compact('brands', 'staff', 'assignments', 'activityLogs', 'roleProductivity', 'availableStaff'));
+        // --- Overview stats ---
+        $totalActivations   = BrandActivation::count();
+        $totalPromoters     = BrandStaffAssignment::where('is_active', true)->where('role', 'promoter')->count();
+        $totalRetailStaff   = BrandStaffAssignment::where('is_active', true)->where('role', 'retail_staff')->count();
+        $totalSupervisors   = BrandStaffAssignment::where('is_active', true)->whereIn('role', ['field_supervisor', 'supervisor'])->count();
+        $totalMerchandisers = BrandStaffAssignment::where('is_active', true)->where('role', 'merchandiser')->count();
+        $activeAccounts     = User::where('status', 'active')->count();
+        $availabilitySnapshot = [
+            'promoters'     => BrandStaffAssignment::where('is_active', false)->where('role', 'promoter')->count(),
+            'retail'        => BrandStaffAssignment::where('is_active', false)->where('role', 'retail_staff')->count(),
+            'supervisors'   => BrandStaffAssignment::where('is_active', false)->whereIn('role', ['field_supervisor', 'supervisor'])->count(),
+            'merchandisers' => BrandStaffAssignment::where('is_active', false)->where('role', 'merchandiser')->count(),
+        ];
+
+        // Brand performance table for overview
+        $brandPerformance = Brand::where('platform_status', 'active')
+            ->with(['activations' => fn ($q) => $q->latest()->limit(1)])
+            ->withCount(['staffAssignments as assigned_staff_count' => fn ($q) => $q->where('is_active', true)])
+            ->withCount(['staffAssignments as available_staff_count' => fn ($q) => $q->where('is_active', false)])
+            ->withCount('consumerEntries as consumer_actions_count')
+            ->withCount('fieldActivities as retail_actions_count')
+            ->orderBy('name')
+            ->get();
+
+        return view('brands-platform.admin', compact(
+            'brands', 'staff', 'assignments', 'activityLogs', 'roleProductivity', 'availableStaff',
+            'totalActivations', 'totalPromoters', 'totalRetailStaff', 'totalSupervisors',
+            'totalMerchandisers', 'activeAccounts', 'availabilitySnapshot', 'brandPerformance',
+        ));
     }
 
     public function staffFeed(Request $request): JsonResponse
