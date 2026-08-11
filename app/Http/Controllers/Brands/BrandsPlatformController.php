@@ -58,7 +58,7 @@ class BrandsPlatformController extends Controller
             ->get();
         $brands = $this->preparePublicBrands($brands);
 
-        $slugOrder = ['lush-hair', 'guinness', 'rexona', 'dove', 'mtn'];
+        $slugOrder = ['omo', 'lush-hair', 'guinness', 'rexona', 'dove', 'mtn', 'gino'];
         $orderedBrands = collect();
         foreach ($slugOrder as $slug) {
             $matched = $brands->first(fn($b) => \Illuminate\Support\Str::slug($b->name) === $slug || $b->slug === $slug);

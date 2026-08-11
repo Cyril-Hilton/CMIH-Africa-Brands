@@ -162,7 +162,7 @@ button{cursor:pointer}
    ========================================================== */
 .brand-carousel-wrap{position:relative;overflow:visible;}
 .brand-carousel-viewport{
-  overflow:visible;padding:75px 20px 45px;max-width:1400px;margin:0 auto;
+  overflow:visible;padding:70px 20px 45px;max-width:1400px;margin:0 auto;
 }
 .liquid-grid{
   display:flex !important;
@@ -173,54 +173,54 @@ button{cursor:pointer}
 }
 .liquid-tile {
   min-width: 0;
-  flex: 0 0 235px;
-  width: 235px;
-  height: 155px;
-  border-radius: 18px;
-  margin: 0 -35px;
+  flex: 0 0 210px;
+  width: 210px;
+  height: 140px;
+  border-radius: 16px;
+  margin: 0 -28px;
   transform-origin: 50% 100%;
   transition: transform .35s cubic-bezier(0.25, 1, 0.5, 1), scale .35s cubic-bezier(0.25, 1, 0.5, 1), box-shadow .28s ease, border-color .28s ease;
   box-shadow: 0 14px 35px rgba(0,0,0,0.45);
 }
 
-/* 7-Card Ascending Staircase Arc Rules ( Rexona = Center / Biggest, Far Outer = Smallest ) */
-.liquid-tile.arc-0 { transform: translateY(72px) rotate(-15deg); scale: 0.65; z-index: 1; opacity: 0.78; }
-.liquid-tile.arc-1 { transform: translateY(44px) rotate(-10deg); scale: 0.82; z-index: 3; opacity: 0.88; }
-.liquid-tile.arc-2 { transform: translateY(18px) rotate(-5deg); scale: 1.02; z-index: 5; opacity: 0.96; }
+/* 7-Card Ascending Staircase Arc Rules ( Rexona = Center Peak, 3-1-3 Symmetrical Balance ) */
+.liquid-tile.arc-0 { transform: translateY(60px) rotate(-10deg); scale: 0.70; z-index: 1; opacity: 0.80; }
+.liquid-tile.arc-1 { transform: translateY(36px) rotate(-6deg); scale: 0.85; z-index: 3; opacity: 0.90; }
+.liquid-tile.arc-2 { transform: translateY(14px) rotate(-2.5deg); scale: 0.98; z-index: 5; opacity: 0.97; }
 
-/* Center Card (Rexona) - Extra Wide & Tall Landscape Rectangle (BIGGEST) */
+/* Center Card (Rexona) - Extra Wide & Tall Landscape Rectangle (BIGGEST PEAK) */
 .liquid-tile.arc-3 { 
-  flex: 0 0 310px; 
-  width: 310px; 
-  height: 195px; 
+  flex: 0 0 270px; 
+  width: 270px; 
+  height: 175px; 
   transform: translateY(0px) rotate(0deg); 
-  scale: 1.25; 
+  scale: 1.22; 
   z-index: 10; 
   opacity: 1; 
   filter: drop-shadow(0 25px 50px rgba(0,0,0,0.65)); 
 }
 
-.liquid-tile.arc-4 { transform: translateY(18px) rotate(5deg); scale: 1.02; z-index: 5; opacity: 0.96; }
-.liquid-tile.arc-5 { transform: translateY(44px) rotate(10deg); scale: 0.82; z-index: 3; opacity: 0.88; }
-.liquid-tile.arc-6 { transform: translateY(72px) rotate(15deg); scale: 0.65; z-index: 1; opacity: 0.78; }
+.liquid-tile.arc-4 { transform: translateY(14px) rotate(2.5deg); scale: 0.98; z-index: 5; opacity: 0.97; }
+.liquid-tile.arc-5 { transform: translateY(36px) rotate(6deg); scale: 0.85; z-index: 3; opacity: 0.90; }
+.liquid-tile.arc-6 { transform: translateY(60px) rotate(10deg); scale: 0.70; z-index: 1; opacity: 0.80; }
 
 /* Hover States */
-.liquid-tile.arc-0:hover { transform: translateY(56px) rotate(-15deg); scale: 0.75; z-index: 20; opacity: 1; }
-.liquid-tile.arc-1:hover { transform: translateY(30px) rotate(-10deg); scale: 0.92; z-index: 20; opacity: 1; }
-.liquid-tile.arc-2:hover { transform: translateY(6px) rotate(-5deg); scale: 1.10; z-index: 20; opacity: 1; }
-.liquid-tile.arc-3:hover { transform: translateY(-14px) rotate(0deg); scale: 1.32; z-index: 20; opacity: 1; }
-.liquid-tile.arc-4:hover { transform: translateY(6px) rotate(5deg); scale: 1.10; z-index: 20; opacity: 1; }
-.liquid-tile.arc-5:hover { transform: translateY(30px) rotate(10deg); scale: 0.92; z-index: 20; opacity: 1; }
-.liquid-tile.arc-6:hover { transform: translateY(56px) rotate(15deg); scale: 0.75; z-index: 20; opacity: 1; }
+.liquid-tile.arc-0:hover { transform: translateY(46px) rotate(-10deg); scale: 0.78; z-index: 20; opacity: 1; }
+.liquid-tile.arc-1:hover { transform: translateY(24px) rotate(-6deg); scale: 0.93; z-index: 20; opacity: 1; }
+.liquid-tile.arc-2:hover { transform: translateY(4px) rotate(-2.5deg); scale: 1.06; z-index: 20; opacity: 1; }
+.liquid-tile.arc-3:hover { transform: translateY(-12px) rotate(0deg); scale: 1.28; z-index: 20; opacity: 1; }
+.liquid-tile.arc-4:hover { transform: translateY(4px) rotate(2.5deg); scale: 1.06; z-index: 20; opacity: 1; }
+.liquid-tile.arc-5:hover { transform: translateY(24px) rotate(6deg); scale: 0.93; z-index: 20; opacity: 1; }
+.liquid-tile.arc-6:hover { transform: translateY(46px) rotate(10deg); scale: 0.78; z-index: 20; opacity: 1; }
 
 .liquid-tile .tile-category{display:none}
 .liquid-tile .tile-bottom small{display:none}
-.liquid-tile .tile-bottom{align-items:center; padding: 8px 16px; height: 48px;}
-.liquid-tile.arc-3 .tile-bottom{height: 58px; padding: 10px 20px;}
-.liquid-tile .tile-logo-wrap{height: calc(100% - 48px); display: flex; align-items: center; justify-content: center;}
-.liquid-tile.arc-3 .tile-logo-wrap{height: calc(100% - 58px);}
-.liquid-tile .tile-logo{max-width: 80%; max-height: 65px; object-fit: contain;}
-.liquid-tile.arc-3 .tile-logo{max-width: 85%; max-height: 90px;}
+.liquid-tile .tile-bottom{align-items:center; padding: 8px 14px; height: 44px;}
+.liquid-tile.arc-3 .tile-bottom{height: 52px; padding: 10px 18px;}
+.liquid-tile .tile-logo-wrap{height: calc(100% - 44px); display: flex; align-items: center; justify-content: center;}
+.liquid-tile.arc-3 .tile-logo-wrap{height: calc(100% - 52px);}
+.liquid-tile .tile-logo{max-width: 80%; max-height: 56px; object-fit: contain;}
+.liquid-tile.arc-3 .tile-logo{max-width: 85%; max-height: 78px;}
 .carousel-controls{
   display:flex;align-items:center;justify-content:center;gap:12px;margin-top:28px
 }
