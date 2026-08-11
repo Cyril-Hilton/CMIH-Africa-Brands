@@ -43,10 +43,11 @@
 
             <div class="work-top" style="margin-top: 15px;">
                 <div>
-                    <div class="eyebrow">RETAIL OPERATIONS</div>
-                    <h1>Redemption Dashboard</h1>
+                    <div class="eyebrow">RETAIL CASHIER REDEMPTION TERMINAL</div>
+                    <h1>Retail Barcode & Discount Scanner</h1>
+                    <p style="margin:4px 0 0; font-size:12px; color:rgba(255,255,255,0.65);">Dedicated scanner terminal for supermarket cashiers and tellers (Shoprite, Melcom, Palace Mall) to verify consumer discount barcodes.</p>
                 </div>
-                <span class="chip ok">Geofence Active</span>
+                <span class="chip ok">Barcode Scanner Active</span>
             </div>
 
             @if(session('status'))

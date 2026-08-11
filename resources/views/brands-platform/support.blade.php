@@ -45,10 +45,11 @@
 
             <div class="work-top" style="margin-top:15px;">
                 <div>
-                    <div class="eyebrow">SUPPORT STAFF WORKSPACE</div>
+                    <div class="eyebrow">PROMOTER & BRAND ADVISOR WORKSPACE</div>
                     <h1>{{ $activation?->name ?: $brand->activation_name ?: 'Brand Activation' }}</h1>
+                    <p style="margin:4px 0 0; font-size:12px; color:rgba(255,255,255,0.65);">Workspace for ushers, sales representatives, and brand advisors engaging consumers on the floor.</p>
                 </div>
-                <span class="chip ok">Active</span>
+                <span class="chip ok">Promoter Active</span>
             </div>
 
             @if(session('status'))
