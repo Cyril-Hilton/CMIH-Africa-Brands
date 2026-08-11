@@ -43,7 +43,11 @@
 
             <div class="work-top" style="margin-top: 15px;">
                 <div>
-                    <div class="eyebrow">RETAIL CASHIER REDEMPTION TERMINAL</div>
+                    <div class="eyebrow" style="display:flex; align-items:center; gap:6px;">
+                        <span>👋 WELCOME BACK, <strong>{{ strtoupper(Auth::user()?->name ?: 'RETAIL CASHIER') }}</strong></span>
+                        <span>&bull;</span>
+                        <span>REDEMPTION TERMINAL</span>
+                    </div>
                     <h1>Retail Barcode & Discount Scanner</h1>
                     <p style="margin:4px 0 0; font-size:12px; color:rgba(255,255,255,0.65);">Dedicated scanner terminal for supermarket cashiers and tellers (Shoprite, Melcom, Palace Mall) to verify consumer discount barcodes.</p>
                 </div>

@@ -63,7 +63,11 @@
 
             <div class="big-top" style="margin-top: 15px;">
                 <div>
-                    <div class="eyebrow">AGENCY COMMAND CENTRE</div>
+                    <div class="eyebrow" style="display:flex; align-items:center; gap:6px;">
+                        <span>👋 WELCOME BACK, <strong>{{ strtoupper(Auth::user()?->name ?: 'AGENCY LEADER') }}</strong></span>
+                        <span>&bull;</span>
+                        <span>AGENCY COMMAND CENTRE</span>
+                    </div>
                     <h1 style="color:#171115; font-size:28px; font-weight:900; margin:5px 0 0;">Portfolio Performance</h1>
                 </div>
                 <div class="filters">

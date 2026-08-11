@@ -52,12 +52,14 @@ class AuthenticatedSessionController extends Controller
             'last_login_user_agent' => substr((string) $request->userAgent(), 0, 255),
         ])->save();
 
+        $welcomeMsg = 'Welcome back to the portal, ' . ($user->name ?: 'User') . '!';
+
         if ($request->filled('redirect_to')) {
-            return redirect()->to($request->input('redirect_to'));
+            return redirect()->to($request->input('redirect_to'))->with('status', $welcomeMsg);
         }
 
         if ($request->session()->has('url.intended')) {
-            return redirect()->intended();
+            return redirect()->intended()->with('status', $welcomeMsg);
         }
 
         if ($user->isMerchandiserSupervisor()) {

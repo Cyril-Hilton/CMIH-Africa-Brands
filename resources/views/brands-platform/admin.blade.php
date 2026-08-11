@@ -44,7 +44,11 @@
 
             <div class="work-top" style="margin-top: 15px;">
                 <div>
-                    <div class="eyebrow">CMIH AGENCY ADMIN CONSOLE</div>
+                    <div class="eyebrow" style="display:flex; align-items:center; gap:6px;">
+                        <span>👋 WELCOME BACK, <strong>{{ strtoupper(Auth::user()?->name ?: 'SUPER ADMIN') }}</strong></span>
+                        <span>&bull;</span>
+                        <span>CMIH AGENCY ADMIN CONSOLE</span>
+                    </div>
                     <h1>Brand Platform Control</h1>
                 </div>
                 <span class="chip ok">System Online</span>
