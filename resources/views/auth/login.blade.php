@@ -33,7 +33,12 @@
 
             <div>
                 <x-input-label for="password" :value="__('Password')" />
-                <x-text-input id="password" type="password" name="password" required autocomplete="current-password" placeholder="Enter your password" />
+                <div class="relative w-full">
+                    <x-text-input id="password" type="password" name="password" required autocomplete="current-password" placeholder="Enter your password" class="pr-10" />
+                    <button type="button" onclick="togglePasswordVisibility('password', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-brand-white/50 hover:text-brand-white transition-colors" aria-label="Toggle password visibility">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
+                </div>
                 <p class="text-[10px] text-brand-ash mt-1">New passwords must be more than 8 characters and include a letter, number, and symbol.</p>
                 <x-input-error :messages="$errors->get('password')" class="mt-2" />
             </div>

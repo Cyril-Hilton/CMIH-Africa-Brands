@@ -38,7 +38,12 @@
             </div>
             <div class="field">
                 <label>Password</label>
-                <input name="password" id="agencyPass" type="password" required autocomplete="current-password" placeholder="Enter password" style="width:100%; box-sizing:border-box;">
+                <div style="position:relative; width:100%;">
+                    <input name="password" id="agencyPass" type="password" required autocomplete="current-password" placeholder="Enter password" style="width:100%; box-sizing:border-box; padding-right:40px;">
+                    <button type="button" onclick="togglePasswordVisibility('agencyPass', this)" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; color:#8b747a; cursor:pointer; font-size:14px; padding:4px;" aria-label="Toggle password visibility">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
+                </div>
             </div>
 
             <div class="field" style="margin-top:-4px;">

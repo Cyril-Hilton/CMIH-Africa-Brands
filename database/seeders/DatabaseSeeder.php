@@ -19,7 +19,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $rawPassword = env('SUPERADMIN_PASSWORD', 'Concepts@MIHSuper');
+        $rawPassword = env('SUPERADMIN_PASSWORD', 'Concepts@MIH25');
 
         User::updateOrCreate(
             ['email' => 'superadmin@cmih.africa'],

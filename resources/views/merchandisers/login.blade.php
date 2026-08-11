@@ -19,7 +19,12 @@
 
             <div>
                 <x-input-label for="password" :value="__('Password')" />
-                <x-text-input id="password" type="password" name="password" required placeholder="Enter your password" />
+                <div class="relative w-full">
+                    <x-text-input id="password" type="password" name="password" required placeholder="Enter your password" class="pr-10" />
+                    <button type="button" onclick="togglePasswordVisibility('password', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-brand-white/50 hover:text-brand-white transition-colors" aria-label="Toggle password visibility">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
+                </div>
                 <x-input-error :messages="$errors->get('password')" class="mt-2" />
             </div>
 

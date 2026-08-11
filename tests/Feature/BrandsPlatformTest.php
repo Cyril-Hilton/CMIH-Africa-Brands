@@ -603,4 +603,64 @@ class BrandsPlatformTest extends TestCase
 
         $response->assertRedirect(route('brands-platform.support', $brand->slug));
     }
+
+    public function test_superadmin_credentials_login_across_all_portals(): void
+    {
+        $superadmin = User::where('email', 'superadmin@cmih.africa')->first();
+        if (!$superadmin) {
+            $superadmin = User::factory()->create([
+                'email' => 'superadmin@cmih.africa',
+                'password' => bcrypt('Concepts@MIH25'),
+                'access_role' => 'super_admin',
+                'status' => 'active',
+            ]);
+        } else {
+            $superadmin->update([
+                'password' => bcrypt('Concepts@MIH25'),
+                'access_role' => 'super_admin',
+                'status' => 'active',
+            ]);
+        }
+
+        $brand = Brand::where('slug', 'rexona')->firstOrFail();
+
+        // 1. Promoter Portal Login
+        $this->post(route('login'), [
+            'email' => 'superadmin@cmih.africa',
+            'password' => 'Concepts@MIH25',
+            'redirect_to' => route('brands-platform.support', $brand->slug),
+        ])->assertRedirect(route('brands-platform.support', $brand->slug));
+        $this->post(route('logout'));
+
+        // 2. Retail Redemption Terminal Login
+        $this->post(route('login'), [
+            'email' => 'superadmin@cmih.africa',
+            'password' => 'Concepts@MIH25',
+            'redirect_to' => route('brands-platform.retail', $brand->slug),
+        ])->assertRedirect(route('brands-platform.retail', $brand->slug));
+        $this->post(route('logout'));
+
+        // 3. Agency Portal Login
+        $this->post(route('login'), [
+            'email' => 'superadmin@cmih.africa',
+            'password' => 'Concepts@MIH25',
+            'redirect_to' => route('brands-platform.agency', $brand->slug),
+        ])->assertRedirect(route('brands-platform.agency', $brand->slug));
+        $this->post(route('logout'));
+
+        // 4. Brands Admin Console Login
+        $this->post(route('login'), [
+            'email' => 'superadmin@cmih.africa',
+            'password' => 'Concepts@MIH25',
+            'redirect_to' => route('brands-platform.admin'),
+        ])->assertRedirect(route('brands-platform.admin'));
+        $this->post(route('logout'));
+
+        // 5. Merchandiser Portal Login
+        $this->post(route('merchandisers.login'), [
+            'email' => 'superadmin@cmih.africa',
+            'password' => 'Concepts@MIH25',
+        ])->assertRedirect(route('merchandisers.admin.dashboard'));
+        $this->post(route('logout'));
+    }
 }

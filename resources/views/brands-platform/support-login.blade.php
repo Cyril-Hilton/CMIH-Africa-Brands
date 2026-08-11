@@ -41,7 +41,7 @@
             <div onclick="selectSupportPortal('promoter')" style="background:#fcf8f9; border:2px solid #e4dadd; border-radius:14px; padding:20px; text-align:left; cursor:pointer; transition:all 0.2s ease;" onmouseover="this.style.borderColor='#ff1020'; this.style.transform='translateY(-2px)';" onmouseout="this.style.borderColor='#e4dadd'; this.style.transform='translateY(0)';">
                 <div style="font-size:32px; margin-bottom:10px;">📣</div>
                 <h3 style="margin:0 0 6px; color:#171115; font-size:16px; font-weight:800;">1. Promoter Portal</h3>
-                <p style="margin:0 0 14px; color:#8b747a; font-size:12px; line-height:1.4;">For ushers, sales girls/boys, brand advisors, and aisle engagement staff.</p>
+                <p style="margin:0 0 14px; color:#8b747a; font-size:12px; line-height:1.4;">For brand ambassadors, field activation specialists, and on-ground sales representatives conducting in-store sampling and consumer engagement.</p>
                 <button type="button" class="btn red" style="width:100%; padding:10px; border-radius:8px; font-size:12px; font-weight:800; pointer-events:none;">Promoter Sign In &rarr;</button>
             </div>
 
@@ -73,7 +73,12 @@
                 </div>
                 <div class="field">
                     <label>Password</label>
-                    <input name="password" id="staffPass" type="password" required autocomplete="current-password" placeholder="Enter password" style="width:100%; box-sizing:border-box;">
+                    <div style="position:relative; width:100%;">
+                        <input name="password" id="staffPass" type="password" required autocomplete="current-password" placeholder="Enter password" style="width:100%; box-sizing:border-box; padding-right:40px;">
+                        <button type="button" onclick="togglePasswordVisibility('staffPass', this)" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; color:#8b747a; cursor:pointer; font-size:14px; padding:4px;" aria-label="Toggle password visibility">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="field" style="margin-top:-4px;">
