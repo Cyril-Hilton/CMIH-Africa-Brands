@@ -52,6 +52,10 @@ class AuthenticatedSessionController extends Controller
             'last_login_user_agent' => substr((string) $request->userAgent(), 0, 255),
         ])->save();
 
+        if ($request->session()->has('url.intended')) {
+            return redirect()->intended();
+        }
+
         if ($user->isMerchandiserSupervisor()) {
             return redirect()->route('merchandisers.admin.dashboard');
         }

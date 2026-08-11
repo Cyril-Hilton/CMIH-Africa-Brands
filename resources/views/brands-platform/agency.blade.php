@@ -4,6 +4,7 @@
 
 @section('content')
 @php
+    $companyLogo = asset('brands-platform-reference/assets/asset_01_abc0e3abce39.png');
     $brandKey = $brand->slug ?: $brand->presentation_key ?: $brand->id;
     $brandLogo = $brand->prototype_logo_url ?: $brand->public_logo_dark_url ?: $brand->public_logo_url;
     $brandStyle = implode(' ', [
@@ -20,23 +21,36 @@
 <section class="brands-prototype view active big-dashboard" id="view-agency" style="{{ $brandStyle }}">
     <div class="big-shell">
         <aside class="big-side">
-            <div class="logo-lock">
+            <div class="logo-lock" style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">
+                <img src="{{ $companyLogo }}" alt="CMIH Logo" style="width:36px; height:36px; border-radius:8px; object-fit:contain; background:#ff1020; padding:4px;">
                 <div>
                     <strong>CMIH AGENCY</strong>
-                    <small style="display:block; color:#9f858c; font-size:8px;">COMMAND CENTRE</small>
+                    <small style="display:block; color:#9f858c; font-size:8px; font-weight:700;">COMMAND CENTRE</small>
                 </div>
             </div>
 
-            <div class="big-nav-label">Portfolio</div>
+            <!-- PORTFOLIO -->
+            <div class="big-nav-label">PORTFOLIO</div>
             <a href="{{ route('brands-platform.agency', $brandKey) }}" class="big-nav active" style="text-decoration:none; display:block; text-align:left;">Overview</a>
-            <a href="{{ route('brands-platform.show', $brandKey) }}" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Brand Page</a>
+            <a href="{{ route('brands-platform.index') }}" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Brands</a>
 
-            <div class="big-nav-label">Workspace</div>
-            <a href="{{ route('brands-platform.support', $brandKey) }}" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Promoter Dashboard</a>
-            <a href="{{ route('brands-platform.retail', $brandKey) }}" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Retail Dashboard</a>
+            <!-- PERFORMANCE -->
+            <div class="big-nav-label">PERFORMANCE</div>
+            <a href="#promoter-leaderboard" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Promoters</a>
+            <a href="#retailer-performance" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Retailers</a>
+            <a href="#consumer-insights" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Consumer Insights</a>
+            <a href="#reports-export" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Reports</a>
 
-            <div class="big-nav-label">Navigation</div>
-            <a href="{{ route('brands-platform.index') }}" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Home</a>
+            <!-- OTHER WORKSPACES (SUPER ADMIN, CVO, LINE MANAGERS) -->
+            @if(auth()->user()?->isCvoOrSuperAdmin() || auth()->user()?->isLineManager() || auth()->user()?->access_role === 'admin')
+                <div class="big-nav-label">OTHER WORKSPACES</div>
+                <a href="{{ route('brands-platform.support', $brandKey) }}" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Promoter Dashboard</a>
+                <a href="{{ route('brands-platform.retail', $brandKey) }}" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Retail Dashboard</a>
+            @endif
+
+            <!-- NAVIGATION -->
+            <div class="big-nav-label">NAVIGATION</div>
+            <a href="{{ route('brands-platform.activation', $brandKey) }}" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Back to Activation</a>
             
             <form method="POST" action="{{ route('logout') }}" id="agency-logout-form" style="display:none;">
                 @csrf
