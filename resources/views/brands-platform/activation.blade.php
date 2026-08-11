@@ -61,7 +61,7 @@
                 <h3>Support Staff</h3>
                 <p>Promoters, sales personnel and field teams record assigned work, images, location updates and retail actions.</p>
             </div>
-            <a href="{{ auth()->check() ? route('brands-platform.support', $brandKey) : route('brands-platform.support-login', $brandKey) }}" class="btn dark">Support Staff Sign In</a>
+            <a href="{{ route('brands-platform.support-login', $brandKey) }}" class="btn dark">Support Staff Sign In</a>
         </article>
 
         <article class="role-card">
