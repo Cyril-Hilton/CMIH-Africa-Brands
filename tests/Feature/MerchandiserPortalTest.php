@@ -42,16 +42,29 @@ class MerchandiserPortalTest extends TestCase
     {
         parent::setUp();
 
-        // Create user with ID 1 to satisfy site_contents.updated_by foreign key constraint
-        User::create([
-            'id' => 1,
-            'name' => 'System Setup Admin',
-            'email' => 'setup-admin@cmih.africa',
-            'contact_email' => 'setup-admin@cmih.africa',
-            'password' => Hash::make('Pass123'),
-            'access_role' => 'super_admin',
-            'status' => 'active'
-        ]);
+        // Ensure user with ID 1 exists and is a super_admin.
+        // Seed migrations may have already created users, so we upgrade
+        // the existing user at ID 1 (or create one if none exists).
+        if (User::where('id', 1)->exists()) {
+            User::where('id', 1)->update([
+                'name'          => 'System Setup Admin',
+                'email'         => 'setup-admin@cmih.africa',
+                'contact_email' => 'setup-admin@cmih.africa',
+                'access_role'   => 'super_admin',
+                'status'        => 'active',
+            ]);
+        } else {
+            // Use forceCreate so the explicit id=1 is honoured (bypasses fillable)
+            User::forceCreate([
+                'id'            => 1,
+                'name'          => 'System Setup Admin',
+                'email'         => 'setup-admin@cmih.africa',
+                'contact_email' => 'setup-admin@cmih.africa',
+                'password'      => Hash::make('Pass123'),
+                'access_role'   => 'super_admin',
+                'status'        => 'active',
+            ]);
+        }
 
         // Add default settings
         SiteContent::updateOrCreate(
@@ -2816,17 +2829,17 @@ class MerchandiserPortalTest extends TestCase
         $this->actingAs($admin);
 
         // Delete without reassign target -> fails with session show_reassign_wizard_for flag
-        $response = $this->delete(route('portal.merchandisers-admin.kds.destroy', $kd1));
+        $response = $this->delete(route('merchandisers.admin.kds.destroy', $kd1));
 
         $response->assertSessionHas('show_reassign_wizard_for', $kd1->id);
         $this->assertDatabaseHas('key_distributors', ['id' => $kd1->id]);
 
         // Delete with target reassign to KD2 -> reassigns outlets and users and deletes KD1
-        $response2 = $this->delete(route('portal.merchandisers-admin.kds.destroy', $kd1), [
+        $response2 = $this->delete(route('merchandisers.admin.kds.destroy', $kd1), [
             'reassign_kd_id' => $kd2->id
         ]);
 
-        $response2->assertRedirect(route('portal.merchandisers-admin.kds'));
+        $response2->assertRedirect(route('merchandisers.admin.tab', ['adminTab' => 'kds']));
         $this->assertDatabaseMissing('key_distributors', ['id' => $kd1->id]);
         
         $this->assertDatabaseHas('outlets', [

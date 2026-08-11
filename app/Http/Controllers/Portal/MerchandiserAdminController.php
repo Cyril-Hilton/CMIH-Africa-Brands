@@ -177,12 +177,54 @@ class MerchandiserAdminController extends Controller
     public function storeSku(Request $request)
     {
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255', 'unique:skus,name'],
+            'name'          => ['required', 'string', 'max:255', 'unique:skus,name'],
+            'category'      => ['nullable', 'string', 'max:100'],
+            'track_osa'     => ['nullable', 'boolean'],
+            'osa_drop_size' => ['nullable', 'integer', 'min:1'],
+            'track_npd'     => ['nullable', 'boolean'],
+            'npd_drop_size' => ['nullable', 'integer', 'min:1'],
+            'track_mhs'     => ['nullable', 'boolean'],
+            'mhs_drop_size' => ['nullable', 'integer', 'min:1'],
         ]);
+
+        // Treat unchecked checkboxes as false
+        $validated['track_osa'] = $request->boolean('track_osa');
+        $validated['track_npd'] = $request->boolean('track_npd');
+        $validated['track_mhs'] = $request->boolean('track_mhs');
+
+        // Default drop sizes to 1 if not provided
+        $validated['osa_drop_size'] = $validated['osa_drop_size'] ?? 1;
+        $validated['npd_drop_size'] = $validated['npd_drop_size'] ?? 1;
+        $validated['mhs_drop_size'] = $validated['mhs_drop_size'] ?? 1;
 
         Sku::create($validated);
 
         return back()->with('status', 'SKU created successfully.');
+    }
+
+    /**
+     * Update SKU drop sizes and tracking flags
+     */
+    public function updateSku(Request $request, Sku $sku)
+    {
+        $validated = $request->validate([
+            'name'          => ['required', 'string', 'max:255', 'unique:skus,name,'.$sku->id],
+            'category'      => ['nullable', 'string', 'max:100'],
+            'track_osa'     => ['nullable', 'boolean'],
+            'osa_drop_size' => ['nullable', 'integer', 'min:1'],
+            'track_npd'     => ['nullable', 'boolean'],
+            'npd_drop_size' => ['nullable', 'integer', 'min:1'],
+            'track_mhs'     => ['nullable', 'boolean'],
+            'mhs_drop_size' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        $validated['track_osa'] = $request->boolean('track_osa');
+        $validated['track_npd'] = $request->boolean('track_npd');
+        $validated['track_mhs'] = $request->boolean('track_mhs');
+
+        $sku->update($validated);
+
+        return back()->with('status', "SKU '{$sku->name}' updated successfully.");
     }
 
     /**

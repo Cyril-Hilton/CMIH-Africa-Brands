@@ -17,7 +17,7 @@ return new class extends Migration
                 'category' => 'Personal Care',
                 'headline' => 'Stay fresh. Keep moving.',
                 'description' => 'Movement-led consumer sampling, trial and retail conversion experiences.',
-                'activation_name' => 'Campus and Gym Sampling Activation 2026',
+                'activation_name' => 'Campus and Gym Sampling Activation',
                 'activation_type' => 'sampling',
                 'activation_description' => 'Sampling activation across selected campuses and gym centres with consumer capture and field reporting.',
                 'primary_color' => '#00656c',

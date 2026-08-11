@@ -48,7 +48,9 @@
     </head>
     <body class="bg-brand-black text-brand-white font-sans antialiased">
         <div class="min-h-screen flex flex-col bg-inked">
-            @include('partials.site-header')
+            @if(! request()->routeIs('brands-platform.*'))
+                @include('partials.site-header')
+            @endif
 
             @if(request()->routeIs('brands-platform.*') && ! request()->routeIs('brands-platform.index', 'brands-platform.show', 'brands-platform.publications', 'brands-platform.activation', 'brands-platform.consumer'))
                 @include('brands-platform.partials.notifications')
@@ -58,8 +60,35 @@
                 @yield('content')
             </main>
 
-            @include('partials.site-footer')
+            @if(! request()->routeIs('brands-platform.*'))
+                @include('partials.site-footer')
+            @endif
         </div>
+
+        @if(request()->routeIs('brands-platform.*'))
+            <script src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google.maps_api_key') ?? env('GOOGLE_MAPS_API_KEY') }}&libraries=places"></script>
+            <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                    const inputs = document.querySelectorAll('input[name="location"], input[id="location"], .google-autocomplete');
+                    inputs.forEach(input => {
+                        if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+                            const autocomplete = new google.maps.places.Autocomplete(input, {
+                                types: ['geocode', 'establishment']
+                            });
+                            input.addEventListener('keydown', (e) => {
+                                if (e.key === 'Enter') {
+                                    const pacContainer = document.querySelector('.pac-container');
+                                    if (pacContainer && pacContainer.style.display !== 'none') {
+                                        e.preventDefault();
+                                    }
+                                }
+                            });
+                        }
+                    });
+                });
+            </script>
+        @endif
+
         @stack('scripts')
         <x-notification />
     </body>

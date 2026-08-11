@@ -60,6 +60,32 @@ class AuthenticatedSessionController extends Controller
             return redirect()->route('merchandisers.dashboard');
         }
 
+        $assignment = \App\Models\BrandStaffAssignment::where('user_id', $user->id)
+            ->where('is_active', true)
+            ->first();
+
+        if ($assignment) {
+            $brand = $assignment->brand;
+            $brandKey = $brand->slug ?: $brand->id;
+            
+            if ($assignment->role === \App\Models\BrandStaffAssignment::ROLE_RETAIL) {
+                return redirect()->route('brands-platform.retail', $brandKey);
+            }
+            
+            if ($assignment->role === \App\Models\BrandStaffAssignment::ROLE_AGENCY) {
+                return redirect()->route('brands-platform.agency', $brandKey);
+            }
+            
+            return redirect()->route('brands-platform.support', $brandKey);
+        }
+
+        if ($user->hasRole(['agency'])) {
+            $firstBrand = \App\Models\Brand::first();
+            if ($firstBrand) {
+                return redirect()->route('brands-platform.agency', $firstBrand->slug ?: $firstBrand->id);
+            }
+        }
+
         $redirectTo = $user->hasRole(['admin', 'super_admin'])
             ? route('admin.dashboard', absolute: false)
             : route('dashboard', absolute: false);

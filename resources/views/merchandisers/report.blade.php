@@ -291,6 +291,145 @@
             </div>
             @endif
 
+            <!-- Executive Summary Section -->
+            @if($report->section('show_exec_summary') && isset($data['exec_compliance']))
+            <div class="glass-panel rounded-2xl border border-brand-white/10 p-5 space-y-4">
+                <div class="flex items-center justify-between border-b border-brand-white/10 pb-3">
+                    <p class="text-xs uppercase tracking-widest text-brand-ash font-bold">📊 Executive Audit Summary</p>
+                    <span class="text-xs text-brand-ash">Target: 100% Audit Compliance</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="rounded-xl border border-brand-white/10 bg-brand-black/40 p-4">
+                        <p class="text-[10px] uppercase tracking-widest text-brand-ash">Scheduled Visits</p>
+                        <p class="text-2xl font-display text-blue-400 mt-1">{{ number_format($data['exec_scheduled']) }}</p>
+                    </div>
+                    <div class="rounded-xl border border-brand-white/10 bg-brand-black/40 p-4">
+                        <p class="text-[10px] uppercase tracking-widest text-brand-ash">Actual Visits</p>
+                        <p class="text-2xl font-display text-green-400 mt-1">{{ number_format($data['exec_actual']) }}</p>
+                    </div>
+                    <div class="rounded-xl border border-brand-white/10 bg-brand-black/40 p-4">
+                        <p class="text-[10px] uppercase tracking-widest text-brand-ash">Audit Compliance Rate</p>
+                        <p class="text-2xl font-display text-amber-400 mt-1">{{ $data['exec_compliance'] }}%</p>
+                    </div>
+                </div>
+            </div>
+            @endif
+
+            <!-- Category Level KPIs -->
+            @if($report->section('show_category_kpi') && isset($data['category_kpis']))
+            <div class="glass-panel rounded-2xl border border-brand-white/10 overflow-hidden">
+                <div class="px-5 py-4 border-b border-brand-white/10">
+                    <p class="text-xs uppercase tracking-widest text-brand-ash font-bold">🏷️ Category Level KPIs (OSA / NPD / MHS)</p>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="border-b border-brand-white/10 text-[10px] uppercase tracking-widest text-brand-ash">
+                            <tr>
+                                <th class="px-5 py-3 text-left">Category</th>
+                                <th class="px-5 py-3 text-right">Total Visits</th>
+                                <th class="px-5 py-3 text-right">OSA Compliance</th>
+                                <th class="px-5 py-3 text-right">NPD Compliance</th>
+                                <th class="px-5 py-3 text-right">MHS Compliance</th>
+                                <th class="px-5 py-3 text-right">Facings Captured</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($data['category_kpis'] as $cat)
+                                <tr class="border-b border-brand-white/5">
+                                    <td class="px-5 py-3 font-semibold text-brand-white">{{ $cat->category }}</td>
+                                    <td class="px-5 py-3 text-right text-brand-ash">{{ number_format($cat->visit_count) }}</td>
+                                    <td class="px-5 py-3 text-right text-emerald-400 font-bold">{{ $cat->osa_pct !== null ? $cat->osa_pct.'%' : 'N/A' }}</td>
+                                    <td class="px-5 py-3 text-right text-amber-400 font-bold">{{ $cat->npd_pct !== null ? $cat->npd_pct.'%' : 'N/A' }}</td>
+                                    <td class="px-5 py-3 text-right text-sky-400 font-bold">{{ $cat->mhs_pct !== null ? $cat->mhs_pct.'%' : 'N/A' }}</td>
+                                    <td class="px-5 py-3 text-right text-brand-ash">{{ number_format($cat->total_facings) }}</td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="6" class="px-5 py-6 text-center text-brand-ash">No category KPI data available.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            @endif
+
+            <!-- User Performance -->
+            @if($report->section('show_user_performance') && isset($data['user_performance']))
+            <div class="glass-panel rounded-2xl border border-brand-white/10 overflow-hidden">
+                <div class="px-5 py-4 border-b border-brand-white/10">
+                    <p class="text-xs uppercase tracking-widest text-brand-ash font-bold">👤 Field Team Performance & Coverage</p>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="border-b border-brand-white/10 text-[10px] uppercase tracking-widest text-brand-ash">
+                            <tr>
+                                <th class="px-5 py-3 text-left">Merchandiser</th>
+                                <th class="px-5 py-3 text-left">KD</th>
+                                <th class="px-5 py-3 text-right">Scheduled Visits</th>
+                                <th class="px-5 py-3 text-right">Completed Visits</th>
+                                <th class="px-5 py-3 text-right">Coverage %</th>
+                                <th class="px-5 py-3 text-right">Images Captured</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($data['user_performance'] as $u)
+                                <tr class="border-b border-brand-white/5">
+                                    <td class="px-5 py-3 font-medium text-brand-white">{{ $u->name }}</td>
+                                    <td class="px-5 py-3 text-brand-ash text-xs">{{ $u->merchandiserKd?->name ?? '—' }}</td>
+                                    <td class="px-5 py-3 text-right text-brand-ash">{{ $u->scheduled_visits }}</td>
+                                    <td class="px-5 py-3 text-right text-blue-400 font-bold">{{ $u->total_visits }}</td>
+                                    <td class="px-5 py-3 text-right font-bold {{ $u->coverage_pct >= 90 ? 'text-emerald-400' : ($u->coverage_pct >= 70 ? 'text-amber-400' : 'text-red-400') }}">{{ $u->coverage_pct }}%</td>
+                                    <td class="px-5 py-3 text-right text-sky-300 font-bold">{{ number_format($u->images_uploaded) }}</td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="6" class="px-5 py-6 text-center text-brand-ash">No team performance data available.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            @endif
+
+            <!-- Image Gallery Preview -->
+            @if($report->section('show_gallery') && isset($data['gallery_photos']) && $data['gallery_photos']->isNotEmpty())
+            <div class="glass-panel rounded-2xl border border-brand-white/10 p-5">
+                <div class="border-b border-brand-white/10 pb-3 mb-4">
+                    <p class="text-xs uppercase tracking-widest text-brand-ash font-bold">📸 Recent Field Audit Photo Capture</p>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                    @foreach($data['gallery_photos'] as $photo)
+                        <div class="group relative aspect-square rounded-xl overflow-hidden border border-brand-white/10 bg-brand-black">
+                            <img src="{{ Storage::url($photo->photo_path) }}" alt="{{ $photo->sku_name }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-2 flex flex-col justify-end">
+                                <p class="text-[10px] font-bold text-white truncate">{{ $photo->sku_name }}</p>
+                                <p class="text-[9px] text-white/70 truncate">{{ $photo->outlet_name }}</p>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+            @endif
+
+            <!-- Price & Promo Section -->
+            @if($report->section('show_price_promo') && isset($data['posm_compliance']))
+            <div class="glass-panel rounded-2xl border border-brand-white/10 p-5">
+                <div class="border-b border-brand-white/10 pb-3 mb-4">
+                    <p class="text-xs uppercase tracking-widest text-brand-ash font-bold">💰 Price Tag & POSM Compliance</p>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="rounded-xl border border-brand-white/10 bg-brand-black/40 p-4">
+                        <p class="text-[10px] uppercase tracking-widest text-brand-ash">POSM Photo Execution Rate</p>
+                        <p class="text-3xl font-display text-emerald-400 mt-1">{{ $data['posm_compliance'] }}%</p>
+                        <p class="text-xs text-brand-ash mt-1">% of visits with verified POSM photo</p>
+                    </div>
+                    <div class="rounded-xl border border-brand-white/10 bg-brand-black/40 p-4">
+                        <p class="text-[10px] uppercase tracking-widest text-brand-ash">Shelf Price Compliance Rate</p>
+                        <p class="text-3xl font-display text-sky-400 mt-1">{{ $data['price_compliance'] }}%</p>
+                        <p class="text-xs text-brand-ash mt-1">% of SKU checks with verified price</p>
+                    </div>
+                </div>
+            </div>
+            @endif
+
             <!-- footer -->
             <div class="text-center text-xs text-brand-ash pt-6">
                 <p>&copy; {{ date('Y') }} CMIH Africa Merchandising Portal. All rights reserved.</p>

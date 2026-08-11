@@ -1,428 +1,584 @@
 @extends('layouts.site')
 
-@section('title', $brand->name.' Agency Dashboard')
+@section('title', $brand->name.' Agency Command Centre')
 
 @section('content')
-    @php
-        $brandStyle = "--bp: ".($brand->primary_color ?: '#00656c')."; --bbg: ".($brand->secondary_color ?: '#170004')."; --bs: ".($brand->accent_color ?: '#18e7ef')."; --ba: ".($brand->accent_color ?: '#ff2ba6')."; --bink: #082126;";
-    @endphp
-    <section class="brands-role-dashboard" style="{{ $brandStyle }}">
-        <div class="mx-auto w-full max-w-7xl px-5 py-8 sm:px-8 lg:px-10">
-            <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+@php
+    $brandKey = $brand->slug ?: $brand->presentation_key ?: $brand->id;
+    $brandLogo = $brand->prototype_logo_url ?: $brand->public_logo_dark_url ?: $brand->public_logo_url;
+    $brandStyle = implode(' ', [
+        '--bp: '.($brand->public_primary_color ?: '#00656c').';',
+        '--bbg: '.($brand->prototype_bg ?: $brand->public_secondary_color ?: '#003e46').';',
+        '--bs: '.($brand->public_secondary_color ?: '#18e7ef').';',
+        '--ba: '.($brand->public_accent_color ?: '#ff2ba6').';',
+        '--bink: '.($brand->prototype_ink ?: '#082126').';',
+        '--bsoft: '.($brand->prototype_soft ?: '#e9fbfb').';',
+        '--display: '.($brand->prototype_display_font ?: 'Arial, Helvetica, sans-serif').';',
+    ]);
+@endphp
+
+<section class="brands-prototype view active big-dashboard" id="view-agency" style="{{ $brandStyle }}">
+    <div class="big-shell">
+        <aside class="big-side">
+            <div class="logo-lock">
+                <img src="{{ asset('brands-platform-reference/assets/asset_01_abc0e3abce39.png') }}" alt="CMIH Agency" style="max-height:36px; object-fit:contain;">
                 <div>
-                    <p class="text-xs font-bold uppercase tracking-[0.35em] text-brand-red">Agency Command Centre</p>
-                    <h1 class="mt-2 font-display text-5xl leading-none text-brand-white">{{ $brand->name }}</h1>
-                    <p class="mt-2 text-sm text-brand-white/60">{{ $activation?->name ?: $brand->activation_name }}</p>
+                    <strong>CMIH AGENCY</strong>
+                    <small style="display:block; color:#9f858c; font-size:8px;">COMMAND CENTRE</small>
                 </div>
-                <div class="flex flex-wrap gap-2">
-                    <a href="{{ route('brands-platform.show', $brand->slug ?: $brand->id) }}" class="rounded-md border border-brand-white/10 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-brand-white/60 hover:text-brand-white">Brand Page</a>
-                    <a href="{{ route('brands-platform.support', $brand->slug ?: $brand->id) }}" class="rounded-md border border-brand-white/10 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-brand-white/60 hover:text-brand-white">Support</a>
-                    <a href="{{ route('brands-platform.retail', $brand->slug ?: $brand->id) }}" class="rounded-md border border-brand-white/10 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-brand-white/60 hover:text-brand-white">Retail</a>
-                    @if($activation?->client_share_token && $activation->clientShareIsActive())
-                        <a href="{{ route('brands-platform.client-report', $activation->client_share_token) }}" class="rounded-md bg-brand-white px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-brand-black hover:bg-brand-red hover:text-brand-white">Client Link</a>
-                    @endif
+            </div>
+
+            <div class="big-nav-label">Portfolio</div>
+            <a href="{{ route('brands-platform.agency', $brandKey) }}" class="big-nav active" style="text-decoration:none; display:block; text-align:left;">Overview</a>
+            <a href="{{ route('brands-platform.show', $brandKey) }}" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Brand Page</a>
+
+            <div class="big-nav-label">Workspace</div>
+            <a href="{{ route('brands-platform.support', $brandKey) }}" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Promoter Dashboard</a>
+            <a href="{{ route('brands-platform.retail', $brandKey) }}" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Retail Dashboard</a>
+
+            <div class="big-nav-label">Navigation</div>
+            <a href="{{ route('brands-platform.index') }}" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Home</a>
+            
+            <form method="POST" action="{{ route('logout') }}" id="agency-logout-form" style="display:none;">
+                @csrf
+            </form>
+            <button class="big-nav" onclick="document.getElementById('agency-logout-form').submit();" style="width:100%; text-align:left; background:none; border:none; cursor:pointer; font-family:inherit; color:#9f858c;">Sign Out</button>
+        </aside>
+
+        <main class="big-main">
+            <div class="big-top">
+                <div>
+                    <div class="eyebrow">AGENCY COMMAND CENTRE</div>
+                    <h1 style="color:#171115; font-size:28px; font-weight:900; margin:5px 0 0;">Portfolio Performance</h1>
+                </div>
+                <div class="filters">
+                    <form method="GET" style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+                        <input type="date" name="from" value="{{ request('from') }}" style="padding:8px 10px; border-radius:10px; border:1px solid #e4dadd; background:#fff; font-size:11px;">
+                        <input type="date" name="to" value="{{ request('to') }}" style="padding:8px 10px; border-radius:10px; border:1px solid #e4dadd; background:#fff; font-size:11px;">
+                        <input type="text" name="location" placeholder="Filter Location" value="{{ request('location') }}" style="padding:8px 10px; border-radius:10px; border:1px solid #e4dadd; background:#fff; font-size:11px; width:120px;">
+                        <select name="activity_type" style="padding:8px 10px; border-radius:10px; border:1px solid #e4dadd; background:#fff; font-size:11px;">
+                            <option value="">All Activities</option>
+                            @foreach(['consumer_registration', 'sample_distributed', 'bottle_sale', 'reward_issued', 'stock_issue'] as $act)
+                                <option value="{{ $act }}" @selected(request('activity_type') === $act)>{{ \Illuminate\Support\Str::headline($act) }}</option>
+                            @endforeach
+                        </select>
+                        <select name="status" style="padding:8px 10px; border-radius:10px; border:1px solid #e4dadd; background:#fff; font-size:11px;">
+                            <option value="">All Statuses</option>
+                            @foreach(['recorded', 'done', 'pending', 'blocked', 'failed'] as $status)
+                                <option value="{{ $status }}" @selected(request('status') === $status)>{{ \Illuminate\Support\Str::headline($status) }}</option>
+                            @endforeach
+                        </select>
+                        <select name="sort" style="padding:8px 10px; border-radius:10px; border:1px solid #e4dadd; background:#fff; font-size:11px;">
+                            <option value="newest" @selected(request('sort') === 'newest')>Newest First</option>
+                            <option value="oldest" @selected(request('sort') === 'oldest')>Oldest First</option>
+                            <option value="units_desc" @selected(request('sort') === 'units_desc')>Highest Volume</option>
+                            <option value="units_asc" @selected(request('sort') === 'units_asc')>Lowest Volume</option>
+                        </select>
+                        <button type="submit" class="btn dark" style="padding:8px 14px; font-size:9px;">Filter</button>
+                    </form>
                 </div>
             </div>
 
             @if(session('status'))
-                <div class="mb-5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">{{ session('status') }}</div>
-            @endif
-            @if(session('client_link'))
-                <div class="mb-5 rounded-lg border border-brand-white/10 bg-brand-white/[0.04] p-4 text-sm text-brand-white/70">
-                    Temporary client link:
-                    <a href="{{ session('client_link') }}" class="font-semibold text-brand-white underline">{{ session('client_link') }}</a>
+                <div style="background:#e9fbfb; border:1px solid #0aa777; color:#082126; border-radius:12px; padding:12px; font-size:12px; margin-bottom:20px;">
+                    {{ session('status') }}
                 </div>
             @endif
 
-            <form method="GET" class="mb-5 grid gap-3 rounded-lg border border-brand-white/10 bg-brand-white/[0.035] p-4 md:grid-cols-[1fr_1fr_1fr_auto]">
-                <input type="date" name="from" value="{{ request('from') }}" class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-3 text-sm text-brand-white">
-                <input type="date" name="to" value="{{ request('to') }}" class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-3 text-sm text-brand-white">
-                <select name="status" class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-3 text-sm text-brand-white">
-                    <option value="">All statuses</option>
-                    @foreach(['recorded', 'done', 'pending', 'blocked', 'failed'] as $status)
-                        <option value="{{ $status }}" @selected(request('status') === $status)>{{ \Illuminate\Support\Str::headline($status) }}</option>
-                    @endforeach
-                </select>
-                <button class="rounded-md bg-brand-white px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-brand-black hover:bg-brand-red hover:text-brand-white">Filter</button>
-            </form>
-
-            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
-                @foreach([
-                    'Reach' => number_format($metrics['reached']),
-                    'Target' => number_format($metrics['target']),
-                    'Verified' => $metrics['verification_rate'].'%',
-                    'Conversions' => number_format($metrics['conversions']),
-                    'High Intent' => $metrics['high_intent_rate'].'%',
-                    'Assigned Staff' => number_format($metrics['assigned_staff']),
-                ] as $label => $value)
-                    <div class="rounded-lg border border-brand-white/10 bg-brand-white/[0.04] p-4">
-                        <p class="text-[9px] font-bold uppercase tracking-wider text-brand-white/40">{{ $label }}</p>
-                        <p class="mt-2 text-2xl font-semibold text-brand-white">{{ $value }}</p>
-                    </div>
-                @endforeach
+            <div class="stats6">
+                <div class="stat">
+                    <small>Reach</small>
+                    <strong>{{ number_format($metrics['reached']) }}</strong>
+                </div>
+                <div class="stat">
+                    <small>Target</small>
+                    <strong>{{ number_format($metrics['target']) }}</strong>
+                </div>
+                <div class="stat">
+                    <small>Verified</small>
+                    <strong>{{ $metrics['verification_rate'] }}%</strong>
+                </div>
+                <div class="stat">
+                    <small>Conversions</small>
+                    <strong>{{ number_format($metrics['conversions']) }}</strong>
+                </div>
+                <div class="stat">
+                    <small>High Intent</small>
+                    <strong>{{ $metrics['high_intent_rate'] }}%</strong>
+                </div>
+                <div class="stat">
+                    <small>Assigned Staff</small>
+                    <strong>{{ number_format($metrics['assigned_staff']) }}</strong>
+                </div>
             </div>
 
-            <div class="mt-6 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-                <div class="rounded-lg border border-brand-white/10 bg-brand-white/[0.045] p-5">
-                    <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-ash">Activation Trend</p>
-                    <div class="mt-4 h-72">
+            <div class="dash-grid">
+                <div class="panel">
+                    <div class="panel-head">
+                        <div>
+                            <h3>Activation Performance</h3>
+                            <small>Reach vs target trends</small>
+                        </div>
+                    </div>
+                    <div style="height:280px; position:relative; margin-top:15px;">
                         <canvas id="brandActivationTrendChart"></canvas>
                     </div>
                 </div>
-                <div class="rounded-lg border border-brand-white/10 bg-brand-white/[0.045] p-5">
-                    <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-ash">Activation Funnel</p>
-                    <div class="mt-4 h-72">
+                
+                <div class="panel">
+                    <div class="panel-head">
+                        <div>
+                            <h3>Activation Funnel</h3>
+                            <small>Overall campaign funnel status</small>
+                        </div>
+                    </div>
+                    <div style="height:280px; position:relative; margin-top:15px;">
                         <canvas id="brandActivationFunnelChart"></canvas>
                     </div>
                 </div>
             </div>
 
-            <div class="mt-6 grid gap-6 lg:grid-cols-3">
-                <div class="rounded-lg border border-brand-white/10 bg-brand-white/[0.045] p-5">
-                    <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-ash">Consumer Demographics</p>
-                    <div class="mt-4 h-64">
-                        <canvas id="brandDemographicChart"></canvas>
+            <div class="dash-grid" style="margin-top:15px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
+                <div class="panel">
+                    <div class="panel-head">
+                        <div>
+                            <h3>Gender Distribution</h3>
+                            <small>Verified consumers by gender</small>
+                        </div>
+                    </div>
+                    <div style="height:220px; position:relative; margin-top:15px;">
+                        <canvas id="genderDistributionChart"></canvas>
                     </div>
                 </div>
-                <div class="rounded-lg border border-brand-white/10 bg-brand-white/[0.045] p-5">
-                    <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-ash">Location Output</p>
-                    <div class="mt-4 h-64">
-                        <canvas id="brandLocationChart"></canvas>
+
+                <div class="panel">
+                    <div class="panel-head">
+                        <div>
+                            <h3>Age Distribution</h3>
+                            <small>Verified consumers by age grouping</small>
+                        </div>
+                    </div>
+                    <div style="height:220px; position:relative; margin-top:15px;">
+                        <canvas id="ageDistributionChart"></canvas>
                     </div>
                 </div>
-                <div class="rounded-lg border border-brand-white/10 bg-brand-white/[0.045] p-5">
-                    <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-ash">Support Staff Ranking</p>
-                    <div class="mt-4 h-64">
-                        <canvas id="brandLeaderboardChart"></canvas>
-                    </div>
-                </div>
-            </div>
 
-            <div class="mt-6 grid gap-6 lg:grid-cols-[0.78fr_1.22fr]">
-                <div class="space-y-6">
-                    <form method="POST" action="{{ route('brands-platform.field-activity.store', $brand->slug ?: $brand->id) }}" enctype="multipart/form-data" class="rounded-lg border border-brand-white/10 bg-brand-white/[0.045] p-5">
-                        @csrf
-                        <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-red">Record Field Activity</p>
-                        <div class="mt-4 grid gap-3">
-                            <select name="staff_role" required class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-3 text-sm text-brand-white">
-                                @foreach([
-                                    'agency_staff' => 'Agency Staff',
-                                    'supporting_staff' => 'Supporting Staff',
-                                    'promoter' => 'Promoter',
-                                    'sales_personnel' => 'Sales Personnel',
-                                    'retail_staff' => 'Retail Staff',
-                                    'field_supervisor' => 'Field Supervisor',
-                                    'merchandiser' => 'Merchandiser',
-                                ] as $value => $label)
-                                    <option value="{{ $value }}">{{ $label }}</option>
-                                @endforeach
-                            </select>
-                            <select name="activity_type" required class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-3 text-sm text-brand-white">
-                                <option value="consumer_registration">Consumer Registration</option>
-                                <option value="sample_distributed">Sample Distributed</option>
-                                <option value="bottle_sale">Bottle Sale / Conversion</option>
-                                <option value="reward_issued">Reward Issued</option>
-                                <option value="reward_redeemed">Reward Redeemed</option>
-                                <option value="retail_scan">Retail Scan</option>
-                                <option value="retail_update">Retail / Partner Update</option>
-                                <option value="stock_issue">Stock / Availability Issue</option>
-                            </select>
-                            <input name="location" placeholder="Location / branch" class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-3 text-sm text-brand-white placeholder-brand-white/30">
-                            <div class="grid gap-3 sm:grid-cols-3">
-                                <input name="units" type="number" min="0" value="0" placeholder="Units" class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-3 text-sm text-brand-white placeholder-brand-white/30">
-                                <input name="conversion_count" type="number" min="0" value="0" placeholder="Conversions" class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-3 text-sm text-brand-white placeholder-brand-white/30">
-                                <input name="transaction_value" type="number" min="0" step="0.01" placeholder="Value" class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-3 text-sm text-brand-white placeholder-brand-white/30">
-                            </div>
-                            <input name="reference_code" placeholder="Coupon / reward / transaction reference" class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-3 text-sm text-brand-white placeholder-brand-white/30">
-                            <textarea name="notes" rows="4" placeholder="Activity notes, insight, issue, or follow-up" class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-3 text-sm text-brand-white placeholder-brand-white/30"></textarea>
-                            <input name="evidence" type="file" accept="image/*" class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-3 text-sm text-brand-white">
-                            <button class="rounded-md bg-brand-red px-4 py-3 text-xs font-bold uppercase tracking-[0.22em] text-brand-white transition hover:bg-brand-white hover:text-brand-black">Save Activity</button>
-                        </div>
-                    </form>
-
-                    @if($activation && auth()->user()?->isCvoOrSuperAdmin())
-                        <form method="POST" action="{{ route('brands-platform.admin.client-link.generate', $activation) }}" class="rounded-lg border border-brand-white/10 bg-brand-white/[0.045] p-5">
-                            @csrf
-                            <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-ash">Temporary Client Access</p>
-                            <div class="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
-                                <select name="duration" required class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-3 text-sm text-brand-white">
-                                    @foreach($clientDurations as $value => $option)
-                                        <option value="{{ $value }}">Valid for {{ $option['label'] }}</option>
-                                    @endforeach
-                                </select>
-                                <button class="rounded-md bg-brand-white px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-brand-black hover:bg-brand-red hover:text-brand-white">Generate</button>
-                            </div>
-                            @if($activation->client_share_expires_at)
-                                <p class="mt-3 text-xs text-brand-white/45">Current link expires {{ $activation->client_share_expires_at->format('M d, Y H:i') }}.</p>
-                            @endif
-                        </form>
-                    @endif
-                </div>
-
-                <div class="space-y-6">
-                    <div class="grid gap-6 lg:grid-cols-2">
-                        <div class="rounded-lg border border-brand-white/10 bg-brand-white/[0.045] p-5">
-                            <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-ash">Gender Distribution</p>
-                            <div class="mt-4 space-y-3">
-                                @forelse($entriesByGender as $row)
-                                    @php $width = $metrics['consumer_entries'] > 0 ? min(100, round(($row->total / $metrics['consumer_entries']) * 100)) : 0; @endphp
-                                    <div>
-                                        <div class="flex justify-between text-xs text-brand-white/70"><span>{{ $row->label }}</span><span>{{ $row->total }}</span></div>
-                                        <div class="mt-1 h-2 rounded-full bg-brand-white/10"><div class="h-2 rounded-full bg-brand-red" style="width: {{ $width }}%"></div></div>
-                                    </div>
-                                @empty
-                                    <p class="text-sm text-brand-white/40">No consumer demographics captured yet.</p>
-                                @endforelse
-                            </div>
-                        </div>
-                        <div class="rounded-lg border border-brand-white/10 bg-brand-white/[0.045] p-5">
-                            <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-ash">Age Distribution</p>
-                            <div class="mt-4 space-y-3">
-                                @forelse($entriesByAge as $row)
-                                    @php $width = $metrics['consumer_entries'] > 0 ? min(100, round(($row->total / $metrics['consumer_entries']) * 100)) : 0; @endphp
-                                    <div>
-                                        <div class="flex justify-between text-xs text-brand-white/70"><span>{{ $row->label }}</span><span>{{ $row->total }}</span></div>
-                                        <div class="mt-1 h-2 rounded-full bg-brand-white/10"><div class="h-2 rounded-full bg-cyan-400" style="width: {{ $width }}%"></div></div>
-                                    </div>
-                                @empty
-                                    <p class="text-sm text-brand-white/40">No consumer age data captured yet.</p>
-                                @endforelse
-                            </div>
+                <div class="panel">
+                    <div class="panel-head">
+                        <div>
+                            <h3>Competitor Brand Share</h3>
+                            <small>Consumer competitor choice distribution</small>
                         </div>
                     </div>
-
-                    <div class="rounded-lg border border-brand-white/10 bg-brand-white/[0.045] p-5">
-                        <div class="flex flex-wrap items-center justify-between gap-3">
-                            <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-ash">Generated Outputs</p>
-                            <div class="flex flex-wrap gap-2">
-                                @foreach(['daily' => 'Daily', 'weekly' => 'Weekly', 'retail' => 'Retail', 'promoter' => 'Promoter', 'consumer-insights' => 'Insights', 'closeout' => 'Closeout'] as $type => $label)
-                                    <a href="{{ route('brands-platform.export', [$brand->slug ?: $brand->id, $type]) }}?{{ http_build_query(request()->only(['from', 'to', 'status'])) }}" class="rounded-md border border-brand-white/10 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-brand-white/55 hover:text-brand-white">{{ $label }}</a>
-                                @endforeach
-                            </div>
-                        </div>
-                        <div class="mt-4 overflow-x-auto">
-                            <table class="min-w-full text-left text-xs">
-                                <thead class="text-[10px] uppercase tracking-wider text-brand-white/40">
-                                    <tr><th class="px-3 py-2">Location</th><th class="px-3 py-2">Units</th><th class="px-3 py-2">Conversions</th><th class="px-3 py-2">Updates</th></tr>
-                                </thead>
-                                <tbody class="divide-y divide-brand-white/5 text-brand-white/75">
-                                    @forelse($locationPerformance as $row)
-                                        <tr><td class="px-3 py-3">{{ $row->label }}</td><td class="px-3 py-3">{{ number_format($row->units) }}</td><td class="px-3 py-3">{{ number_format($row->conversions) }}</td><td class="px-3 py-3">{{ number_format($row->updates) }}</td></tr>
-                                    @empty
-                                        <tr><td colspan="4" class="px-3 py-8 text-center text-brand-white/40">No location activity yet.</td></tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <div class="rounded-lg border border-brand-white/10 bg-brand-white/[0.045] p-5">
-                        <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-ash">Top Support Staff</p>
-                        <div class="mt-4 grid gap-2">
-                            @forelse($leaderboard as $row)
-                                <div class="grid grid-cols-[1fr_auto_auto] gap-3 rounded-md bg-brand-black/35 px-3 py-2 text-xs text-brand-white/70">
-                                    <span>{{ $row->user?->name ?: 'Unassigned' }}</span>
-                                    <span>{{ number_format($row->units) }} units</span>
-                                    <span>{{ number_format($row->conversions) }} conv.</span>
-                                </div>
-                            @empty
-                                <p class="text-sm text-brand-white/40">No staff activity has been recorded yet.</p>
-                            @endforelse
-                        </div>
-                    </div>
-
-                    <div class="rounded-lg border border-brand-white/10 bg-brand-white/[0.045] p-5">
-                        <div class="flex flex-wrap items-center justify-between gap-3">
-                            <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-ash">Report Evidence Images</p>
-                            <a href="{{ route('brands-platform.brand-gallery', $brand->slug ?: $brand->id) }}" class="text-[10px] font-bold uppercase tracking-wider text-brand-white/50 hover:text-brand-white">Open Gallery</a>
-                        </div>
-                        <div class="mt-4 grid gap-3 sm:grid-cols-2">
-                            @forelse($reportImages as $activity)
-                                <article class="overflow-hidden rounded-md border border-brand-white/10 bg-brand-black/35">
-                                    <img src="{{ \App\Http\Controllers\Brands\BrandsPlatformController::storageUrl($activity->evidence_path) }}" alt="{{ $activity->brand?->name }} evidence" class="aspect-[4/3] w-full object-cover" loading="lazy">
-                                    <div class="p-3 text-xs text-brand-white/60">
-                                        <p class="font-semibold text-brand-white">{{ $activity->location ?: 'No location' }}</p>
-                                        <p>{{ \Illuminate\Support\Str::headline($activity->activity_type) }} - {{ $activity->created_at?->format('M d, H:i') }}</p>
-                                    </div>
-                                </article>
-                            @empty
-                                <p class="text-sm text-brand-white/40 sm:col-span-2">No presentation evidence images have been uploaded yet.</p>
-                            @endforelse
-                        </div>
+                    <div style="height:220px; position:relative; margin-top:15px;">
+                        <canvas id="competitorShareChart"></canvas>
                     </div>
                 </div>
             </div>
 
-            <div class="mt-6 rounded-lg border border-brand-white/10 bg-brand-white/[0.035] p-5">
-                <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-ash">Recent Transactions</p>
-                <div class="mt-4 overflow-x-auto">
-                    <table class="min-w-full text-left text-xs">
-                        <thead class="text-[10px] uppercase tracking-wider text-brand-white/40">
-                            <tr><th class="px-3 py-2">Time</th><th class="px-3 py-2">Staff</th><th class="px-3 py-2">Role</th><th class="px-3 py-2">Activity</th><th class="px-3 py-2">Status</th><th class="px-3 py-2">Location</th><th class="px-3 py-2">Units</th><th class="px-3 py-2">Conversions</th></tr>
+            <div class="dash-grid" style="margin-top:15px;">
+                <div class="panel">
+                    <div class="panel-head">
+                        <div>
+                            <h3>Location Performance</h3>
+                            <small>Campaign performance by city / branch</small>
+                        </div>
+                    </div>
+                    <table class="leader" style="width:100%; margin-top:15px; color:#171115;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #e4dadd;">
+                                <th style="text-align:left; padding:8px 0;">Location</th>
+                                <th style="text-align:right; padding:8px 0;">Units</th>
+                                <th style="text-align:right; padding:8px 0;">Conversions</th>
+                                <th style="text-align:right; padding:8px 0;">Updates</th>
+                            </tr>
                         </thead>
-                        <tbody class="divide-y divide-brand-white/5 text-brand-white/75">
-                            @forelse($recentActivities as $activity)
-                                <tr>
-                                    <td class="px-3 py-3">{{ $activity->created_at?->format('M d, H:i') }}</td>
-                                    <td class="px-3 py-3">{{ $activity->user?->name ?: 'N/A' }}</td>
-                                    <td class="px-3 py-3">{{ \Illuminate\Support\Str::headline($activity->staff_role) }}</td>
-                                    <td class="px-3 py-3">{{ \Illuminate\Support\Str::headline($activity->activity_type) }}</td>
-                                    <td class="px-3 py-3">{{ \Illuminate\Support\Str::headline($activity->status) }}</td>
-                                    <td class="px-3 py-3">{{ $activity->location ?: 'N/A' }}</td>
-                                    <td class="px-3 py-3">{{ number_format($activity->units) }}</td>
-                                    <td class="px-3 py-3">{{ number_format($activity->conversion_count) }}</td>
+                        <tbody>
+                            @forelse($locationPerformance as $row)
+                                <tr style="border-bottom: 1px solid #f0e6e9;">
+                                    <td style="padding:10px 0; font-weight:800;">{{ $row->label }}</td>
+                                    <td style="padding:10px 0; text-align:right;">{{ number_format($row->units) }}</td>
+                                    <td style="padding:10px 0; text-align:right;">{{ number_format($row->conversions) }}</td>
+                                    <td style="padding:10px 0; text-align:right;">{{ number_format($row->updates) }}</td>
                                 </tr>
                             @empty
-                                <tr><td colspan="8" class="px-3 py-8 text-center text-brand-white/40">No activity has been recorded yet.</td></tr>
+                                <tr>
+                                    <td colspan="4" style="text-align:center; padding:30px; color:#8b747a;">No location performance captured yet.</td>
+                                </tr>
                             @endforelse
                         </tbody>
                     </table>
                 </div>
-                <div class="mt-4">{{ $recentActivities->links() }}</div>
+
+                <div class="panel">
+                    <div class="panel-head">
+                        <div>
+                            <h3>Location Performance Chart</h3>
+                            <small>Units distribution by location</small>
+                        </div>
+                    </div>
+                    <div style="height:280px; position:relative; margin-top:15px;">
+                        <canvas id="locationPerformanceChart"></canvas>
+                    </div>
+                </div>
             </div>
-        </div>
-    </section>
+
+            <div class="dash-grid" style="margin-top:15px;">
+                <div class="panel">
+                    <div class="panel-head">
+                        <div>
+                            <h3>This Brand's Promoters</h3>
+                            <small>Top performers for {{ $brand->name }}</small>
+                        </div>
+                    </div>
+                    <table class="leader" style="width:100%; margin-top:15px; color:#171115;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #e4dadd;">
+                                <th style="text-align:left; padding:8px 0;">Promoter</th>
+                                <th style="text-align:right; padding:8px 0;">Activity</th>
+                                <th style="text-align:right; padding:8px 0;">Conv.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($leaderboard as $row)
+                                <tr style="border-bottom: 1px solid #f0e6e9;">
+                                    <td style="padding:10px 0; font-weight:800;">{{ $row->user?->name ?: 'Promoter' }}</td>
+                                    <td style="padding:10px 0; text-align:right;">{{ number_format($row->units) }}</td>
+                                    <td style="padding:10px 0; text-align:right;">{{ number_format($row->conversions) }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="3" style="text-align:center; padding:20px; color:#8b747a;">No active staff captured for this brand.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-head">
+                        <div>
+                            <h3>Cross-Brand Portfolio Promoters</h3>
+                            <small>Overall performance across CMIH brands</small>
+                        </div>
+                    </div>
+                    <table class="leader" style="width:100%; margin-top:15px; color:#171115;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #e4dadd;">
+                                <th style="text-align:left; padding:8px 0;">Promoter</th>
+                                <th style="text-align:left; padding:8px 0;">Assigned Brands</th>
+                                <th style="text-align:right; padding:8px 0;">Total Activity</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($portfolioLeaderboard as $row)
+                                @php
+                                    $assignedBrands = \App\Models\BrandStaffAssignment::where('user_id', $row->user_id)
+                                        ->where('is_active', true)
+                                        ->with('brand')
+                                        ->get()
+                                        ->pluck('brand.name')
+                                        ->unique()
+                                        ->implode(', ');
+                                @endphp
+                                <tr style="border-bottom: 1px solid #f0e6e9;">
+                                    <td style="padding:10px 0; font-weight:800;">{{ $row->user?->name ?: 'Promoter' }}</td>
+                                    <td style="padding:10px 0; color:#8b747a; font-size:10px;">{{ $assignedBrands ?: 'None' }}</td>
+                                    <td style="padding:10px 0; text-align:right; font-weight:900;">{{ number_format($row->units) }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="3" style="text-align:center; padding:20px; color:#8b747a;">No portfolio staff logged yet.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="dash-grid" style="margin-top:15px;">
+                <div class="panel">
+                    <div class="panel-head">
+                        <div>
+                            <h3>Record Field Activity</h3>
+                            <small>Log manual supervisor or agency entries</small>
+                        </div>
+                    </div>
+                    
+                    <form method="POST" action="{{ route('brands-platform.field-activity.store', $brandKey) }}" enctype="multipart/form-data" style="display:flex; flex-direction:column; gap:12px; margin-top:15px;">
+                        @csrf
+                        <div class="field">
+                            <label style="color:#171115; font-size:10px;">Staff Role</label>
+                            <select name="staff_role" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                                <option value="agency_staff" selected>Agency Staff</option>
+                                <option value="field_supervisor">Field Supervisor</option>
+                                <option value="promoter">Promoter</option>
+                            </select>
+                        </div>
+
+                        <div class="field">
+                            <label style="color:#171115; font-size:10px;">Activity Type</label>
+                            <select name="activity_type" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                                <option value="consumer_registration">Consumer Registration</option>
+                                <option value="sample_distributed" selected>Sample Distributed</option>
+                                <option value="bottle_sale">Bottle Sale / Conversion</option>
+                                <option value="reward_issued">Reward Issued</option>
+                            </select>
+                        </div>
+
+                        <div class="field">
+                            <label style="color:#171115; font-size:10px;">Location</label>
+                            <input name="location" placeholder="e.g. Accra Mall" style="width:100%; padding:10px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                        </div>
+
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                            <div class="field">
+                                <label style="color:#171115; font-size:10px;">Units</label>
+                                <input name="units" type="number" min="0" value="10" style="width:100%; padding:10px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                            </div>
+                            <div class="field">
+                                <label style="color:#171115; font-size:10px;">Conversions</label>
+                                <input name="conversion_count" type="number" min="0" value="0" style="width:100%; padding:10px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                            </div>
+                        </div>
+
+                        <div class="field">
+                            <label style="color:#171115; font-size:10px;">Notes</label>
+                            <textarea name="notes" placeholder="Activity notes" rows="3" style="width:100%; padding:10px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;"></textarea>
+                        </div>
+
+                        <button type="submit" class="btn dark" style="width:100%; margin-top:8px;">Save Activity</button>
+                    </form>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-head">
+                        <div>
+                            <h3>Report Evidence Images</h3>
+                            <small>Captured field evidence uploads</small>
+                        </div>
+                    </div>
+                    <div style="margin-top:20px; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                        @forelse($reportImages as $activity)
+                            <article style="border:1px solid #e4dadd; border-radius:12px; overflow:hidden; background:#fff;">
+                                <img src="{{ \App\Http\Controllers\Brands\BrandsPlatformController::storageUrl($activity->evidence_path) }}" alt="evidence" style="width:100%; aspect-ratio:4/3; object-fit:cover;">
+                                <div style="padding:10px; font-size:11px;">
+                                    <p style="margin:0; font-weight:800;">{{ $activity->location ?: 'Assigned Location' }}</p>
+                                    <p style="margin:4px 0 0; color:#8b747a;">{{ \Illuminate\Support\Str::headline($activity->activity_type) }}</p>
+                                </div>
+                            </article>
+                        @empty
+                            <p style="grid-column:span 2; text-align:center; color:#8b747a; font-size:12px; padding:30px 0;">No evidence images uploaded yet.</p>
+                        @endforelse
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel" style="margin-top:15px;">
+                <div class="panel-head">
+                    <div>
+                        <h3>Recent Transactions</h3>
+                        <small>Full activity log across the campaign</small>
+                    </div>
+                </div>
+                
+                <table class="leader" style="width:100%; margin-top:15px; color:#171115;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid #e4dadd;">
+                            <th style="text-align:left; padding:8px 0;">Time</th>
+                            <th style="text-align:left; padding:8px 0;">Staff</th>
+                            <th style="text-align:left; padding:8px 0;">Role</th>
+                            <th style="text-align:left; padding:8px 0;">Activity</th>
+                            <th style="text-align:left; padding:8px 0;">Status</th>
+                            <th style="text-align:right; padding:8px 0;">Units</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($recentActivities as $activity)
+                            <tr style="border-bottom: 1px solid #f0e6e9;">
+                                <td style="padding:10px 0;">{{ $activity->created_at?->format('M d, H:i') }}</td>
+                                <td style="padding:10px 0; font-weight:800;">{{ $activity->user?->name ?: 'N/A' }}</td>
+                                <td style="padding:10px 0; color:#8b747a;">{{ \Illuminate\Support\Str::headline($activity->staff_role) }}</td>
+                                <td style="padding:10px 0;">{{ \Illuminate\Support\Str::headline($activity->activity_type) }}</td>
+                                <td style="padding:10px 0;">{{ \Illuminate\Support\Str::headline($activity->status) }}</td>
+                                <td style="padding:10px 0; text-align:right; font-weight:800;">{{ number_format($activity->units) }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="6" style="text-align:center; padding:30px; color:#8b747a;">No campaign transactions logged yet.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+                <div style="margin-top:15px;">
+                    {{ $recentActivities->links() }}
+                </div>
+            </div>
+        </main>
+    </div>
+</section>
 @endsection
 
 @push('scripts')
-    <script>
-        (() => {
-            const chartPayload = {
-                trend: {
-                    labels: @json($consumerTrend['labels']),
-                    consumers: @json($consumerTrend['data']),
-                    activities: @json($activityTrend['data']),
-                },
-                funnel: {
-                    labels: ['Target', 'Reached', 'Verified', 'Conversions'],
-                    data: [{{ (int) $metrics['target'] }}, {{ (int) $metrics['reached'] }}, {{ (int) $metrics['verified_entries'] }}, {{ (int) $metrics['conversions'] }}],
-                },
-                demographics: {
-                    labels: @json($entriesByGender->pluck('label')->values()),
-                    data: @json($entriesByGender->pluck('total')->map(fn ($value) => (int) $value)->values()),
-                },
-                locations: {
-                    labels: @json($locationPerformance->pluck('label')->values()),
-                    units: @json($locationPerformance->pluck('units')->map(fn ($value) => (int) $value)->values()),
-                    conversions: @json($locationPerformance->pluck('conversions')->map(fn ($value) => (int) $value)->values()),
-                },
-                leaderboard: {
-                    labels: @json($leaderboard->map(fn ($row) => $row->user?->name ?: 'Unassigned')->values()),
-                    units: @json($leaderboard->pluck('units')->map(fn ($value) => (int) $value)->values()),
-                    conversions: @json($leaderboard->pluck('conversions')->map(fn ($value) => (int) $value)->values()),
-                },
-            };
+<script>
+(() => {
+    const chartPayload = {
+        trend: {
+            labels: @json($consumerTrend['labels']),
+            consumers: @json($consumerTrend['data']),
+            activities: @json($activityTrend['data']),
+        },
+        funnel: {
+            labels: ['Target', 'Reached', 'Verified', 'Conversions'],
+            data: [{{ (int) $metrics['target'] }}, {{ (int) $metrics['reached'] }}, {{ (int) $metrics['verified_entries'] }}, {{ (int) $metrics['conversions'] }}],
+        },
+        gender: {
+            labels: @json($entriesByGender->pluck('label')),
+            data: @json($entriesByGender->pluck('total')),
+        },
+        age: {
+            labels: @json($entriesByAge->pluck('label')),
+            data: @json($entriesByAge->pluck('total')),
+        },
+        competitor: {
+            labels: @json($competitorShare->pluck('label')),
+            data: @json($competitorShare->pluck('total')),
+        },
+        location: {
+            labels: @json($locationPerformance->pluck('label')),
+            data: @json($locationPerformance->pluck('units')),
+        }
+    };
 
-            const loadChart = () => new Promise((resolve) => {
-                if (window.Chart) {
-                    resolve();
-                    return;
-                }
+    const loadChart = () => new Promise((resolve) => {
+        if (window.Chart) {
+            resolve();
+            return;
+        }
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+        script.defer = true;
+        script.onload = resolve;
+        document.head.appendChild(script);
+    });
 
-                const existing = document.querySelector('script[data-chart-js]');
-                if (existing) {
-                    existing.addEventListener('load', resolve, { once: true });
-                    return;
-                }
+    const ctx = (id) => document.getElementById(id);
+    const commonOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { labels: { color: '#171115' } }
+        },
+        scales: {
+            x: { ticks: { color: '#8b747a' }, grid: { color: 'rgba(0,0,0,.05)' } },
+            y: { beginAtZero: true, ticks: { color: '#8b747a' }, grid: { color: 'rgba(0,0,0,.05)' } }
+        }
+    };
 
-                const script = document.createElement('script');
-                script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
-                script.defer = true;
-                script.dataset.chartJs = 'true';
-                script.onload = resolve;
-                document.head.appendChild(script);
+    loadChart().then(() => {
+        Chart.defaults.color = '#171115';
+        Chart.defaults.borderColor = 'rgba(0,0,0,.08)';
+
+        if (ctx('brandActivationTrendChart')) {
+            new Chart(ctx('brandActivationTrendChart'), {
+                type: 'line',
+                data: {
+                    labels: chartPayload.trend.labels,
+                    datasets: [
+                        { label: 'Consumers', data: chartPayload.trend.consumers, borderColor: '#ff1020', backgroundColor: 'rgba(255,16,32,.08)', tension: .35, fill: true },
+                        { label: 'Field Updates', data: chartPayload.trend.activities, borderColor: '#00656c', backgroundColor: 'rgba(0,101,108,.05)', tension: .35, fill: true }
+                    ]
+                },
+                options: commonOptions
             });
+        }
 
-            const chartData = (labels, data, fallbackLabel = 'No data') => ({
-                labels: labels.length ? labels : [fallbackLabel],
-                data: data.length ? data : [0],
+        if (ctx('brandActivationFunnelChart')) {
+            new Chart(ctx('brandActivationFunnelChart'), {
+                type: 'bar',
+                data: {
+                    labels: chartPayload.funnel.labels,
+                    datasets: [{ label: 'Funnel Progress', data: chartPayload.funnel.data, backgroundColor: ['#8e000c', '#ff1020', '#0a9d70', '#d4aa45'] }]
+                },
+                options: commonOptions
             });
+        }
 
-            const ctx = (id) => document.getElementById(id);
-            const commonOptions = {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { labels: { color: 'rgba(255,255,255,.72)' } },
+        if (ctx('genderDistributionChart')) {
+            new Chart(ctx('genderDistributionChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: chartPayload.gender.labels,
+                    datasets: [{
+                        data: chartPayload.gender.data,
+                        backgroundColor: ['#ff1020', '#00656c', '#d4aa45', '#7cbcff']
+                    }]
                 },
-                scales: {
-                    x: { ticks: { color: 'rgba(255,255,255,.55)' }, grid: { color: 'rgba(255,255,255,.08)' } },
-                    y: { beginAtZero: true, ticks: { color: 'rgba(255,255,255,.55)' }, grid: { color: 'rgba(255,255,255,.08)' } },
-                },
-            };
-
-            loadChart().then(() => {
-                Chart.defaults.color = 'rgba(255,255,255,.72)';
-                Chart.defaults.borderColor = 'rgba(255,255,255,.1)';
-
-                const trendLabels = chartPayload.trend.labels.length ? chartPayload.trend.labels : ['No data'];
-                const consumerTrend = chartPayload.trend.consumers.length ? chartPayload.trend.consumers : [0];
-                const activityTrend = chartPayload.trend.activities.length ? chartPayload.trend.activities : [0];
-
-                if (ctx('brandActivationTrendChart')) {
-                    new Chart(ctx('brandActivationTrendChart'), {
-                        type: 'line',
-                        data: {
-                            labels: trendLabels,
-                            datasets: [
-                                { label: 'Consumers', data: consumerTrend, borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,.18)', tension: .35, fill: true },
-                                { label: 'Field Updates', data: activityTrend, borderColor: '#22d3ee', backgroundColor: 'rgba(34,211,238,.12)', tension: .35, fill: true },
-                            ],
-                        },
-                        options: commonOptions,
-                    });
-                }
-
-                if (ctx('brandActivationFunnelChart')) {
-                    new Chart(ctx('brandActivationFunnelChart'), {
-                        type: 'bar',
-                        data: {
-                            labels: chartPayload.funnel.labels,
-                            datasets: [{ label: 'Activation Funnel', data: chartPayload.funnel.data, backgroundColor: ['#991b1b', '#ef4444', '#22c55e', '#a78bfa'] }],
-                        },
-                        options: commonOptions,
-                    });
-                }
-
-                const demographics = chartData(chartPayload.demographics.labels, chartPayload.demographics.data);
-                if (ctx('brandDemographicChart')) {
-                    new Chart(ctx('brandDemographicChart'), {
-                        type: 'doughnut',
-                        data: { labels: demographics.labels, datasets: [{ data: demographics.data, backgroundColor: ['#ef4444', '#22d3ee', '#a78bfa', '#f59e0b', '#22c55e'] }] },
-                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: 'rgba(255,255,255,.72)' } } } },
-                    });
-                }
-
-                const locations = chartData(chartPayload.locations.labels, chartPayload.locations.units);
-                if (ctx('brandLocationChart')) {
-                    new Chart(ctx('brandLocationChart'), {
-                        type: 'bar',
-                        data: {
-                            labels: locations.labels,
-                            datasets: [
-                                { label: 'Units', data: locations.data, backgroundColor: 'rgba(239,68,68,.75)' },
-                                { label: 'Conversions', data: chartPayload.locations.conversions.length ? chartPayload.locations.conversions : [0], backgroundColor: 'rgba(34,197,94,.75)' },
-                            ],
-                        },
-                        options: { ...commonOptions, indexAxis: 'y' },
-                    });
-                }
-
-                const leaderboard = chartData(chartPayload.leaderboard.labels, chartPayload.leaderboard.units);
-                if (ctx('brandLeaderboardChart')) {
-                    new Chart(ctx('brandLeaderboardChart'), {
-                        type: 'bar',
-                        data: {
-                            labels: leaderboard.labels,
-                            datasets: [
-                                { label: 'Units', data: leaderboard.data, backgroundColor: 'rgba(239,68,68,.75)' },
-                                { label: 'Conversions', data: chartPayload.leaderboard.conversions.length ? chartPayload.leaderboard.conversions : [0], backgroundColor: 'rgba(167,139,250,.75)' },
-                            ],
-                        },
-                        options: { ...commonOptions, indexAxis: 'y' },
-                    });
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } }
                 }
             });
-        })();
-    </script>
+        }
+
+        if (ctx('ageDistributionChart')) {
+            new Chart(ctx('ageDistributionChart'), {
+                type: 'bar',
+                data: {
+                    labels: chartPayload.age.labels,
+                    datasets: [{
+                        label: 'Consumers',
+                        data: chartPayload.age.data,
+                        backgroundColor: '#00656c'
+                    }]
+                },
+                options: commonOptions
+            });
+        }
+
+        if (ctx('competitorShareChart')) {
+            new Chart(ctx('competitorShareChart'), {
+                type: 'pie',
+                data: {
+                    labels: chartPayload.competitor.labels,
+                    datasets: [{
+                        data: chartPayload.competitor.data,
+                        backgroundColor: ['#d4aa45', '#7cbcff', '#ff1020', '#ff2ba6', '#0a9d70', '#ead6dc']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } }
+                }
+            });
+        }
+
+        if (ctx('locationPerformanceChart')) {
+            new Chart(ctx('locationPerformanceChart'), {
+                type: 'bar',
+                data: {
+                    labels: chartPayload.location.labels,
+                    datasets: [{
+                        label: 'Units',
+                        data: chartPayload.location.data,
+                        backgroundColor: '#ff1020'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { beginAtZero: true, ticks: { color: '#8b747a' }, grid: { color: 'rgba(0,0,0,.05)' } },
+                        y: { ticks: { color: '#8b747a' }, grid: { display: false } }
+                    }
+                }
+            });
+        }
+    });
+})();
+</script>
 @endpush

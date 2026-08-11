@@ -27,6 +27,28 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class BrandsPlatformController extends Controller
 {
+    public function showSupportLogin(Request $request, string $brand): View
+    {
+        $brand = $this->resolveBrand($brand);
+        $this->hydrateBrandPresentation($brand);
+        $activation = $this->primaryActivation($brand);
+
+        session(['url.intended' => route('brands-platform.support', $brand->slug ?: $brand->id)]);
+
+        return view('brands-platform.support-login', compact('brand', 'activation'));
+    }
+
+    public function showAgencyLogin(Request $request, string $brand): View
+    {
+        $brand = $this->resolveBrand($brand);
+        $this->hydrateBrandPresentation($brand);
+        $activation = $this->primaryActivation($brand);
+
+        session(['url.intended' => route('brands-platform.agency', $brand->slug ?: $brand->id)]);
+
+        return view('brands-platform.agency-login', compact('brand', 'activation'));
+    }
+
     public function index(Request $request): View
     {
         $brands = Brand::query()
@@ -35,6 +57,21 @@ class BrandsPlatformController extends Controller
             ->orderBy('name')
             ->get();
         $brands = $this->preparePublicBrands($brands);
+
+        $slugOrder = ['lush-hair', 'guinness', 'rexona', 'dove', 'mtn'];
+        $orderedBrands = collect();
+        foreach ($slugOrder as $slug) {
+            $matched = $brands->first(fn($b) => \Illuminate\Support\Str::slug($b->name) === $slug || $b->slug === $slug);
+            if ($matched) {
+                $orderedBrands->push($matched);
+            }
+        }
+        foreach ($brands as $brand) {
+            if (!$orderedBrands->contains('id', $brand->id)) {
+                $orderedBrands->push($brand);
+            }
+        }
+        $brands = $orderedBrands;
 
         $stats = [
             'brands' => $brands->count(),
@@ -133,6 +170,12 @@ class BrandsPlatformController extends Controller
             ->groupBy('label')
             ->orderByDesc('total')
             ->get();
+        $competitorShare = $this->consumerEntryQuery($brand, $activation, $filters)
+            ->selectRaw("COALESCE(NULLIF(current_choice, ''), 'None/Generic') as label, COUNT(*) as total")
+            ->groupBy('label')
+            ->orderByDesc('total')
+            ->take(6)
+            ->get();
         $locationPerformance = $this->fieldActivityQuery($brand, $activation, $filters)
             ->selectRaw("COALESCE(NULLIF(location, ''), 'Unspecified') as label, SUM(units) as units, SUM(conversion_count) as conversions, COUNT(*) as updates")
             ->groupBy('label')
@@ -146,6 +189,14 @@ class BrandsPlatformController extends Controller
             ->withQueryString();
         $leaderboard = $this->fieldActivityQuery($brand, $activation, $filters)
             ->with('user')
+            ->selectRaw('user_id, SUM(units) as units, SUM(conversion_count) as conversions, COUNT(*) as updates')
+            ->whereNotNull('user_id')
+            ->groupBy('user_id')
+            ->orderByDesc('units')
+            ->take(10)
+            ->get();
+            
+        $portfolioLeaderboard = BrandFieldActivity::with('user')
             ->selectRaw('user_id, SUM(units) as units, SUM(conversion_count) as conversions, COUNT(*) as updates')
             ->whereNotNull('user_id')
             ->groupBy('user_id')
@@ -171,9 +222,11 @@ class BrandsPlatformController extends Controller
             'filters',
             'entriesByGender',
             'entriesByAge',
+            'competitorShare',
             'locationPerformance',
             'recentActivities',
             'leaderboard',
+            'portfolioLeaderboard',
             'consumerTrend',
             'activityTrend',
             'reportImages',
@@ -205,9 +258,14 @@ class BrandsPlatformController extends Controller
             ->take(10)
             ->get();
 
+        $promoterDailyTrend = $this->dailyTrend(
+            $this->fieldActivityQuery($brand, $activation, $filters)->where('user_id', $request->user()->id),
+            'created_at'
+        );
+
         $this->logBrandActivity($request, $brand, $activation, 'page_view', 'support_workspace');
 
-        return view('brands-platform.support', compact('brand', 'activation', 'metrics', 'filters', 'myActivities', 'leaderboard', 'assignedLocations', 'allowedRoles'));
+        return view('brands-platform.support', compact('brand', 'activation', 'metrics', 'filters', 'myActivities', 'leaderboard', 'assignedLocations', 'allowedRoles', 'promoterDailyTrend'));
     }
 
     public function retail(Request $request, string $brand): View
@@ -226,9 +284,20 @@ class BrandsPlatformController extends Controller
             ->paginate(15)
             ->withQueryString();
 
+        $redemptionDailyTrend = $this->dailyTrend(
+            $this->fieldActivityQuery($brand, $activation, $filters)->whereIn('activity_type', ['reward_redeemed', 'retail_update', 'retail_scan']),
+            'created_at'
+        );
+
+        $redemptionStatus = [
+            'verified' => $this->fieldActivityQuery($brand, $activation, $filters)->where('activity_type', 'reward_redeemed')->where('status', 'done')->count(),
+            'pending' => $this->fieldActivityQuery($brand, $activation, $filters)->where('activity_type', 'reward_redeemed')->where('status', 'pending')->count(),
+            'failed' => $this->fieldActivityQuery($brand, $activation, $filters)->where('activity_type', 'reward_redeemed')->where('status', 'failed')->count(),
+        ];
+
         $this->logBrandActivity($request, $brand, $activation, 'page_view', 'retail_workspace');
 
-        return view('brands-platform.retail', compact('brand', 'activation', 'metrics', 'filters', 'redemptions', 'assignedLocations'));
+        return view('brands-platform.retail', compact('brand', 'activation', 'metrics', 'filters', 'redemptions', 'assignedLocations', 'redemptionDailyTrend', 'redemptionStatus'));
     }
 
     public function gallery(Request $request, ?string $brand = null): View
@@ -275,10 +344,16 @@ class BrandsPlatformController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'email', 'department', 'access_role', 'job_title', 'position_title']);
         $assignments = BrandStaffAssignment::with(['brand', 'user', 'assigner'])
+            ->when($request->filled('filter_brand'), fn ($q) => $q->where('brand_id', $request->input('filter_brand')))
+            ->when($request->filled('filter_role'), fn ($q) => $q->where('role', $request->input('filter_role')))
+            ->when($request->filled('search_staff'), fn ($q) => $q->whereHas('user', fn ($sub) => $sub->where('name', 'like', '%'.$request->input('search_staff').'%')))
             ->latest()
             ->paginate(20, ['*'], 'assignments_page')
             ->withQueryString();
+
         $activityLogs = BrandActivityLog::with(['brand', 'activation', 'user'])
+            ->when($request->filled('filter_brand'), fn ($q) => $q->where('brand_id', $request->input('filter_brand')))
+            ->when($request->filled('filter_action'), fn ($q) => $q->where('action', $request->input('filter_action')))
             ->latest()
             ->paginate(20, ['*'], 'logs_page')
             ->withQueryString();
@@ -652,8 +727,8 @@ class BrandsPlatformController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'phone' => ['required', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:255'],
-            'age_band' => ['required', 'string', 'max:50'],
-            'gender' => ['required', 'string', 'max:50'],
+            'age_band' => ['nullable', 'string', 'max:50'],
+            'gender' => ['nullable', 'string', 'max:50'],
             'location' => ['nullable', 'string', 'max:255'],
             'source' => ['nullable', 'string', 'max:100'],
             'result_type' => ['nullable', 'string', 'max:100'],
@@ -975,10 +1050,21 @@ class BrandsPlatformController extends Controller
 
     private function assetForPresentation(?string $path): ?string
     {
-        return $path ? asset($path) : null;
+        if (! $path) {
+            return null;
+        }
+
+        if (Str::startsWith($path, ['http://', 'https://'])) {
+            return $path;
+        }
+
+        $segments = explode('/', $path);
+        $encoded = implode('/', array_map('rawurlencode', $segments));
+
+        return asset($encoded);
     }
 
-    private function brandPresentationCatalog(): array
+    public function brandPresentationCatalog(): array
     {
         $darkBase = 'images/CMIH WEB ASSETS/BRAND LOGOS/DARK THEME/';
         $lightBase = 'images/CMIH WEB ASSETS/BRAND LOGOS/LIGHT THEME/';
@@ -999,7 +1085,7 @@ class BrandsPlatformController extends Controller
                 'display' => 'Arial, Helvetica, sans-serif',
                 'headline' => 'Stay fresh. Keep moving.',
                 'desc' => 'Movement-led consumer sampling, trial and retail conversion experiences.',
-                'activation' => 'Campus & Gym Sampling Activation 2026',
+                'activation' => 'Campus & Gym Sampling Activation',
                 'type' => 'sampling',
                 'activation_desc' => 'September-December sampling activation across selected campuses and gym centres, with a campaign target of 200,000 samples.',
                 'result' => 'Sample + Coupon',
@@ -1094,72 +1180,168 @@ class BrandsPlatformController extends Controller
                 'class' => 'baileys',
                 'logo' => $lightBase.'Baileys logo.png',
                 'dark_logo' => $lightBase.'Baileys logo.png',
+                'prototype_logo' => $lightBase.'Baileys logo.png',
                 'primary' => '#3c2315',
                 'secondary' => '#170b06',
                 'accent' => '#d7b58a',
+                'bg' => '#1c0d06',
+                'soft' => '#fcf6ef',
+                'ink' => '#2a1409',
+                'display' => 'Georgia, serif',
+                'headline' => 'Deliciously Baileys.',
+                'desc' => 'Premium sampling, dessert pairing and treat experiences.',
+                'activation' => 'Treat Tour',
+                'type' => 'sampling',
+                'activation_desc' => 'Treat pairing, dessert recipes, sampling and premium consumer acquisition.',
+                'result' => 'Trial + Recipe',
+                'hero' => 'Discover the Baileys treat experience',
             ],
             'axe' => [
                 'name' => 'AXE',
                 'class' => 'axe',
                 'logo' => $lightBase.'AXE.png',
                 'dark_logo' => $darkBase.'AXE.png',
+                'prototype_logo' => $darkBase.'AXE.png',
                 'primary' => '#202020',
                 'secondary' => '#050505',
                 'accent' => '#aeb4bc',
+                'bg' => '#111111',
+                'soft' => '#eaeaea',
+                'ink' => '#050505',
+                'display' => 'Arial, Helvetica, sans-serif',
+                'headline' => 'Find your magic.',
+                'desc' => 'Fragrance sampling, style consulting and fragrance trials.',
+                'activation' => 'AXE Grooming Tour',
+                'type' => 'sampling',
+                'activation_desc' => 'Grooming consulting, deodorant trials and consumer registration.',
+                'result' => 'Trial + Coupon',
+                'hero' => 'AXE Style Station',
             ],
             'castle-milk-stout' => [
                 'name' => 'Castle Milk Stout',
                 'class' => 'castle-milk-stout',
                 'logo' => $lightBase.'CM DARK.png',
                 'dark_logo' => $darkBase.'CM LIGHT.png',
+                'prototype_logo' => $darkBase.'CM LIGHT.png',
                 'primary' => '#24120b',
                 'secondary' => '#080403',
                 'accent' => '#cfb072',
+                'bg' => '#150a05',
+                'soft' => '#f8f2ef',
+                'ink' => '#24120b',
+                'display' => 'Georgia, serif',
+                'headline' => 'Unplug and unwind.',
+                'desc' => 'Savour premium stout tasting and unplugged musical sessions.',
+                'activation' => 'Unplugged Stout Experience',
+                'type' => 'sales',
+                'activation_desc' => 'Premium stout sales tracking, event activation and loyalty reward redemptions.',
+                'result' => 'Bottle Sales + Rewards',
+                'hero' => 'Castle Stout Unplugged',
             ],
             'diageo' => [
                 'name' => 'Diageo',
                 'class' => 'diageo',
                 'logo' => $lightBase.'diageo.png',
                 'dark_logo' => $lightBase.'diageo.png',
+                'prototype_logo' => $lightBase.'diageo.png',
                 'primary' => '#1c1c1f',
                 'secondary' => '#050505',
                 'accent' => '#a98145',
+                'bg' => '#121214',
+                'soft' => '#f0edf5',
+                'ink' => '#1c1c1f',
+                'display' => 'Georgia, serif',
+                'headline' => 'Celebrating life, every day, everywhere.',
+                'desc' => 'Portfolio brand showcases, tasting masterclasses and sales campaigns.',
+                'activation' => 'Diageo World Class showcase',
+                'type' => 'sales',
+                'activation_desc' => 'Tasting masterclasses, sales tracking and bar partner redemptions.',
+                'result' => 'Sales + Masterclass',
+                'hero' => 'Diageo World Class Showcase',
             ],
             'friesland' => [
                 'name' => 'Friesland',
                 'class' => 'friesland',
                 'logo' => $lightBase.'Friesland.png',
                 'dark_logo' => $lightBase.'Friesland.png',
+                'prototype_logo' => $lightBase.'Friesland.png',
                 'primary' => '#d11f2f',
                 'secondary' => '#1c4f9a',
                 'accent' => '#ffffff',
+                'bg' => '#0a2c5a',
+                'soft' => '#e1ecfa',
+                'ink' => '#031835',
+                'display' => 'Arial, Helvetica, sans-serif',
+                'headline' => 'Nourishing goodness.',
+                'desc' => 'Nutritional sampling, milk education and community outreach.',
+                'activation' => 'Friesland Milk Outreach',
+                'type' => 'sampling',
+                'activation_desc' => 'School sampling campaigns, nutritional checks, and product distribution.',
+                'result' => 'Sampling + Outreach',
+                'hero' => 'Nourish your family today',
             ],
             'gordons' => [
                 'name' => "Gordon's",
                 'class' => 'gordons',
                 'logo' => $lightBase."Gordon's dark.png",
                 'dark_logo' => $darkBase."Gordon's white.png",
+                'prototype_logo' => $darkBase."Gordon's white.png",
                 'primary' => '#0c6b37',
                 'secondary' => '#05351d',
                 'accent' => '#ffffff',
+                'bg' => '#042715',
+                'soft' => '#e3f4ec',
+                'ink' => '#021a0d',
+                'display' => 'Arial, Helvetica, sans-serif',
+                'headline' => 'Shall we gin?',
+                'desc' => "Gordon's gin bar pop-ups, cocktail tasting and retail activation.",
+                'activation' => 'Shall We Gin pop-ups',
+                'type' => 'sales',
+                'activation_desc' => "Gordon's Gin cocktail events, sales tracking and redemption.",
+                'result' => 'Cocktail Sales + Rewards',
+                'hero' => "Gordon's Gin Experience",
             ],
             'johnnie-walker' => [
                 'name' => 'Johnnie Walker',
                 'class' => 'johnnie-walker',
                 'logo' => $lightBase.'JW_Logo_WithoutDescriptor_SmallSize_Black_cmyk.png',
                 'dark_logo' => $darkBase.'JW_Logo_WithoutDescriptor_SmallSize_white_cmyk.png',
+                'prototype_logo' => $darkBase.'JW_Logo_WithoutDescriptor_SmallSize_white_cmyk.png',
                 'primary' => '#1f1a12',
                 'secondary' => '#070604',
                 'accent' => '#d4aa45',
+                'bg' => '#15110a',
+                'soft' => '#fbf5e6',
+                'ink' => '#1f1a12',
+                'display' => 'Georgia, serif',
+                'headline' => 'Keep Walking.',
+                'desc' => 'Highball cocktail sampling, bottle engraving and premium trade activations.',
+                'activation' => 'Walker Keep Walking Tour',
+                'type' => 'sales',
+                'activation_desc' => 'Engraving and gift activations, highball sales tracking and trade partnerships.',
+                'result' => 'Bottle Sales + Engraving',
+                'hero' => 'Walker Keep Walking Showcase',
             ],
             'kpmg' => [
                 'name' => 'KPMG',
                 'class' => 'kpmg',
                 'logo' => $lightBase.'KPMG.png',
                 'dark_logo' => $lightBase.'KPMG.png',
+                'prototype_logo' => $lightBase.'KPMG.png',
                 'primary' => '#00338d',
                 'secondary' => '#001d52',
                 'accent' => '#6fb5ff',
+                'bg' => '#001d52',
+                'soft' => '#e6f0ff',
+                'ink' => '#001130',
+                'display' => 'Arial, Helvetica, sans-serif',
+                'headline' => 'Inspire confidence. Empower change.',
+                'desc' => 'Professional recruitment fairs, business consulting pop-ups and advisory leads.',
+                'activation' => 'Graduate Advisory Pop-up',
+                'type' => 'sampling',
+                'activation_desc' => 'Recruitment fairs, career consultations and lead profiling.',
+                'result' => 'Lead Capture + Consult',
+                'hero' => 'KPMG Career Advisory',
             ],
             'lush-hair' => [
                 'name' => 'Lush Hair',
@@ -1229,54 +1411,147 @@ class BrandsPlatformController extends Controller
                 'class' => 'malta-guinness',
                 'logo' => $lightBase.'Malta guinness.png',
                 'dark_logo' => $darkBase.'Malta guinness light.png',
+                'prototype_logo' => $darkBase.'Malta guinness light.png',
                 'primary' => '#2a1711',
                 'secondary' => '#080403',
                 'accent' => '#d4aa45',
+                'bg' => '#1c0d09',
+                'soft' => '#fdf4f1',
+                'ink' => '#2a1711',
+                'display' => 'Arial, Helvetica, sans-serif',
+                'headline' => 'Nourishing energy.',
+                'desc' => 'High-energy street samplings, fitness tours and consumer captures.',
+                'activation' => 'Nourishing Energy Tour',
+                'type' => 'sampling',
+                'activation_desc' => 'High-energy street trials, cold sampling and consumer capture.',
+                'result' => 'Sampling + Energy',
+                'hero' => 'Malta Guinness Energy Station',
             ],
             'orijin' => [
                 'name' => 'Orijin',
                 'class' => 'orijin',
                 'logo' => $lightBase.'Orijin .png',
                 'dark_logo' => $lightBase.'Orijin .png',
+                'prototype_logo' => $lightBase.'Orijin .png',
                 'primary' => '#161616',
                 'secondary' => '#050505',
                 'accent' => '#ff6b1a',
+                'bg' => '#100502',
+                'soft' => '#fbf2eb',
+                'ink' => '#1a0904',
+                'display' => 'Arial, Helvetica, sans-serif',
+                'headline' => 'Live Orijinal.',
+                'desc' => 'Cultural pop-ups, herbal blend tasting and community sales events.',
+                'activation' => 'Live Orijinal Festival',
+                'type' => 'sales',
+                'activation_desc' => 'Festival activations, herbal blend trials and bottle sales.',
+                'result' => 'Sales + Tasting',
+                'hero' => 'Live Orijinal Pop-up',
             ],
             'peak' => [
                 'name' => 'PEAK',
                 'class' => 'peak',
                 'logo' => $lightBase.'PEAK LOGO.png',
                 'dark_logo' => $lightBase.'PEAK LOGO.png',
+                'prototype_logo' => $lightBase.'PEAK LOGO.png',
                 'primary' => '#0a4b8f',
                 'secondary' => '#031b3f',
                 'accent' => '#e51b2d',
+                'bg' => '#05244c',
+                'soft' => '#e2efff',
+                'ink' => '#031732',
+                'display' => 'Arial, Helvetica, sans-serif',
+                'headline' => 'Reach your peak.',
+                'desc' => 'Healthy breakfast challenges, product trials and family events.',
+                'activation' => 'Peak Breakfast Challenge',
+                'type' => 'sampling',
+                'activation_desc' => 'Healthy breakfast samplings, nutritional guidance, and trials.',
+                'result' => 'Sampling + Engagement',
+                'hero' => 'Start your day at your Peak',
             ],
             'smirnoff-ice' => [
                 'name' => 'Smirnoff Ice',
                 'class' => 'smirnoff-ice',
                 'logo' => $lightBase.'Smirnoff ice.png',
                 'dark_logo' => $lightBase.'Smirnoff ice.png',
+                'prototype_logo' => $lightBase.'Smirnoff ice.png',
                 'primary' => '#a6d7e8',
                 'secondary' => '#11394c',
                 'accent' => '#ffffff',
+                'bg' => '#0b2532',
+                'soft' => '#eaf4f7',
+                'ink' => '#05151c',
+                'display' => 'Arial, Helvetica, sans-serif',
+                'headline' => 'Double the chill.',
+                'desc' => 'Smirnoff Ice chill zones, party activations and bottle-sales redemptions.',
+                'activation' => 'Smirnoff Chill Zone',
+                'type' => 'sales',
+                'activation_desc' => 'Beach/party activations, chill zone engagement and sales redemptions.',
+                'result' => 'Sales + Chill',
+                'hero' => 'Smirnoff Chill Experience',
             ],
             'unilever' => [
                 'name' => 'Unilever',
                 'class' => 'unilever',
                 'logo' => $lightBase.'Unilever black.png',
                 'dark_logo' => $darkBase.'Unilever white.png',
+                'prototype_logo' => $darkBase.'Unilever white.png',
                 'primary' => '#004b93',
                 'secondary' => '#002859',
                 'accent' => '#7cbcff',
+                'bg' => '#002046',
+                'soft' => '#e1effc',
+                'ink' => '#00132b',
+                'display' => 'Arial, Helvetica, sans-serif',
+                'headline' => 'Making sustainable living commonplace.',
+                'desc' => 'Multi-brand household product samplings, environmental drives, and coupons.',
+                'activation' => 'Household Care Drive',
+                'type' => 'sampling',
+                'activation_desc' => 'Community household care pop-ups, multi-brand sampling and coupons.',
+                'result' => 'Sampling + Coupons',
+                'hero' => 'Unilever Household Care Pop-up',
             ],
             'bii' => [
                 'name' => 'BII',
                 'class' => 'bii',
                 'logo' => $lightBase.'BII Logo.png',
                 'dark_logo' => $darkBase.'BII Logo LIGHT.png',
+                'prototype_logo' => $darkBase.'BII Logo LIGHT.png',
                 'primary' => '#211d18',
                 'secondary' => '#080807',
                 'accent' => '#d4aa45',
+                'bg' => '#15120f',
+                'soft' => '#faf6f1',
+                'ink' => '#211d18',
+                'display' => 'Georgia, serif',
+                'headline' => 'Excellence in building.',
+                'desc' => 'BII architectural showcases, construction materials profiling and leads.',
+                'activation' => 'Excellence in Build Expo',
+                'type' => 'sampling',
+                'activation_desc' => 'Build expos, construction material demonstrations and lead profiling.',
+                'result' => 'Lead Capture + Profile',
+                'hero' => 'BII Build Exposition',
+            ],
+            'spicy-tamarind' => [
+                'name' => 'Spicy Tamarind',
+                'class' => 'spicy-tamarind',
+                'logo' => 'images/brand-platform/spicy-tamarind.png',
+                'dark_logo' => 'images/brand-platform/spicy-tamarind.png',
+                'prototype_logo' => 'images/brand-platform/spicy-tamarind.png',
+                'primary' => '#ff4500',
+                'secondary' => '#8b0000',
+                'accent' => '#ffd700',
+                'bg' => '#4a0e17',
+                'soft' => '#fff0f2',
+                'ink' => '#2a050a',
+                'display' => 'Arial, Helvetica, sans-serif',
+                'headline' => 'A taste of the exotic.',
+                'desc' => 'Premium spicy tamarind liqueur and event tasting experiences.',
+                'activation' => 'Spicy Tam Night Out',
+                'type' => 'sales',
+                'activation_desc' => 'Night-trade sales activation, bar samplings and bottle sales tracking.',
+                'result' => 'Sales + Engagement',
+                'hero' => 'Discover Spicy Tamarind',
             ],
         ];
     }
@@ -1336,19 +1611,44 @@ class BrandsPlatformController extends Controller
 
     private function consumerEntryQuery(Brand $brand, ?BrandActivation $activation = null, array $filters = [])
     {
-        return $brand->consumerEntries()
-            ->when($activation, fn ($query) => $query->where('brand_activation_id', $activation->id))
-            ->when($filters['from'] ?? null, fn ($query, $from) => $query->where('created_at', '>=', $from))
-            ->when($filters['to'] ?? null, fn ($query, $to) => $query->where('created_at', '<=', $to));
+        $query = $brand->consumerEntries()
+            ->when($activation, fn ($q) => $q->where('brand_activation_id', $activation->id))
+            ->when($filters['from'] ?? null, fn ($q, $from) => $q->where('created_at', '>=', $from))
+            ->when($filters['to'] ?? null, fn ($q, $to) => $q->where('created_at', '<=', $to))
+            ->when($filters['location'] ?? null, fn ($q, $loc) => $q->where('location', 'like', "%{$loc}%"));
+
+        $sort = $filters['sort'] ?? 'newest';
+        if ($sort === 'oldest') {
+            $query->orderBy('created_at', 'asc');
+        } else {
+            $query->orderBy('created_at', 'desc');
+        }
+
+        return $query;
     }
 
     private function fieldActivityQuery(Brand $brand, ?BrandActivation $activation = null, array $filters = [])
     {
-        return $brand->fieldActivities()
-            ->when($activation, fn ($query) => $query->where('brand_activation_id', $activation->id))
-            ->when($filters['from'] ?? null, fn ($query, $from) => $query->where('created_at', '>=', $from))
-            ->when($filters['to'] ?? null, fn ($query, $to) => $query->where('created_at', '<=', $to))
-            ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status));
+        $query = $brand->fieldActivities()
+            ->when($activation, fn ($q) => $q->where('brand_activation_id', $activation->id))
+            ->when($filters['from'] ?? null, fn ($q, $from) => $q->where('created_at', '>=', $from))
+            ->when($filters['to'] ?? null, fn ($q, $to) => $q->where('created_at', '<=', $to))
+            ->when($filters['status'] ?? null, fn ($q, $status) => $q->where('status', $status))
+            ->when($filters['location'] ?? null, fn ($q, $loc) => $q->where('location', 'like', "%{$loc}%"))
+            ->when($filters['activity_type'] ?? null, fn ($q, $act) => $q->where('activity_type', $act));
+
+        $sort = $filters['sort'] ?? 'newest';
+        if ($sort === 'oldest') {
+            $query->orderBy('created_at', 'asc');
+        } elseif ($sort === 'units_desc') {
+            $query->orderBy('units', 'desc');
+        } elseif ($sort === 'units_asc') {
+            $query->orderBy('units', 'asc');
+        } else {
+            $query->orderBy('created_at', 'desc');
+        }
+
+        return $query;
     }
 
     private function reportFilters(Request $request): array
@@ -1357,6 +1657,9 @@ class BrandsPlatformController extends Controller
             'from' => $request->filled('from') ? Carbon::parse($request->input('from'))->startOfDay() : null,
             'to' => $request->filled('to') ? Carbon::parse($request->input('to'))->endOfDay() : null,
             'status' => $request->filled('status') ? $request->input('status') : null,
+            'location' => $request->filled('location') ? $request->input('location') : null,
+            'activity_type' => $request->filled('activity_type') ? $request->input('activity_type') : null,
+            'sort' => $request->input('sort', 'newest'),
         ];
     }
 

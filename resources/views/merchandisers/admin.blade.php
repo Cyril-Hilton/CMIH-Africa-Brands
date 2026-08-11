@@ -16,7 +16,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @if(in_array($activeAdminTab, ['overview', 'routes'], true))
+    @if(in_array($activeAdminTab, ['overview', 'routes', 'executive', 'category-kpi', 'user-performance', 'price-promo'], true))
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     @endif
     @if($activeAdminTab === 'tracking')
@@ -263,6 +263,46 @@
                     <span class="text-lg w-6 text-center">⏱️</span>
                     <span>Clock Settings</span>
                 </button>
+
+                <div class="px-4 pt-5 pb-1">
+                    <p class="text-[9px] font-bold uppercase tracking-[0.3em] text-brand-ash/60">ShelfWatch Analytics</p>
+                </div>
+
+                <button @click="window.location.href = @js($adminTabUrl('gallery')); sidebarOpen = false"
+                    :class="activeTab === 'gallery' ? 'active' : ''"
+                    class="nav-item w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 text-sm text-brand-white/70 font-medium">
+                    <span class="text-lg w-6 text-center">📸</span>
+                    <span>Image Gallery</span>
+                    <span class="ml-auto text-[10px] text-brand-ash">{{ $totalImagesCount ?? 0 }}</span>
+                </button>
+
+                <button @click="window.location.href = @js($adminTabUrl('executive')); sidebarOpen = false"
+                    :class="activeTab === 'executive' ? 'active' : ''"
+                    class="nav-item w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 text-sm text-brand-white/70 font-medium">
+                    <span class="text-lg w-6 text-center">📊</span>
+                    <span>Executive Summary</span>
+                </button>
+
+                <button @click="window.location.href = @js($adminTabUrl('category-kpi')); sidebarOpen = false"
+                    :class="activeTab === 'category-kpi' ? 'active' : ''"
+                    class="nav-item w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 text-sm text-brand-white/70 font-medium">
+                    <span class="text-lg w-6 text-center">🏷️</span>
+                    <span>Category KPIs</span>
+                </button>
+
+                <button @click="window.location.href = @js($adminTabUrl('user-performance')); sidebarOpen = false"
+                    :class="activeTab === 'user-performance' ? 'active' : ''"
+                    class="nav-item w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 text-sm text-brand-white/70 font-medium">
+                    <span class="text-lg w-6 text-center">👤</span>
+                    <span>User Performance</span>
+                </button>
+
+                <button @click="window.location.href = @js($adminTabUrl('price-promo')); sidebarOpen = false"
+                    :class="activeTab === 'price-promo' ? 'active' : ''"
+                    class="nav-item w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 text-sm text-brand-white/70 font-medium">
+                    <span class="text-lg w-6 text-center">💰</span>
+                    <span>Price &amp; Promo</span>
+                </button>
             </nav>
 
             <!-- Logout -->
@@ -308,7 +348,12 @@
                                 forms: 'Forms & Planograms',
                                 assets: '📁 Asset Management',
                                 notifications: '🔔 Notifications & Approvals',
-                                settings: '⏱️ Clock Window Settings'
+                                settings: '⏱️ Clock Window Settings',
+                                gallery: '📸 Image Gallery',
+                                executive: '📊 Executive Summary',
+                                'category-kpi': '🏷️ Category Level KPIs',
+                                'user-performance': '👤 User Performance',
+                                'price-promo': '💰 Price & Promo Compliance'
                             }[activeTab]"></p>
                         </div>
                     </div>
@@ -839,6 +884,26 @@
                                     <label class="flex items-center gap-2 cursor-pointer select-none">
                                         <input type="checkbox" name="show_kds" value="1" checked class="rounded border-brand-white/20 bg-brand-black text-brand-red focus:ring-0">
                                         <span>Show Key Distributors</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                                        <input type="checkbox" name="show_exec_summary" value="1" checked class="rounded border-brand-white/20 bg-brand-black text-brand-red focus:ring-0">
+                                        <span>Show Executive Summary</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                                        <input type="checkbox" name="show_category_kpi" value="1" checked class="rounded border-brand-white/20 bg-brand-black text-brand-red focus:ring-0">
+                                        <span>Show Category KPIs</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                                        <input type="checkbox" name="show_user_performance" value="1" checked class="rounded border-brand-white/20 bg-brand-black text-brand-red focus:ring-0">
+                                        <span>Show User Performance</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                                        <input type="checkbox" name="show_gallery" value="1" checked class="rounded border-brand-white/20 bg-brand-black text-brand-red focus:ring-0">
+                                        <span>Show Image Gallery</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                                        <input type="checkbox" name="show_price_promo" value="1" checked class="rounded border-brand-white/20 bg-brand-black text-brand-red focus:ring-0">
+                                        <span>Show Price &amp; Promo</span>
                                     </label>
                                 </div>
 
@@ -3137,7 +3202,432 @@
                     </div>
                 </div>
 
+                {{-- ═══════════════════════════════════════════════════
+                     TAB: IMAGE GALLERY (ShelfWatch)
+                ════════════════════════════════════════════════════ --}}
+                <div x-show="activeTab === 'gallery'" x-transition>
+                    {{-- Filters Bar --}}
+                    <div class="mb-5 rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
+                        <form method="GET" action="{{ $adminTabUrl('gallery') }}" class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3 items-end">
+                            <input type="hidden" name="adminTab" value="gallery">
+                            <label class="col-span-2 md:col-span-1 block">
+                                <span class="text-[10px] uppercase tracking-wider text-brand-ash">Date From</span>
+                                <input type="date" name="date_from" value="{{ request('date_from') }}" class="mt-1 w-full rounded-xl border border-brand-white/10 bg-brand-black px-3 py-2 text-xs text-brand-white focus:border-brand-red focus:ring-0">
+                            </label>
+                            <label class="col-span-2 md:col-span-1 block">
+                                <span class="text-[10px] uppercase tracking-wider text-brand-ash">Date To</span>
+                                <input type="date" name="date_to" value="{{ request('date_to') }}" class="mt-1 w-full rounded-xl border border-brand-white/10 bg-brand-black px-3 py-2 text-xs text-brand-white focus:border-brand-red focus:ring-0">
+                            </label>
+                            <label class="block">
+                                <span class="text-[10px] uppercase tracking-wider text-brand-ash">Merchandiser</span>
+                                <select name="filter_user" class="mt-1 w-full rounded-xl border border-brand-white/10 bg-brand-black px-3 py-2 text-xs text-brand-white focus:border-brand-red focus:ring-0">
+                                    <option value="">All Users</option>
+                                    @foreach($galleryFilters['users'] ?? [] as $u)
+                                        <option value="{{ $u->id }}" @selected(request('filter_user') == $u->id)>{{ $u->name }}</option>
+                                    @endforeach
+                                </select>
+                            </label>
+                            <label class="block">
+                                <span class="text-[10px] uppercase tracking-wider text-brand-ash">Key Distributor</span>
+                                <select name="filter_kd" class="mt-1 w-full rounded-xl border border-brand-white/10 bg-brand-black px-3 py-2 text-xs text-brand-white focus:border-brand-red focus:ring-0">
+                                    <option value="">All KDs</option>
+                                    @foreach($galleryFilters['kds'] ?? [] as $kd)
+                                        <option value="{{ $kd->id }}" @selected(request('filter_kd') == $kd->id)>{{ $kd->name }}</option>
+                                    @endforeach
+                                </select>
+                            </label>
+                            <label class="block">
+                                <span class="text-[10px] uppercase tracking-wider text-brand-ash">Category</span>
+                                <select name="filter_category" class="mt-1 w-full rounded-xl border border-brand-white/10 bg-brand-black px-3 py-2 text-xs text-brand-white focus:border-brand-red focus:ring-0">
+                                    <option value="">All Categories</option>
+                                    @foreach($galleryFilters['categories'] ?? [] as $cat)
+                                        <option value="{{ $cat }}" @selected(request('filter_category') === $cat)>{{ $cat }}</option>
+                                    @endforeach
+                                </select>
+                            </label>
+                            <label class="block">
+                                <span class="text-[10px] uppercase tracking-wider text-brand-ash">Channel</span>
+                                <select name="filter_channel" class="mt-1 w-full rounded-xl border border-brand-white/10 bg-brand-black px-3 py-2 text-xs text-brand-white focus:border-brand-red focus:ring-0">
+                                    <option value="">All Channels</option>
+                                    @foreach($galleryFilters['channels'] ?? [] as $ch)
+                                        <option value="{{ $ch }}" @selected(request('filter_channel') === $ch)>{{ $ch }}</option>
+                                    @endforeach
+                                </select>
+                            </label>
+                            <div class="flex gap-2">
+                                <button type="submit" class="flex-1 rounded-xl bg-brand-red px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white hover:bg-red-700 transition">Apply</button>
+                                <a href="{{ $adminTabUrl('gallery') }}" class="flex-1 rounded-xl border border-brand-white/10 bg-brand-white/5 px-3 py-2 text-center text-[10px] font-bold uppercase tracking-wider text-brand-white hover:bg-brand-white/10 transition">Reset</a>
+                            </div>
+                        </form>
+                    </div>
+
+                    {{-- Stats bar --}}
+                    <div class="mb-4 flex items-center gap-4">
+                        <p class="text-xs text-brand-ash">Showing <span class="text-brand-white font-bold">{{ method_exists($galleryImages, 'total') ? $galleryImages->total() : $galleryImages->count() }}</span> images</p>
+                        <span class="text-brand-ash/40">|</span>
+                        <p class="text-xs text-brand-ash">Total in system: <span class="text-brand-white font-bold">{{ number_format($totalImagesCount ?? 0) }}</span></p>
+                    </div>
+
+                    {{-- Image grid --}}
+                    @if($galleryImages->isEmpty())
+                        <div class="glass-panel rounded-2xl border border-brand-white/10 p-16 text-center">
+                            <p class="text-4xl mb-3">📸</p>
+                            <p class="text-brand-white font-semibold">No images found</p>
+                            <p class="text-xs text-brand-ash mt-1">Try adjusting your filters or check that field teams have submitted visits with photos.</p>
+                        </div>
+                    @else
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3 mb-5">
+                            @foreach($galleryImages as $img)
+                                <div class="group relative overflow-hidden rounded-2xl border border-brand-white/10 bg-brand-black aspect-square cursor-pointer"
+                                     x-data="{ open: false }" @click="open = true">
+                                    <img src="{{ Storage::url($img->photo_path) }}"
+                                         alt="{{ $img->sku_name }}"
+                                         class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                         loading="lazy">
+                                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-end p-3">
+                                        <p class="text-[11px] font-semibold text-white leading-tight truncate">{{ $img->sku_name }}</p>
+                                        <p class="text-[10px] text-white/70 truncate">{{ $img->outlet_name }}</p>
+                                        <p class="text-[9px] text-white/50">{{ $img->user_name }} · {{ \Carbon\Carbon::parse($img->created_at)->format('d M H:i') }}</p>
+                                    </div>
+                                    {{-- Lightbox --}}
+                                    <div x-show="open" x-cloak @click.stop="open = false"
+                                         class="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4"
+                                         x-transition>
+                                        <div @click.stop class="max-w-3xl w-full">
+                                            <img src="{{ Storage::url($img->photo_path) }}" alt="{{ $img->sku_name }}" class="rounded-2xl max-h-[70vh] mx-auto object-contain">
+                                            <div class="mt-4 text-center">
+                                                <p class="text-white font-semibold">{{ $img->sku_name }}</p>
+                                                <p class="text-white/60 text-sm">{{ $img->outlet_name }} · {{ $img->kd_name }}</p>
+                                                <p class="text-white/40 text-xs mt-1">{{ $img->user_name }} · {{ \Carbon\Carbon::parse($img->created_at)->format('d M Y H:i') }}</p>
+                                            </div>
+                                            <button @click="open = false" class="mt-4 mx-auto block px-6 py-2 rounded-full border border-white/20 text-white text-sm hover:bg-white/10 transition">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                        @if(method_exists($galleryImages, 'links'))<div>{{ $galleryImages->links() }}</div>@endif
+                    @endif
+                </div>
+
+                {{-- ═══════════════════════════════════════════════════
+                     TAB: EXECUTIVE SUMMARY (ShelfWatch)
+                ════════════════════════════════════════════════════ --}}
+                <div x-show="activeTab === 'executive'" x-transition>
+                    {{-- KPI Bar --}}
+                    <div class="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4 mb-6">
+                        <div class="stat-card kpi-glow-blue glass-panel rounded-2xl p-5 border border-brand-white/10">
+                            <p class="text-[10px] uppercase tracking-widest text-brand-ash mb-2">Scheduled Visits</p>
+                            <p class="text-4xl font-display text-blue-400">{{ number_format($execScheduled) }}</p>
+                        </div>
+                        <div class="stat-card kpi-glow-green glass-panel rounded-2xl p-5 border border-brand-white/10">
+                            <p class="text-[10px] uppercase tracking-widest text-brand-ash mb-2">Actual Visits</p>
+                            <p class="text-4xl font-display text-green-400">{{ number_format($execActual) }}</p>
+                        </div>
+                        <div class="stat-card kpi-glow-amber glass-panel rounded-2xl p-5 border border-brand-white/10">
+                            <p class="text-[10px] uppercase tracking-widest text-brand-ash mb-2">Audit Compliance</p>
+                            <p class="text-4xl font-display text-amber-400">{{ $execCompliance }}%</p>
+                            <p class="text-xs text-brand-ash mt-1">Target 100%</p>
+                        </div>
+                        <div class="stat-card kpi-glow-green glass-panel rounded-2xl p-5 border border-brand-white/10">
+                            <p class="text-[10px] uppercase tracking-widest text-brand-ash mb-2">% Active Users</p>
+                            <p class="text-4xl font-display text-emerald-400">{{ $execActiveRate }}%</p>
+                        </div>
+                        <div class="stat-card kpi-glow-blue glass-panel rounded-2xl p-5 border border-brand-white/10">
+                            <p class="text-[10px] uppercase tracking-widest text-brand-ash mb-2">Total Images</p>
+                            <p class="text-4xl font-display text-sky-400">{{ number_format($totalImagesCount) }}</p>
+                        </div>
+                        <div class="stat-card glass-panel rounded-2xl p-5 border border-brand-white/10">
+                            <p class="text-[10px] uppercase tracking-widest text-brand-ash mb-2">SKU Count</p>
+                            <p class="text-4xl font-display text-violet-400">{{ $execSkuCount }}</p>
+                        </div>
+                        <div class="stat-card glass-panel rounded-2xl p-5 border border-brand-white/10">
+                            <p class="text-[10px] uppercase tracking-widest text-brand-ash mb-2">Active Merchandisers</p>
+                            <p class="text-4xl font-display text-brand-white">{{ $activeMerchandisers }}</p>
+                            <p class="text-xs text-brand-ash mt-1">of {{ $totalMerchandisers }}</p>
+                        </div>
+                    </div>
+
+                    {{-- Charts --}}
+                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-6">
+                        <div class="glass-panel rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
+                            <p class="text-xs uppercase tracking-widest text-brand-ash mb-4">Scheduled vs Actual Visits (7-Day Trend)</p>
+                            <div class="h-64"><canvas id="execVisitTrendChart"></canvas></div>
+                        </div>
+                        <div class="glass-panel rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
+                            <p class="text-xs uppercase tracking-widest text-brand-ash mb-4">Image Capture by Day</p>
+                            <div class="h-64"><canvas id="execImageValidityChart"></canvas></div>
+                        </div>
+                    </div>
+
+                    {{-- Merchandiser summary table --}}
+                    <div class="glass-panel rounded-2xl border border-brand-white/10 overflow-hidden">
+                        <div class="border-b border-brand-white/10 px-5 py-4 flex items-center justify-between">
+                            <p class="text-xs uppercase tracking-widest text-brand-ash">Field Team Summary</p>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full min-w-[640px] text-sm">
+                                <thead class="border-b border-brand-white/10 text-[10px] uppercase tracking-widest text-brand-ash">
+                                    <tr>
+                                        <th class="px-5 py-3 text-left">Merchandiser</th>
+                                        <th class="px-5 py-3 text-left">KD</th>
+                                        <th class="px-5 py-3 text-right">Clock-ins</th>
+                                        <th class="px-5 py-3 text-right">Visits</th>
+                                        <th class="px-5 py-3 text-right">Coverage</th>
+                                        <th class="px-5 py-3 text-right">OSA</th>
+                                        <th class="px-5 py-3 text-right">Score</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse(($perfectStoreSummary['merchandisers'] ?? collect())->take(12) as $row)
+                                        <tr class="border-b border-brand-white/5">
+                                            <td class="px-5 py-3 font-semibold text-brand-white">{{ $row['name'] }}</td>
+                                            <td class="px-5 py-3 text-brand-ash text-xs">{{ $row['kd'] ?? '—' }}</td>
+                                            <td class="px-5 py-3 text-right text-brand-ash">{{ $row['clockins'] ?? '—' }}</td>
+                                            <td class="px-5 py-3 text-right text-blue-300">{{ $row['visits'] ?? '—' }}</td>
+                                            <td class="px-5 py-3 text-right text-emerald-300">{{ $row['coverage'] !== null ? number_format((float)$row['coverage'],1).'%' : 'N/A' }}</td>
+                                            <td class="px-5 py-3 text-right text-sky-300">{{ $row['osa'] !== null ? number_format((float)$row['osa'],1).'%' : 'N/A' }}</td>
+                                            <td class="px-5 py-3 text-right font-bold text-brand-white">{{ $row['perfect_store_score'] !== null ? number_format((float)$row['perfect_store_score'],1).'%' : 'N/A' }}</td>
+                                        </tr>
+                                    @empty
+                                        <tr><td colspan="7" class="px-5 py-10 text-center text-sm text-brand-ash">No data for this period yet.</td></tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- ═══════════════════════════════════════════════════
+                     TAB: CATEGORY LEVEL KPIs (ShelfWatch)
+                ════════════════════════════════════════════════════ --}}
+                <div x-show="activeTab === 'category-kpi'" x-transition>
+                    <div class="mb-5 glass-panel rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
+                        <p class="text-xs text-brand-ash mb-1">Category-level KPI aggregation — OSA, NPD, MHS scored per product category based on all field visit SKU checks in the selected period.</p>
+                    </div>
+
+                    @if($categoryKpis->isEmpty())
+                        <div class="glass-panel rounded-2xl border border-brand-white/10 p-16 text-center">
+                            <p class="text-4xl mb-3">🏷️</p>
+                            <p class="text-brand-white font-semibold">No category KPI data yet</p>
+                            <p class="text-xs text-brand-ash mt-1">Field teams need to complete SKU visits with scoring before category roll-ups appear.</p>
+                        </div>
+                    @else
+                        {{-- Charts --}}
+                        <div class="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-6">
+                            <div class="glass-panel rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
+                                <p class="text-xs uppercase tracking-widest text-brand-ash mb-4">OSA by Category</p>
+                                <div class="h-56"><canvas id="catOsaChart"></canvas></div>
+                            </div>
+                            <div class="glass-panel rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
+                                <p class="text-xs uppercase tracking-widest text-brand-ash mb-4">NPD by Category</p>
+                                <div class="h-56"><canvas id="catNpdChart"></canvas></div>
+                            </div>
+                            <div class="glass-panel rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
+                                <p class="text-xs uppercase tracking-widest text-brand-ash mb-4">MHS by Category</p>
+                                <div class="h-56"><canvas id="catMhsChart"></canvas></div>
+                            </div>
+                        </div>
+
+                        {{-- Table --}}
+                        <div class="glass-panel rounded-2xl border border-brand-white/10 overflow-hidden">
+                            <div class="border-b border-brand-white/10 px-5 py-4">
+                                <p class="text-xs uppercase tracking-widest text-brand-ash">Category KPI Detail</p>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full min-w-[700px] text-sm">
+                                    <thead class="border-b border-brand-white/10 text-[10px] uppercase tracking-widest text-brand-ash">
+                                        <tr>
+                                            <th class="px-5 py-3 text-left">Category</th>
+                                            <th class="px-5 py-3 text-right">Visits</th>
+                                            <th class="px-5 py-3 text-right">OSA %</th>
+                                            <th class="px-5 py-3 text-right">OSA Pass/Total</th>
+                                            <th class="px-5 py-3 text-right">NPD %</th>
+                                            <th class="px-5 py-3 text-right">MHS %</th>
+                                            <th class="px-5 py-3 text-right">Total Facings</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($categoryKpis as $row)
+                                            <tr class="border-b border-brand-white/5">
+                                                <td class="px-5 py-3 font-semibold text-brand-white">{{ $row->category }}</td>
+                                                <td class="px-5 py-3 text-right text-brand-ash">{{ number_format($row->visit_count) }}</td>
+                                                <td class="px-5 py-3 text-right">
+                                                    @if($row->osa_pct !== null)
+                                                        <span class="{{ $row->osa_pct >= 95 ? 'text-emerald-400' : ($row->osa_pct >= 80 ? 'text-amber-400' : 'text-red-400') }} font-semibold">{{ $row->osa_pct }}%</span>
+                                                    @else <span class="text-brand-ash">N/A</span> @endif
+                                                </td>
+                                                <td class="px-5 py-3 text-right text-brand-ash text-xs">{{ $row->osa_pass }}/{{ $row->osa_total }}</td>
+                                                <td class="px-5 py-3 text-right">
+                                                    @if($row->npd_pct !== null)
+                                                        <span class="{{ $row->npd_pct >= 100 ? 'text-emerald-400' : ($row->npd_pct >= 75 ? 'text-amber-400' : 'text-red-400') }} font-semibold">{{ $row->npd_pct }}%</span>
+                                                    @else <span class="text-brand-ash">N/A</span> @endif
+                                                </td>
+                                                <td class="px-5 py-3 text-right">
+                                                    @if($row->mhs_pct !== null)
+                                                        <span class="{{ $row->mhs_pct >= 100 ? 'text-emerald-400' : ($row->mhs_pct >= 80 ? 'text-amber-400' : 'text-red-400') }} font-semibold">{{ $row->mhs_pct }}%</span>
+                                                    @else <span class="text-brand-ash">N/A</span> @endif
+                                                </td>
+                                                <td class="px-5 py-3 text-right text-brand-ash">{{ number_format($row->total_facings) }}</td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    @endif
+                </div>
+
+                {{-- ═══════════════════════════════════════════════════
+                     TAB: USER PERFORMANCE (ShelfWatch)
+                ════════════════════════════════════════════════════ --}}
+                <div x-show="activeTab === 'user-performance'" x-transition>
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                        <div class="stat-card kpi-glow-blue glass-panel rounded-2xl p-5 border border-brand-white/10">
+                            <p class="text-[10px] uppercase tracking-widest text-brand-ash mb-2">Active Merchandisers</p>
+                            <p class="text-4xl font-display text-blue-400">{{ $activeMerchandisers }}</p>
+                        </div>
+                        <div class="stat-card kpi-glow-green glass-panel rounded-2xl p-5 border border-brand-white/10">
+                            <p class="text-[10px] uppercase tracking-widest text-brand-ash mb-2">Avg Coverage</p>
+                            <p class="text-4xl font-display text-emerald-400">{{ $userPerformance->isNotEmpty() ? number_format($userPerformance->avg('coverage_pct'), 1) : 0 }}%</p>
+                        </div>
+                        <div class="stat-card kpi-glow-amber glass-panel rounded-2xl p-5 border border-brand-white/10">
+                            <p class="text-[10px] uppercase tracking-widest text-brand-ash mb-2">Total Images</p>
+                            <p class="text-4xl font-display text-amber-400">{{ number_format($userPerformance->sum('images_uploaded')) }}</p>
+                        </div>
+                        <div class="stat-card glass-panel rounded-2xl p-5 border border-brand-white/10">
+                            <p class="text-[10px] uppercase tracking-widest text-brand-ash mb-2">Total Visits</p>
+                            <p class="text-4xl font-display text-brand-white">{{ number_format($userPerformance->sum('total_visits')) }}</p>
+                        </div>
+                    </div>
+
+                    {{-- Top performers bar chart --}}
+                    <div class="mb-5 glass-panel rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
+                        <p class="text-xs uppercase tracking-widest text-brand-ash mb-4">Coverage % by Merchandiser (Top 10)</p>
+                        <div class="h-64"><canvas id="userPerfCoverageChart"></canvas></div>
+                    </div>
+
+                    <div class="glass-panel rounded-2xl border border-brand-white/10 overflow-hidden">
+                        <div class="border-b border-brand-white/10 px-5 py-4 flex items-center justify-between">
+                            <p class="text-xs uppercase tracking-widest text-brand-ash">User Scorecard</p>
+                            <span class="text-xs text-brand-ash">Period: {{ $coverageStart->format('d M') }} – {{ $coverageEnd->format('d M Y') }}</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full min-w-[700px] text-sm">
+                                <thead class="border-b border-brand-white/10 text-[10px] uppercase tracking-widest text-brand-ash">
+                                    <tr>
+                                        <th class="px-5 py-3 text-left">Rank</th>
+                                        <th class="px-5 py-3 text-left">Merchandiser</th>
+                                        <th class="px-5 py-3 text-left">KD</th>
+                                        <th class="px-5 py-3 text-right">Clock-ins</th>
+                                        <th class="px-5 py-3 text-right">Scheduled</th>
+                                        <th class="px-5 py-3 text-right">Actual Visits</th>
+                                        <th class="px-5 py-3 text-right">Coverage</th>
+                                        <th class="px-5 py-3 text-right">Images</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($userPerformance as $rank => $user)
+                                        <tr class="border-b border-brand-white/5">
+                                            <td class="px-5 py-3 font-bold {{ $rank === 0 ? 'text-amber-400' : ($rank === 1 ? 'text-slate-300' : ($rank === 2 ? 'text-orange-400' : 'text-brand-ash')) }}">#{{ $rank + 1 }}</td>
+                                            <td class="px-5 py-3 font-semibold text-brand-white">{{ $user->name }}</td>
+                                            <td class="px-5 py-3 text-brand-ash text-xs">{{ $user->merchandiserKd?->name ?? '—' }}</td>
+                                            <td class="px-5 py-3 text-right text-brand-ash">{{ $user->total_clockins }}</td>
+                                            <td class="px-5 py-3 text-right text-brand-ash">{{ $user->scheduled_visits }}</td>
+                                            <td class="px-5 py-3 text-right text-blue-300">{{ $user->total_visits }}</td>
+                                            <td class="px-5 py-3 text-right">
+                                                @php $cov = $user->coverage_pct; @endphp
+                                                <span class="{{ $cov >= 90 ? 'text-emerald-400' : ($cov >= 70 ? 'text-amber-400' : 'text-red-400') }} font-bold">{{ $cov }}%</span>
+                                            </td>
+                                            <td class="px-5 py-3 text-right text-sky-300">{{ number_format($user->images_uploaded) }}</td>
+                                        </tr>
+                                    @empty
+                                        <tr><td colspan="8" class="px-5 py-10 text-center text-sm text-brand-ash">No user performance data for this period.</td></tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- ═══════════════════════════════════════════════════
+                     TAB: PRICE & PROMO COMPLIANCE (ShelfWatch)
+                ════════════════════════════════════════════════════ --}}
+                <div x-show="activeTab === 'price-promo'" x-transition>
+                    {{-- KPI cards --}}
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                        <div class="stat-card kpi-glow-green glass-panel rounded-2xl p-5 border border-brand-white/10">
+                            <p class="text-[10px] uppercase tracking-widest text-brand-ash mb-2">POSM Compliance</p>
+                            <p class="text-4xl font-display text-emerald-400">{{ $posmCompliance }}%</p>
+                            <p class="text-xs text-brand-ash mt-1">Visits with photos</p>
+                        </div>
+                        <div class="stat-card kpi-glow-blue glass-panel rounded-2xl p-5 border border-brand-white/10">
+                            <p class="text-[10px] uppercase tracking-widest text-brand-ash mb-2">Price Tag Compliance</p>
+                            <p class="text-4xl font-display text-sky-400">{{ $pricingCompliance }}%</p>
+                            <p class="text-xs text-brand-ash mt-1">SKU checks with price</p>
+                        </div>
+                        <div class="stat-card kpi-glow-amber glass-panel rounded-2xl p-5 border border-brand-white/10">
+                            <p class="text-[10px] uppercase tracking-widest text-brand-ash mb-2">Total Images</p>
+                            <p class="text-4xl font-display text-amber-400">{{ number_format($totalImagesCount) }}</p>
+                        </div>
+                        <div class="stat-card glass-panel rounded-2xl p-5 border border-brand-white/10">
+                            <p class="text-[10px] uppercase tracking-widest text-brand-ash mb-2">KDs Tracked</p>
+                            <p class="text-4xl font-display text-violet-400">{{ $pricePromoData->count() }}</p>
+                        </div>
+                    </div>
+
+                    {{-- POSM chart + table --}}
+                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-6">
+                        <div class="glass-panel rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
+                            <p class="text-xs uppercase tracking-widest text-brand-ash mb-4">POSM Compliance by KD</p>
+                            <div class="h-64"><canvas id="posmComplianceChart"></canvas></div>
+                        </div>
+                        <div class="glass-panel rounded-2xl border border-brand-white/10 overflow-hidden">
+                            <div class="border-b border-brand-white/10 px-5 py-4">
+                                <p class="text-xs uppercase tracking-widest text-brand-ash">KD Promo Performance</p>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <thead class="border-b border-brand-white/10 text-[10px] uppercase tracking-widest text-brand-ash">
+                                        <tr>
+                                            <th class="px-4 py-3 text-left">Key Distributor</th>
+                                            <th class="px-4 py-3 text-right">Visits</th>
+                                            <th class="px-4 py-3 text-right">POSM Visits</th>
+                                            <th class="px-4 py-3 text-right">POSM Rate</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @forelse($pricePromoData as $row)
+                                            <tr class="border-b border-brand-white/5">
+                                                <td class="px-4 py-3 font-semibold text-brand-white">{{ $row->kd_name }}</td>
+                                                <td class="px-4 py-3 text-right text-brand-ash">{{ number_format($row->visits) }}</td>
+                                                <td class="px-4 py-3 text-right text-sky-300">{{ number_format($row->posm_visits) }}</td>
+                                                <td class="px-4 py-3 text-right">
+                                                    <span class="{{ $row->posm_rate >= 90 ? 'text-emerald-400' : ($row->posm_rate >= 70 ? 'text-amber-400' : 'text-red-400') }} font-bold">{{ $row->posm_rate }}%</span>
+                                                </td>
+                                            </tr>
+                                        @empty
+                                            <tr><td colspan="4" class="px-4 py-8 text-center text-sm text-brand-ash">No promo data for this period.</td></tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Guidance panel --}}
+                    <div class="glass-panel rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5">
+                        <p class="text-xs font-bold uppercase tracking-widest text-amber-400 mb-3">📌 POSM Compliance Definition</p>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-brand-ash">
+                            <div><p class="font-semibold text-brand-white mb-1">POSM Compliance</p><p>% of store visits where at least one shelf/POSM photo was captured by the merchandiser during the visit.</p></div>
+                            <div><p class="font-semibold text-brand-white mb-1">Price Tag Compliance</p><p>% of SKU checks where a shelf price was recorded. Enables price monitoring and competitive intelligence.</p></div>
+                            <div><p class="font-semibold text-brand-white mb-1">Target</p><p>POSM: 100% · Price Recording: 100%. Both are set as mandatory execution standards for all field visits.</p></div>
+                        </div>
+                    </div>
+                </div>
+
             </main>
+
         </div><!-- /main -->
     </div><!-- /layout -->
 </div><!-- /app -->
@@ -3734,6 +4224,136 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 </script>
+
+@if($activeAdminTab === 'executive')
+<script>
+(function () {
+    const chartDefaults = {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: 'rgba(255,255,255,.65)', font: { size: 11 } } } },
+        scales: {
+            x: { grid: { color: 'rgba(255,255,255,.07)' }, ticks: { color: 'rgba(255,255,255,.55)' } },
+            y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,.07)' }, ticks: { color: 'rgba(255,255,255,.55)' } }
+        }
+    };
+    const visitTrend = document.getElementById('execVisitTrendChart');
+    if (visitTrend) {
+        new Chart(visitTrend, {
+            type: 'bar',
+            data: {
+                labels: @json($execVisitTrend['labels']),
+                datasets: [
+                    { label: 'Scheduled', data: @json($execVisitTrend['scheduled']), backgroundColor: 'rgba(59,130,246,.55)', borderColor: '#3b82f6', borderWidth: 1.5, borderRadius: 5 },
+                    { label: 'Actual Visits', data: @json($execVisitTrend['actual']), backgroundColor: 'rgba(34,197,94,.55)', borderColor: '#22c55e', borderWidth: 1.5, borderRadius: 5 }
+                ]
+            },
+            options: chartDefaults
+        });
+    }
+    const imgValidity = document.getElementById('execImageValidityChart');
+    if (imgValidity) {
+        new Chart(imgValidity, {
+            type: 'bar',
+            data: {
+                labels: @json($execImageValidity['labels']),
+                datasets: [
+                    { label: 'Images Captured', data: @json($execImageValidity['valid']), backgroundColor: 'rgba(14,165,233,.65)', borderColor: '#0ea5e9', borderWidth: 1.5, borderRadius: 5 },
+                    { label: 'Missing Photos', data: @json($execImageValidity['invalid']), backgroundColor: 'rgba(239,68,68,.45)', borderColor: '#ef4444', borderWidth: 1.5, borderRadius: 5 }
+                ]
+            },
+            options: chartDefaults
+        });
+    }
+})();
+</script>
+@endif
+
+@if($activeAdminTab === 'category-kpi')
+<script>
+(function () {
+    const labels = @json($categoryKpis->pluck('category')->values());
+    const osaPct  = @json($categoryKpis->map(fn($r) => $r->osa_pct)->values());
+    const npdPct  = @json($categoryKpis->map(fn($r) => $r->npd_pct)->values());
+    const mhsPct  = @json($categoryKpis->map(fn($r) => $r->mhs_pct)->values());
+    const defOpts = {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+            x: { grid: { color: 'rgba(255,255,255,.07)' }, ticks: { color: 'rgba(255,255,255,.55)', font: { size: 10 } } },
+            y: { beginAtZero: true, max: 100, grid: { color: 'rgba(255,255,255,.07)' }, ticks: { color: 'rgba(255,255,255,.55)', callback: v => v + '%' } }
+        }
+    };
+    const makeBar = (id, data, color) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        new Chart(el, { type: 'bar', data: { labels, datasets: [{ data, backgroundColor: color, borderRadius: 5 }] }, options: defOpts });
+    };
+    makeBar('catOsaChart', osaPct, 'rgba(14,165,233,.7)');
+    makeBar('catNpdChart', npdPct, 'rgba(245,158,11,.7)');
+    makeBar('catMhsChart', mhsPct, 'rgba(167,139,250,.7)');
+})();
+</script>
+@endif
+
+@if($activeAdminTab === 'user-performance')
+<script>
+(function () {
+    const el = document.getElementById('userPerfCoverageChart');
+    if (!el) return;
+    const top10 = @json($userPerformance->take(10)->map(fn($u) => ['name' => $u->name, 'cov' => $u->coverage_pct])->values());
+    new Chart(el, {
+        type: 'bar',
+        data: {
+            labels: top10.map(u => u.name),
+            datasets: [{
+                label: 'Coverage %',
+                data: top10.map(u => u.cov),
+                backgroundColor: top10.map(u => u.cov >= 90 ? 'rgba(34,197,94,.7)' : u.cov >= 70 ? 'rgba(245,158,11,.7)' : 'rgba(239,68,68,.7)'),
+                borderRadius: 5
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { beginAtZero: true, max: 100, grid: { color: 'rgba(255,255,255,.07)' }, ticks: { color: 'rgba(255,255,255,.55)', callback: v => v + '%' } },
+                y: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,.75)', font: { size: 11 } } }
+            }
+        }
+    });
+})();
+</script>
+@endif
+
+@if($activeAdminTab === 'price-promo')
+<script>
+(function () {
+    const el = document.getElementById('posmComplianceChart');
+    if (!el) return;
+    const data = @json($pricePromoData->values());
+    new Chart(el, {
+        type: 'bar',
+        data: {
+            labels: data.map(r => r.kd_name),
+            datasets: [{
+                label: 'POSM Rate %',
+                data: data.map(r => r.posm_rate),
+                backgroundColor: data.map(r => r.posm_rate >= 90 ? 'rgba(34,197,94,.7)' : r.posm_rate >= 70 ? 'rgba(245,158,11,.7)' : 'rgba(239,68,68,.7)'),
+                borderRadius: 5
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { color: 'rgba(255,255,255,.07)' }, ticks: { color: 'rgba(255,255,255,.55)', font: { size: 10 } } },
+                y: { beginAtZero: true, max: 100, grid: { color: 'rgba(255,255,255,.07)' }, ticks: { color: 'rgba(255,255,255,.55)', callback: v => v + '%' } }
+            }
+        }
+    });
+})();
+</script>
+@endif
 
 </body>
 </html>

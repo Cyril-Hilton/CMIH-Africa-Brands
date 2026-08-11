@@ -1,316 +1,463 @@
 @extends('layouts.site')
 
-@section('title', 'Brands Platform Admin')
+@section('title', 'Brands Platform Admin Control Console')
 
 @section('content')
-    <section class="brands-role-dashboard" style="--bp:#ff1020; --bbg:#170004; --bs:#d4aa45; --ba:#ff2ba6; --bink:#171115;">
-        <div class="mx-auto w-full max-w-7xl px-5 py-8 sm:px-8 lg:px-10">
-            <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+@php
+    $brandStyle = implode(' ', [
+        '--bp: #ff1020;',
+        '--bbg: #170004;',
+        '--bs: #d4aa45;',
+        '--ba: #ff2ba6;',
+        '--bink: #171115;',
+        '--bsoft: #fbf0f2;',
+        '--display: "Outfit", sans-serif;',
+    ]);
+@endphp
+
+<section class="brands-prototype view active workspace" id="view-admin" style="{{ $brandStyle }}">
+    <div class="work-shell">
+        <aside class="work-side">
+            <div class="work-brand">
+                <div style="width:10px; height:10px; border-radius:50%; background:#ff1020; box-shadow:0 0 10px #ff1020;"></div>
                 <div>
-                    <p class="text-xs font-bold uppercase tracking-[0.35em] text-brand-red">Admin Console</p>
-                    <h1 class="mt-2 font-display text-5xl leading-none text-brand-white">Brand Platform Control</h1>
-                    <p class="mt-2 text-sm text-brand-white/60">Create brand activations, assign staff, publish updates, issue temporary client links, and audit activity.</p>
+                    <strong>Agency Admin</strong>
+                    <small>Control Center</small>
                 </div>
-                <a href="{{ route('brands-platform.index') }}" class="rounded-md border border-brand-white/10 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-brand-white/60 hover:text-brand-white">Brands Home</a>
+            </div>
+            <div class="side-label">Console Navigation</div>
+            <a href="#creation-plan" class="side-btn active" style="text-decoration:none; display:block;">Add Brand Activation</a>
+            <a href="#portfolios" class="side-btn" style="text-decoration:none; display:block;">Brand Portfolios</a>
+            <a href="#staff-db" class="side-btn" style="text-decoration:none; display:block;">Staff Database</a>
+            <a href="#audit-trail" class="side-btn" style="text-decoration:none; display:block;">Audit Trail</a>
+            
+            <div class="side-label" style="margin-top:20px;">Exit</div>
+            <a href="{{ route('brands-platform.index') }}" class="side-btn" style="text-decoration:none; display:block;">Return to Hub</a>
+            <form method="POST" action="{{ route('logout') }}" id="admin-logout-form" style="display:none;">
+                @csrf
+            </form>
+            <button class="side-btn" onclick="document.getElementById('admin-logout-form').submit();" style="width:100%; text-align:left; background:none; border:none; cursor:pointer; font-family:inherit;">Sign Out</button>
+        </aside>
+
+        <main class="work-main">
+            <div class="work-top">
+                <div>
+                    <div class="eyebrow">CMIH AGENCY ADMIN CONSOLE</div>
+                    <h1>Brand Platform Control</h1>
+                </div>
+                <span class="chip ok">System Online</span>
             </div>
 
             @if(session('status'))
-                <div class="mb-5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">{{ session('status') }}</div>
+                <div style="background:rgba(10, 157, 112, 0.15); border:1px solid #0a9d70; color:#fff; border-radius:10px; padding:12px; font-size:12px; margin-bottom:20px;">
+                    {{ session('status') }}
+                </div>
             @endif
+            
             @if(session('client_link'))
-                <div class="mb-5 rounded-lg border border-brand-white/10 bg-brand-white/[0.04] p-4 text-sm text-brand-white/70">
-                    Temporary client link:
-                    <a href="{{ session('client_link') }}" class="font-semibold text-brand-white underline">{{ session('client_link') }}</a>
+                <div style="background:rgba(212, 170, 69, 0.15); border:1px solid #d4aa45; color:#fff; border-radius:10px; padding:12px; font-size:12px; margin-bottom:20px;">
+                    <strong>Temporary Client Link Generated:</strong>
+                    <a href="{{ session('client_link') }}" class="underline" style="color:#d4aa45; margin-left:5px;" target="_blank">{{ session('client_link') }}</a>
                 </div>
             @endif
 
-            <form method="POST" action="{{ route('brands-platform.admin.brands.store') }}" enctype="multipart/form-data" class="rounded-lg border border-brand-white/10 bg-brand-white/[0.045] p-5">
-                @csrf
-                <div class="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                        <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-red">Add Brand & Activation</p>
-                        <h2 class="mt-1 text-xl font-semibold text-brand-white">Activation Execution Plan</h2>
-                    </div>
-                    <button class="rounded-md bg-brand-red px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-brand-white hover:bg-brand-white hover:text-brand-black">Save Plan</button>
+            <!-- Quick Metrics Grid -->
+            <div class="metrics" style="margin-bottom:20px;">
+                <div class="metric">
+                    <small>Client Brands</small>
+                    <strong>{{ number_format($brands->count()) }}</strong>
+                    <span>Active accounts</span>
                 </div>
-
-                <div class="mt-5 grid gap-4 lg:grid-cols-2">
-                    <div class="grid gap-3 sm:grid-cols-2">
-                        <input name="name" required placeholder="Brand name" class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-3 text-sm text-brand-white placeholder-brand-white/30">
-                        <select name="category" class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-3 text-sm text-brand-white">
-                            @foreach(['Personal Care', 'Beverage', 'Food', 'Home Care', 'Beauty', 'Telecommunications', 'Other'] as $category)
-                                <option>{{ $category }}</option>
-                            @endforeach
-                        </select>
-                        <input name="headline" placeholder="Brand headline" class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-3 text-sm text-brand-white placeholder-brand-white/30 sm:col-span-2">
-                        <textarea name="description" rows="3" placeholder="Brand description" class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-3 text-sm text-brand-white placeholder-brand-white/30 sm:col-span-2"></textarea>
-                        <input name="primary_color" placeholder="Primary colour e.g. #e50914" class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-3 text-sm text-brand-white placeholder-brand-white/30">
-                        <input name="secondary_color" placeholder="Secondary colour" class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-3 text-sm text-brand-white placeholder-brand-white/30">
-                        <label class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-3 text-xs text-brand-white/55 sm:col-span-2">
-                            Brand logo
-                            <input name="logo" type="file" accept="image/*,.svg" class="mt-2 block w-full text-sm text-brand-white">
-                        </label>
-                    </div>
-                    <div class="grid gap-3 sm:grid-cols-2">
-                        <input name="activation_name" placeholder="Activation name" class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-3 text-sm text-brand-white placeholder-brand-white/30 sm:col-span-2">
-                        <select name="activation_type" class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-3 text-sm text-brand-white">
-                            @foreach(['sampling', 'sales', 'consumer_capture', 'retail_redemption', 'merchandising', 'activation'] as $type)
-                                <option value="{{ $type }}">{{ \Illuminate\Support\Str::headline($type) }}</option>
-                            @endforeach
-                        </select>
-                        <input name="target_unit" placeholder="Target unit e.g. Samples" class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-3 text-sm text-brand-white placeholder-brand-white/30">
-                        <input name="starts_at" type="date" class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-3 text-sm text-brand-white">
-                        <input name="ends_at" type="date" class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-3 text-sm text-brand-white">
-                        <input name="target_reach" type="number" min="0" placeholder="Overall target" class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-3 text-sm text-brand-white placeholder-brand-white/30 sm:col-span-2">
-                        <textarea name="activation_description" rows="3" placeholder="Activation description" class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-3 text-sm text-brand-white placeholder-brand-white/30 sm:col-span-2"></textarea>
-                        <label class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-3 text-xs text-brand-white/55 sm:col-span-2">
-                            Activation banner
-                            <input name="banner" type="file" accept="image/*" class="mt-2 block w-full text-sm text-brand-white">
-                        </label>
-                        <div class="rounded-md border border-brand-white/10 bg-brand-black/35 p-3 sm:col-span-2">
-                            <p class="text-[10px] font-bold uppercase tracking-wider text-brand-white/40">Modules</p>
-                            <div class="mt-3 grid gap-2 sm:grid-cols-2">
-                                @foreach([
-                                    'publication' => 'Publication',
-                                    'consumer_form' => 'Consumer Form',
-                                    'agency_reporting' => 'Agency Reporting',
-                                    'coupons_rewards' => 'Coupons / Rewards',
-                                    'geofence' => 'Geofence',
-                                    'retail_scanner' => 'Retail Scanner',
-                                    'merchandising' => 'Merchandising',
-                                ] as $value => $label)
-                                    <label class="flex items-center gap-2 text-xs text-brand-white/65">
-                                        <input type="checkbox" name="modules[]" value="{{ $value }}" class="rounded border-brand-white/20 bg-brand-black" @checked(in_array($value, ['publication', 'consumer_form', 'agency_reporting'], true))>
-                                        <span>{{ $label }}</span>
-                                    </label>
-                                @endforeach
-                            </div>
-                        </div>
-                    </div>
+                <div class="metric">
+                    <small>Live Activations</small>
+                    <strong>{{ number_format($brands->sum('activations_count')) }}</strong>
+                    <span>In progress</span>
                 </div>
-
-                <div class="mt-5 grid gap-3 md:grid-cols-3">
-                    @for($i = 0; $i < 3; $i++)
-                        <div class="rounded-md border border-brand-white/10 bg-brand-black/35 p-3">
-                            <p class="text-[10px] font-bold uppercase tracking-wider text-brand-white/40">Location {{ $i + 1 }}</p>
-                            <input name="locations[{{ $i }}][name]" placeholder="Location name" class="mt-3 w-full rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-2 text-sm text-brand-white placeholder-brand-white/30">
-                            <div class="mt-3 grid gap-2 sm:grid-cols-2">
-                                <input name="locations[{{ $i }}][target]" type="number" min="0" placeholder="Target" class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-2 text-sm text-brand-white placeholder-brand-white/30">
-                                <input name="locations[{{ $i }}][daily_target]" type="number" min="0" placeholder="Daily" class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-2 text-sm text-brand-white placeholder-brand-white/30">
-                            </div>
-                            <select name="locations[{{ $i }}][staff_ids][]" multiple class="mt-3 h-28 w-full rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-2 text-sm text-brand-white">
-                                @foreach($staff as $member)
-                                    <option value="{{ $member->id }}">{{ $member->name }} - {{ $member->department ?: 'No dept' }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    @endfor
+                <div class="metric">
+                    <small>Available Staff</small>
+                    <strong>{{ number_format(max(0, $availableStaff)) }}</strong>
+                    <span>Unassigned</span>
                 </div>
-            </form>
-
-            <div class="mt-8 grid gap-4 md:grid-cols-4">
-                <div class="rounded-lg border border-brand-white/10 bg-brand-white/[0.04] p-4">
-                    <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-ash">Brands</p>
-                    <p class="mt-2 text-3xl font-semibold text-brand-white">{{ number_format($brands->count()) }}</p>
-                </div>
-                <div class="rounded-lg border border-brand-white/10 bg-brand-white/[0.04] p-4">
-                    <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-ash">Activations</p>
-                    <p class="mt-2 text-3xl font-semibold text-brand-white">{{ number_format($brands->sum('activations_count')) }}</p>
-                </div>
-                <div class="rounded-lg border border-brand-white/10 bg-brand-white/[0.04] p-4">
-                    <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-ash">Available Staff</p>
-                    <p class="mt-2 text-3xl font-semibold text-brand-white">{{ number_format(max(0, $availableStaff)) }}</p>
-                </div>
-                <div class="rounded-lg border border-brand-white/10 bg-brand-white/[0.04] p-4">
-                    <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-ash">Field Updates</p>
-                    <p class="mt-2 text-3xl font-semibold text-brand-white">{{ number_format($brands->sum('field_activities_count')) }}</p>
+                <div class="metric">
+                    <small>Total Field Updates</small>
+                    <strong>{{ number_format($brands->sum('field_activities_count')) }}</strong>
+                    <span>Audit trail total</span>
                 </div>
             </div>
 
-            <div class="mt-4 rounded-lg border border-brand-white/10 bg-brand-white/[0.035] p-5">
-                <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-ash">Staff Productivity By Role</p>
-                <div class="mt-4 grid gap-3 md:grid-cols-4">
+            <!-- Role Productivity Dashboard -->
+            <div class="panel" style="margin-bottom:20px;">
+                <div class="panel-head">
+                    <div>
+                        <h3>Productivity Stats By Staff Role</h3>
+                        <small>Cumulative field updates logged by staff role</small>
+                    </div>
+                </div>
+                <div class="dash-grid" style="margin-top:15px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:10px;">
                     @forelse($roleProductivity as $row)
-                        <div class="rounded-md border border-brand-white/10 bg-brand-black/35 p-4">
-                            <p class="text-sm font-semibold text-brand-white">{{ \Illuminate\Support\Str::headline($row->staff_role) }}</p>
-                            <p class="mt-2 text-xs text-brand-white/55">{{ number_format($row->updates) }} updates</p>
-                            <p class="text-xs text-brand-white/55">{{ number_format($row->units) }} units - {{ number_format($row->conversions) }} conversions</p>
+                        <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:15px;">
+                            <p style="font-size:13px; font-weight:800; color:#fff; margin:0;">{{ \Illuminate\Support\Str::headline($row->staff_role) }}</p>
+                            <p style="margin:5px 0 0; font-size:11px; color:rgba(255,255,255,0.6);">{{ number_format($row->updates) }} log reports</p>
+                            <p style="margin:2px 0 0; font-size:11px; color:#d4aa45; font-weight:bold;">{{ number_format($row->units) }} units • {{ number_format($row->conversions) }} conv.</p>
                         </div>
                     @empty
-                        <p class="text-sm text-brand-white/40 md:col-span-4">No staff activity has been recorded yet.</p>
+                        <p style="font-size:12px; color:rgba(255,255,255,0.4);">No staff productivity logged yet.</p>
                     @endforelse
                 </div>
             </div>
 
-            <div class="mt-8 grid gap-4 lg:grid-cols-2">
-                @foreach($brands as $brand)
-                    <article class="rounded-lg border border-brand-white/10 bg-brand-white/[0.045] p-5">
-                        <div class="flex items-start justify-between gap-4">
-                            <div>
-                                <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-ash">{{ $brand->category ?: 'Brand' }}</p>
-                                <h2 class="mt-1 text-2xl font-semibold text-brand-white">{{ $brand->name }}</h2>
-                                <p class="mt-1 text-xs text-brand-white/45">{{ number_format($brand->activations_count) }} activations - {{ number_format($brand->consumer_entries_count) }} entries - {{ number_format($brand->field_activities_count) }} updates</p>
+            <!-- Creation Section -->
+            <div class="panel" id="creation-plan" style="margin-bottom:20px;">
+                <div class="panel-head">
+                    <div>
+                        <h3>Add Brand & Setup Activation Plan</h3>
+                        <small>Configure execution scope, target parameters, modules, and staff geofenced locations</small>
+                    </div>
+                </div>
+                
+                <form method="POST" action="{{ route('brands-platform.admin.brands.store') }}" enctype="multipart/form-data" style="margin-top:20px; display:flex; flex-direction:column; gap:15px;">
+                    @csrf
+                    
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:20px;">
+                        <div style="display:flex; flex-direction:column; gap:12px;">
+                            <div class="field">
+                                <label>Brand Name</label>
+                                <input name="name" required placeholder="e.g. Spicy Tamarind" style="width:100%; padding:10px; border-radius:8px; background:#24191c; color:#fff; border:1px solid rgba(255,255,255,0.14);">
                             </div>
-                            @if($brand->logoUrl())
-                                <img src="{{ $brand->logoUrl('dark') ?: $brand->logoUrl() }}" alt="{{ $brand->name }}" class="h-12 max-w-24 object-contain">
-                            @endif
-                        </div>
-
-                        <form method="POST" action="{{ route('brands-platform.admin.assignments.store', $brand->slug ?: $brand->id) }}" class="mt-5 grid gap-3 sm:grid-cols-[1fr_170px_auto]">
-                            @csrf
-                            <select name="user_id" required class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-3 text-sm text-brand-white">
-                                <option value="">Select staff</option>
-                                @foreach($staff as $member)
-                                    <option value="{{ $member->id }}">{{ $member->name }} - {{ $member->department ?: 'No dept' }}</option>
-                                @endforeach
-                            </select>
-                            <select name="role" required class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-3 text-sm text-brand-white">
-                                @foreach([
-                                    'agency_staff' => 'Agency Staff',
-                                    'supporting_staff' => 'Supporting Staff',
-                                    'brand_admin' => 'Brand Admin',
-                                    'promoter' => 'Promoter',
-                                    'sales_personnel' => 'Sales Personnel',
-                                    'retail_staff' => 'Retail Staff',
-                                    'field_supervisor' => 'Field Supervisor',
-                                    'merchandiser' => 'Merchandiser',
-                                ] as $value => $label)
-                                    <option value="{{ $value }}">{{ $label }}</option>
-                                @endforeach
-                            </select>
-                            <button class="rounded-md bg-brand-red px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-brand-white hover:bg-brand-white hover:text-brand-black">Assign</button>
-                        </form>
-
-                        <form method="POST" action="{{ route('brands-platform.admin.publications.store', $brand->slug ?: $brand->id) }}" enctype="multipart/form-data" class="mt-4 grid gap-3">
-                            @csrf
-                            <p class="text-[10px] font-bold uppercase tracking-wider text-brand-white/40">Publish Brand Update</p>
-                            <input name="title" placeholder="Publication title" class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-2 text-sm text-brand-white placeholder-brand-white/30">
-                            <div class="grid gap-3 sm:grid-cols-2">
-                                <input name="category" placeholder="Category" class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-2 text-sm text-brand-white placeholder-brand-white/30">
-                                <select name="status" class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-2 text-sm text-brand-white">
-                                    <option value="published">Published</option>
-                                    <option value="draft">Draft</option>
-                                    <option value="archived">Archived</option>
+                            <div class="field">
+                                <label>Category</label>
+                                <select name="category" style="width:100%; padding:10px; border-radius:8px; background:#24191c; color:#fff; border:1px solid rgba(255,255,255,0.14);">
+                                    @foreach(['Personal Care', 'Beverage', 'Food', 'Home Care', 'Beauty', 'Telecommunications', 'Other'] as $category)
+                                        <option>{{ $category }}</option>
+                                    @endforeach
                                 </select>
                             </div>
-                            <textarea name="summary" rows="2" placeholder="Short update" class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-2 text-sm text-brand-white placeholder-brand-white/30"></textarea>
-                            <textarea name="body" rows="4" placeholder="Full publication story, promo details, recap or activation note" class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-2 text-sm text-brand-white placeholder-brand-white/30"></textarea>
-                            <label class="rounded-md border border-brand-white/10 bg-brand-black/50 px-3 py-3 text-xs text-brand-white/55">
-                                Publication image
-                                <input name="image" type="file" accept="image/*" class="mt-2 block w-full text-sm text-brand-white">
-                            </label>
-                            <button class="self-start rounded-md border border-brand-white/10 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-brand-white/60 hover:text-brand-white">Publish</button>
-                        </form>
-
-                        <div class="mt-4 flex flex-wrap gap-2">
-                            @forelse($brand->staffAssignments->where('is_active', true)->take(10) as $assignment)
-                                <span class="rounded-full border border-brand-white/10 bg-brand-black/50 px-3 py-1.5 text-[10px] text-brand-white/65">{{ $assignment->user?->name }} - {{ \Illuminate\Support\Str::headline($assignment->role) }}</span>
-                            @empty
-                                <span class="text-xs text-brand-white/35">No assigned staff yet.</span>
-                            @endforelse
+                            <div class="field">
+                                <label>Brand Headline</label>
+                                <input name="headline" placeholder="Headline for landing view" style="width:100%; padding:10px; border-radius:8px; background:#24191c; color:#fff; border:1px solid rgba(255,255,255,0.14);">
+                            </div>
+                            <div class="field">
+                                <label>Description</label>
+                                <textarea name="description" rows="3" placeholder="Brief summary of what the brand is into..." style="width:100%; padding:10px; border-radius:8px; background:#24191c; color:#fff; border:1px solid rgba(255,255,255,0.14);"></textarea>
+                            </div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                                <div class="field">
+                                    <label>Primary Brand Color</label>
+                                    <input name="primary_color" placeholder="e.g. #ff1020" style="width:100%; padding:10px; border-radius:8px; background:#24191c; color:#fff; border:1px solid rgba(255,255,255,0.14);">
+                                </div>
+                                <div class="field">
+                                    <label>Secondary Brand Color</label>
+                                    <input name="secondary_color" placeholder="e.g. #d4aa45" style="width:100%; padding:10px; border-radius:8px; background:#24191c; color:#fff; border:1px solid rgba(255,255,255,0.14);">
+                                </div>
+                            </div>
+                            <div class="field">
+                                <label>Brand Logo Image File</label>
+                                <input name="logo" type="file" accept="image/*,.svg" style="width:100%; padding:6px; border-radius:8px; background:#24191c; color:#fff; border:1px solid rgba(255,255,255,0.14);">
+                            </div>
                         </div>
 
-                        <div class="mt-4 space-y-2">
-                            @foreach($brand->activations->take(3) as $activation)
-                                <div class="rounded-md border border-brand-white/10 bg-brand-black/35 p-3">
-                                    <div class="flex flex-wrap items-center justify-between gap-3">
-                                        <div>
-                                            <p class="text-sm font-semibold text-brand-white">{{ $activation->name }}</p>
-                                            <p class="text-[10px] uppercase tracking-wider text-brand-white/40">{{ \Illuminate\Support\Str::headline($activation->status) }} - target {{ number_format($activation->target_reach) }} {{ $activation->target_unit }}</p>
-                                        </div>
-                                        <form method="POST" action="{{ route('brands-platform.admin.client-link.generate', $activation) }}" class="flex gap-2">
-                                            @csrf
-                                            <select name="duration" class="rounded-md border border-brand-white/10 bg-brand-black/50 px-2 py-2 text-xs text-brand-white">
-                                                <option value="1h">1 hour</option>
-                                                <option value="6h">6 hours</option>
-                                                <option value="24h">24 hours</option>
-                                                <option value="7d">7 days</option>
-                                            </select>
-                                            <button class="rounded-md bg-brand-white px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-brand-black hover:bg-brand-red hover:text-brand-white">Client Link</button>
-                                        </form>
+                        <div style="display:flex; flex-direction:column; gap:12px;">
+                            <div class="field">
+                                <label>Activation Campaign Name</label>
+                                <input name="activation_name" placeholder="e.g. Campus and Gym Sampling Activation" style="width:100%; padding:10px; border-radius:8px; background:#24191c; color:#fff; border:1px solid rgba(255,255,255,0.14);">
+                            </div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                                <div class="field">
+                                    <label>Activation Type</label>
+                                    <select name="activation_type" style="width:100%; padding:10px; border-radius:8px; background:#24191c; color:#fff; border:1px solid rgba(255,255,255,0.14);">
+                                        @foreach(['sampling', 'sales', 'consumer_capture', 'retail_redemption', 'merchandising', 'activation'] as $type)
+                                            <option value="{{ $type }}">{{ \Illuminate\Support\Str::headline($type) }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label>Target Unit Label</label>
+                                    <input name="target_unit" placeholder="e.g. Leads Captured" style="width:100%; padding:10px; border-radius:8px; background:#24191c; color:#fff; border:1px solid rgba(255,255,255,0.14);">
+                                </div>
+                            </div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                                <div class="field">
+                                    <label>Start Date</label>
+                                    <input name="starts_at" type="date" style="width:100%; padding:10px; border-radius:8px; background:#24191c; color:#fff; border:1px solid rgba(255,255,255,0.14);">
+                                </div>
+                                <div class="field">
+                                    <label>End Date</label>
+                                    <input name="ends_at" type="date" style="width:100%; padding:10px; border-radius:8px; background:#24191c; color:#fff; border:1px solid rgba(255,255,255,0.14);">
+                                </div>
+                            </div>
+                            <div class="field">
+                                <label>Target Reach Count</label>
+                                <input name="target_reach" type="number" min="0" placeholder="e.g. 500" style="width:100%; padding:10px; border-radius:8px; background:#24191c; color:#fff; border:1px solid rgba(255,255,255,0.14);">
+                            </div>
+                            <div class="field">
+                                <label>Campaign Banner Image File</label>
+                                <input name="banner" type="file" accept="image/*" style="width:100%; padding:6px; border-radius:8px; background:#24191c; color:#fff; border:1px solid rgba(255,255,255,0.14);">
+                            </div>
+
+                            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:12px;">
+                                <p style="font-size:11px; font-weight:800; color:rgba(255,255,255,0.4); margin:0 0 8px; text-transform:uppercase; tracking-wider;">Enable Modules</p>
+                                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                                    @foreach([
+                                        'publication' => 'Publications & Feed',
+                                        'consumer_form' => 'Consumer Journey',
+                                        'agency_reporting' => 'Agency Live Dashboard',
+                                        'coupons_rewards' => 'Coupons & Rewards',
+                                        'geofence' => 'GPS Geofencing',
+                                        'retail_scanner' => 'Retail Scanner',
+                                        'merchandising' => 'Merchandising Audit',
+                                    ] as $val => $lbl)
+                                        <label style="display:flex; items-center; gap:6px; font-size:11px; color:#fff; cursor:pointer;">
+                                            <input type="checkbox" name="modules[]" value="{{ $val }}" @checked(in_array($val, ['publication', 'consumer_form', 'agency_reporting'], true))>
+                                            <span>{{ $lbl }}</span>
+                                        </label>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Geofenced Target Locations Allocation Grid -->
+                    <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:15px; margin-top:10px;">
+                        <h4 style="margin:0 0 10px; font-size:13px; font-weight:800; color:#fff;">Allocated Branch / Locations Targets & Promoters</h4>
+                        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:15px;">
+                            @for($i = 0; $i < 3; $i++)
+                                <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:12px;">
+                                    <p style="font-size:11px; font-weight:800; color:#d4aa45; margin:0 0 8px;">LOCATION {{ $i + 1 }}</p>
+                                    <input name="locations[{{ $i }}][name]" placeholder="Location name (e.g. Accra Mall)" style="width:100%; padding:8px; border-radius:6px; background:#1c1114; color:#fff; border:1px solid rgba(255,255,255,0.1); font-size:12px; margin-bottom:8px;">
+                                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+                                        <input name="locations[{{ $i }}][target]" type="number" min="0" placeholder="Total target" style="width:100%; padding:8px; border-radius:6px; background:#1c1114; color:#fff; border:1px solid rgba(255,255,255,0.1); font-size:12px;">
+                                        <input name="locations[{{ $i }}][daily_target]" type="number" min="0" placeholder="Daily target" style="width:100%; padding:8px; border-radius:6px; background:#1c1114; color:#fff; border:1px solid rgba(255,255,255,0.1); font-size:12px;">
                                     </div>
-                                    @if($activation->activation_plan)
-                                        <p class="mt-2 text-xs text-brand-white/45">
-                                            {{ count($activation->activation_plan['locations'] ?? []) }} locations,
-                                            {{ count($activation->activation_plan['assigned_staff_ids'] ?? []) }} assigned staff,
-                                            {{ number_format($activation->activation_plan['unallocated_target'] ?? 0) }} unallocated target.
-                                        </p>
+                                    <label style="font-size:10px; color:rgba(255,255,255,0.5);">Assign Staff</label>
+                                    <select name="locations[{{ $i }}][staff_ids][]" multiple style="width:100%; padding:6px; border-radius:6px; background:#1c1114; color:#fff; border:1px solid rgba(255,255,255,0.1); font-size:11px; height:90px; margin-top:4px;">
+                                        @foreach($staff as $member)
+                                            <option value="{{ $member->id }}">{{ $member->name }} ({{ $member->department ?: 'N/A' }})</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            @endfor
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn brand" style="align-self:flex-end; padding:12px 30px;">Save Activation Plan</button>
+                </form>
+            </div>
+
+            <!-- Brand Portfolios Grid -->
+            <div class="panel" id="portfolios" style="margin-bottom:20px;">
+                <div class="panel-head">
+                    <div>
+                        <h3>Brand Portfolios Management</h3>
+                        <small>Manage assignments, publish updates, and view brand statistics</small>
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap:20px; margin-top:20px;">
+                    @foreach($brands as $brand)
+                        @php
+                            $logo = $brand->prototype_logo_url ?: $brand->public_logo_dark_url ?: $brand->public_logo_url;
+                        @endphp
+                        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:20px; display:flex; flex-direction:column; justify-content:space-between;">
+                            <div>
+                                <div style="display:flex; justify-content:space-between; align-items:start; gap:10px;">
+                                    <div>
+                                        <span class="chip" style="background:#ff1020; color:#fff; font-size:8px;">{{ $brand->category ?: 'General' }}</span>
+                                        <h4 style="margin:5px 0 0; font-size:18px; font-weight:900; color:#fff;">{{ $brand->name }}</h4>
+                                    </div>
+                                    @if($logo)
+                                        <img src="{{ $logo }}" alt="{{ $brand->name }}" style="max-height:36px; max-width:80px; object-fit:contain; border-radius:4px;">
                                     @endif
                                 </div>
-                            @endforeach
+                                <p style="font-size:11px; color:rgba(255,255,255,0.5); margin:6px 0 12px;">
+                                    {{ $brand->activations_count }} activations • {{ $brand->consumer_entries_count }} consumers • {{ $brand->field_activities_count }} logs
+                                </p>
+
+                                <hr style="border:0; border-top:1px solid rgba(255,255,255,0.08); margin:12px 0;">
+
+                                <!-- Staff Assignment Form -->
+                                <form method="POST" action="{{ route('brands-platform.admin.assignments.store', $brand->slug ?: $brand->id) }}" style="display:grid; grid-template-columns:1fr auto; gap:8px; margin-bottom:12px;">
+                                    @csrf
+                                    <select name="user_id" required style="padding:8px; border-radius:6px; background:#1c1114; color:#fff; border:1px solid rgba(255,255,255,0.1); font-size:11px;">
+                                        <option value="">Select staff to assign</option>
+                                        @foreach($staff as $member)
+                                            <option value="{{ $member->id }}">{{ $member->name }}</option>
+                                        @endforeach
+                                    </select>
+                                    <input type="hidden" name="role" value="promoter">
+                                    <button type="submit" class="btn brand" style="padding:8px 12px; font-size:10px;">Assign</button>
+                                </form>
+
+                                <!-- Publish Brand Announcement Form -->
+                                <form method="POST" action="{{ route('brands-platform.admin.publications.store', $brand->slug ?: $brand->id) }}" style="display:flex; flex-direction:column; gap:8px;">
+                                    @csrf
+                                    <input name="title" required placeholder="Publication Title" style="padding:8px; border-radius:6px; background:#1c1114; color:#fff; border:1px solid rgba(255,255,255,0.1); font-size:11px;">
+                                    <input name="category" placeholder="Category (e.g. Campaign Update)" style="padding:8px; border-radius:6px; background:#1c1114; color:#fff; border:1px solid rgba(255,255,255,0.1); font-size:11px;">
+                                    <input type="hidden" name="status" value="published">
+                                    <textarea name="summary" required rows="2" placeholder="Announcement body details..." style="padding:8px; border-radius:6px; background:#1c1114; color:#fff; border:1px solid rgba(255,255,255,0.1); font-size:11px;"></textarea>
+                                    <button type="submit" class="btn brand" style="align-self:flex-end; padding:6px 12px; font-size:10px; background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.1);">Publish Update</button>
+                                </form>
+                            </div>
+
+                            <div style="margin-top:15px;">
+                                <p style="font-size:10px; color:rgba(255,255,255,0.4); margin:0 0 6px; font-weight:800; text-transform:uppercase;">Assigned Promoters</p>
+                                <div style="display:flex; flex-wrap:wrap; gap:4px;">
+                                    @forelse($brand->staffAssignments->where('is_active', true)->take(6) as $assign)
+                                        <span style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); padding:4px 8px; border-radius:12px; font-size:9px; color:rgba(255,255,255,0.7);">
+                                            {{ $assign->user?->name }} ({{ \Illuminate\Support\Str::headline($assign->role) }})
+                                        </span>
+                                    @empty
+                                        <span style="font-size:11px; color:rgba(255,255,255,0.3);">No assigned staff yet.</span>
+                                    @endforelse
+                                </div>
+
+                                <p style="font-size:10px; color:rgba(255,255,255,0.4); margin:12px 0 6px; font-weight:800; text-transform:uppercase;">Activations & Client Share Links</p>
+                                <div style="display:flex; flex-direction:column; gap:6px;">
+                                    @foreach($brand->activations->take(2) as $act)
+                                        <div style="background:rgba(0,0,0,0.2); border-radius:6px; padding:8px; display:flex; justify-content:between; align-items:center;">
+                                            <div style="flex-1;">
+                                                <p style="margin:0; font-size:11px; font-weight:800; color:#fff;">{{ $act->name }}</p>
+                                                <p style="margin:2px 0 0; font-size:9px; color:rgba(255,255,255,0.4);">Target: {{ number_format($act->target_reach) }} • Status: {{ \Illuminate\Support\Str::headline($act->status) }}</p>
+                                            </div>
+                                            <form method="POST" action="{{ route('brands-platform.admin.client-link.generate', $act) }}" style="display:flex; gap:4px; align-items:center;">
+                                                @csrf
+                                                <select name="duration" style="padding:4px; border-radius:4px; background:#1c1114; color:#fff; border:1px solid rgba(255,255,255,0.1); font-size:9px;">
+                                                    <option value="1h">1 hr</option>
+                                                    <option value="24h">24 hr</option>
+                                                    <option value="7d">7 days</option>
+                                                </select>
+                                                <button type="submit" class="btn brand" style="padding:4px 8px; font-size:9px; background:#fff; color:#000;">Share Link</button>
+                                            </form>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
                         </div>
-                    </article>
-                @endforeach
+                    @endforeach
+                </div>
             </div>
 
-            <div class="mt-8 rounded-lg border border-brand-white/10 bg-brand-white/[0.035] p-5">
-                <div class="flex flex-wrap items-center justify-between gap-3">
+            <!-- Staff Database Assignments Panel -->
+            <div class="panel" id="staff-db" style="margin-bottom:20px;">
+                <div class="panel-head" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
                     <div>
-                        <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-ash">Staff Database</p>
-                        <h2 class="mt-1 text-xl font-semibold text-brand-white">Current Brand Assignments</h2>
+                        <h3>Current Brand Staff Assignments</h3>
+                        <small>Active workspace allocations mapped across portfolios</small>
                     </div>
-                    <a href="{{ route('brands-platform.admin.staff-feed') }}" class="rounded-md border border-brand-white/10 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-brand-white/60 hover:text-brand-white">Staff API</a>
+                    <form method="GET" style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+                        <input type="text" name="search_staff" placeholder="Search staff name" value="{{ request('search_staff') }}" style="padding:6px 8px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:#24191c; color:#fff; font-size:11px; width:120px;">
+                        <select name="filter_brand" style="padding:6px 8px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:#24191c; color:#fff; font-size:11px;">
+                            <option value="">All Brands</option>
+                            @foreach($brands as $b)
+                                <option value="{{ $b->id }}" @selected(request('filter_brand') == $b->id)>{{ $b->name }}</option>
+                            @endforeach
+                        </select>
+                        <select name="filter_role" style="padding:6px 8px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:#24191c; color:#fff; font-size:11px;">
+                            <option value="">All Roles</option>
+                            @foreach(['promoter', 'supporting_staff', 'sales_personnel', 'retail_staff', 'merchandiser'] as $r)
+                                <option value="{{ $r }}" @selected(request('filter_role') === $r)>{{ \Illuminate\Support\Str::headline($r) }}</option>
+                            @endforeach
+                        </select>
+                        <button type="submit" class="btn brand" style="padding:6px 12px; font-size:10px;">Search</button>
+                    </form>
                 </div>
-                <div class="mt-4 overflow-x-auto">
-                    <table class="min-w-full text-left text-xs">
-                        <thead class="text-[10px] uppercase tracking-wider text-brand-white/40">
-                            <tr><th class="px-3 py-2">Brand</th><th class="px-3 py-2">Staff</th><th class="px-3 py-2">Department</th><th class="px-3 py-2">Role</th><th class="px-3 py-2">Assigned By</th><th class="px-3 py-2">Action</th></tr>
-                        </thead>
-                        <tbody class="divide-y divide-brand-white/5 text-brand-white/75">
-                            @forelse($assignments as $assignment)
-                                <tr>
-                                    <td class="px-3 py-3">{{ $assignment->brand?->name }}</td>
-                                    <td class="px-3 py-3">{{ $assignment->user?->name }}</td>
-                                    <td class="px-3 py-3">{{ $assignment->user?->department ?: 'N/A' }}</td>
-                                    <td class="px-3 py-3">{{ \Illuminate\Support\Str::headline($assignment->role) }}</td>
-                                    <td class="px-3 py-3">{{ $assignment->assigner?->name ?: 'System' }}</td>
-                                    <td class="px-3 py-3">
-                                        <form method="POST" action="{{ route('brands-platform.admin.assignments.destroy', $assignment) }}" onsubmit="return confirm('Remove this brand assignment?')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button class="rounded-md bg-brand-red/15 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-brand-red hover:bg-brand-red hover:text-brand-white">Remove</button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr><td colspan="6" class="px-3 py-8 text-center text-brand-white/40">No assignments yet.</td></tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+
+                <table class="leader" style="width:100%; margin-top:15px;">
+                    <thead>
+                        <tr>
+                            <th>Brand</th>
+                            <th>Staff Name</th>
+                            <th>Department</th>
+                            <th>Assigned Role</th>
+                            <th>Assigned By</th>
+                            <th style="text-align:right;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($assignments as $assignment)
+                            <tr>
+                                <td style="font-weight:800;">{{ $assignment->brand?->name }}</td>
+                                <td style="font-weight:800; color:#fff;">{{ $assignment->user?->name }}</td>
+                                <td style="color:rgba(255,255,255,0.6);">{{ $assignment->user?->department ?: 'N/A' }}</td>
+                                <td>{{ \Illuminate\Support\Str::headline($assignment->role) }}</td>
+                                <td style="color:rgba(255,255,255,0.5);">{{ $assignment->assigner?->name ?: 'System' }}</td>
+                                <td style="text-align:right;">
+                                    <form method="POST" action="{{ route('brands-platform.admin.assignments.destroy', $assignment) }}" onsubmit="return confirm('Remove promoter assignment?')" style="display:inline-block;">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn brand" style="padding:4px 10px; font-size:9px; background:rgba(255,16,32,0.15); border:1px solid #ff1020; color:#fff;">Remove</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="6" style="text-align:center; padding:30px; color:rgba(255,255,255,0.4);">No promoter assignments matching filters.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+                <div style="margin-top:15px;">
+                    {{ $assignments->appends(request()->except('assignments_page'))->links() }}
                 </div>
-                <div class="mt-4">{{ $assignments->links() }}</div>
             </div>
 
-            <div class="mt-8 rounded-lg border border-brand-white/10 bg-brand-white/[0.035] p-5">
-                <div class="flex flex-wrap items-center justify-between gap-3">
+            <!-- Audit Trail Logs Panel -->
+            <div class="panel" id="audit-trail" style="margin-bottom:20px;">
+                <div class="panel-head" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
                     <div>
-                        <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-ash">Activity Logs</p>
-                        <h2 class="mt-1 text-xl font-semibold text-brand-white">Platform Audit Trail</h2>
+                        <h3>Platform Audit Trail</h3>
+                        <small>E2E click log activity and data submits audit tracking</small>
                     </div>
+                    <form method="GET" style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+                        <select name="filter_brand" style="padding:6px 8px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:#24191c; color:#fff; font-size:11px;">
+                            <option value="">All Brands</option>
+                            @foreach($brands as $b)
+                                <option value="{{ $b->id }}" @selected(request('filter_brand') == $b->id)>{{ $b->name }}</option>
+                            @endforeach
+                        </select>
+                        <select name="filter_action" style="padding:6px 8px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:#24191c; color:#fff; font-size:11px;">
+                            <option value="">All Actions</option>
+                            @foreach(['page_view', 'data_submit', 'verification', 'click', 'reward_issue'] as $act)
+                                <option value="{{ $act }}" @selected(request('filter_action') === $act)>{{ \Illuminate\Support\Str::headline($act) }}</option>
+                            @endforeach
+                        </select>
+                        <button type="submit" class="btn brand" style="padding:6px 12px; font-size:10px;">Filter Logs</button>
+                    </form>
                 </div>
-                <div class="mt-4 overflow-x-auto">
-                    <table class="min-w-full text-left text-xs">
-                        <thead class="text-[10px] uppercase tracking-wider text-brand-white/40">
-                            <tr><th class="px-3 py-2">Time</th><th class="px-3 py-2">Account</th><th class="px-3 py-2">Action</th><th class="px-3 py-2">Context</th><th class="px-3 py-2">Brand</th><th class="px-3 py-2">Activation</th></tr>
-                        </thead>
-                        <tbody class="divide-y divide-brand-white/5 text-brand-white/75">
-                            @forelse($activityLogs as $log)
-                                <tr>
-                                    <td class="px-3 py-3">{{ $log->created_at?->format('M d, H:i') }}</td>
-                                    <td class="px-3 py-3">{{ $log->user?->name ?: 'Public' }}</td>
-                                    <td class="px-3 py-3">{{ \Illuminate\Support\Str::headline($log->action) }}</td>
-                                    <td class="px-3 py-3">{{ \Illuminate\Support\Str::headline($log->context) }}</td>
-                                    <td class="px-3 py-3">{{ $log->brand?->name ?: 'N/A' }}</td>
-                                    <td class="px-3 py-3">{{ $log->activation?->name ?: 'N/A' }}</td>
-                                </tr>
-                            @empty
-                                <tr><td colspan="6" class="px-3 py-8 text-center text-brand-white/40">No activity logs yet.</td></tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+
+                <table class="leader" style="width:100%; margin-top:15px;">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Account User</th>
+                            <th>Action</th>
+                            <th>Context / Route</th>
+                            <th>Brand</th>
+                            <th>Activation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($activityLogs as $log)
+                            <tr>
+                                <td style="color:rgba(255,255,255,0.6);">{{ $log->created_at?->format('M d, H:i') }}</td>
+                                <td style="font-weight:800; color:#fff;">{{ $log->user?->name ?: 'Public / Guest' }}</td>
+                                <td><span style="font-family:monospace; background:rgba(255,255,255,0.06); padding:2px 6px; border-radius:4px;">{{ $log->action }}</span></td>
+                                <td>{{ \Illuminate\Support\Str::headline($log->context) }}</td>
+                                <td style="color:#d4aa45;">{{ $log->brand?->name ?: 'N/A' }}</td>
+                                <td style="color:rgba(255,255,255,0.5);">{{ $log->activation?->name ?: 'N/A' }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="6" style="text-align:center; padding:30px; color:rgba(255,255,255,0.4);">No audit logs captured.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+                <div style="margin-top:15px;">
+                    {{ $activityLogs->appends(request()->except('logs_page'))->links() }}
                 </div>
-                <div class="mt-4">{{ $activityLogs->links() }}</div>
             </div>
-        </div>
-    </section>
+
+        </main>
+    </div>
+</section>
 @endsection

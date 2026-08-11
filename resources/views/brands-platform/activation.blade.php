@@ -60,7 +60,7 @@
                 <h3>Support Staff</h3>
                 <p>Promoters, sales personnel and field teams record assigned work, images, location updates and retail actions.</p>
             </div>
-            <a href="{{ auth()->check() ? route('brands-platform.support', $brandKey) : route('login') }}" class="btn dark">Support Staff Sign In</a>
+            <a href="{{ auth()->check() ? route('brands-platform.support', $brandKey) : route('brands-platform.support-login', $brandKey) }}" class="btn dark">Support Staff Sign In</a>
         </article>
 
         <article class="role-card">
@@ -69,7 +69,7 @@
                 <h3>Agency</h3>
                 <p>Open metrics, charts, exports, field evidence, activation progress and client-ready outputs.</p>
             </div>
-            <a href="{{ auth()->check() ? route('brands-platform.agency', $brandKey) : route('login') }}" class="btn red">Agency Sign In</a>
+            <a href="{{ auth()->check() ? route('brands-platform.agency', $brandKey) : route('brands-platform.agency-login', $brandKey) }}" class="btn red">Agency Sign In</a>
         </article>
     </div>
 </section>

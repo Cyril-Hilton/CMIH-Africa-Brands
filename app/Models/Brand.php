@@ -71,9 +71,13 @@ class Brand extends Model
         }
 
         if (Str::startsWith($path, ['images/', 'build/', 'css/', 'js/'])) {
-            return asset($path);
+            $segments = explode('/', $path);
+            $encoded = implode('/', array_map('rawurlencode', $segments));
+            return asset($encoded);
         }
 
-        return Storage::disk('public')->url($path);
+        $segments = explode('/', $path);
+        $encoded = implode('/', array_map('rawurlencode', $segments));
+        return Storage::disk('public')->url($encoded);
     }
 }

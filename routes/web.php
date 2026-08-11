@@ -66,6 +66,8 @@ Route::prefix('brands')->name('brands-platform.')->group(function () {
     Route::get('/{brand}/activation', [BrandsPlatformController::class, 'activation'])->name('activation');
     Route::get('/{brand}/consumer', [BrandsPlatformController::class, 'consumer'])->name('consumer');
     Route::get('/{brand}', [BrandsPlatformController::class, 'show'])->name('show');
+    Route::get('/{brand}/support-login', [BrandsPlatformController::class, 'showSupportLogin'])->name('support-login');
+    Route::get('/{brand}/agency-login', [BrandsPlatformController::class, 'showAgencyLogin'])->name('agency-login');
     Route::post('/{brand}/consumer-entry', [BrandsPlatformController::class, 'storeConsumerEntry'])
         ->middleware('throttle:30,1')
         ->name('consumer-entry.store');
@@ -346,7 +348,9 @@ Route::middleware(['auth', 'active', 'clocked_in'])->prefix('portal')->name('por
         
         Route::redirect('/skus', '/merchandisers/admin/hub/skus')->name('skus');
         Route::post('/skus', [\App\Http\Controllers\Portal\MerchandiserAdminController::class, 'storeSku'])->name('skus.store');
+        Route::put('/skus/{sku}', [\App\Http\Controllers\Portal\MerchandiserAdminController::class, 'updateSku'])->name('skus.update');
         Route::delete('/skus/{sku}', [\App\Http\Controllers\Portal\MerchandiserAdminController::class, 'destroySku'])->name('skus.destroy');
+
         
         Route::redirect('/kds', '/merchandisers/admin/hub/kds')->name('kds');
         Route::post('/kds', [\App\Http\Controllers\Portal\MerchandiserAdminController::class, 'storeKd'])->name('kds.store');
@@ -471,7 +475,7 @@ Route::prefix('merchandisers')->name('merchandisers.')->group(function () {
         Route::middleware(['role:admin,super_admin'])->prefix('admin')->name('admin.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'dashboard'])->name('dashboard');
             Route::get('/hub/{adminTab}', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'dashboard'])
-                ->whereIn('adminTab', ['overview', 'tracking', 'kds', 'routes', 'skus', 'forms', 'merchandisers', 'supervisors', 'assets', 'notifications', 'settings'])
+                ->whereIn('adminTab', ['overview', 'tracking', 'kds', 'routes', 'skus', 'forms', 'merchandisers', 'supervisors', 'assets', 'notifications', 'settings', 'gallery', 'executive', 'category-kpi', 'user-performance', 'price-promo'])
                 ->name('tab');
             Route::get('/merchandisers', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'merchandisers'])->name('merchandisers');
             Route::post('/merchandisers/{user}/suspend', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'suspendMerchandiser'])->name('merchandisers.suspend');

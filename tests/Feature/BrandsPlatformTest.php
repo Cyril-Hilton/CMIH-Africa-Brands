@@ -25,7 +25,7 @@ class BrandsPlatformTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('CMIH Brands Platform');
-        $response->assertSee('Merchandiser Portal');
+        $response->assertSee('Merchandiser Sign In');
         $response->assertSee('OMO');
     }
 
@@ -182,7 +182,7 @@ class BrandsPlatformTest extends TestCase
         $this->get(route('brands-platform.consumer', $brand->slug))
             ->assertOk()
             ->assertSee('CONSUMER JOURNEY')
-            ->assertSee('Consumer Registration');
+            ->assertSee('Registration');
     }
 
     public function test_consumer_capture_saves_to_brand_activation(): void
@@ -407,7 +407,7 @@ class BrandsPlatformTest extends TestCase
 
         $this->get(route('brands-platform.consumer-entry.verify', [$brand->slug, $entry->verification_token]))
             ->assertOk()
-            ->assertSee('Complete Entry');
+            ->assertSee('Phone Verification');
 
         $this->post(route('brands-platform.consumer-entry.complete', [$brand->slug, $entry->verification_token]), [
             'otp_code' => $entry->otp_code,

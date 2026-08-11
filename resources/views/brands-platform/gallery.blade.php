@@ -1,57 +1,94 @@
 @extends('layouts.site')
 
-@section('title', 'Brands Evidence Gallery')
+@section('title', 'Brand Evidence Gallery')
 
 @section('content')
-    @php
-        $galleryBrand = $selectedBrand ?? $brands->first();
-        $brandStyle = "--bp: ".($galleryBrand?->primary_color ?: '#00656c')."; --bbg: ".($galleryBrand?->secondary_color ?: '#170004')."; --bs: ".($galleryBrand?->accent_color ?: '#18e7ef')."; --ba: ".($galleryBrand?->accent_color ?: '#ff2ba6')."; --bink: #082126;";
-    @endphp
-    <section class="brands-role-dashboard" style="{{ $brandStyle }}">
-        <div class="mx-auto w-full max-w-7xl px-5 py-8 sm:px-8 lg:px-10">
-            <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+@php
+    $galleryBrand = $selectedBrand ?? $brands->first();
+    $brandLogo = $galleryBrand?->prototype_logo_url ?: $galleryBrand?->public_logo_dark_url ?: $galleryBrand?->public_logo_url;
+    $brandStyle = implode(' ', [
+        '--bp: '.($galleryBrand?->public_primary_color ?: '#00656c').';',
+        '--bbg: '.($galleryBrand?->prototype_bg ?: $galleryBrand?->public_secondary_color ?: '#003e46').';',
+        '--bs: '.($galleryBrand?->public_secondary_color ?: '#18e7ef').';',
+        '--ba: '.($galleryBrand?->public_accent_color ?: '#ff2ba6').';',
+        '--bink: '.($galleryBrand?->prototype_ink ?: '#082126').';',
+        '--bsoft: '.($galleryBrand?->prototype_soft ?: '#e9fbfb').';',
+        '--display: '.($galleryBrand?->prototype_display_font ?: 'Arial, Helvetica, sans-serif').';',
+    ]);
+@endphp
+
+<section class="brands-prototype view active workspace" id="view-gallery" style="{{ $brandStyle }}">
+    <div class="work-shell">
+        <aside class="work-side">
+            <div class="work-brand">
+                @if($brandLogo)
+                    <img src="{{ $brandLogo }}" alt="{{ $galleryBrand?->name }}" data-no-fallback="true" onerror="this.hidden=true;" style="max-height:36px; max-width:88px; object-fit:contain; border-radius:4px;">
+                @else
+                    <div style="width:10px; height:10px; border-radius:50%; background:var(--bp); box-shadow:0 0 10px var(--bp);"></div>
+                @endif
                 <div>
-                    <p class="text-xs font-bold uppercase tracking-[0.35em] text-brand-red">Gallery</p>
-                    <h1 class="mt-2 font-display text-5xl leading-none text-brand-white">{{ $selectedBrand?->name ?: 'Brand Evidence Gallery' }}</h1>
-                    <p class="mt-2 text-sm text-brand-white/60">Verified activity images from brand teams and support staff.</p>
+                    <strong>{{ $galleryBrand?->name ?: 'All Brands' }}</strong>
+                    <small>Evidence Gallery</small>
                 </div>
-                <a href="{{ route('brands-platform.index') }}" class="rounded-md border border-brand-white/10 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-brand-white/60 hover:text-brand-white">Brands Home</a>
             </div>
 
-            <div class="mb-6 flex gap-2 overflow-x-auto pb-1">
-                <a href="{{ route('brands-platform.gallery') }}" class="shrink-0 rounded-full border border-brand-white/10 px-4 py-2 text-[10px] font-bold uppercase tracking-wider {{ $selectedBrand ? 'text-brand-white/55 hover:text-brand-white' : 'bg-brand-white text-brand-black' }}">All Brands</a>
-                @foreach($brands as $brand)
-                    <a href="{{ route('brands-platform.brand-gallery', $brand->slug ?: $brand->id) }}" class="shrink-0 rounded-full border border-brand-white/10 px-4 py-2 text-[10px] font-bold uppercase tracking-wider {{ $selectedBrand?->id === $brand->id ? 'bg-brand-red text-brand-white' : 'text-brand-white/55 hover:text-brand-white' }}">{{ $brand->name }}</a>
-                @endforeach
+            <div class="side-label">Filter By Brand</div>
+            <a href="{{ route('brands-platform.gallery') }}" class="side-btn {{ !$selectedBrand ? 'active' : '' }}" style="text-decoration:none; display:block;">All Brands</a>
+            @foreach($brands as $brand)
+                <a href="{{ route('brands-platform.brand-gallery', $brand->slug ?: $brand->id) }}" class="side-btn {{ $selectedBrand?->id === $brand->id ? 'active' : '' }}" style="text-decoration:none; display:block;">{{ $brand->name }}</a>
+            @endforeach
+
+            <div class="side-label" style="margin-top:20px;">Navigation</div>
+            <a href="{{ route('brands-platform.index') }}" class="side-btn" style="text-decoration:none; display:block;">Brands Home</a>
+        </aside>
+
+        <main class="work-main">
+            <div class="work-top">
+                <div>
+                    <div class="eyebrow">FIELD EVIDENCE</div>
+                    <h1>{{ $selectedBrand?->name ?: 'Brand Evidence Gallery' }}</h1>
+                    <p style="margin:5px 0 0; font-size:13px; color:rgba(255,255,255,0.5);">Verified activity images from brand teams and field staff</p>
+                </div>
+                <span class="chip ok">{{ $activities->total() }} Images</span>
             </div>
 
-            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <!-- Gallery Grid -->
+            <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap:16px; margin-top:10px;">
                 @forelse($activities as $activity)
-                    <article class="overflow-hidden rounded-lg border border-brand-white/10 bg-brand-white/[0.045]">
-                        <div class="aspect-[4/3] bg-brand-black/60">
-                            <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($activity->evidence_path) }}" alt="{{ $activity->brand?->name }} evidence" class="h-full w-full object-cover" loading="lazy">
+                    <article style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; overflow:hidden; transition:border-color 0.2s;">
+                        <div style="aspect-ratio:4/3; background:rgba(0,0,0,0.3); overflow:hidden;">
+                            <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($activity->evidence_path) }}"
+                                alt="{{ $activity->brand?->name }} evidence"
+                                style="width:100%; height:100%; object-fit:cover; display:block; transition:transform 0.3s;"
+                                loading="lazy"
+                                onmouseover="this.style.transform='scale(1.04)'"
+                                onmouseout="this.style.transform='scale(1)'">
                         </div>
-                        <div class="space-y-2 p-4">
-                            <div class="flex items-start justify-between gap-3">
+                        <div style="padding:14px;">
+                            <div style="display:flex; justify-content:space-between; align-items:start; gap:8px; margin-bottom:8px;">
                                 <div>
-                                    <p class="text-sm font-bold text-brand-white">{{ $activity->brand?->name }}</p>
-                                    <p class="text-[10px] uppercase tracking-wider text-brand-white/40">{{ \Illuminate\Support\Str::headline($activity->activity_type) }}</p>
+                                    <p style="font-weight:800; font-size:13px; color:#fff; margin:0;">{{ $activity->brand?->name }}</p>
+                                    <p style="font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:rgba(255,255,255,0.4); margin:3px 0 0;">{{ \Illuminate\Support\Str::headline($activity->activity_type) }}</p>
                                 </div>
-                                <span class="rounded-full bg-brand-black/50 px-2 py-1 text-[10px] text-brand-white/55">{{ number_format($activity->units) }}</span>
+                                <span style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); padding:4px 8px; border-radius:12px; font-size:9px; color:rgba(255,255,255,0.6); white-space:nowrap;">{{ number_format($activity->units) }} units</span>
                             </div>
-                            <p class="text-xs text-brand-white/60">{{ $activity->location ?: 'No location' }} - {{ $activity->created_at?->format('M d, H:i') }}</p>
-                            <p class="line-clamp-2 text-xs leading-5 text-brand-white/45">{{ $activity->notes ?: 'No notes added.' }}</p>
-                            <p class="text-[10px] uppercase tracking-wider text-brand-white/35">{{ $activity->user?->name ?: 'Field team' }}</p>
+                            <p style="font-size:11px; color:rgba(255,255,255,0.55); margin:0;">{{ $activity->location ?: 'No location' }} &nbsp;·&nbsp; {{ $activity->created_at?->format('M d, H:i') }}</p>
+                            @if($activity->notes)
+                                <p style="font-size:10px; color:rgba(255,255,255,0.38); margin:6px 0 0; line-height:1.5; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">{{ $activity->notes }}</p>
+                            @endif
+                            <p style="font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:rgba(255,255,255,0.3); margin:8px 0 0;">{{ $activity->user?->name ?: 'Field team' }}</p>
                         </div>
                     </article>
                 @empty
-                    <div class="rounded-lg border border-brand-white/10 bg-brand-white/[0.045] p-8 text-sm text-brand-white/50 sm:col-span-2 lg:col-span-3 xl:col-span-4">
-                        No evidence images have been uploaded for this view yet.
+                    <div style="grid-column:1/-1; padding:60px; text-align:center; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:12px;">
+                        <p style="color:rgba(255,255,255,0.4); font-size:14px;">No evidence images uploaded yet for this view.</p>
+                        <p style="color:rgba(255,255,255,0.25); font-size:12px; margin-top:6px;">Field staff can upload photos when logging activities in their workspace.</p>
                     </div>
                 @endforelse
             </div>
 
-            <div class="mt-6">{{ $activities->links() }}</div>
-        </div>
-    </section>
+            <div style="margin-top:24px;">{{ $activities->links() }}</div>
+        </main>
+    </div>
+</section>
 @endsection
