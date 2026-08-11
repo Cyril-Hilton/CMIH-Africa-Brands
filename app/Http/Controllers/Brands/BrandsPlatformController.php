@@ -223,6 +223,12 @@ class BrandsPlatformController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'email', 'staff_id_number', 'access_role']);
 
+        $todayAttendances = \App\Models\BrandStaffAttendance::where('brand_id', $brand->id)
+            ->with('user')
+            ->latest()
+            ->take(50)
+            ->get();
+
         $this->logBrandActivity($request, $brand, $activation, 'page_view', 'agency_dashboard');
 
         return view('brands-platform.agency', compact(
@@ -242,7 +248,8 @@ class BrandsPlatformController extends Controller
             'reportImages',
             'clientDurations',
             'assignedStaff',
-            'availableUsers'
+            'availableUsers',
+            'todayAttendances'
         ));
     }
 
@@ -256,6 +263,18 @@ class BrandsPlatformController extends Controller
         $metrics = $this->brandMetrics($brand, $activation, $filters);
         $assignedLocations = $this->assignedPlanLocationsFor($request->user(), $activation);
         $allowedRoles = $this->allowedStaffRolesFor($request->user(), $brand);
+
+        $activeAttendance = \App\Models\BrandStaffAttendance::where('brand_id', $brand->id)
+            ->where('user_id', $request->user()->id)
+            ->where('status', 'clocked_in')
+            ->latest()
+            ->first();
+
+        $myStaffAssignment = \App\Models\BrandStaffAssignment::where('brand_id', $brand->id)
+            ->where('user_id', $request->user()->id)
+            ->where('is_active', true)
+            ->first();
+
         $myActivities = $this->fieldActivityQuery($brand, $activation, $filters)
             ->where('user_id', $request->user()->id)
             ->latest()
@@ -277,7 +296,7 @@ class BrandsPlatformController extends Controller
 
         $this->logBrandActivity($request, $brand, $activation, 'page_view', 'support_workspace');
 
-        return view('brands-platform.support', compact('brand', 'activation', 'metrics', 'filters', 'myActivities', 'leaderboard', 'assignedLocations', 'allowedRoles', 'promoterDailyTrend'));
+        return view('brands-platform.support', compact('brand', 'activation', 'metrics', 'filters', 'myActivities', 'leaderboard', 'assignedLocations', 'allowedRoles', 'promoterDailyTrend', 'activeAttendance', 'myStaffAssignment'));
     }
 
     public function retail(Request $request, string $brand): View
@@ -289,6 +308,18 @@ class BrandsPlatformController extends Controller
         $filters = $this->reportFilters($request);
         $metrics = $this->brandMetrics($brand, $activation, $filters);
         $assignedLocations = $this->assignedPlanLocationsFor($request->user(), $activation);
+
+        $activeAttendance = \App\Models\BrandStaffAttendance::where('brand_id', $brand->id)
+            ->where('user_id', $request->user()->id)
+            ->where('status', 'clocked_in')
+            ->latest()
+            ->first();
+
+        $myStaffAssignment = \App\Models\BrandStaffAssignment::where('brand_id', $brand->id)
+            ->where('user_id', $request->user()->id)
+            ->where('is_active', true)
+            ->first();
+
         $redemptions = $this->fieldActivityQuery($brand, $activation, $filters)
             ->whereIn('activity_type', ['reward_redeemed', 'retail_update', 'retail_scan'])
             ->with('user')
@@ -309,7 +340,7 @@ class BrandsPlatformController extends Controller
 
         $this->logBrandActivity($request, $brand, $activation, 'page_view', 'retail_workspace');
 
-        return view('brands-platform.retail', compact('brand', 'activation', 'metrics', 'filters', 'redemptions', 'assignedLocations', 'redemptionDailyTrend', 'redemptionStatus'));
+        return view('brands-platform.retail', compact('brand', 'activation', 'metrics', 'filters', 'redemptions', 'assignedLocations', 'redemptionDailyTrend', 'redemptionStatus', 'activeAttendance', 'myStaffAssignment'));
     }
 
     public function gallery(Request $request, ?string $brand = null): View
@@ -1866,85 +1897,6 @@ class BrandsPlatformController extends Controller
         return array_values(array_unique($roles));
     }
 
-    public function storeAgencyTeamMember(Request $request, string $brand): RedirectResponse
-    {
-        $brand = $this->resolveBrand($brand);
-        $this->guardCanManageTeam($request->user(), $brand);
-
-        $validated = $request->validate([
-            'user_id' => ['required', 'exists:users,id'],
-            'role' => ['required', 'string', 'in:'.implode(',', BrandStaffAssignment::ROLES)],
-            'can_manage_team' => ['nullable', 'boolean'],
-            'can_record_activity' => ['nullable', 'boolean'],
-            'can_export' => ['nullable', 'boolean'],
-            'notes' => ['nullable', 'string', 'max:1000'],
-        ]);
-
-        $permissions = [
-            'can_manage_team' => (bool) ($validated['can_manage_team'] ?? false),
-            'can_record_activity' => (bool) ($validated['can_record_activity'] ?? true),
-            'can_export' => (bool) ($validated['can_export'] ?? false),
-        ];
-
-        BrandStaffAssignment::updateOrCreate(
-            [
-                'brand_id' => $brand->id,
-                'user_id' => $validated['user_id'],
-            ],
-            [
-                'role' => $validated['role'],
-                'permissions' => $permissions,
-                'is_active' => true,
-                'notes' => $validated['notes'] ?? 'Assigned via Agency Portal',
-                'assigned_by' => $request->user()->id,
-            ]
-        );
-
-        return back()->with('status', 'Staff team member and privileges saved successfully.');
-    }
-
-    public function updateAgencyTeamMember(Request $request, string $brand, BrandStaffAssignment $assignment): RedirectResponse
-    {
-        $brand = $this->resolveBrand($brand);
-        $this->guardCanManageTeam($request->user(), $brand);
-        abort_unless((int) $assignment->brand_id === (int) $brand->id, 404);
-
-        $validated = $request->validate([
-            'role' => ['required', 'string', 'in:'.implode(',', BrandStaffAssignment::ROLES)],
-            'can_manage_team' => ['nullable', 'boolean'],
-            'can_record_activity' => ['nullable', 'boolean'],
-            'can_export' => ['nullable', 'boolean'],
-            'is_active' => ['nullable', 'boolean'],
-            'notes' => ['nullable', 'string', 'max:1000'],
-        ]);
-
-        $permissions = [
-            'can_manage_team' => (bool) ($validated['can_manage_team'] ?? false),
-            'can_record_activity' => (bool) ($validated['can_record_activity'] ?? false),
-            'can_export' => (bool) ($validated['can_export'] ?? false),
-        ];
-
-        $assignment->update([
-            'role' => $validated['role'],
-            'permissions' => $permissions,
-            'is_active' => (bool) ($validated['is_active'] ?? true),
-            'notes' => $validated['notes'] ?? $assignment->notes,
-        ]);
-
-        return back()->with('status', 'Staff privileges updated successfully.');
-    }
-
-    public function archiveAgencyTeamMember(Request $request, string $brand, BrandStaffAssignment $assignment): RedirectResponse
-    {
-        $brand = $this->resolveBrand($brand);
-        $this->guardCanManageTeam($request->user(), $brand);
-        abort_unless((int) $assignment->brand_id === (int) $brand->id, 404);
-
-        $assignment->update(['is_active' => false]);
-
-        return back()->with('status', 'Staff brand access archived successfully.');
-    }
-
     private function guardCanManageTeam(?User $user, Brand $brand): void
     {
         if (! $user) {
@@ -2052,6 +2004,228 @@ class BrandsPlatformController extends Controller
             $message,
             $url
         );
+    }
+
+    public function storeAgencyTeamMember(Request $request, string $brand): RedirectResponse
+    {
+        $brand = $this->resolveBrand($brand);
+        $this->guardCanManageTeam($request->user(), $brand);
+
+        $validated = $request->validate([
+            'user_id' => ['required', 'integer', 'exists:users,id'],
+            'role' => ['required', Rule::in(BrandStaffAssignment::ROLES)],
+            'assigned_location' => ['nullable', 'string', 'max:255'],
+            'assigned_address' => ['nullable', 'string', 'max:255'],
+            'assigned_latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'assigned_longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'shift_start_time' => ['nullable', 'string', 'max:10'],
+            'shift_end_time' => ['nullable', 'string', 'max:10'],
+            'grace_period_minutes' => ['nullable', 'integer', 'min:0', 'max:120'],
+            'lateness_deduction_amount' => ['nullable', 'numeric', 'min:0'],
+            'can_manage_team' => ['nullable', 'boolean'],
+            'can_record_activity' => ['nullable', 'boolean'],
+            'can_export' => ['nullable', 'boolean'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $user = User::findOrFail($validated['user_id']);
+
+        $permissions = [
+            'can_manage_team' => (bool) ($request->input('can_manage_team', 0)),
+            'can_record_activity' => (bool) ($request->input('can_record_activity', 1)),
+            'can_export' => (bool) ($request->input('can_export', 0)),
+        ];
+
+        BrandStaffAssignment::updateOrCreate(
+            [
+                'brand_id' => $brand->id,
+                'user_id' => $user->id,
+            ],
+            [
+                'role' => $validated['role'],
+                'permissions' => $permissions,
+                'assigned_location' => $validated['assigned_location'] ?? 'Shoprite - Accra Mall',
+                'assigned_address' => $validated['assigned_address'] ?? 'Accra Mall, Tetteh Quarshie Interchange',
+                'assigned_latitude' => isset($validated['assigned_latitude']) ? (float)$validated['assigned_latitude'] : 5.6225,
+                'assigned_longitude' => isset($validated['assigned_longitude']) ? (float)$validated['assigned_longitude'] : -0.1729,
+                'shift_start_time' => $validated['shift_start_time'] ?? '08:30',
+                'shift_end_time' => $validated['shift_end_time'] ?? '17:00',
+                'grace_period_minutes' => isset($validated['grace_period_minutes']) ? (int)$validated['grace_period_minutes'] : 10,
+                'lateness_deduction_amount' => isset($validated['lateness_deduction_amount']) ? (float)$validated['lateness_deduction_amount'] : 20.00,
+                'is_active' => true,
+                'notes' => $validated['notes'] ?? null,
+                'assigned_by' => $request->user()->id,
+            ]
+        );
+
+        $this->logBrandActivity($request, $brand, null, 'agency_team_member_added', 'agency', [
+            'staff_id' => $user->id,
+            'role' => $validated['role'],
+            'location' => $validated['assigned_location'] ?? 'Shoprite - Accra Mall',
+        ]);
+
+        return back()->with('status', "Brand privileges & geofenced venue assigned to {$user->name}.");
+    }
+
+    public function archiveAgencyTeamMember(Request $request, string $brand, BrandStaffAssignment $assignment): RedirectResponse
+    {
+        $brand = $this->resolveBrand($brand);
+        $this->guardCanManageTeam($request->user(), $brand);
+
+        $assignment->update(['is_active' => false]);
+        return back()->with('status', 'Staff brand access revoked.');
+    }
+
+    public function clockIn(Request $request, string $brand): RedirectResponse
+    {
+        $brand = $this->resolveBrand($brand);
+        $this->guardBrandAccess($request->user(), $brand);
+
+        $validated = $request->validate([
+            'latitude' => ['required', 'numeric', 'between:-90,90'],
+            'longitude' => ['required', 'numeric', 'between:-180,180'],
+            'staff_role' => ['nullable', 'string'],
+        ]);
+
+        $user = $request->user();
+        $activation = $this->primaryActivation($brand);
+
+        $assignment = BrandStaffAssignment::where('brand_id', $brand->id)
+            ->where('user_id', $user->id)
+            ->where('is_active', true)
+            ->first();
+
+        $assignedName = $assignment?->assigned_location ?: ($activation?->locations[0]['name'] ?? 'Shoprite - Accra Mall');
+        $assignedLat = (float) ($assignment?->assigned_latitude ?: ($activation?->locations[0]['latitude'] ?? 5.6225));
+        $assignedLng = (float) ($assignment?->assigned_longitude ?: ($activation?->locations[0]['longitude'] ?? -0.1729));
+
+        $userLat = (float) $validated['latitude'];
+        $userLng = (float) $validated['longitude'];
+
+        // STRICT 300M GEOFENCE RADIUS CHECK
+        $distance = $this->haversineDistance($userLat, $userLng, $assignedLat, $assignedLng);
+        $allowedRadiusMeters = 300.0;
+
+        if ($distance > $allowedRadiusMeters) {
+            $diffRound = round($distance, 1);
+            return back()->withErrors([
+                'geofence' => "Geofence Enforcement Error: You are {$diffRound} meters away from your assigned venue '{$assignedName}'. You must be within 300 meters to clock in."
+            ]);
+        }
+
+        // SHIFT TIMING & LATENESS CALCULATION
+        $startTimeStr = $assignment?->shift_start_time ?: '08:30';
+        $graceMins = (int) ($assignment?->grace_period_minutes ?: 10);
+        $deductionAmount = (float) ($assignment?->lateness_deduction_amount ?: 20.00);
+
+        $now = now();
+        $todayShiftStart = Carbon::parse($now->toDateString() . ' ' . $startTimeStr);
+        $graceDeadline = (clone $todayShiftStart)->addMinutes($graceMins);
+
+        $isLate = false;
+        $latenessMinutes = 0;
+        $appliedDeduction = 0.00;
+
+        if ($now->greaterThan($graceDeadline)) {
+            $isLate = true;
+            $latenessMinutes = (int) ceil($now->diffInMinutes($todayShiftStart));
+            $appliedDeduction = $deductionAmount;
+        }
+
+        \App\Models\BrandStaffAttendance::create([
+            'brand_id' => $brand->id,
+            'brand_activation_id' => $activation?->id,
+            'user_id' => $user->id,
+            'staff_role' => $validated['staff_role'] ?? 'promoter',
+            'assigned_location_name' => $assignedName,
+            'assigned_latitude' => $assignedLat,
+            'assigned_longitude' => $assignedLng,
+            'clock_in_time' => $now,
+            'clock_in_latitude' => $userLat,
+            'clock_in_longitude' => $userLng,
+            'clock_in_distance_meters' => round($distance, 1),
+            'is_late' => $isLate,
+            'lateness_minutes' => $latenessMinutes,
+            'deduction_amount' => $appliedDeduction,
+            'status' => 'clocked_in',
+        ]);
+
+        $this->logBrandActivity($request, $brand, $activation, 'clock_in', 'attendance', [
+            'location' => $assignedName,
+            'distance' => round($distance, 1),
+            'is_late' => $isLate,
+            'lateness_minutes' => $latenessMinutes,
+            'deduction' => $appliedDeduction,
+        ]);
+
+        if ($isLate) {
+            $msg = "Clock-In Recorded for {$assignedName} (Distance: " . round($distance, 1) . "m). WARNING: You clocked in {$latenessMinutes} minutes late (Grace period: {$graceMins}m). A lateness deduction of GHS " . number_format($appliedDeduction, 2) . " has been logged.";
+            return back()->with('status_warning', $msg);
+        }
+
+        return back()->with('status', "On-Time Geofenced Clock-In Verified for {$assignedName}! (Distance: " . round($distance, 1) . "m). Have a great shift!");
+    }
+
+    public function clockOut(Request $request, string $brand): RedirectResponse
+    {
+        $brand = $this->resolveBrand($brand);
+        $this->guardBrandAccess($request->user(), $brand);
+
+        $validated = $request->validate([
+            'latitude' => ['required', 'numeric', 'between:-90,90'],
+            'longitude' => ['required', 'numeric', 'between:-180,180'],
+        ]);
+
+        $user = $request->user();
+        $attendance = \App\Models\BrandStaffAttendance::where('brand_id', $brand->id)
+            ->where('user_id', $user->id)
+            ->where('status', 'clocked_in')
+            ->latest()
+            ->first();
+
+        if (! $attendance) {
+            return back()->withErrors(['attendance' => 'No active shift clock-in found.']);
+        }
+
+        $assignedLat = (float) ($attendance->assigned_latitude ?: 5.6225);
+        $assignedLng = (float) ($attendance->assigned_longitude ?: -0.1729);
+        $userLat = (float) $validated['latitude'];
+        $userLng = (float) $validated['longitude'];
+
+        $distance = $this->haversineDistance($userLat, $userLng, $assignedLat, $assignedLng);
+        if ($distance > 300.0) {
+            $diffRound = round($distance, 1);
+            return back()->withErrors([
+                'geofence' => "Geofence Enforcement Error: You are {$diffRound} meters away from your assigned venue '{$attendance->assigned_location_name}'. You must be within 300 meters to clock out."
+            ]);
+        }
+
+        $attendance->update([
+            'clock_out_time' => now(),
+            'clock_out_latitude' => $userLat,
+            'clock_out_longitude' => $userLng,
+            'clock_out_distance_meters' => round($distance, 1),
+            'status' => 'clocked_out',
+        ]);
+
+        $this->logBrandActivity($request, $brand, null, 'clock_out', 'attendance', [
+            'location' => $attendance->assigned_location_name,
+            'distance' => round($distance, 1),
+        ]);
+
+        return back()->with('status', "Clock-Out Verified for {$attendance->assigned_location_name}. Thank you for your work today!");
+    }
+
+    private function haversineDistance($lat1, $lon1, $lat2, $lon2): float
+    {
+        $earthRadius = 6371000;
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLon = deg2rad($lon2 - $lon1);
+        $a = sin($dLat / 2) * sin($dLat / 2) +
+             cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
+             sin($dLon / 2) * sin($dLon / 2);
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+        return $earthRadius * $c;
     }
 
     public static function storageUrl(?string $path): ?string

@@ -28,11 +28,11 @@
         } elseif ($currentRoute === 'brands-platform.consumer') {
             $items[] = ['label' => 'Consumer Experience'];
         } elseif ($currentRoute === 'brands-platform.support-login') {
-            $items[] = ['label' => 'Staff Login'];
+            $items[] = ['label' => 'Support Staff Gateway'];
         } elseif ($currentRoute === 'brands-platform.support') {
-            $items[] = ['label' => 'Retail Support Staff'];
+            $items[] = ['label' => 'Promoter Support Staff'];
         } elseif ($currentRoute === 'brands-platform.retail') {
-            $items[] = ['label' => 'Retail Attendant & Scanner'];
+            $items[] = ['label' => 'Retail Redemption Terminal'];
         } elseif ($currentRoute === 'brands-platform.agency-login') {
             $items[] = ['label' => 'Agency Login'];
         } elseif ($currentRoute === 'brands-platform.agency') {

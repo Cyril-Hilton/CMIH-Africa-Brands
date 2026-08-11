@@ -56,6 +56,126 @@
                 </div>
             @endif
 
+            @if(session('status_warning'))
+                <div style="background:rgba(234, 179, 8, 0.15); border:1px solid #eab308; color:#fef08a; border-radius:10px; padding:12px; font-size:12px; margin-bottom:20px;">
+                    {{ session('status_warning') }}
+                </div>
+            @endif
+
+            @if($errors->has('geofence'))
+                <div style="background:rgba(239, 68, 68, 0.15); border:1px solid #ef4444; color:#fca5a5; border-radius:10px; padding:12px; font-size:12px; margin-bottom:20px;">
+                    🚨 {{ $errors->first('geofence') }}
+                </div>
+            @endif
+
+            <!-- Live 300m Geofenced Clock-In Widget for Retail Personnel -->
+            @php
+                $assignedVenue = $myStaffAssignment?->assigned_location ?: ($activation?->locations[0]['name'] ?? 'Shoprite - Accra Mall');
+                $assignedAddr = $myStaffAssignment?->assigned_address ?: 'Accra Mall, Tetteh Quarshie Interchange';
+                $shiftStart = $myStaffAssignment?->shift_start_time ?: '08:30';
+                $shiftEnd = $myStaffAssignment?->shift_end_time ?: '17:00';
+                $graceMins = $myStaffAssignment?->grace_period_minutes ?: 10;
+                $latePenalty = $myStaffAssignment?->lateness_deduction_amount ?: 20.00;
+            @endphp
+            <div style="background: rgba(23, 17, 21, 0.85); border:1px solid rgba(255,255,255,0.12); border-radius:14px; padding:18px 22px; margin-bottom:20px; box-shadow:0 8px 32px rgba(0,0,0,0.3);">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                    <div>
+                        <div style="font-size:11px; font-weight:800; color:#ff1020; letter-spacing:0.05em; text-transform:uppercase; margin-bottom:4px;">📍 RETAIL TERMINAL VENUE & GEOFENCE STATUS</div>
+                        <h3 style="margin:0; font-size:17px; font-weight:800; color:#ffffff;">{{ $assignedVenue }}</h3>
+                        <p style="margin:2px 0 0; font-size:12px; color:rgba(255,255,255,0.65);">
+                            {{ $assignedAddr }} &bull; Shift: <strong>{{ $shiftStart }} - {{ $shiftEnd }}</strong> (Grace: {{ $graceMins }}m | Late Penalty: GHS {{ number_format($latePenalty, 2) }})
+                        </p>
+                    </div>
+
+                    @if(!empty($activeAttendance))
+                        <div style="text-align:right;">
+                            <div style="display:inline-flex; align-items:center; gap:8px; background:{{ $activeAttendance->is_late ? 'rgba(239,68,68,0.2)' : 'rgba(16,185,129,0.2)' }}; border:1px solid {{ $activeAttendance->is_late ? '#ef4444' : '#10b981' }}; color:#ffffff; padding:6px 14px; border-radius:30px; font-size:12px; font-weight:800; margin-bottom:8px;">
+                                <span style="width:8px; height:8px; border-radius:50%; background:{{ $activeAttendance->is_late ? '#ef4444' : '#10b981' }}; display:inline-block;"></span>
+                                {{ $activeAttendance->is_late ? 'TERMINAL ACTIVE (LATE -' . $activeAttendance->lateness_minutes . 'm | GHS ' . number_format($activeAttendance->deduction_amount, 2) . ' Penalty)' : 'RETAIL TERMINAL ACTIVE' }}
+                            </div>
+                            <div>
+                                <small style="color:rgba(255,255,255,0.5); font-size:11px; display:block;">Clocked in at: {{ $activeAttendance->clock_in_time->format('h:i A') }} (Distance: {{ $activeAttendance->clock_in_distance_meters }}m)</small>
+                                <form method="POST" action="{{ route('brands-platform.clock-out', $brandKey) }}" id="clock-out-form" style="margin-top:6px;">
+                                    @csrf
+                                    <input type="hidden" name="latitude" id="clock_out_lat">
+                                    <input type="hidden" name="longitude" id="clock_out_lng">
+                                    <button type="button" onclick="submitGeofencedClockOut()" class="btn" style="background:#ef4444; color:#fff; border:none; padding:8px 16px; border-radius:8px; font-size:12px; font-weight:800; cursor:pointer;">
+                                        🚪 Close Terminal Shift
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    @else
+                        <div style="text-align:right;">
+                            <div style="margin-bottom:8px;">
+                                <span style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:#fca5a5; padding:5px 12px; border-radius:20px; font-size:11px; font-weight:700;">
+                                    Terminal Locked &bull; 300m Geofence Enforced
+                                </span>
+                            </div>
+                            <form method="POST" action="{{ route('brands-platform.clock-in', $brandKey) }}" id="clock-in-form">
+                                @csrf
+                                <input type="hidden" name="staff_role" value="retail_staff">
+                                <input type="hidden" name="latitude" id="clock_in_lat">
+                                <input type="hidden" name="longitude" id="clock_in_lng">
+                                <button type="button" id="clock-in-btn" onclick="submitGeofencedClockIn()" class="btn red" style="padding:10px 20px; border-radius:8px; font-size:13px; font-weight:800; display:inline-flex; align-items:center; gap:6px;">
+                                    📍 Detect Live GPS & Open Terminal
+                                </button>
+                            </form>
+                            <small id="geo-status-msg" style="display:block; color:rgba(255,255,255,0.5); font-size:11px; margin-top:4px;">Requires location permission</small>
+                        </div>
+                    @endif
+                </div>
+            </div>
+
+            <script>
+            function submitGeofencedClockIn() {
+                const btn = document.getElementById('clock-in-btn');
+                const statusMsg = document.getElementById('geo-status-msg');
+                if (btn) btn.disabled = true;
+                if (statusMsg) statusMsg.innerHTML = '⌛ Detecting terminal GPS coordinates...';
+
+                if (!navigator.geolocation) {
+                    alert('Geolocation is not supported by your browser.');
+                    if (btn) btn.disabled = false;
+                    return;
+                }
+
+                navigator.geolocation.getCurrentPosition(
+                    function(pos) {
+                        document.getElementById('clock_in_lat').value = pos.coords.latitude;
+                        document.getElementById('clock_in_lng').value = pos.coords.longitude;
+                        document.getElementById('clock-in-form').submit();
+                    },
+                    function(err) {
+                        alert('Could not acquire GPS location: ' + err.message + '. Please allow location access in your browser settings.');
+                        if (btn) btn.disabled = false;
+                        if (statusMsg) statusMsg.innerHTML = '❌ Location access denied.';
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            }
+
+            function submitGeofencedClockOut() {
+                if (!confirm('Are you sure you want to close your terminal shift?')) return;
+                if (!navigator.geolocation) {
+                    alert('Geolocation is not supported by your browser.');
+                    return;
+                }
+
+                navigator.geolocation.getCurrentPosition(
+                    function(pos) {
+                        document.getElementById('clock_out_lat').value = pos.coords.latitude;
+                        document.getElementById('clock_out_lng').value = pos.coords.longitude;
+                        document.getElementById('clock-out-form').submit();
+                    },
+                    function(err) {
+                        alert('Could not acquire GPS location: ' + err.message);
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            }
+            </script>
+
             <div class="metrics">
                 <div class="metric">
                     <small>Successful Today</small>

@@ -663,4 +663,47 @@ class BrandsPlatformTest extends TestCase
         ])->assertRedirect(route('merchandisers.admin.dashboard'));
         $this->post(route('logout'));
     }
+
+    public function test_geofenced_clock_in_radius_enforced_and_lateness_deduction(): void
+    {
+        $brand = Brand::where('slug', 'rexona')->firstOrFail();
+        $promoter = User::factory()->create(['access_role' => 'supporting_staff']);
+
+        // Create assignment for Accra Mall (5.6225, -0.1729)
+        BrandStaffAssignment::create([
+            'brand_id' => $brand->id,
+            'user_id' => $promoter->id,
+            'role' => 'promoter',
+            'assigned_location' => 'Shoprite - Accra Mall',
+            'assigned_latitude' => 5.6225,
+            'assigned_longitude' => -0.1729,
+            'shift_start_time' => '08:00',
+            'grace_period_minutes' => 10,
+            'lateness_deduction_amount' => 20.00,
+            'is_active' => true,
+        ]);
+
+        // 1. Attempt Clock-In > 300m away (5.7000, -0.1729 is ~8.6km away)
+        $farResponse = $this->actingAs($promoter)->post(route('brands-platform.clock-in', $brand->slug), [
+            'latitude' => 5.7000,
+            'longitude' => -0.1729,
+            'staff_role' => 'promoter',
+        ]);
+        $farResponse->assertSessionHasErrors(['geofence']);
+
+        // 2. Clock-In inside 300m radius (5.6226, -0.1729 is ~11 meters away)
+        $validResponse = $this->actingAs($promoter)->post(route('brands-platform.clock-in', $brand->slug), [
+            'latitude' => 5.6226,
+            'longitude' => -0.1729,
+            'staff_role' => 'promoter',
+        ]);
+        $validResponse->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('brand_staff_attendances', [
+            'brand_id' => $brand->id,
+            'user_id' => $promoter->id,
+            'assigned_location_name' => 'Shoprite - Accra Mall',
+            'status' => 'clocked_in',
+        ]);
+    }
 }

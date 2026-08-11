@@ -311,13 +311,94 @@
                 </div>
             </div>
 
+            <!-- LIVE STAFF ATTENDANCE & FIELD GPS MAP CLUSTER -->
+            <div class="dash-grid" style="margin-top:20px;">
+                <div class="panel" style="grid-column: 1 / -1;">
+                    <div class="panel-head" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                        <div>
+                            <h3 style="color:#171115; font-size:18px; font-weight:900; margin:0;">🌐 Live Staff Attendance & Field GPS Map</h3>
+                            <small style="color:#8b747a;">Real-time 300m geofenced location tracking, shift punctuality, and staff map plotting</small>
+                        </div>
+                        <div style="display:flex; gap:10px;">
+                            <span class="chip" style="background:#0aa777; color:#fff; font-weight:800; padding:6px 12px; border-radius:20px; font-size:11px;">
+                                {{ $todayAttendances->where('status', 'clocked_in')->count() }} Active Clocked-In
+                            </span>
+                            <span class="chip" style="background:#ff1020; color:#fff; font-weight:800; padding:6px 12px; border-radius:20px; font-size:11px;">
+                                {{ $todayAttendances->where('is_late', true)->count() }} Late Session Logged
+                            </span>
+                        </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: 1fr 2fr; gap:20px; margin-top:20px;">
+                        <!-- Attendance Roster & Avatar Sidebar -->
+                        <div style="background:#fcf8f9; border:1px solid #e4dadd; border-radius:12px; padding:16px; max-height:480px; overflow-y:auto;">
+                            <h4 style="margin:0 0 12px; color:#171115; font-size:13px; font-weight:800;">Staff Location Roster (Click Avatar to Zoom)</h4>
+                            
+                            <div style="display:flex; flex-direction:column; gap:10px;">
+                                @forelse($todayAttendances as $att)
+                                    @php
+                                        $lat = $att->clock_in_latitude ?: $att->assigned_latitude ?: 5.6225;
+                                        $lng = $att->clock_in_longitude ?: $att->assigned_longitude ?: -0.1729;
+                                    @endphp
+                                    <div onclick="focusStaffOnMap({{ $att->user_id }}, {{ $lat }}, {{ $lng }}, '{{ addslashes($att->user?->name ?: 'Staff') }}', '{{ addslashes($att->assigned_location_name ?: 'Venue') }}', '{{ $att->clock_in_time ? $att->clock_in_time->format('h:i A') : 'Not Clocked In' }}', {{ $att->is_late ? 'true' : 'false' }}, {{ $att->lateness_minutes }}, {{ $att->deduction_amount }}, {{ $att->clock_in_distance_meters ?: 0 }})" 
+                                         style="background:#fff; border:1px solid #e4dadd; border-radius:10px; padding:12px; cursor:pointer; transition:all 0.2s ease; display:flex; align-items:center; gap:12px;"
+                                         onmouseover="this.style.borderColor='#ff1020'; this.style.transform='translateX(4px)';"
+                                         onmouseout="this.style.borderColor='#e4dadd'; this.style.transform='translateX(0)';">
+                                        
+                                        <!-- Avatar -->
+                                        <div style="width:40px; height:40px; border-radius:50%; background:#171115; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:14px; flex-shrink:0; border:2px solid {{ $att->is_late ? '#ef4444' : '#10b981' }};">
+                                            {{ strtoupper(substr($att->user?->name ?: 'S', 0, 2)) }}
+                                        </div>
+
+                                        <div style="flex:1; min-width:0;">
+                                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                                <strong style="color:#171115; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ $att->user?->name ?: 'Staff Member' }}</strong>
+                                                <small style="font-size:10px; font-weight:800; color:{{ $att->status === 'clocked_in' ? '#0aa777' : '#8b747a' }};">
+                                                    {{ strtoupper($att->status) }}
+                                                </small>
+                                            </div>
+
+                                            <div style="font-size:11px; color:#8b747a; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                                📍 {{ $att->assigned_location_name ?: 'Shoprite Accra Mall' }}
+                                            </div>
+
+                                            <div style="display:flex; align-items:center; gap:6px; margin-top:4px;">
+                                                @if($att->is_late)
+                                                    <span style="background:rgba(239,68,68,0.15); color:#991b1b; padding:2px 6px; border-radius:10px; font-size:9px; font-weight:800;">
+                                                        LATE ({{ $att->lateness_minutes }}m | -GHS {{ number_format($att->deduction_amount, 2) }})
+                                                    </span>
+                                                @else
+                                                    <span style="background:rgba(16,185,129,0.15); color:#065f46; padding:2px 6px; border-radius:10px; font-size:9px; font-weight:800;">
+                                                        ON-TIME
+                                                    </span>
+                                                @endif
+                                                <small style="color:#8b747a; font-size:10px;">{{ $att->clock_in_time ? $att->clock_in_time->format('h:i A') : '' }} ({{ $att->clock_in_distance_meters }}m)</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @empty
+                                    <div style="text-align:center; padding:30px 10px; color:#8b747a; font-size:12px;">
+                                        No staff clocked in today yet. As staff members clock in from their support workspace, their live location pin will appear here on the map.
+                                    </div>
+                                @endforelse
+                            </div>
+                        </div>
+
+                        <!-- Map Canvas Container -->
+                        <div style="position:relative; border-radius:12px; overflow:hidden; border:1px solid #e4dadd; min-height:480px;">
+                            <div id="agencyStaffMap" style="width:100%; height:100%; min-height:480px; background:#f4f5f8;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- TEAM & STAFF PRIVILEGES MANAGEMENT PANEL -->
             <div id="team-privileges" class="dash-grid" style="margin-top:20px;">
                 <div class="panel" style="grid-column: 1 / -1;">
                     <div class="panel-head" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
                         <div>
                             <h3 style="color:#171115; font-size:18px; font-weight:900; margin:0;">Brand Team & Delegated Staff Privileges</h3>
-                            <small style="color:#8b747a;">Enrol brand staff, manage access levels, and assign delegated team management privileges</small>
+                            <small style="color:#8b747a;">Enrol brand staff, manage access levels, assign geofenced venues & shift parameters</small>
                         </div>
                         <span class="chip" style="background:#ff1020; color:#fff; font-weight:800; padding:6px 12px; border-radius:20px; font-size:11px;">
                             {{ count($assignedStaff) }} Active Team Member{{ count($assignedStaff) === 1 ? '' : 's' }}
@@ -352,6 +433,36 @@
                                     </select>
                                 </div>
 
+                                <div class="field">
+                                    <label style="color:#171115; font-size:10px; font-weight:700;">Assigned Venue & Location (Google Autocomplete) *</label>
+                                    <input type="text" name="assigned_location" id="agency_staff_location_ac" placeholder="e.g. Shoprite - Accra Mall" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                                    <input type="hidden" name="assigned_address" id="agency_staff_address">
+                                    <input type="hidden" name="assigned_latitude" id="agency_staff_lat" value="5.6225">
+                                    <input type="hidden" name="assigned_longitude" id="agency_staff_lng" value="-0.1729">
+                                </div>
+
+                                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                                    <div class="field">
+                                        <label style="color:#171115; font-size:10px; font-weight:700;">Shift Start Time</label>
+                                        <input type="time" name="shift_start_time" value="08:30" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                                    </div>
+                                    <div class="field">
+                                        <label style="color:#171115; font-size:10px; font-weight:700;">Shift End Time</label>
+                                        <input type="time" name="shift_end_time" value="17:00" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                                    </div>
+                                </div>
+
+                                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                                    <div class="field">
+                                        <label style="color:#171115; font-size:10px; font-weight:700;">Grace Period (Mins)</label>
+                                        <input type="number" name="grace_period_minutes" value="10" min="0" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                                    </div>
+                                    <div class="field">
+                                        <label style="color:#171115; font-size:10px; font-weight:700;">Late Penalty (GHS)</label>
+                                        <input type="number" step="0.01" name="lateness_deduction_amount" value="20.00" min="0" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                                    </div>
+                                </div>
+
                                 <div style="display:flex; flex-direction:column; gap:8px; background:#fff; padding:12px; border-radius:8px; border:1px solid #e4dadd;">
                                     <label style="font-size:10px; font-weight:800; color:#171115; text-transform:uppercase;">Privileges & Delegated Rights</label>
                                     
@@ -376,7 +487,7 @@
                                     <input name="notes" placeholder="e.g. Assigned to Accra campaign activation" style="width:100%; padding:10px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
                                 </div>
 
-                                <button type="submit" class="btn red" style="width:100%; padding:12px; border-radius:8px; font-size:12px; font-weight:800; cursor:pointer;">Assign Brand Privileges</button>
+                                <button type="submit" class="btn red" style="width:100%; padding:12px; border-radius:8px; font-size:12px; font-weight:800; cursor:pointer;">Assign Brand Privileges & Location</button>
                             </form>
                         </div>
 
@@ -720,5 +831,118 @@
         }
     });
 })();
+</script>
+
+<script src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google.maps_api_key') ?? env('GOOGLE_MAPS_API_KEY') }}&libraries=places&callback=initAgencyStaffMap" async defer></script>
+
+<script>
+let agencyMap = null;
+let agencyStaffMarkers = {};
+let agencyInfoWindow = null;
+
+function initAgencyStaffMap() {
+    const mapEl = document.getElementById('agencyStaffMap');
+    if (!mapEl) return;
+
+    agencyMap = new google.maps.Map(mapEl, {
+        center: { lat: 5.6225, lng: -0.1729 },
+        zoom: 12,
+        styles: [
+            { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] }
+        ]
+    });
+
+    agencyInfoWindow = new google.maps.InfoWindow();
+
+    const acInput = document.getElementById('agency_staff_location_ac');
+    if (acInput && typeof google !== 'undefined' && google.maps && google.maps.places) {
+        const autocomplete = new google.maps.places.Autocomplete(acInput, {
+            types: ['establishment', 'geocode']
+        });
+        autocomplete.addListener('place_changed', function() {
+            const place = autocomplete.getPlace();
+            if (place.geometry) {
+                document.getElementById('agency_staff_lat').value = place.geometry.location.lat();
+                document.getElementById('agency_staff_lng').value = place.geometry.location.lng();
+                document.getElementById('agency_staff_address').value = place.formatted_address || place.name;
+            }
+        });
+    }
+
+    const attendances = @json($todayAttendances);
+    if (attendances && attendances.length > 0) {
+        const bounds = new google.maps.LatLngBounds();
+        
+        attendances.forEach(att => {
+            const lat = parseFloat(att.clock_in_latitude || att.assigned_latitude || 5.6225);
+            const lng = parseFloat(att.clock_in_longitude || att.assigned_longitude || -0.1729);
+            const pos = { lat: lat, lng: lng };
+            bounds.extend(pos);
+
+            const isLate = att.is_late;
+            const markerColor = isLate ? '#ef4444' : '#10b981';
+
+            const marker = new google.maps.Marker({
+                position: pos,
+                map: agencyMap,
+                title: (att.user ? att.user.name : 'Staff') + ' @ ' + (att.assigned_location_name || 'Venue'),
+                icon: {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 10,
+                    fillColor: markerColor,
+                    fillOpacity: 0.9,
+                    strokeWeight: 2,
+                    strokeColor: '#ffffff'
+                }
+            });
+
+            marker.addListener('click', () => {
+                const lateContent = isLate ? `<span style="color:#ef4444; font-weight:800;">🚨 LATE (${att.lateness_minutes}m) - Penalty GHS ${att.deduction_amount}</span>` : `<span style="color:#10b981; font-weight:800;">✅ ON-TIME CLOCK-IN</span>`;
+                const content = `
+                    <div style="padding:8px; font-family:sans-serif;">
+                        <h4 style="margin:0 0 4px; font-size:14px; color:#171115;">${att.user ? att.user.name : 'Staff'}</h4>
+                        <div style="font-size:12px; color:#555;"><strong>Venue:</strong> ${att.assigned_location_name || 'Venue'}</div>
+                        <div style="font-size:12px; color:#555; margin:3px 0;"><strong>Status:</strong> ${lateContent}</div>
+                        <div style="font-size:11px; color:#888;">Distance from venue: ${att.clock_in_distance_meters || 0}m</div>
+                    </div>
+                `;
+                agencyInfoWindow.setContent(content);
+                agencyInfoWindow.open(agencyMap, marker);
+            });
+
+            agencyStaffMarkers[att.user_id] = marker;
+        });
+
+        agencyMap.fitBounds(bounds);
+    }
+}
+
+function focusStaffOnMap(userId, lat, lng, name, locationName, clockInTime, isLate, latenessMins, penalty, distance) {
+    if (!agencyMap) return;
+
+    const pos = { lat: parseFloat(lat), lng: parseFloat(lng) };
+    agencyMap.setCenter(pos);
+    agencyMap.setZoom(17);
+
+    const marker = agencyStaffMarkers[userId];
+    const lateText = isLate ? `<span style="color:#ef4444; font-weight:800;">🚨 LATE (${latenessMins}m) &bull; Penalty: GHS ${penalty}</span>` : `<span style="color:#10b981; font-weight:800;">✅ CLOCKED IN ON-TIME</span>`;
+    const infoContent = `
+        <div style="padding:10px; font-family:sans-serif; max-width:220px;">
+            <div style="font-size:11px; font-weight:800; color:#ff1020; text-transform:uppercase;">STAFF GPS LOCATION</div>
+            <h3 style="margin:4px 0; font-size:15px; font-weight:900; color:#171115;">${name}</h3>
+            <div style="font-size:12px; color:#444; margin-bottom:4px;">📍 ${locationName}</div>
+            <div style="font-size:12px; margin-bottom:4px;">${lateText}</div>
+            <div style="font-size:11px; color:#666;">Clock-in Time: <strong>${clockInTime}</strong> (${distance}m away)</div>
+        </div>
+    `;
+
+    agencyInfoWindow.setContent(infoContent);
+    if (marker) {
+        agencyInfoWindow.open(agencyMap, marker);
+    } else {
+        agencyInfoWindow.setPosition(pos);
+        agencyInfoWindow.open(agencyMap);
+    }
+}
 </script>
 @endpush

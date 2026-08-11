@@ -35,6 +35,14 @@ class BrandStaffAssignment extends Model
         'user_id',
         'role',
         'permissions',
+        'assigned_location',
+        'assigned_address',
+        'assigned_latitude',
+        'assigned_longitude',
+        'shift_start_time',
+        'shift_end_time',
+        'grace_period_minutes',
+        'lateness_deduction_amount',
         'is_active',
         'notes',
         'assigned_by',
@@ -45,6 +53,10 @@ class BrandStaffAssignment extends Model
         return [
             'is_active' => 'boolean',
             'permissions' => 'array',
+            'assigned_latitude' => 'float',
+            'assigned_longitude' => 'float',
+            'grace_period_minutes' => 'integer',
+            'lateness_deduction_amount' => 'decimal:2',
         ];
     }
 
