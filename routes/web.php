@@ -97,9 +97,16 @@ Route::middleware(['auth', 'active'])->prefix('brands')->name('brands-platform.'
     Route::post('/{brand}/field-activity', [BrandsPlatformController::class, 'storeFieldActivity'])->name('field-activity.store');
     Route::post('/{brand}/clock-in', [BrandsPlatformController::class, 'clockIn'])->name('clock-in');
     Route::post('/{brand}/clock-out', [BrandsPlatformController::class, 'clockOut'])->name('clock-out');
+    // Staff enrollment (CMIH API import)
     Route::post('/{brand}/team', [BrandsPlatformController::class, 'storeAgencyTeamMember'])->name('team.store');
     Route::put('/{brand}/team/{assignment}', [BrandsPlatformController::class, 'updateAgencyTeamMember'])->name('team.update');
     Route::delete('/{brand}/team/{assignment}', [BrandsPlatformController::class, 'archiveAgencyTeamMember'])->name('team.destroy');
+    // Manual staff enrollment (promoters & retail terminal)
+    Route::post('/{brand}/staff/enroll', [BrandsPlatformController::class, 'enrollStaff'])->name('staff.enroll');
+    // Venue change (preserves history)
+    Route::put('/{brand}/staff/{assignment}/venue', [BrandsPlatformController::class, 'updateStaffVenue'])->name('staff.update-venue');
+    // Venue history (JSON endpoint for modal)
+    Route::get('/{brand}/staff/{assignment}/history', [BrandsPlatformController::class, 'staffVenueHistory'])->name('staff.venue-history');
 });
 
 Route::get('/dashboard', [DashboardController::class, 'index'])

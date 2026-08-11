@@ -396,152 +396,351 @@
                 </div>
             </div>
 
-            <!-- TEAM & STAFF PRIVILEGES MANAGEMENT PANEL -->
+            <!-- STAFF ENROLLMENT PANEL — 3-TAB SYSTEM -->
             <div id="team-privileges" class="dash-grid" style="margin-top:20px;">
-                <div class="panel" style="grid-column: 1 / -1;">
+                <div class="panel" style="grid-column: 1 / -1; overflow:visible;">
                     <div class="panel-head" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
                         <div>
-                            <h3 style="color:#171115; font-size:18px; font-weight:900; margin:0;">Brand Team & Delegated Staff Privileges</h3>
-                            <small style="color:#8b747a;">Enrol brand staff, manage access levels, assign geofenced venues & shift parameters</small>
+                            <h3 style="color:#171115; font-size:18px; font-weight:900; margin:0;">👥 Staff Enrollment Centre</h3>
+                            <small style="color:#8b747a;">Import CMIH staff or manually enrol promoters and retail terminal cashiers — assign venue on enrollment, full venue history preserved</small>
                         </div>
-                        <span class="chip" style="background:#ff1020; color:#fff; font-weight:800; padding:6px 12px; border-radius:20px; font-size:11px;">
-                            {{ count($assignedStaff) }} Active Team Member{{ count($assignedStaff) === 1 ? '' : 's' }}
-                        </span>
+                        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                            <span style="background:#0055d4; color:#fff; font-weight:800; padding:5px 12px; border-radius:20px; font-size:11px;">
+                                🏢 {{ $enrolledAgencyStaff->count() }} Agency Staff
+                            </span>
+                            <span style="background:#7c3aed; color:#fff; font-weight:800; padding:5px 12px; border-radius:20px; font-size:11px;">
+                                🎤 {{ $enrolledPromoters->count() }} Promoters
+                            </span>
+                            <span style="background:#0aa777; color:#fff; font-weight:800; padding:5px 12px; border-radius:20px; font-size:11px;">
+                                🛒 {{ $enrolledRetail->count() }} Retail Terminal
+                            </span>
+                        </div>
                     </div>
 
-                    <div style="display:grid; grid-template-columns: 1fr 2fr; gap:20px; margin-top:20px;">
-                        <!-- Add / Assign Staff Form -->
-                        <div style="background:#fcf8f9; border:1px solid #e4dadd; border-radius:12px; padding:18px;">
-                            <h4 style="margin:0 0 12px; color:#171115; font-size:14px; font-weight:800;">Grant Staff Brand Access</h4>
-                            <form method="POST" action="{{ route('brands-platform.team.store', $brandKey) }}" style="display:flex; flex-direction:column; gap:12px;">
-                                @csrf
-                                <div class="field">
-                                    <label style="color:#171115; font-size:10px; font-weight:700;">Select Staff Member *</label>
-                                    <select name="user_id" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
-                                        <option value="">Select User</option>
-                                        @foreach($availableUsers as $u)
-                                            <option value="{{ $u->id }}">{{ $u->name }} ({{ $u->email }}) — {{ \Illuminate\Support\Str::headline($u->access_role ?: 'User') }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
+                    <!-- TAB NAVIGATION -->
+                    <div style="display:flex; gap:0; margin-top:20px; border-bottom:2px solid #e4dadd;">
+                        <button onclick="switchEnrollTab('cmih')" id="tab-cmih"
+                            style="padding:10px 18px; font-size:12px; font-weight:800; border:none; border-bottom:3px solid #ff1020; background:none; cursor:pointer; color:#171115; margin-bottom:-2px;">
+                            🏢 Import CMIH Staff
+                        </button>
+                        <button onclick="switchEnrollTab('promoter')" id="tab-promoter"
+                            style="padding:10px 18px; font-size:12px; font-weight:800; border:none; border-bottom:3px solid transparent; background:none; cursor:pointer; color:#8b747a; margin-bottom:-2px;">
+                            🎤 Enrol Promoter
+                        </button>
+                        <button onclick="switchEnrollTab('retail')" id="tab-retail"
+                            style="padding:10px 18px; font-size:12px; font-weight:800; border:none; border-bottom:3px solid transparent; background:none; cursor:pointer; color:#8b747a; margin-bottom:-2px;">
+                            🛒 Enrol Retail Terminal
+                        </button>
+                    </div>
 
-                                <div class="field">
-                                    <label style="color:#171115; font-size:10px; font-weight:700;">Assigned Role *</label>
-                                    <select name="role" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
-                                        <option value="agency_staff">Agency Staff</option>
-                                        <option value="field_supervisor">Field Supervisor</option>
-                                        <option value="supporting_staff">Supporting Staff</option>
-                                        <option value="promoter">Promoter</option>
-                                        <option value="retail_staff">Retail Attendant</option>
-                                        <option value="sales_personnel">Sales Representative</option>
-                                    </select>
-                                </div>
+                    <div style="display:grid; grid-template-columns: 380px 1fr; gap:24px; margin-top:20px; align-items:start;">
 
-                                <div class="field">
-                                    <label style="color:#171115; font-size:10px; font-weight:700;">Assigned Venue & Location (Google Autocomplete) *</label>
-                                    <input type="text" name="assigned_location" id="agency_staff_location_ac" placeholder="e.g. Shoprite - Accra Mall" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
-                                    <input type="hidden" name="assigned_address" id="agency_staff_address">
-                                    <input type="hidden" name="assigned_latitude" id="agency_staff_lat" value="5.6225">
-                                    <input type="hidden" name="assigned_longitude" id="agency_staff_lng" value="-0.1729">
+                        <!-- LEFT: ENROLLMENT FORMS (TABBED) -->
+                        <div>
+                            <!-- TAB 1: CMIH API IMPORT -->
+                            <div id="panel-cmih">
+                                <div style="background:#f0f4ff; border:1px solid #c7d7ff; border-radius:12px; padding:16px; margin-bottom:12px;">
+                                    <p style="margin:0; font-size:11px; color:#1e40af; font-weight:700;">
+                                        🔗 CMIH Portal API — These staff are already in the CMIH system. Select them below to assign them to this brand with a venue.
+                                    </p>
                                 </div>
-
-                                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                                <form method="POST" action="{{ route('brands-platform.team.store', $brandKey) }}" style="display:flex; flex-direction:column; gap:12px;">
+                                    @csrf
                                     <div class="field">
-                                        <label style="color:#171115; font-size:10px; font-weight:700;">Shift Start Time</label>
-                                        <input type="time" name="shift_start_time" value="08:30" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                                        <label style="color:#171115; font-size:10px; font-weight:700;">Select CMIH Staff Member *</label>
+                                        <select name="user_id" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #c7d7ff; background:#fff; font-size:12px;">
+                                            <option value="">— Select Staff —</option>
+                                            @foreach($availableUsers as $u)
+                                                <option value="{{ $u->id }}" {{ in_array($u->id, $alreadyEnrolledUserIds) ? 'disabled' : '' }}>
+                                                    {{ $u->name }} ({{ $u->email }})
+                                                    @if($u->department) · {{ \Illuminate\Support\Str::headline($u->department) }}@endif
+                                                    {{ in_array($u->id, $alreadyEnrolledUserIds) ? ' — Already Enrolled' : '' }}
+                                                </option>
+                                            @endforeach
+                                        </select>
                                     </div>
                                     <div class="field">
-                                        <label style="color:#171115; font-size:10px; font-weight:700;">Shift End Time</label>
-                                        <input type="time" name="shift_end_time" value="17:00" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
-                                    </div>
-                                </div>
-
-                                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                                    <div class="field">
-                                        <label style="color:#171115; font-size:10px; font-weight:700;">Grace Period (Mins)</label>
-                                        <input type="number" name="grace_period_minutes" value="10" min="0" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                                        <label style="color:#171115; font-size:10px; font-weight:700;">Assigned Role *</label>
+                                        <select name="role" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #c7d7ff; background:#fff; font-size:12px;">
+                                            <option value="agency_staff">Agency Staff</option>
+                                            <option value="field_supervisor">Field Supervisor</option>
+                                            <option value="brand_admin">Brand Admin</option>
+                                        </select>
                                     </div>
                                     <div class="field">
-                                        <label style="color:#171115; font-size:10px; font-weight:700;">Late Penalty (GHS)</label>
-                                        <input type="number" step="0.01" name="lateness_deduction_amount" value="20.00" min="0" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                                        <label style="color:#171115; font-size:10px; font-weight:700;">Assigned Venue (Google Autocomplete) *</label>
+                                        <input type="text" name="assigned_location" id="cmih_location_ac" placeholder="Search venue…" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #c7d7ff; background:#fff; font-size:12px;">
+                                        <input type="hidden" name="assigned_address" id="cmih_address">
+                                        <input type="hidden" name="assigned_latitude" id="cmih_lat" value="5.673841">
+                                        <input type="hidden" name="assigned_longitude" id="cmih_lng" value="-0.198322">
                                     </div>
+                                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                                        <div class="field">
+                                            <label style="color:#171115; font-size:10px; font-weight:700;">Shift Start</label>
+                                            <input type="time" name="shift_start_time" value="08:30" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                                        </div>
+                                        <div class="field">
+                                            <label style="color:#171115; font-size:10px; font-weight:700;">Shift End</label>
+                                            <input type="time" name="shift_end_time" value="17:00" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                                        </div>
+                                    </div>
+                                    <div style="display:flex; flex-direction:column; gap:8px; background:#fff; padding:10px; border-radius:8px; border:1px solid #e4dadd;">
+                                        <label style="font-size:10px; font-weight:800; color:#171115;">Privileges</label>
+                                        <label style="display:flex; align-items:center; gap:8px; font-size:11px; cursor:pointer;">
+                                            <input type="checkbox" name="can_manage_team" value="1"> <span><strong>Team Manager</strong> (can add/edit staff)</span>
+                                        </label>
+                                        <label style="display:flex; align-items:center; gap:8px; font-size:11px; cursor:pointer;">
+                                            <input type="checkbox" name="can_record_activity" value="1" checked> <span>Field Activity Logging</span>
+                                        </label>
+                                        <label style="display:flex; align-items:center; gap:8px; font-size:11px; cursor:pointer;">
+                                            <input type="checkbox" name="can_export" value="1"> <span>Report Export</span>
+                                        </label>
+                                    </div>
+                                    <div class="field">
+                                        <label style="color:#171115; font-size:10px; font-weight:700;">Notes</label>
+                                        <input name="notes" placeholder="e.g. Assigned to Accra campaign" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                                    </div>
+                                    <button type="submit" style="background:#0055d4; color:#fff; padding:11px; border-radius:8px; font-size:12px; font-weight:800; border:none; cursor:pointer; width:100%;">
+                                        🏢 Import & Assign CMIH Staff
+                                    </button>
+                                </form>
+                            </div>
+
+                            <!-- TAB 2: MANUAL PROMOTER ENROLLMENT -->
+                            <div id="panel-promoter" style="display:none;">
+                                <div style="background:#f5f0ff; border:1px solid #c4b5fd; border-radius:12px; padding:16px; margin-bottom:12px;">
+                                    <p style="margin:0; font-size:11px; color:#5b21b6; font-weight:700;">
+                                        🎤 Manual Enrollment — Promoters, brand advisors, ushers, and floor sales staff not in the CMIH portal.
+                                    </p>
                                 </div>
+                                <form method="POST" action="{{ route('brands-platform.staff.enroll', $brandKey) }}" enctype="multipart/form-data" style="display:flex; flex-direction:column; gap:12px;">
+                                    @csrf
+                                    <input type="hidden" name="enrollment_type" value="promoter">
+                                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                                        <div class="field" style="grid-column:1/-1;">
+                                            <label style="color:#171115; font-size:10px; font-weight:700;">Full Name *</label>
+                                            <input name="external_name" required placeholder="e.g. Abena Mensah" style="width:100%; padding:10px; border-radius:8px; border:1px solid #c4b5fd; background:#fff; font-size:12px;">
+                                        </div>
+                                        <div class="field">
+                                            <label style="color:#171115; font-size:10px; font-weight:700;">Phone *</label>
+                                            <input name="external_phone" required placeholder="0244 000 000" style="width:100%; padding:9px; border-radius:8px; border:1px solid #c4b5fd; background:#fff; font-size:12px;">
+                                        </div>
+                                        <div class="field">
+                                            <label style="color:#171115; font-size:10px; font-weight:700;">Email</label>
+                                            <input name="external_email" type="email" placeholder="abena@mail.com" style="width:100%; padding:9px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                                        </div>
+                                        <div class="field">
+                                            <label style="color:#171115; font-size:10px; font-weight:700;">ID Type *</label>
+                                            <select name="external_id_type" required style="width:100%; padding:9px; border-radius:8px; border:1px solid #c4b5fd; background:#fff; font-size:12px;">
+                                                <option value="">— Select —</option>
+                                                @foreach(\App\Models\BrandStaffAssignment::ID_TYPES as $idType)
+                                                    <option value="{{ $idType }}">{{ $idType }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="field">
+                                            <label style="color:#171115; font-size:10px; font-weight:700;">ID Number *</label>
+                                            <input name="external_id_number" required placeholder="GHA-000000000-0" style="width:100%; padding:9px; border-radius:8px; border:1px solid #c4b5fd; background:#fff; font-size:12px;">
+                                        </div>
+                                    </div>
+                                    <div class="field">
+                                        <label style="color:#171115; font-size:10px; font-weight:700;">Staff Photo</label>
+                                        <input type="file" name="photo" accept="image/*" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                                    </div>
+                                    <div class="field">
+                                        <label style="color:#171115; font-size:10px; font-weight:700;">Assigned Venue (Google Autocomplete) *</label>
+                                        <input type="text" name="assigned_location" id="promo_location_ac" placeholder="Search activation venue…" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #c4b5fd; background:#fff; font-size:12px;">
+                                        <input type="hidden" name="assigned_address" id="promo_address">
+                                        <input type="hidden" name="assigned_latitude" id="promo_lat" value="5.673841">
+                                        <input type="hidden" name="assigned_longitude" id="promo_lng" value="-0.198322">
+                                    </div>
+                                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px;">
+                                        <div class="field">
+                                            <label style="color:#171115; font-size:10px; font-weight:700;">Shift Start</label>
+                                            <input type="time" name="shift_start_time" value="08:30" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                                        </div>
+                                        <div class="field">
+                                            <label style="color:#171115; font-size:10px; font-weight:700;">Shift End</label>
+                                            <input type="time" name="shift_end_time" value="17:00" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                                        </div>
+                                        <div class="field">
+                                            <label style="color:#171115; font-size:10px; font-weight:700;">Grace (Mins)</label>
+                                            <input type="number" name="grace_period_minutes" value="10" min="0" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                                        </div>
+                                        <div class="field">
+                                            <label style="color:#171115; font-size:10px; font-weight:700;">Late Penalty GHS</label>
+                                            <input type="number" step="0.01" name="lateness_deduction_amount" value="20.00" min="0" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                                        </div>
+                                    </div>
+                                    <div class="field">
+                                        <label style="color:#171115; font-size:10px; font-weight:700;">Notes</label>
+                                        <input name="notes" placeholder="e.g. Works at Accra Mall main entrance" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                                    </div>
+                                    <button type="submit" style="background:#7c3aed; color:#fff; padding:11px; border-radius:8px; font-size:12px; font-weight:800; border:none; cursor:pointer; width:100%;">
+                                        🎤 Enrol Promoter
+                                    </button>
+                                </form>
+                            </div>
 
-                                <div style="display:flex; flex-direction:column; gap:8px; background:#fff; padding:12px; border-radius:8px; border:1px solid #e4dadd;">
-                                    <label style="font-size:10px; font-weight:800; color:#171115; text-transform:uppercase;">Privileges & Delegated Rights</label>
-                                    
-                                    <label style="display:flex; align-items:center; gap:8px; font-size:11px; color:#171115; cursor:pointer;">
-                                        <input type="checkbox" name="can_manage_team" value="1">
-                                        <span><strong>Delegated Team Manager</strong> (Can add/edit staff privileges)</span>
-                                    </label>
-                                    
-                                    <label style="display:flex; align-items:center; gap:8px; font-size:11px; color:#171115; cursor:pointer;">
-                                        <input type="checkbox" name="can_record_activity" value="1" checked>
-                                        <span>Field Activity Logging</span>
-                                    </label>
-
-                                    <label style="display:flex; align-items:center; gap:8px; font-size:11px; color:#171115; cursor:pointer;">
-                                        <input type="checkbox" name="can_export" value="1">
-                                        <span>Report Export Rights</span>
-                                    </label>
+                            <!-- TAB 3: RETAIL TERMINAL ENROLLMENT -->
+                            <div id="panel-retail" style="display:none;">
+                                <div style="background:#f0fdf4; border:1px solid #86efac; border-radius:12px; padding:16px; margin-bottom:12px;">
+                                    <p style="margin:0; font-size:11px; color:#166534; font-weight:700;">
+                                        🛒 Retail Terminal — Cashiers and tellers at Shoprite, Melcom, Palace Mall, etc. who scan consumer discount barcodes.
+                                    </p>
                                 </div>
-
-                                <div class="field">
-                                    <label style="color:#171115; font-size:10px; font-weight:700;">Assignment Notes</label>
-                                    <input name="notes" placeholder="e.g. Assigned to Accra campaign activation" style="width:100%; padding:10px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
-                                </div>
-
-                                <button type="submit" class="btn red" style="width:100%; padding:12px; border-radius:8px; font-size:12px; font-weight:800; cursor:pointer;">Assign Brand Privileges & Location</button>
-                            </form>
+                                <form method="POST" action="{{ route('brands-platform.staff.enroll', $brandKey) }}" enctype="multipart/form-data" style="display:flex; flex-direction:column; gap:12px;">
+                                    @csrf
+                                    <input type="hidden" name="enrollment_type" value="retail_terminal">
+                                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                                        <div class="field" style="grid-column:1/-1;">
+                                            <label style="color:#171115; font-size:10px; font-weight:700;">Full Name *</label>
+                                            <input name="external_name" required placeholder="e.g. Kwame Boateng" style="width:100%; padding:10px; border-radius:8px; border:1px solid #86efac; background:#fff; font-size:12px;">
+                                        </div>
+                                        <div class="field">
+                                            <label style="color:#171115; font-size:10px; font-weight:700;">Phone *</label>
+                                            <input name="external_phone" required placeholder="0244 000 000" style="width:100%; padding:9px; border-radius:8px; border:1px solid #86efac; background:#fff; font-size:12px;">
+                                        </div>
+                                        <div class="field">
+                                            <label style="color:#171115; font-size:10px; font-weight:700;">Email</label>
+                                            <input name="external_email" type="email" placeholder="kwame@shoprite.com" style="width:100%; padding:9px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                                        </div>
+                                        <div class="field">
+                                            <label style="color:#171115; font-size:10px; font-weight:700;">ID Type *</label>
+                                            <select name="external_id_type" required style="width:100%; padding:9px; border-radius:8px; border:1px solid #86efac; background:#fff; font-size:12px;">
+                                                <option value="">— Select —</option>
+                                                @foreach(\App\Models\BrandStaffAssignment::ID_TYPES as $idType)
+                                                    <option value="{{ $idType }}">{{ $idType }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="field">
+                                            <label style="color:#171115; font-size:10px; font-weight:700;">ID Number *</label>
+                                            <input name="external_id_number" required placeholder="GHA-000000000-0" style="width:100%; padding:9px; border-radius:8px; border:1px solid #86efac; background:#fff; font-size:12px;">
+                                        </div>
+                                    </div>
+                                    <div class="field">
+                                        <label style="color:#171115; font-size:10px; font-weight:700;">Staff Photo</label>
+                                        <input type="file" name="photo" accept="image/*" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                                    </div>
+                                    <div class="field">
+                                        <label style="color:#171115; font-size:10px; font-weight:700;">Retail Outlet / Store *</label>
+                                        <input type="text" name="assigned_location" id="retail_location_ac" placeholder="e.g. Shoprite - Accra Mall" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #86efac; background:#fff; font-size:12px;">
+                                        <input type="hidden" name="assigned_address" id="retail_address">
+                                        <input type="hidden" name="assigned_latitude" id="retail_lat" value="5.673841">
+                                        <input type="hidden" name="assigned_longitude" id="retail_lng" value="-0.198322">
+                                    </div>
+                                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px;">
+                                        <div class="field">
+                                            <label style="color:#171115; font-size:10px; font-weight:700;">Shift Start</label>
+                                            <input type="time" name="shift_start_time" value="08:00" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                                        </div>
+                                        <div class="field">
+                                            <label style="color:#171115; font-size:10px; font-weight:700;">Shift End</label>
+                                            <input type="time" name="shift_end_time" value="20:00" style="width:100%; padding:8px; border-radius:8px; font-size:12px; border:1px solid #e4dadd; background:#fff;">
+                                        </div>
+                                        <div class="field">
+                                            <label style="color:#171115; font-size:10px; font-weight:700;">Grace (Mins)</label>
+                                            <input type="number" name="grace_period_minutes" value="10" min="0" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                                        </div>
+                                        <div class="field">
+                                            <label style="color:#171115; font-size:10px; font-weight:700;">Late Penalty GHS</label>
+                                            <input type="number" step="0.01" name="lateness_deduction_amount" value="20.00" min="0" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                                        </div>
+                                    </div>
+                                    <div class="field">
+                                        <label style="color:#171115; font-size:10px; font-weight:700;">Notes</label>
+                                        <input name="notes" placeholder="e.g. Checkout lane 3, Shoprite Accra Mall" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                                    </div>
+                                    <button type="submit" style="background:#0aa777; color:#fff; padding:11px; border-radius:8px; font-size:12px; font-weight:800; border:none; cursor:pointer; width:100%;">
+                                        🛒 Enrol Retail Terminal Staff
+                                    </button>
+                                </form>
+                            </div>
                         </div>
 
-                        <!-- Active Team Members Table -->
+                        <!-- RIGHT: STAFF ROSTER TABLE -->
                         <div>
-                            <table style="width:100%; border-collapse:collapse; color:#171115;">
+                            <table style="width:100%; border-collapse:collapse; color:#171115; font-size:12px;">
                                 <thead>
-                                    <tr style="border-bottom:2px solid #e4dadd; font-size:11px; text-transform:uppercase; color:#8b747a;">
-                                        <th style="text-align:left; padding:8px;">Team Member</th>
-                                        <th style="text-align:left; padding:8px;">Role</th>
-                                        <th style="text-align:left; padding:8px;">Privileges</th>
-                                        <th style="text-align:right; padding:8px;">Actions</th>
+                                    <tr style="border-bottom:2px solid #e4dadd; font-size:10px; text-transform:uppercase; color:#8b747a;">
+                                        <th style="text-align:left; padding:8px 6px;">Staff Member</th>
+                                        <th style="text-align:left; padding:8px 6px;">Type</th>
+                                        <th style="text-align:left; padding:8px 6px;">Current Venue</th>
+                                        <th style="text-align:left; padding:8px 6px;">Shift</th>
+                                        <th style="text-align:right; padding:8px 6px;">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @forelse($assignedStaff as $assign)
-                                        <tr style="border-bottom:1px solid #f0e6e9; font-size:12px;">
-                                            <td style="padding:10px 8px;">
-                                                <strong>{{ $assign->user?->name ?: 'Staff Member' }}</strong>
-                                                <small style="display:block; color:#8b747a; font-size:10px;">{{ $assign->user?->email }}</small>
-                                            </td>
-                                            <td style="padding:10px 8px;">
-                                                <span style="display:inline-block; background:#f0e6e9; color:#171115; padding:3px 8px; border-radius:12px; font-size:10px; font-weight:800;">
-                                                    {{ \Illuminate\Support\Str::headline($assign->role) }}
-                                                </span>
-                                            </td>
-                                            <td style="padding:10px 8px;">
-                                                <div style="display:flex; flex-wrap:wrap; gap:4px;">
-                                                    @if($assign->canManageTeam())
-                                                        <span style="background:#ff1020; color:#fff; padding:2px 6px; border-radius:10px; font-size:9px; font-weight:800;">Team Lead</span>
+                                        <tr style="border-bottom:1px solid #f0e6e9;">
+                                            <td style="padding:10px 6px;">
+                                                <div style="display:flex; align-items:center; gap:9px;">
+                                                    @if($assign->photo_path)
+                                                        <img src="{{ asset('storage/'.$assign->photo_path) }}" style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:2px solid #e4dadd;">
+                                                    @else
+                                                        <div style="width:32px; height:32px; border-radius:50%; background:#171115; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:12px; flex-shrink:0;">
+                                                            {{ strtoupper(substr($assign->display_name, 0, 2)) }}
+                                                        </div>
                                                     @endif
-                                                    @if($assign->canRecordActivity())
-                                                        <span style="background:#0aa777; color:#fff; padding:2px 6px; border-radius:10px; font-size:9px; font-weight:800;">Logger</span>
-                                                    @endif
-                                                    @if($assign->canExport())
-                                                        <span style="background:#00a3e0; color:#fff; padding:2px 6px; border-radius:10px; font-size:9px; font-weight:800;">Exports</span>
-                                                    @endif
+                                                    <div>
+                                                        <strong style="display:block;">{{ $assign->display_name }}</strong>
+                                                        <small style="color:#8b747a;">{{ $assign->display_email ?: $assign->external_phone }}</small>
+                                                    </div>
                                                 </div>
                                             </td>
-                                            <td style="padding:10px 8px; text-align:right;">
-                                                <form method="POST" action="{{ route('brands-platform.team.destroy', [$brandKey, $assign->id]) }}" style="display:inline;">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" onclick="return confirm('Revoke brand access for {{ $assign->user?->name }}?')" style="background:none; border:1px solid #ff1020; color:#ff1020; padding:4px 8px; border-radius:6px; font-size:10px; font-weight:800; cursor:pointer;">Archive</button>
-                                                </form>
+                                            <td style="padding:10px 6px;">
+                                                <div style="display:flex; flex-direction:column; gap:3px;">
+                                                    @if($assign->enrollment_source === 'cmih_api')
+                                                        <span style="background:#dbeafe; color:#1e40af; padding:2px 7px; border-radius:10px; font-size:9px; font-weight:800; display:inline-block;">🏢 CMIH API</span>
+                                                    @else
+                                                        <span style="background:#fef3c7; color:#92400e; padding:2px 7px; border-radius:10px; font-size:9px; font-weight:800; display:inline-block;">✍️ Manual</span>
+                                                    @endif
+                                                    <span style="background:#f0e6e9; color:#171115; padding:2px 7px; border-radius:10px; font-size:9px; font-weight:800; display:inline-block;">
+                                                        {{ $assign->enrollment_type_label }}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td style="padding:10px 6px; max-width:180px;">
+                                                <div style="font-size:11px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                                    📍 {{ Str::limit($assign->assigned_location ?: '—', 40) }}
+                                                </div>
+                                                @if($assign->venue_assigned_at)
+                                                    <small style="color:#8b747a; font-size:10px;">Since {{ $assign->venue_assigned_at->format('d M Y') }}</small>
+                                                @endif
+                                            </td>
+                                            <td style="padding:10px 6px;">
+                                                <small style="color:#8b747a;">{{ $assign->shift_start_time }} – {{ $assign->shift_end_time }}</small>
+                                            </td>
+                                            <td style="padding:10px 6px; text-align:right;">
+                                                <div style="display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap;">
+                                                    <!-- Edit Venue -->
+                                                    <button onclick="openVenueModal({{ $assign->id }}, '{{ addslashes($assign->display_name) }}', '{{ addslashes($assign->assigned_location) }}')"
+                                                        style="background:none; border:1px solid #0055d4; color:#0055d4; padding:4px 8px; border-radius:6px; font-size:10px; font-weight:800; cursor:pointer;">
+                                                        📍 Edit Venue
+                                                    </button>
+                                                    <!-- History -->
+                                                    <button onclick="openHistoryModal({{ $assign->id }}, '{{ addslashes($assign->display_name) }}')"
+                                                        style="background:none; border:1px solid #8b747a; color:#8b747a; padding:4px 8px; border-radius:6px; font-size:10px; font-weight:800; cursor:pointer;">
+                                                        📋 History
+                                                    </button>
+                                                    <!-- Deactivate -->
+                                                    <form method="POST" action="{{ route('brands-platform.team.destroy', [$brandKey, $assign->id]) }}" style="display:inline;">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" onclick="return confirm('Remove {{ $assign->display_name }} from this brand?')"
+                                                            style="background:none; border:1px solid #ff1020; color:#ff1020; padding:4px 8px; border-radius:6px; font-size:10px; font-weight:800; cursor:pointer;">
+                                                            Deactivate
+                                                        </button>
+                                                    </form>
+                                                </div>
                                             </td>
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="4" style="text-align:center; padding:30px; color:#8b747a;">No assigned team members yet. Use the form on the left to assign staff members.</td>
+                                            <td colspan="5" style="text-align:center; padding:40px; color:#8b747a;">
+                                                No staff enrolled yet. Use the forms on the left to get started.
+                                            </td>
                                         </tr>
                                     @endforelse
                                 </tbody>
@@ -551,7 +750,60 @@
                 </div>
             </div>
 
+            <!-- EDIT VENUE MODAL -->
+            <div id="venueModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+                <div style="background:#fff; border-radius:16px; padding:28px; width:480px; max-width:95vw; box-shadow:0 20px 60px rgba(0,0,0,0.3); position:relative;">
+                    <button onclick="closeVenueModal()" style="position:absolute; top:14px; right:16px; background:none; border:none; font-size:20px; cursor:pointer; color:#8b747a;">×</button>
+                    <h3 style="margin:0 0 4px; color:#171115; font-size:16px; font-weight:900;">📍 Change Assigned Venue</h3>
+                    <p id="venueModalSubtitle" style="margin:0 0 18px; color:#8b747a; font-size:12px;"></p>
+                    <form id="venueModalForm" method="POST" style="display:flex; flex-direction:column; gap:12px;">
+                        @csrf
+                        @method('PUT')
+                        <div class="field">
+                            <label style="color:#171115; font-size:10px; font-weight:700;">New Venue (Google Autocomplete)</label>
+                            <input type="text" id="venue_modal_location" name="assigned_location" required placeholder="Search new venue…" style="width:100%; padding:10px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                            <input type="hidden" name="assigned_address" id="venue_modal_address">
+                            <input type="hidden" name="assigned_latitude" id="venue_modal_lat">
+                            <input type="hidden" name="assigned_longitude" id="venue_modal_lng">
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                            <div class="field">
+                                <label style="color:#171115; font-size:10px; font-weight:700;">Shift Start</label>
+                                <input type="time" name="shift_start_time" value="08:30" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                            </div>
+                            <div class="field">
+                                <label style="color:#171115; font-size:10px; font-weight:700;">Shift End</label>
+                                <input type="time" name="shift_end_time" value="17:00" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label style="color:#171115; font-size:10px; font-weight:700;">Reason for Change</label>
+                            <input name="venue_changed_reason" placeholder="e.g. Campaign moved to new location" style="width:100%; padding:10px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                        </div>
+                        <div style="background:#fffbeb; border:1px solid #fbbf24; border-radius:8px; padding:10px;">
+                            <small style="color:#92400e; font-size:11px; font-weight:700;">⚠️ The current venue will be archived in history — no data is lost. The new venue will become active for geofencing.</small>
+                        </div>
+                        <button type="submit" style="background:#0055d4; color:#fff; padding:11px; border-radius:8px; font-size:13px; font-weight:800; border:none; cursor:pointer;">
+                            📍 Save New Venue (Archive Current)
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- VENUE HISTORY MODAL -->
+            <div id="historyModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+                <div style="background:#fff; border-radius:16px; padding:28px; width:600px; max-width:95vw; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.3); position:relative;">
+                    <button onclick="closeHistoryModal()" style="position:absolute; top:14px; right:16px; background:none; border:none; font-size:20px; cursor:pointer; color:#8b747a;">×</button>
+                    <h3 style="margin:0 0 4px; color:#171115; font-size:16px; font-weight:900;">📋 Venue Location History</h3>
+                    <p id="historyModalSubtitle" style="margin:0 0 18px; color:#8b747a; font-size:12px;"></p>
+                    <div id="historyModalContent" style="display:flex; flex-direction:column; gap:10px;">
+                        <div style="text-align:center; padding:30px; color:#8b747a;">Loading history…</div>
+                    </div>
+                </div>
+            </div>
+
             <div class="dash-grid" style="margin-top:15px;">
+
                 <div class="panel">
                     <div class="panel-head">
                         <div>
@@ -849,8 +1101,8 @@ function initAgencyStaffMap() {
     if (!mapEl) return;
 
     agencyMap = new google.maps.Map(mapEl, {
-        center: { lat: 5.6225, lng: -0.1729 },
-        zoom: 12,
+        center: { lat: 5.673841, lng: -0.198322 },
+        zoom: 13,
         styles: [
             { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] }
         ]
@@ -858,19 +1110,29 @@ function initAgencyStaffMap() {
 
     agencyInfoWindow = new google.maps.InfoWindow();
 
-    const acInput = document.getElementById('agency_staff_location_ac');
-    if (acInput && typeof google !== 'undefined' && google.maps && google.maps.places) {
-        const autocomplete = new google.maps.places.Autocomplete(acInput, {
-            types: ['establishment', 'geocode']
+    // ── Google Autocomplete for all 3 enrollment forms ──────────────────────
+    if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+        const acFields = [
+            { input: 'cmih_location_ac', lat: 'cmih_lat', lng: 'cmih_lng', addr: 'cmih_address' },
+            { input: 'promo_location_ac', lat: 'promo_lat', lng: 'promo_lng', addr: 'promo_address' },
+            { input: 'retail_location_ac', lat: 'retail_lat', lng: 'retail_lng', addr: 'retail_address' },
+        ];
+        acFields.forEach(f => {
+            const el = document.getElementById(f.input);
+            if (!el) return;
+            const ac = new google.maps.places.Autocomplete(el, { types: ['establishment', 'geocode'] });
+            ac.addListener('place_changed', function() {
+                const place = ac.getPlace();
+                if (place.geometry) {
+                    document.getElementById(f.lat).value = place.geometry.location.lat();
+                    document.getElementById(f.lng).value = place.geometry.location.lng();
+                    document.getElementById(f.addr).value = place.formatted_address || place.name;
+                }
+            });
         });
-        autocomplete.addListener('place_changed', function() {
-            const place = autocomplete.getPlace();
-            if (place.geometry) {
-                document.getElementById('agency_staff_lat').value = place.geometry.location.lat();
-                document.getElementById('agency_staff_lng').value = place.geometry.location.lng();
-                document.getElementById('agency_staff_address').value = place.formatted_address || place.name;
-            }
-        });
+
+        // Venue modal autocomplete (initialised lazily when modal opens)
+        window._venueModalAcInited = false;
     }
 
     const attendances = @json($todayAttendances);
@@ -878,8 +1140,8 @@ function initAgencyStaffMap() {
         const bounds = new google.maps.LatLngBounds();
         
         attendances.forEach(att => {
-            const lat = parseFloat(att.clock_in_latitude || att.assigned_latitude || 5.6225);
-            const lng = parseFloat(att.clock_in_longitude || att.assigned_longitude || -0.1729);
+            const lat = parseFloat(att.clock_in_latitude || att.assigned_latitude || 5.673841);
+            const lng = parseFloat(att.clock_in_longitude || att.assigned_longitude || -0.198322);
             const pos = { lat: lat, lng: lng };
             bounds.extend(pos);
 
@@ -948,5 +1210,106 @@ function focusStaffOnMap(userId, lat, lng, name, locationName, clockInTime, isLa
         agencyInfoWindow.open(agencyMap);
     }
 }
+
+// ── ENROLLMENT TAB SWITCHING ───────────────────────────────────────────────
+function switchEnrollTab(tab) {
+    const panels = { cmih: 'panel-cmih', promoter: 'panel-promoter', retail: 'panel-retail' };
+    const tabs   = { cmih: 'tab-cmih',   promoter: 'tab-promoter',   retail: 'tab-retail' };
+    const colors = { cmih: '#0055d4', promoter: '#7c3aed', retail: '#0aa777' };
+
+    Object.keys(panels).forEach(key => {
+        document.getElementById(panels[key]).style.display = key === tab ? 'block' : 'none';
+        const tabEl = document.getElementById(tabs[key]);
+        if (key === tab) {
+            tabEl.style.borderBottomColor = colors[key];
+            tabEl.style.color = '#171115';
+        } else {
+            tabEl.style.borderBottomColor = 'transparent';
+            tabEl.style.color = '#8b747a';
+        }
+    });
+}
+
+// ── VENUE MODAL ────────────────────────────────────────────────────────────
+function openVenueModal(assignmentId, staffName, currentVenue) {
+    const modal = document.getElementById('venueModal');
+    const form  = document.getElementById('venueModalForm');
+    document.getElementById('venueModalSubtitle').textContent =
+        'Changing venue for: ' + staffName + ' (current: ' + (currentVenue || '—') + ')';
+    form.action = '/brands/{{ $brandKey }}/staff/' + assignmentId + '/venue';
+    document.getElementById('venue_modal_location').value = '';
+    modal.style.display = 'flex';
+
+    // Lazily init autocomplete on modal input
+    if (!window._venueModalAcInited && typeof google !== 'undefined' && google.maps && google.maps.places) {
+        const el = document.getElementById('venue_modal_location');
+        const ac = new google.maps.places.Autocomplete(el, { types: ['establishment', 'geocode'] });
+        ac.addListener('place_changed', function() {
+            const place = ac.getPlace();
+            if (place.geometry) {
+                document.getElementById('venue_modal_lat').value = place.geometry.location.lat();
+                document.getElementById('venue_modal_lng').value = place.geometry.location.lng();
+                document.getElementById('venue_modal_address').value = place.formatted_address || place.name;
+            }
+        });
+        window._venueModalAcInited = true;
+    }
+}
+
+function closeVenueModal() {
+    document.getElementById('venueModal').style.display = 'none';
+}
+
+// ── VENUE HISTORY MODAL ────────────────────────────────────────────────────
+async function openHistoryModal(assignmentId, staffName) {
+    const modal = document.getElementById('historyModal');
+    const content = document.getElementById('historyModalContent');
+    document.getElementById('historyModalSubtitle').textContent = 'Complete venue location history for: ' + staffName;
+    content.innerHTML = '<div style="text-align:center; padding:30px; color:#8b747a;">Loading history…</div>';
+    modal.style.display = 'flex';
+
+    try {
+        const response = await fetch('/brands/{{ $brandKey }}/staff/' + assignmentId + '/history', {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        const data = await response.json();
+        if (!data.history || data.history.length === 0) {
+            content.innerHTML = '<div style="text-align:center; padding:30px; color:#8b747a;">No venue history found.</div>';
+            return;
+        }
+        content.innerHTML = data.history.map((h, i) => `
+            <div style="background:${h.is_current ? '#f0f9ff' : '#fcf8f9'}; border:1px solid ${h.is_current ? '#0055d4' : '#e4dadd'}; border-radius:10px; padding:14px; position:relative;">
+                ${h.is_current ? '<span style="position:absolute; top:10px; right:12px; background:#0055d4; color:#fff; padding:2px 8px; border-radius:10px; font-size:9px; font-weight:800;">CURRENT</span>' : ''}
+                <div style="font-weight:800; font-size:13px; color:#171115; margin-bottom:3px;">
+                    ${i + 1}. 📍 ${h.venue || '—'}
+                </div>
+                ${h.address ? `<div style="font-size:11px; color:#8b747a; margin-bottom:5px;">${h.address}</div>` : ''}
+                <div style="display:flex; gap:16px; flex-wrap:wrap; font-size:11px; color:#8b747a;">
+                    <span>🕐 Shift: ${h.shift}</span>
+                    <span>📅 Assigned: ${h.assigned_at}</span>
+                    <span>👤 By: ${h.assigned_by}</span>
+                    ${h.changed_reason && !h.is_current ? `<span>🔄 Reason: ${h.changed_reason}</span>` : ''}
+                </div>
+            </div>
+        `).join('');
+    } catch(e) {
+        content.innerHTML = '<div style="text-align:center; padding:30px; color:#ef4444;">Failed to load history. Please try again.</div>';
+    }
+}
+
+function closeHistoryModal() {
+    document.getElementById('historyModal').style.display = 'none';
+}
+
+// Close modals on backdrop click
+document.addEventListener('DOMContentLoaded', function() {
+    ['venueModal', 'historyModal'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('click', function(e) {
+            if (e.target === el) el.style.display = 'none';
+        });
+    });
+});
 </script>
 @endpush
+

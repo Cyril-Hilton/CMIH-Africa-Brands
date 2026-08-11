@@ -21,7 +21,7 @@ class DatabaseSeeder extends Seeder
     {
         $rawPassword = env('SUPERADMIN_PASSWORD', 'Concepts@MIH25');
 
-        User::updateOrCreate(
+        $superadmin = User::updateOrCreate(
             ['email' => 'superadmin@cmih.africa'],
             [
                 'name' => 'Super Admin',
@@ -33,6 +33,29 @@ class DatabaseSeeder extends Seeder
                 'must_reset_password' => false,
             ]
         );
+
+        // Assign default geofenced location for Super Admin to Concepts Make It Happen, Haatso / North Legon
+        $brands = \App\Models\Brand::all();
+        foreach ($brands as $b) {
+            \App\Models\BrandStaffAssignment::updateOrCreate(
+                [
+                    'brand_id' => $b->id,
+                    'user_id' => $superadmin->id,
+                ],
+                [
+                    'role' => 'brand_admin',
+                    'assigned_location' => 'Concepts Make It Happen (No. 7 Affum Street, North Legon, Haatso)',
+                    'assigned_address' => 'No. 7 Affum Street, North Legon, Haatso, Accra',
+                    'assigned_latitude' => 5.673841,
+                    'assigned_longitude' => -0.198322,
+                    'shift_start_time' => '08:30',
+                    'shift_end_time' => '17:00',
+                    'grace_period_minutes' => 10,
+                    'lateness_deduction_amount' => 20.00,
+                    'is_active' => true,
+                ]
+            );
+        }
 
         $depts = [
             'hr_admin'            => 'HR & Admin Staff',

@@ -74,8 +74,8 @@
 
             <!-- Live 300m Geofenced Clock-In Widget for Retail Personnel -->
             @php
-                $assignedVenue = $myStaffAssignment?->assigned_location ?: ($activation?->locations[0]['name'] ?? 'Shoprite - Accra Mall');
-                $assignedAddr = $myStaffAssignment?->assigned_address ?: 'Accra Mall, Tetteh Quarshie Interchange';
+                $assignedVenue = $myStaffAssignment?->assigned_location ?: ($activation?->locations[0]['name'] ?? 'Concepts Make It Happen (No. 7 Affum Street, North Legon, Haatso)');
+                $assignedAddr = $myStaffAssignment?->assigned_address ?: 'No. 7 Affum Street, North Legon, Haatso, Accra';
                 $shiftStart = $myStaffAssignment?->shift_start_time ?: '08:30';
                 $shiftEnd = $myStaffAssignment?->shift_end_time ?: '17:00';
                 $graceMins = $myStaffAssignment?->grace_period_minutes ?: 10;

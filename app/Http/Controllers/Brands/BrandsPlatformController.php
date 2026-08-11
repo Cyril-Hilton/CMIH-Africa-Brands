@@ -215,13 +215,22 @@ class BrandsPlatformController extends Controller
         $assignedStaff = $brand->staffAssignments()
             ->with(['user', 'assigner'])
             ->where('is_active', true)
+            ->where('is_current_venue', true)
             ->latest()
             ->get();
+
+        // Separate enrolled staff by type for the roster
+        $enrolledPromoters   = $assignedStaff->where('enrollment_type', BrandStaffAssignment::TYPE_PROMOTER);
+        $enrolledRetail      = $assignedStaff->where('enrollment_type', BrandStaffAssignment::TYPE_RETAIL_TERMINAL);
+        $enrolledAgencyStaff = $assignedStaff->whereIn('enrollment_type', [BrandStaffAssignment::TYPE_AGENCY_STAFF, null]);
+
+        // Users already enrolled for this brand (for the CMIH import tab — exclude from dropdown)
+        $alreadyEnrolledUserIds = $assignedStaff->pluck('user_id')->filter()->values()->toArray();
 
         $availableUsers = User::query()
             ->where('status', 'active')
             ->orderBy('name')
-            ->get(['id', 'name', 'email', 'staff_id_number', 'access_role']);
+            ->get(['id', 'name', 'email', 'staff_id_number', 'access_role', 'department']);
 
         $todayAttendances = \App\Models\BrandStaffAttendance::where('brand_id', $brand->id)
             ->with('user')
@@ -248,6 +257,10 @@ class BrandsPlatformController extends Controller
             'reportImages',
             'clientDurations',
             'assignedStaff',
+            'enrolledPromoters',
+            'enrolledRetail',
+            'enrolledAgencyStaff',
+            'alreadyEnrolledUserIds',
             'availableUsers',
             'todayAttendances'
         ));
@@ -2006,67 +2019,237 @@ class BrandsPlatformController extends Controller
         );
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // STAFF ENROLLMENT
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Import a CMIH-portal user and assign them to this brand (source: cmih_api).
+     */
     public function storeAgencyTeamMember(Request $request, string $brand): RedirectResponse
     {
         $brand = $this->resolveBrand($brand);
         $this->guardCanManageTeam($request->user(), $brand);
 
         $validated = $request->validate([
-            'user_id' => ['required', 'integer', 'exists:users,id'],
-            'role' => ['required', Rule::in(BrandStaffAssignment::ROLES)],
-            'assigned_location' => ['nullable', 'string', 'max:255'],
-            'assigned_address' => ['nullable', 'string', 'max:255'],
-            'assigned_latitude' => ['nullable', 'numeric', 'between:-90,90'],
-            'assigned_longitude' => ['nullable', 'numeric', 'between:-180,180'],
-            'shift_start_time' => ['nullable', 'string', 'max:10'],
-            'shift_end_time' => ['nullable', 'string', 'max:10'],
-            'grace_period_minutes' => ['nullable', 'integer', 'min:0', 'max:120'],
+            'user_id'                   => ['required', 'integer', 'exists:users,id'],
+            'role'                      => ['required', Rule::in(BrandStaffAssignment::ROLES)],
+            'assigned_location'         => ['nullable', 'string', 'max:255'],
+            'assigned_address'          => ['nullable', 'string', 'max:255'],
+            'assigned_latitude'         => ['nullable', 'numeric', 'between:-90,90'],
+            'assigned_longitude'        => ['nullable', 'numeric', 'between:-180,180'],
+            'shift_start_time'          => ['nullable', 'string', 'max:10'],
+            'shift_end_time'            => ['nullable', 'string', 'max:10'],
+            'grace_period_minutes'      => ['nullable', 'integer', 'min:0', 'max:120'],
             'lateness_deduction_amount' => ['nullable', 'numeric', 'min:0'],
-            'can_manage_team' => ['nullable', 'boolean'],
-            'can_record_activity' => ['nullable', 'boolean'],
-            'can_export' => ['nullable', 'boolean'],
-            'notes' => ['nullable', 'string', 'max:1000'],
+            'can_manage_team'           => ['nullable', 'boolean'],
+            'can_record_activity'       => ['nullable', 'boolean'],
+            'can_export'                => ['nullable', 'boolean'],
+            'notes'                     => ['nullable', 'string', 'max:1000'],
         ]);
 
         $user = User::findOrFail($validated['user_id']);
-
         $permissions = [
-            'can_manage_team' => (bool) ($request->input('can_manage_team', 0)),
-            'can_record_activity' => (bool) ($request->input('can_record_activity', 1)),
-            'can_export' => (bool) ($request->input('can_export', 0)),
+            'can_manage_team'    => (bool) ($request->input('can_manage_team', 0)),
+            'can_record_activity'=> (bool) ($request->input('can_record_activity', 1)),
+            'can_export'         => (bool) ($request->input('can_export', 0)),
         ];
 
-        BrandStaffAssignment::updateOrCreate(
-            [
-                'brand_id' => $brand->id,
-                'user_id' => $user->id,
-            ],
-            [
-                'role' => $validated['role'],
-                'permissions' => $permissions,
-                'assigned_location' => $validated['assigned_location'] ?? 'Shoprite - Accra Mall',
-                'assigned_address' => $validated['assigned_address'] ?? 'Accra Mall, Tetteh Quarshie Interchange',
-                'assigned_latitude' => isset($validated['assigned_latitude']) ? (float)$validated['assigned_latitude'] : 5.6225,
-                'assigned_longitude' => isset($validated['assigned_longitude']) ? (float)$validated['assigned_longitude'] : -0.1729,
-                'shift_start_time' => $validated['shift_start_time'] ?? '08:30',
-                'shift_end_time' => $validated['shift_end_time'] ?? '17:00',
-                'grace_period_minutes' => isset($validated['grace_period_minutes']) ? (int)$validated['grace_period_minutes'] : 10,
-                'lateness_deduction_amount' => isset($validated['lateness_deduction_amount']) ? (float)$validated['lateness_deduction_amount'] : 20.00,
-                'is_active' => true,
-                'notes' => $validated['notes'] ?? null,
-                'assigned_by' => $request->user()->id,
-            ]
-        );
+        // Archive any existing current-venue row for this user+brand
+        $existing = BrandStaffAssignment::where('brand_id', $brand->id)
+            ->where('user_id', $user->id)
+            ->where('is_current_venue', true)
+            ->first();
+
+        if ($existing) {
+            $existing->update(['is_current_venue' => false, 'is_active' => false, 'venue_changed_reason' => 'Reassigned']);
+        }
+
+        BrandStaffAssignment::create([
+            'brand_id'                  => $brand->id,
+            'user_id'                   => $user->id,
+            'role'                      => $validated['role'],
+            'enrollment_source'         => BrandStaffAssignment::SOURCE_CMIH_API,
+            'enrollment_type'           => BrandStaffAssignment::TYPE_AGENCY_STAFF,
+            'permissions'               => $permissions,
+            'assigned_location'         => $validated['assigned_location'] ?? 'Concepts Make It Happen (No. 7 Affum Street, North Legon, Haatso)',
+            'assigned_address'          => $validated['assigned_address'] ?? 'No. 7 Affum Street, North Legon, Haatso, Accra',
+            'assigned_latitude'         => isset($validated['assigned_latitude']) ? (float) $validated['assigned_latitude'] : 5.673841,
+            'assigned_longitude'        => isset($validated['assigned_longitude']) ? (float) $validated['assigned_longitude'] : -0.198322,
+            'shift_start_time'          => $validated['shift_start_time'] ?? '08:30',
+            'shift_end_time'            => $validated['shift_end_time'] ?? '17:00',
+            'grace_period_minutes'      => isset($validated['grace_period_minutes']) ? (int) $validated['grace_period_minutes'] : 10,
+            'lateness_deduction_amount' => isset($validated['lateness_deduction_amount']) ? (float) $validated['lateness_deduction_amount'] : 20.00,
+            'is_active'                 => true,
+            'is_current_venue'          => true,
+            'venue_assigned_at'         => now(),
+            'notes'                     => $validated['notes'] ?? null,
+            'assigned_by'               => $request->user()->id,
+        ]);
 
         $this->logBrandActivity($request, $brand, null, 'agency_team_member_added', 'agency', [
             'staff_id' => $user->id,
-            'role' => $validated['role'],
-            'location' => $validated['assigned_location'] ?? 'Shoprite - Accra Mall',
+            'role'     => $validated['role'],
+            'location' => $validated['assigned_location'] ?? 'Concepts Make It Happen',
+            'source'   => 'cmih_api',
         ]);
 
-        return back()->with('status', "Brand privileges & geofenced venue assigned to {$user->name}.");
+        return back()->with('status', "✅ {$user->name} imported from CMIH portal and assigned to {$brand->name}.");
     }
 
+    /**
+     * Manually enroll an external promoter or retail terminal staff member.
+     */
+    public function enrollStaff(Request $request, string $brand): RedirectResponse
+    {
+        $brand = $this->resolveBrand($brand);
+        $this->guardCanManageTeam($request->user(), $brand);
+
+        $enrollmentType = $request->input('enrollment_type', BrandStaffAssignment::TYPE_PROMOTER);
+
+        $validated = $request->validate([
+            'enrollment_type'           => ['required', Rule::in(BrandStaffAssignment::ENROLLMENT_TYPES)],
+            'external_name'             => ['required', 'string', 'max:120'],
+            'external_phone'            => ['required', 'string', 'max:30'],
+            'external_email'            => ['nullable', 'email', 'max:120'],
+            'external_id_type'          => ['required', Rule::in(BrandStaffAssignment::ID_TYPES)],
+            'external_id_number'        => ['required', 'string', 'max:80'],
+            'photo'                     => ['nullable', 'image', 'max:3072'],
+            'assigned_location'         => ['required', 'string', 'max:255'],
+            'assigned_address'          => ['nullable', 'string', 'max:255'],
+            'assigned_latitude'         => ['nullable', 'numeric', 'between:-90,90'],
+            'assigned_longitude'        => ['nullable', 'numeric', 'between:-180,180'],
+            'shift_start_time'          => ['nullable', 'string', 'max:10'],
+            'shift_end_time'            => ['nullable', 'string', 'max:10'],
+            'grace_period_minutes'      => ['nullable', 'integer', 'min:0', 'max:120'],
+            'lateness_deduction_amount' => ['nullable', 'numeric', 'min:0'],
+            'notes'                     => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $role = match ($enrollmentType) {
+            BrandStaffAssignment::TYPE_RETAIL_TERMINAL => BrandStaffAssignment::ROLE_RETAIL,
+            default                                    => BrandStaffAssignment::ROLE_PROMOTER,
+        };
+
+        // Handle photo upload
+        $photoPath = null;
+        if ($request->hasFile('photo')) {
+            $photoPath = $request->file('photo')->store('brand-staff-photos', 'public');
+        }
+
+        BrandStaffAssignment::create([
+            'brand_id'                  => $brand->id,
+            'user_id'                   => null, // external — no CMIH account
+            'role'                      => $role,
+            'enrollment_source'         => BrandStaffAssignment::SOURCE_MANUAL,
+            'enrollment_type'           => $enrollmentType,
+            'external_name'             => $validated['external_name'],
+            'external_phone'            => $validated['external_phone'],
+            'external_email'            => $validated['external_email'] ?? null,
+            'external_id_type'          => $validated['external_id_type'],
+            'external_id_number'        => $validated['external_id_number'],
+            'photo_path'                => $photoPath,
+            'permissions'               => ['can_record_activity' => true, 'can_manage_team' => false, 'can_export' => false],
+            'assigned_location'         => $validated['assigned_location'],
+            'assigned_address'          => $validated['assigned_address'] ?? null,
+            'assigned_latitude'         => isset($validated['assigned_latitude']) ? (float) $validated['assigned_latitude'] : 5.673841,
+            'assigned_longitude'        => isset($validated['assigned_longitude']) ? (float) $validated['assigned_longitude'] : -0.198322,
+            'shift_start_time'          => $validated['shift_start_time'] ?? '08:30',
+            'shift_end_time'            => $validated['shift_end_time'] ?? '17:00',
+            'grace_period_minutes'      => isset($validated['grace_period_minutes']) ? (int) $validated['grace_period_minutes'] : 10,
+            'lateness_deduction_amount' => isset($validated['lateness_deduction_amount']) ? (float) $validated['lateness_deduction_amount'] : 20.00,
+            'is_active'                 => true,
+            'is_current_venue'          => true,
+            'venue_assigned_at'         => now(),
+            'notes'                     => $validated['notes'] ?? null,
+            'assigned_by'               => $request->user()->id,
+        ]);
+
+        $typeLabel = $enrollmentType === BrandStaffAssignment::TYPE_RETAIL_TERMINAL ? 'Retail Terminal Cashier' : 'Promoter';
+        return back()->with('status', "✅ {$validated['external_name']} enrolled as {$typeLabel} for {$brand->name} at {$validated['assigned_location']}.");
+    }
+
+    /**
+     * Change a staff member's venue (archives old, creates new — preserves history).
+     */
+    public function updateStaffVenue(Request $request, string $brand, BrandStaffAssignment $assignment): RedirectResponse
+    {
+        $brand = $this->resolveBrand($brand);
+        $this->guardCanManageTeam($request->user(), $brand);
+        abort_unless((int) $assignment->brand_id === (int) $brand->id, 404);
+
+        $validated = $request->validate([
+            'assigned_location'         => ['required', 'string', 'max:255'],
+            'assigned_address'          => ['nullable', 'string', 'max:255'],
+            'assigned_latitude'         => ['nullable', 'numeric', 'between:-90,90'],
+            'assigned_longitude'        => ['nullable', 'numeric', 'between:-180,180'],
+            'shift_start_time'          => ['nullable', 'string', 'max:10'],
+            'shift_end_time'            => ['nullable', 'string', 'max:10'],
+            'grace_period_minutes'      => ['nullable', 'integer', 'min:0', 'max:120'],
+            'lateness_deduction_amount' => ['nullable', 'numeric', 'min:0'],
+            'venue_changed_reason'      => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $newAssignment = $assignment->changeVenueTo(
+            venueData: [
+                'assigned_location'         => $validated['assigned_location'],
+                'assigned_address'          => $validated['assigned_address'] ?? null,
+                'assigned_latitude'         => isset($validated['assigned_latitude']) ? (float) $validated['assigned_latitude'] : $assignment->assigned_latitude,
+                'assigned_longitude'        => isset($validated['assigned_longitude']) ? (float) $validated['assigned_longitude'] : $assignment->assigned_longitude,
+                'shift_start_time'          => $validated['shift_start_time'] ?? $assignment->shift_start_time,
+                'shift_end_time'            => $validated['shift_end_time'] ?? $assignment->shift_end_time,
+                'grace_period_minutes'      => isset($validated['grace_period_minutes']) ? (int) $validated['grace_period_minutes'] : $assignment->grace_period_minutes,
+                'lateness_deduction_amount' => isset($validated['lateness_deduction_amount']) ? (float) $validated['lateness_deduction_amount'] : $assignment->lateness_deduction_amount,
+            ],
+            reason: $validated['venue_changed_reason'] ?? 'Venue updated',
+            changedByUserId: $request->user()->id,
+        );
+
+        return back()->with('status', "📍 Venue updated to {$validated['assigned_location']} for {$assignment->display_name}. Previous venue archived in location history.");
+    }
+
+    /**
+     * Return venue history for a staff member as JSON (used by history modal).
+     */
+    public function staffVenueHistory(Request $request, string $brand, BrandStaffAssignment $assignment): \Illuminate\Http\JsonResponse
+    {
+        $brand = $this->resolveBrand($brand);
+        $this->guardCanManageTeam($request->user(), $brand);
+        abort_unless((int) $assignment->brand_id === (int) $brand->id, 404);
+
+        // Get all rows for this user+brand (all venues), ordered oldest first
+        $history = BrandStaffAssignment::where('brand_id', $brand->id)
+            ->where(function ($q) use ($assignment) {
+                if ($assignment->user_id) {
+                    $q->where('user_id', $assignment->user_id);
+                } else {
+                    // Manual enrollees matched by external_phone since they have no user_id
+                    $q->where('external_phone', $assignment->external_phone)
+                      ->whereNull('user_id');
+                }
+            })
+            ->with('assigner:id,name')
+            ->orderBy('venue_assigned_at')
+            ->get()
+            ->map(fn ($a) => [
+                'id'                => $a->id,
+                'venue'             => $a->assigned_location,
+                'address'           => $a->assigned_address,
+                'lat'               => $a->assigned_latitude,
+                'lng'               => $a->assigned_longitude,
+                'shift'             => $a->shift_start_time . ' – ' . $a->shift_end_time,
+                'assigned_at'       => $a->venue_assigned_at?->format('d M Y, h:i A') ?? $a->created_at->format('d M Y, h:i A'),
+                'is_current'        => (bool) $a->is_current_venue,
+                'changed_reason'    => $a->venue_changed_reason,
+                'assigned_by'       => $a->assigner?->name ?? 'System',
+            ]);
+
+        return response()->json(['history' => $history]);
+    }
+
+    /**
+     * Archive a manually enrolled or CMIH staff member's brand access.
+     */
     public function archiveAgencyTeamMember(Request $request, string $brand, BrandStaffAssignment $assignment): RedirectResponse
     {
         $brand = $this->resolveBrand($brand);
@@ -2095,9 +2278,9 @@ class BrandsPlatformController extends Controller
             ->where('is_active', true)
             ->first();
 
-        $assignedName = $assignment?->assigned_location ?: ($activation?->locations[0]['name'] ?? 'Shoprite - Accra Mall');
-        $assignedLat = (float) ($assignment?->assigned_latitude ?: ($activation?->locations[0]['latitude'] ?? 5.6225));
-        $assignedLng = (float) ($assignment?->assigned_longitude ?: ($activation?->locations[0]['longitude'] ?? -0.1729));
+        $assignedName = $assignment?->assigned_location ?: ($activation?->locations[0]['name'] ?? 'Concepts Make It Happen (No. 7 Affum Street, North Legon, Haatso)');
+        $assignedLat = (float) ($assignment?->assigned_latitude ?: ($activation?->locations[0]['latitude'] ?? 5.673841));
+        $assignedLng = (float) ($assignment?->assigned_longitude ?: ($activation?->locations[0]['longitude'] ?? -0.198322));
 
         $userLat = (float) $validated['latitude'];
         $userLng = (float) $validated['longitude'];
@@ -2187,8 +2370,8 @@ class BrandsPlatformController extends Controller
             return back()->withErrors(['attendance' => 'No active shift clock-in found.']);
         }
 
-        $assignedLat = (float) ($attendance->assigned_latitude ?: 5.6225);
-        $assignedLng = (float) ($attendance->assigned_longitude ?: -0.1729);
+        $assignedLat = (float) ($attendance->assigned_latitude ?: 5.673841);
+        $assignedLng = (float) ($attendance->assigned_longitude ?: -0.198322);
         $userLat = (float) $validated['latitude'];
         $userLng = (float) $validated['longitude'];
 
