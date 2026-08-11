@@ -497,6 +497,45 @@
     const refInput = document.querySelector('input[name="reference_code"]');
     let mediaStream = null;
     let scanInterval = null;
+    let zxingControls = null;
+    let zxingReader = null;
+    let zxingLoadingPromise = null;
+
+    const setScanStatus = (message, tone = 'info') => {
+        if (!statusMsg) return;
+        const colors = {
+            info: 'var(--bs)',
+            success: '#0a9d70',
+            warning: '#f59e0b',
+            error: '#ef4444'
+        };
+        statusMsg.textContent = message;
+        statusMsg.style.color = colors[tone] || colors.info;
+    };
+
+    const showScanner = (active) => {
+        if (video) video.style.display = active ? 'block' : 'none';
+        if (overlay) overlay.style.display = active ? 'block' : 'none';
+        if (placeholder) placeholder.style.display = active ? 'none' : 'flex';
+        if (btnStart) btnStart.style.display = active ? 'none' : 'inline-block';
+        if (btnStop) btnStop.style.display = active ? 'inline-block' : 'none';
+    };
+
+    const loadZxingBrowser = () => {
+        if (window.ZXingBrowser) return Promise.resolve(window.ZXingBrowser);
+        if (zxingLoadingPromise) return zxingLoadingPromise;
+
+        zxingLoadingPromise = new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/@zxing/browser@0.1.5';
+            script.async = true;
+            script.onload = () => window.ZXingBrowser ? resolve(window.ZXingBrowser) : reject(new Error('ZXing scanner failed to load.'));
+            script.onerror = () => reject(new Error('Could not load the barcode scanner library.'));
+            document.head.appendChild(script);
+        });
+
+        return zxingLoadingPromise;
+    };
 
     const playBeep = () => {
         try {
@@ -525,28 +564,76 @@
             statusMsg.textContent = '✓ Scanned Barcode: ' + code;
             statusMsg.style.color = '#0a9d70';
         }
+        setScanStatus('Scanned barcode: ' + code, 'success');
         stopScanner();
     };
 
+    const explainCameraError = (err) => {
+        if (!window.isSecureContext) {
+            return 'Camera scanning requires HTTPS. Open the secure brands portal URL and try again.';
+        }
+
+        if (err && (err.name === 'NotAllowedError' || err.name === 'SecurityError')) {
+            return 'Camera access is blocked. Allow camera permission for this site in your browser settings, then try again.';
+        }
+
+        if (err && err.name === 'NotFoundError') {
+            return 'No camera was found on this device. You can still type the reward code manually.';
+        }
+
+        return 'Could not access camera. You can still type the reward code manually.';
+    };
+
     const startScanner = async () => {
+        stopScanner();
+
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            alert('Camera access is not supported on this browser or environment.');
+            setScanStatus('Camera access is not supported on this browser. Type the reward code manually.', 'warning');
+            return;
+        }
+
+        if (!window.isSecureContext) {
+            setScanStatus('Camera scanning requires HTTPS. Open the secure brands portal URL and try again.', 'error');
             return;
         }
 
         try {
+            setScanStatus('Requesting camera permission...', 'info');
+            showScanner(true);
+
+            if (!('BarcodeDetector' in window)) {
+                const ZXing = await loadZxingBrowser();
+                zxingReader = new ZXing.BrowserMultiFormatReader();
+                setScanStatus('Scanner ready. Align barcode inside the viewfinder...', 'info');
+                zxingControls = await zxingReader.decodeFromConstraints(
+                    {
+                        video: {
+                            facingMode: { ideal: 'environment' },
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 }
+                        }
+                    },
+                    video,
+                    result => {
+                        if (result) {
+                            handleDetectedCode(typeof result.getText === 'function' ? result.getText() : String(result.text || result));
+                        }
+                    }
+                );
+                return;
+            }
+
             mediaStream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: { ideal: 'environment' } }
+                video: {
+                    facingMode: { ideal: 'environment' },
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                }
             });
             video.srcObject = mediaStream;
             await video.play();
 
-            video.style.display = 'block';
-            overlay.style.display = 'block';
-            placeholder.style.display = 'none';
-            btnStart.style.display = 'none';
-            btnStop.style.display = 'inline-block';
-            if (statusMsg) statusMsg.textContent = 'Align barcode inside viewfinder...';
+            setScanStatus('Align barcode inside the viewfinder...', 'info');
 
             if ('BarcodeDetector' in window) {
                 const barcodeDetector = new BarcodeDetector({
@@ -566,21 +653,30 @@
                 if (statusMsg) statusMsg.textContent = 'Camera active. Position barcode in frame or type code below.';
             }
         } catch (err) {
-            alert('Could not access camera: ' + err.message);
+            stopScanner();
+            setScanStatus(explainCameraError(err), 'error');
         }
     };
 
     const stopScanner = () => {
         if (scanInterval) clearInterval(scanInterval);
+        scanInterval = null;
+        if (zxingControls && typeof zxingControls.stop === 'function') {
+            try { zxingControls.stop(); } catch (e) {}
+        }
+        zxingControls = null;
+        if (zxingReader && typeof zxingReader.reset === 'function') {
+            try { zxingReader.reset(); } catch (e) {}
+        }
         if (mediaStream) {
             mediaStream.getTracks().forEach(track => track.stop());
             mediaStream = null;
         }
-        video.style.display = 'none';
-        overlay.style.display = 'none';
-        placeholder.style.display = 'flex';
-        btnStart.style.display = 'inline-block';
-        btnStop.style.display = 'none';
+        if (video && video.srcObject) {
+            video.srcObject.getTracks().forEach(track => track.stop());
+            video.srcObject = null;
+        }
+        showScanner(false);
     };
 
     btnStart?.addEventListener('click', startScanner);

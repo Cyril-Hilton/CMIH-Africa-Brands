@@ -29,6 +29,21 @@ class BrandsPlatformTest extends TestCase
         $response->assertSee('OMO');
     }
 
+    public function test_brand_security_headers_allow_camera_and_google_maps_sources(): void
+    {
+        config(['cmih.app_kind' => 'brands']);
+
+        $response = $this->get('/');
+
+        $response->assertOk();
+        $this->assertStringContainsString('camera=(self)', $response->headers->get('Permissions-Policy'));
+
+        $csp = $response->headers->get('Content-Security-Policy-Report-Only');
+        $this->assertStringContainsString('script-src-elem', $csp);
+        $this->assertStringContainsString('https://maps.googleapis.com', $csp);
+        $this->assertStringContainsString('https://unpkg.com', $csp);
+    }
+
     public function test_super_admin_can_assign_internal_staff_to_a_brand(): void
     {
         $admin = User::factory()->create([

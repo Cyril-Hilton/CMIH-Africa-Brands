@@ -1673,8 +1673,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // 2. Initialise Charts
     initAgencyCharts();
 
-    // 3. Initialise Google Map if element exists
-    initAgencyMap();
+    // 3. Initialise Google Map once the async Maps script is ready
+    initAgencyMapWhenReady();
 });
 
 // ── TAB SWITCHING ─────────────────────────────────────────────────────────
@@ -1695,7 +1695,7 @@ function switchAgencyTab(tabId) {
     if (nav) nav.classList.add('active');
 
     // Re-render map when overview tab is made active
-    if (tabId === 'overview' && agencyMap) {
+    if (tabId === 'overview' && agencyMap && typeof google !== 'undefined' && google.maps) {
         setTimeout(() => google.maps.event.trigger(agencyMap, 'resize'), 100);
     }
 }
@@ -1783,9 +1783,19 @@ function initAgencyCharts() {
 }
 
 // ── GOOGLE MAP & AUTCOMPLETE ──────────────────────────────────────────────
+function initAgencyMapWhenReady() {
+    if (typeof google !== 'undefined' && google.maps) {
+        initAgencyMap();
+        return;
+    }
+
+    window.addEventListener('brands:google-maps-ready', initAgencyMap, { once: true });
+}
+
 function initAgencyMap() {
     const mapEl = document.getElementById('agencyStaffMap');
     if (!mapEl) return;
+    if (agencyMap || typeof google === 'undefined' || !google.maps) return;
 
     agencyMap = new google.maps.Map(mapEl, {
         center: { lat: 5.673841, lng: -0.198322 },

@@ -64,28 +64,33 @@
             @endif
         </div>
 
-        @if(request()->routeIs('brands-platform.*'))
-            <script src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google.maps_api_key') ?? env('GOOGLE_MAPS_API_KEY') }}&libraries=places"></script>
+        @php
+            $brandsGoogleMapsKey = config('services.google.maps_api_key') ?? env('GOOGLE_MAPS_API_KEY');
+            $shouldLoadBrandsGoogleMaps = request()->routeIs('brands-platform.agency') && filled($brandsGoogleMapsKey);
+        @endphp
+
+        @if($shouldLoadBrandsGoogleMaps)
             <script>
-                document.addEventListener('DOMContentLoaded', () => {
+                window.initBrandsGooglePlacesAutocomplete = function () {
                     const inputs = document.querySelectorAll('input[name="location"], input[id="location"], .google-autocomplete');
                     inputs.forEach(input => {
+                        if (input.dataset.googlePlacesReady === '1') return;
                         if (typeof google !== 'undefined' && google.maps && google.maps.places) {
-                            const autocomplete = new google.maps.places.Autocomplete(input, {
-                                types: ['geocode', 'establishment']
-                            });
-                            input.addEventListener('keydown', (e) => {
-                                if (e.key === 'Enter') {
-                                    const pacContainer = document.querySelector('.pac-container');
-                                    if (pacContainer && pacContainer.style.display !== 'none') {
-                                        e.preventDefault();
-                                    }
+                            input.dataset.googlePlacesReady = '1';
+                            new google.maps.places.Autocomplete(input, { types: ['geocode', 'establishment'] });
+                            input.addEventListener('keydown', event => {
+                                if (event.key !== 'Enter') return;
+                                const pacContainer = document.querySelector('.pac-container');
+                                if (pacContainer && pacContainer.style.display !== 'none') {
+                                    event.preventDefault();
                                 }
                             });
                         }
                     });
-                });
+                    window.dispatchEvent(new CustomEvent('brands:google-maps-ready'));
+                };
             </script>
+            <script async defer src="https://maps.googleapis.com/maps/api/js?key={{ $brandsGoogleMapsKey }}&libraries=places&loading=async&callback=initBrandsGooglePlacesAutocomplete"></script>
         @endif
 
         @stack('scripts')

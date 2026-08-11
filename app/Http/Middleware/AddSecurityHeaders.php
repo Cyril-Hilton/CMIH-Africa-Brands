@@ -15,12 +15,22 @@ class AddSecurityHeaders
         $response->headers->set('X-Content-Type-Options', 'nosniff');
         $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
-        $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self)');
+        $response->headers->set('Permissions-Policy', 'camera=(self), microphone=(), geolocation=(self)');
         $response->headers->set('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
         $response->headers->set('X-Permitted-Cross-Domain-Policies', 'none');
+        $scriptSources = "'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com https://maps.googleapis.com https://maps.gstatic.com https://www.googletagmanager.com";
         $response->headers->set(
             'Content-Security-Policy-Report-Only',
-            "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self' https: wss:; media-src 'self' data: blob: https:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
+            "default-src 'self'; "
+            ."script-src {$scriptSources}; "
+            ."script-src-elem {$scriptSources}; "
+            ."style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://maps.googleapis.com; "
+            ."img-src 'self' data: blob: https: https://maps.googleapis.com https://maps.gstatic.com https://streetviewpixels-pa.googleapis.com; "
+            ."font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
+            ."connect-src 'self' https: wss: https://maps.googleapis.com https://maps.gstatic.com https://www.google-analytics.com https://region1.google-analytics.com; "
+            ."worker-src 'self' blob:; "
+            ."media-src 'self' data: blob: https:; "
+            ."frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
         );
 
         if ($request->isSecure()) {
