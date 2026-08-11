@@ -25,7 +25,7 @@
                 <a href="{{ route('brands-platform.notifications') }}" class="home-admin home-notifications">Brands Notifications</a>
                 <a href="{{ route('brands-platform.admin') }}" class="home-admin">Admin</a>
             @else
-                <a href="{{ route('login') }}" class="home-admin">Admin</a>
+                <a href="{{ route('brands-platform.admin') }}" class="home-admin">Admin</a>
             @endauth
         </div>
     </div>
