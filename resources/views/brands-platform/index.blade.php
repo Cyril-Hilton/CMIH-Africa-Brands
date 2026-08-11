@@ -147,8 +147,9 @@
 
     const visibleCount = () => {
         if (window.matchMedia('(max-width: 620px)').matches) return 1;
-        if (window.matchMedia('(max-width: 1050px)').matches) return 3;
-        return 5;
+        if (window.matchMedia('(max-width: 900px)').matches) return 3;
+        if (window.matchMedia('(max-width: 1200px)').matches) return 5;
+        return 7;
     };
 
     const render = () => {
@@ -159,7 +160,7 @@
             const slot = (cardIndex - index + cards.length) % cards.length;
             const isVisible = slot < visible;
             card.hidden = !isVisible;
-            card.classList.remove('arc-0', 'arc-1', 'arc-2', 'arc-3', 'arc-4');
+            card.classList.remove('arc-0', 'arc-1', 'arc-2', 'arc-3', 'arc-4', 'arc-5', 'arc-6');
             if (isVisible) {
                 card.classList.add(`arc-${slot}`);
             }
