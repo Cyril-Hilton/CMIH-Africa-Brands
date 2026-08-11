@@ -167,7 +167,7 @@ button{cursor:pointer}
 .liquid-grid{
   display:grid !important;
   grid-template-columns:repeat(5,minmax(0,1fr)) !important;
-  gap:20px !important;
+  gap:12px !important;
   align-items:end;
 }
 .liquid-tile {
@@ -176,17 +176,17 @@ button{cursor:pointer}
   transform-origin: 50% 100%;
   transition: transform .35s cubic-bezier(0.25, 1, 0.5, 1), scale .35s cubic-bezier(0.25, 1, 0.5, 1), box-shadow .28s ease, border-color .28s ease;
 }
-.liquid-tile.arc-0 { transform: translateX(58px) translateY(55px) rotate(-10deg); scale: 0.76; z-index: 1; opacity: 0.85; }
-.liquid-tile.arc-1 { transform: translateX(12px) translateY(26px) rotate(-5deg); scale: 0.94; z-index: 3; opacity: 0.96; }
+.liquid-tile.arc-0 { transform: translateX(118px) translateY(55px) rotate(-10deg); scale: 0.78; z-index: 1; opacity: 0.86; }
+.liquid-tile.arc-1 { transform: translateX(24px) translateY(26px) rotate(-5deg); scale: 0.95; z-index: 3; opacity: 0.96; }
 .liquid-tile.arc-2 { transform: translateX(0px) translateY(0px) rotate(0deg); scale: 1.26; z-index: 10; opacity: 1; filter: drop-shadow(0 20px 35px rgba(0,0,0,0.45)); }
-.liquid-tile.arc-3 { transform: translateX(-12px) translateY(26px) rotate(5deg); scale: 0.94; z-index: 3; opacity: 0.96; }
-.liquid-tile.arc-4 { transform: translateX(-58px) translateY(55px) rotate(10deg); scale: 0.76; z-index: 1; opacity: 0.85; }
+.liquid-tile.arc-3 { transform: translateX(-24px) translateY(26px) rotate(5deg); scale: 0.95; z-index: 3; opacity: 0.96; }
+.liquid-tile.arc-4 { transform: translateX(-118px) translateY(55px) rotate(10deg); scale: 0.78; z-index: 1; opacity: 0.86; }
 
-.liquid-tile.arc-0:hover { transform: translateX(58px) translateY(40px) rotate(-10deg); scale: 0.86; z-index: 20; opacity: 1; }
-.liquid-tile.arc-1:hover { transform: translateX(12px) translateY(14px) rotate(-5deg); scale: 1.04; z-index: 20; opacity: 1; }
+.liquid-tile.arc-0:hover { transform: translateX(118px) translateY(40px) rotate(-10deg); scale: 0.88; z-index: 20; opacity: 1; }
+.liquid-tile.arc-1:hover { transform: translateX(24px) translateY(14px) rotate(-5deg); scale: 1.05; z-index: 20; opacity: 1; }
 .liquid-tile.arc-2:hover { transform: translateX(0px) translateY(-8px) rotate(0deg); scale: 1.32; z-index: 20; opacity: 1; }
-.liquid-tile.arc-3:hover { transform: translateX(-12px) translateY(14px) rotate(5deg); scale: 1.04; z-index: 20; opacity: 1; }
-.liquid-tile.arc-4:hover { transform: translateX(-58px) translateY(40px) rotate(10deg); scale: 0.86; z-index: 20; opacity: 1; }
+.liquid-tile.arc-3:hover { transform: translateX(-24px) translateY(14px) rotate(5deg); scale: 1.05; z-index: 20; opacity: 1; }
+.liquid-tile.arc-4:hover { transform: translateX(-118px) translateY(40px) rotate(10deg); scale: 0.88; z-index: 20; opacity: 1; }
 
 .liquid-tile .tile-category{display:none}
 .liquid-tile .tile-bottom small{display:none}
