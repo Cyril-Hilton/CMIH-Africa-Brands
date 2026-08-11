@@ -143,7 +143,8 @@
     const count = document.getElementById('carouselCount');
     const previous = document.querySelector('[data-carousel-prev]');
     const next = document.querySelector('[data-carousel-next]');
-    let index = 0;
+    const rexonaIdx = cards.findIndex(c => (c.getAttribute('href') || '').toLowerCase().includes('rexona') || c.textContent.toLowerCase().includes('rexona'));
+    let index = rexonaIdx >= 0 ? (rexonaIdx - 3 + cards.length) % cards.length : 0;
 
     const visibleCount = () => {
         if (window.matchMedia('(max-width: 620px)').matches) return 1;
@@ -167,7 +168,8 @@
         });
 
         if (count) {
-            count.textContent = `${index + 1} / ${cards.length}`;
+            const centerIdx = (index + 3) % cards.length;
+            count.textContent = `${centerIdx + 1} / ${cards.length}`;
         }
     };
 

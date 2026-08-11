@@ -167,42 +167,44 @@ button{cursor:pointer}
 .liquid-grid{
   display:grid !important;
   grid-template-columns:repeat(7,minmax(0,1fr)) !important;
-  gap:6px !important;
+  gap:4px !important;
   align-items:end;
 }
 .liquid-tile {
   min-width: 0;
-  min-height: 190px;
+  width: 100%;
+  aspect-ratio: 1.40 / 1;
+  border-radius: 18px;
   transform-origin: 50% 100%;
   transition: transform .35s cubic-bezier(0.25, 1, 0.5, 1), scale .35s cubic-bezier(0.25, 1, 0.5, 1), box-shadow .28s ease, border-color .28s ease;
 }
 
-/* 7-Card Arc Perspective Rules */
-.liquid-tile.arc-0 { transform: translateX(185px) translateY(80px) rotate(-14deg); scale: 0.60; z-index: 1; opacity: 0.72; }
-.liquid-tile.arc-1 { transform: translateX(118px) translateY(52px) rotate(-9.5deg); scale: 0.78; z-index: 3; opacity: 0.86; }
-.liquid-tile.arc-2 { transform: translateX(24px) translateY(24px) rotate(-4.5deg); scale: 0.95; z-index: 5; opacity: 0.96; }
+/* 7-Card Arc Perspective Rules - Closed Gap & Landscape Rectangular Cards */
+.liquid-tile.arc-0 { transform: translateX(255px) translateY(72px) rotate(-14deg); scale: 0.62; z-index: 1; opacity: 0.76; }
+.liquid-tile.arc-1 { transform: translateX(155px) translateY(46px) rotate(-9.5deg); scale: 0.80; z-index: 3; opacity: 0.88; }
+.liquid-tile.arc-2 { transform: translateX(40px) translateY(20px) rotate(-4.5deg); scale: 0.96; z-index: 5; opacity: 0.97; }
 
-/* Center Card (Rexona) - Increased Width */
-.liquid-tile.arc-3 { transform: translateX(0px) translateY(0px) rotate(0deg); scale: 1.42 1.28; z-index: 10; opacity: 1; filter: drop-shadow(0 22px 40px rgba(0,0,0,0.5)); }
+/* Center Card (Rexona) - Extra Wide Landscape Rectangular */
+.liquid-tile.arc-3 { transform: translateX(0px) translateY(0px) rotate(0deg); scale: 1.56 1.18; z-index: 10; opacity: 1; filter: drop-shadow(0 22px 40px rgba(0,0,0,0.55)); }
 
-.liquid-tile.arc-4 { transform: translateX(-24px) translateY(24px) rotate(4.5deg); scale: 0.95; z-index: 5; opacity: 0.96; }
-.liquid-tile.arc-5 { transform: translateX(-118px) translateY(52px) rotate(9.5deg); scale: 0.78; z-index: 3; opacity: 0.86; }
-.liquid-tile.arc-6 { transform: translateX(-185px) translateY(80px) rotate(14deg); scale: 0.60; z-index: 1; opacity: 0.72; }
+.liquid-tile.arc-4 { transform: translateX(-40px) translateY(20px) rotate(4.5deg); scale: 0.96; z-index: 5; opacity: 0.97; }
+.liquid-tile.arc-5 { transform: translateX(-155px) translateY(46px) rotate(9.5deg); scale: 0.80; z-index: 3; opacity: 0.88; }
+.liquid-tile.arc-6 { transform: translateX(-255px) translateY(72px) rotate(14deg); scale: 0.62; z-index: 1; opacity: 0.76; }
 
 /* Hover States */
-.liquid-tile.arc-0:hover { transform: translateX(185px) translateY(66px) rotate(-14deg); scale: 0.70; z-index: 20; opacity: 1; }
-.liquid-tile.arc-1:hover { transform: translateX(118px) translateY(38px) rotate(-9.5deg); scale: 0.88; z-index: 20; opacity: 1; }
-.liquid-tile.arc-2:hover { transform: translateX(24px) translateY(12px) rotate(-4.5deg); scale: 1.05; z-index: 20; opacity: 1; }
-.liquid-tile.arc-3:hover { transform: translateX(0px) translateY(-10px) rotate(0deg); scale: 1.48 1.34; z-index: 20; opacity: 1; }
-.liquid-tile.arc-4:hover { transform: translateX(-24px) translateY(12px) rotate(4.5deg); scale: 1.05; z-index: 20; opacity: 1; }
-.liquid-tile.arc-5:hover { transform: translateX(-118px) translateY(38px) rotate(9.5deg); scale: 0.88; z-index: 20; opacity: 1; }
-.liquid-tile.arc-6:hover { transform: translateX(-185px) translateY(66px) rotate(14deg); scale: 0.70; z-index: 20; opacity: 1; }
+.liquid-tile.arc-0:hover { transform: translateX(255px) translateY(58px) rotate(-14deg); scale: 0.72; z-index: 20; opacity: 1; }
+.liquid-tile.arc-1:hover { transform: translateX(155px) translateY(32px) rotate(-9.5deg); scale: 0.90; z-index: 20; opacity: 1; }
+.liquid-tile.arc-2:hover { transform: translateX(40px) translateY(8px) rotate(-4.5deg); scale: 1.06; z-index: 20; opacity: 1; }
+.liquid-tile.arc-3:hover { transform: translateX(0px) translateY(-10px) rotate(0deg); scale: 1.62 1.24; z-index: 20; opacity: 1; }
+.liquid-tile.arc-4:hover { transform: translateX(-40px) translateY(8px) rotate(4.5deg); scale: 1.06; z-index: 20; opacity: 1; }
+.liquid-tile.arc-5:hover { transform: translateX(-155px) translateY(32px) rotate(9.5deg); scale: 0.90; z-index: 20; opacity: 1; }
+.liquid-tile.arc-6:hover { transform: translateX(-255px) translateY(58px) rotate(14deg); scale: 0.72; z-index: 20; opacity: 1; }
 
 .liquid-tile .tile-category{display:none}
 .liquid-tile .tile-bottom small{display:none}
-.liquid-tile .tile-bottom{align-items:center}
-.liquid-tile .tile-logo-wrap{height:126px}
-.liquid-tile .tile-logo{max-width:88%;max-height:104px}
+.liquid-tile .tile-bottom{align-items:center; padding: 10px 14px;}
+.liquid-tile .tile-logo-wrap{height: 68%; display: flex; align-items: center; justify-content: center;}
+.liquid-tile .tile-logo{max-width: 82%; max-height: 68px; object-fit: contain;}
 .carousel-controls{
   display:flex;align-items:center;justify-content:center;gap:12px;margin-top:28px
 }
