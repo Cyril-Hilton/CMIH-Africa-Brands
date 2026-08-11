@@ -44,6 +44,13 @@
                 <label>Password</label>
                 <input name="password" id="staffPass" type="password" required autocomplete="current-password" placeholder="Enter password" style="width:100%; box-sizing:border-box;">
             </div>
+
+            <div class="field" style="margin-top:-4px;">
+                <label style="display:flex; align-items:center; gap:8px; font-size:12px; color:#171115; cursor:pointer; font-weight:600;">
+                    <input type="checkbox" name="remember" value="1" id="remember_me_support" style="width:16px; height:16px; accent-color:#ff1020; cursor:pointer;">
+                    <span>Remember me</span>
+                </label>
+            </div>
             
             <div style="display:flex; flex-direction:column; gap:12px; margin-top:6px;">
                 <button type="submit" class="btn red" style="width:100%; display:block; box-sizing:border-box; padding:14px; border-radius:12px; font-weight:800; font-size:14px; text-align:center;">Sign In</button>
