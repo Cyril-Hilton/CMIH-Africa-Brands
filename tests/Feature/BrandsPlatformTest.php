@@ -193,6 +193,7 @@ class BrandsPlatformTest extends TestCase
         $this->post(route('brands-platform.consumer-entry.store', $brand->slug), [
             'name' => 'Test Consumer',
             'phone' => '0240000000',
+            'email' => 'consumer@example.com',
             'age_band' => '23-27',
             'gender' => 'Female',
             'location' => 'Shoprite',
@@ -209,6 +210,7 @@ class BrandsPlatformTest extends TestCase
             'brand_id' => $brand->id,
             'brand_activation_id' => $activation->id,
             'phone' => '0240000000',
+            'email' => 'consumer@example.com',
             'location' => 'Shoprite',
             'current_choice' => 'Competitor X',
             'purchase_intent' => 'Definitely',
@@ -229,6 +231,98 @@ class BrandsPlatformTest extends TestCase
             ->assertOk()
             ->assertSee('Client Live Report')
             ->assertSee($brand->name);
+    }
+
+    public function test_unredeemed_discount_code_blocks_duplicate_request_until_redeemed(): void
+    {
+        $brand = Brand::where('slug', 'rexona')->firstOrFail();
+
+        // 1. First request generates an active reward code
+        $entry = BrandConsumerEntry::create([
+            'brand_id' => $brand->id,
+            'name' => 'Repeat Tester',
+            'phone' => '0549998888',
+            'email' => 'repeattester@example.com',
+            'age_band' => '23-27',
+            'gender' => 'Male',
+            'location' => 'Accra Mall',
+            'current_choice' => 'None',
+            'marketing_consent' => true,
+            'data_consent' => true,
+            'verification_token' => 'test-token-123',
+            'otp_code' => '123456',
+            'otp_verified_at' => now(),
+            'reward_code' => 'REX-ACTIVE123',
+        ]);
+
+        // 2. Second request with same phone/email should be BLOCKED and redirected to existing barcode view
+        $response = $this->post(route('brands-platform.consumer-entry.store', $brand->slug), [
+            'name' => 'Repeat Tester Duplicate',
+            'phone' => '0549998888',
+            'email' => 'repeattester@example.com',
+            'age_band' => '23-27',
+            'gender' => 'Male',
+            'location' => 'Accra Mall',
+            'current_choice' => 'None',
+            'marketing_consent' => '1',
+            'data_consent' => '1',
+        ]);
+
+        $response->assertRedirect(route('brands-platform.consumer-entry.verify', [$brand->slug, 'test-token-123']));
+        $response->assertSessionHas('status');
+
+        // 3. Retail attendant scans the barcode -> marks redeemed_at
+        $entry->forceFill(['redeemed_at' => now()])->save();
+
+        // 4. Now the user can request a new discount code again
+        $this->post(route('brands-platform.consumer-entry.store', $brand->slug), [
+            'name' => 'Repeat Tester Fresh Request',
+            'phone' => '0549998888',
+            'email' => 'repeattester@example.com',
+            'age_band' => '23-27',
+            'gender' => 'Male',
+            'location' => 'Accra Mall',
+            'current_choice' => 'None',
+            'marketing_consent' => '1',
+            'data_consent' => '1',
+        ])->assertRedirect();
+    }
+
+    public function test_consumer_otp_verification_issues_reward_code(): void
+    {
+        User::factory()->create([
+            'status' => 'active',
+            'access_role' => 'super_admin',
+        ]);
+        $brand = Brand::where('slug', 'omo')->firstOrFail();
+
+        $this->post(route('brands-platform.consumer-entry.store', $brand->slug), [
+            'name' => 'Reward Consumer',
+            'phone' => '0241111111',
+            'email' => 'rewardconsumer@example.com',
+            'age_band' => '28-35',
+            'gender' => 'Male',
+            'location' => 'Osu',
+            'current_choice' => 'None',
+            'purchase_intent' => 'Likely',
+            'marketing_consent' => '1',
+            'data_consent' => '1',
+        ])->assertRedirect();
+
+        $entry = BrandConsumerEntry::where('phone', '0241111111')->firstOrFail();
+
+        $this->get(route('brands-platform.consumer-entry.verify', [$brand->slug, $entry->verification_token]))
+            ->assertOk()
+            ->assertSee('Phone Verification');
+
+        $this->post(route('brands-platform.consumer-entry.complete', [$brand->slug, $entry->verification_token]), [
+            'otp_code' => $entry->otp_code,
+        ])->assertRedirect();
+
+        $entry->refresh();
+        $this->assertNotNull($entry->otp_verified_at);
+        $this->assertNotNull($entry->reward_code);
+        $this->assertGreaterThanOrEqual(1, Notification::where('title', 'Consumer verified')->count());
     }
 
     public function test_gallery_requires_brand_access_and_shows_only_selected_brand_evidence(): void
@@ -385,39 +479,7 @@ class BrandsPlatformTest extends TestCase
             ->assertNotFound();
     }
 
-    public function test_consumer_otp_verification_issues_reward_code(): void
-    {
-        User::factory()->create([
-            'status' => 'active',
-            'access_role' => 'super_admin',
-        ]);
-        $brand = Brand::where('slug', 'omo')->firstOrFail();
 
-        $this->post(route('brands-platform.consumer-entry.store', $brand->slug), [
-            'name' => 'Reward Consumer',
-            'phone' => '0241111111',
-            'age_band' => '28-35',
-            'gender' => 'Male',
-            'location' => 'Osu',
-            'purchase_intent' => 'Likely',
-            'data_consent' => '1',
-        ])->assertRedirect();
-
-        $entry = BrandConsumerEntry::where('phone', '0241111111')->firstOrFail();
-
-        $this->get(route('brands-platform.consumer-entry.verify', [$brand->slug, $entry->verification_token]))
-            ->assertOk()
-            ->assertSee('Phone Verification');
-
-        $this->post(route('brands-platform.consumer-entry.complete', [$brand->slug, $entry->verification_token]), [
-            'otp_code' => $entry->otp_code,
-        ])->assertRedirect();
-
-        $entry->refresh();
-        $this->assertNotNull($entry->otp_verified_at);
-        $this->assertNotNull($entry->reward_code);
-        $this->assertGreaterThanOrEqual(1, Notification::where('title', 'Consumer verified')->count());
-    }
 
     public function test_support_workspace_records_activity_and_exports_report(): void
     {

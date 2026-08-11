@@ -73,21 +73,21 @@
                         <p>Tell us who you are so we can secure this activation entry.</p>
 
                         <div class="phone-field">
-                            <label>Full name</label>
+                            <label>Full name *</label>
                             <input name="name" value="{{ old('name') }}" required>
                         </div>
                         <div class="phone-field">
-                            <label>Phone number</label>
+                            <label>Phone number *</label>
                             <input name="phone" value="{{ old('phone') }}" required>
                         </div>
                         <div class="phone-field">
-                            <label>Email address</label>
-                            <input name="email" type="email" value="{{ old('email') }}">
+                            <label>Email address *</label>
+                            <input name="email" type="email" value="{{ old('email') }}" required>
                         </div>
                         <div class="phone-grid">
                             <div class="phone-field">
-                                <label>Age range</label>
-                                <select name="age_band">
+                                <label>Age range *</label>
+                                <select name="age_band" required>
                                     <option value="">Select age</option>
                                     @foreach(['18-22', '23-27', '28-35', '36+'] as $option)
                                         <option value="{{ $option }}" @selected(old('age_band') === $option)>{{ $option }}</option>
@@ -95,8 +95,8 @@
                                 </select>
                             </div>
                             <div class="phone-field">
-                                <label>Gender</label>
-                                <select name="gender">
+                                <label>Gender *</label>
+                                <select name="gender" required>
                                     <option value="">Select gender</option>
                                     @foreach(['Female', 'Male', 'Prefer not to say'] as $option)
                                         <option value="{{ $option }}" @selected(old('gender') === $option)>{{ $option }}</option>
@@ -115,17 +115,17 @@
                         <p>Help us understand your experience and preferences.</p>
 
                         <div class="phone-field">
-                            <label>Activation location</label>
-                            <input name="location" value="{{ old('location') }}" placeholder="Outlet, campus, venue or branch">
+                            <label>Activation location *</label>
+                            <input name="location" value="{{ old('location') }}" placeholder="Outlet, campus, venue or branch" required>
                         </div>
                         <div class="phone-field">
-                            <label>Current choice / competitor</label>
-                            <input name="current_choice" value="{{ old('current_choice') }}" placeholder="e.g. Rival brand / service">
+                            <label>Current choice / competitor *</label>
+                            <input name="current_choice" value="{{ old('current_choice') }}" placeholder="e.g. Rival brand / service" required>
                         </div>
 
                         @if($brand->slug === 'mtn')
                             <div class="phone-field">
-                                <label>Fibre coverage check</label>
+                                <label>Fibre coverage check *</label>
                                 <select name="answers[fibre_coverage]" required>
                                     <option value="">Select coverage status</option>
                                     <option value="Available" @selected(old('answers.fibre_coverage') === 'Available')>Available (Standard connection)</option>
@@ -134,7 +134,7 @@
                                 </select>
                             </div>
                             <div class="phone-field">
-                                <label>Preferred broadband speed</label>
+                                <label>Preferred broadband speed *</label>
                                 <select name="answers[preferred_speed]" required>
                                     <option value="">Select speed plan</option>
                                     <option value="50 Mbps (GHS 120/mo)" @selected(old('answers.preferred_speed') === '50 Mbps (GHS 120/mo)')>50 Mbps — GHS 120/mo</option>
@@ -143,7 +143,7 @@
                                 </select>
                             </div>
                             <div class="phone-field">
-                                <label>Free installation interest</label>
+                                <label>Free installation interest *</label>
                                 <select name="answers[free_installation_opt_in]" required>
                                     <option value="Yes" @selected(old('answers.free_installation_opt_in') === 'Yes')>Yes — Opt-in for free installation package</option>
                                     <option value="No" @selected(old('answers.free_installation_opt_in') === 'No')>No thanks</option>
@@ -153,7 +153,7 @@
                             <input type="hidden" name="result_type" value="Qualified Lead">
                         @elseif($brand->slug === 'omo')
                             <div class="phone-field">
-                                <label>Preferred detergent format</label>
+                                <label>Preferred detergent format *</label>
                                 <select name="answers[detergent_format]" required>
                                     <option value="">Select format</option>
                                     <option value="Powder" @selected(old('answers.detergent_format') === 'Powder')>Powder Detergent</option>
@@ -162,7 +162,7 @@
                                 </select>
                             </div>
                             <div class="phone-field">
-                                <label>Laundry frequency</label>
+                                <label>Laundry frequency *</label>
                                 <select name="answers[laundry_frequency]" required>
                                     <option value="">Select frequency</option>
                                     <option value="Daily" @selected(old('answers.laundry_frequency') === 'Daily')>Daily</option>
@@ -174,7 +174,7 @@
                             <input type="hidden" name="result_type" value="Sample Distributed">
                         @elseif($brand->slug === 'dove')
                             <div class="phone-field">
-                                <label>Primary skin / hair type</label>
+                                <label>Primary skin / hair type *</label>
                                 <select name="answers[skin_hair_type]" required>
                                     <option value="">Select type</option>
                                     <option value="Dry" @selected(old('answers.skin_hair_type') === 'Dry')>Dry / Delicate</option>
@@ -184,7 +184,7 @@
                                 </select>
                             </div>
                             <div class="phone-field">
-                                <label>Beauty message resonance</label>
+                                <label>Beauty message resonance *</label>
                                 <select name="answers[message_resonance]" required>
                                     <option value="">Select response</option>
                                     <option value="Highly Resonating" @selected(old('answers.message_resonance') === 'Highly Resonating')>Highly Resonating</option>
@@ -196,7 +196,7 @@
                             <input type="hidden" name="result_type" value="Sample Distributed">
                         @elseif($brand->slug === 'spicy-tamarind')
                             <div class="phone-field">
-                                <label>Tasting review score</label>
+                                <label>Tasting review score *</label>
                                 <select name="answers[tasting_score]" required>
                                     <option value="">Select rating</option>
                                     <option value="5 Stars (Excellent)" @selected(old('answers.tasting_score') === '5 Stars (Excellent)')>5 Stars — Excellent</option>
@@ -207,7 +207,7 @@
                                 </select>
                             </div>
                             <div class="phone-field">
-                                <label>Preferred consumption style</label>
+                                <label>Preferred consumption style *</label>
                                 <select name="answers[consumption_style]" required>
                                     <option value="">Select style</option>
                                     <option value="Neat" @selected(old('answers.consumption_style') === 'Neat')>Neat</option>
@@ -219,7 +219,7 @@
                             <input type="hidden" name="result_type" value="Reward Issued">
                         @elseif($brand->slug === 'lush-hair')
                             <div class="phone-field">
-                                <label>Preferred extension style</label>
+                                <label>Preferred extension style *</label>
                                 <select name="answers[hair_extension_style]" required>
                                     <option value="">Select style</option>
                                     <option value="Short" @selected(old('answers.hair_extension_style') === 'Short')>Short extensions</option>
@@ -228,7 +228,7 @@
                                 </select>
                             </div>
                             <div class="phone-field">
-                                <label>Primary hair concern</label>
+                                <label>Primary hair concern *</label>
                                 <select name="answers[hair_concern]" required>
                                     <option value="">Select concern</option>
                                     <option value="Tangles/Frizz" @selected(old('answers.hair_concern') === 'Tangles/Frizz')>Tangles & Frizz</option>
@@ -241,7 +241,7 @@
                             <input type="hidden" name="result_type" value="Sample Distributed">
                         @elseif($brand->slug === 'gino')
                             <div class="phone-field">
-                                <label>Tomato paste sachet / tin preference</label>
+                                <label>Tomato paste sachet / tin preference *</label>
                                 <select name="answers[pack_size_preference]" required>
                                     <option value="">Select pack size</option>
                                     <option value="Small Sachet (70g)" @selected(old('answers.pack_size_preference') === 'Small Sachet (70g)')>Small Sachet (70g)</option>
@@ -250,7 +250,7 @@
                                 </select>
                             </div>
                             <div class="phone-field">
-                                <label>Cooking frequency</label>
+                                <label>Cooking frequency *</label>
                                 <select name="answers[cooking_frequency]" required>
                                     <option value="">Select frequency</option>
                                     <option value="Daily" @selected(old('answers.cooking_frequency') === 'Daily')>Daily</option>
@@ -262,8 +262,8 @@
                             <input type="hidden" name="result_type" value="Sample Distributed">
                         @else
                             <div class="phone-field">
-                                <label>Purchase / conversion intent</label>
-                                <select name="purchase_intent">
+                                <label>Purchase / conversion intent *</label>
+                                <select name="purchase_intent" required>
                                     <option value="">Select intent</option>
                                     @foreach(['Definitely', 'Very likely', 'Likely', 'Maybe', 'Not interested'] as $option)
                                         <option value="{{ $option }}" @selected(old('purchase_intent') === $option)>{{ $option }}</option>
@@ -271,12 +271,12 @@
                                 </select>
                             </div>
                             <div class="phone-field">
-                                <label>Preferred outlet / channel</label>
-                                <input name="preferred_channel" value="{{ old('preferred_channel') }}" placeholder="e.g. Supermarkets, local retail">
+                                <label>Preferred outlet / channel *</label>
+                                <input name="preferred_channel" value="{{ old('preferred_channel') }}" placeholder="e.g. Supermarkets, local retail" required>
                             </div>
                             <div class="phone-field">
-                                <label>Result / reward</label>
-                                <select name="result_type">
+                                <label>Result / reward *</label>
+                                <select name="result_type" required>
                                     <option value="">Select result</option>
                                     @foreach(['Sample Distributed', 'Bottle Sale / Conversion', 'Coupon Issued', 'Reward Issued', 'Qualified Lead'] as $option)
                                         <option value="{{ $option }}" @selected(old('result_type') === $option)>{{ $option }}</option>
@@ -284,8 +284,8 @@
                                 </select>
                             </div>
                             <div class="phone-field">
-                                <label>Brand feedback / review</label>
-                                <input name="answers[brand_question]" value="{{ old('answers.brand_question') }}" placeholder="e.g. Consumer requests or feedback">
+                                <label>Brand feedback / review *</label>
+                                <input name="answers[brand_question]" value="{{ old('answers.brand_question') }}" placeholder="e.g. Consumer requests or feedback" required>
                             </div>
                         @endif
                         <div class="phone-bottom">
@@ -303,8 +303,8 @@
                             <span>This consumer is new to the brand, product or service proposition.</span>
                         </label>
                         <label class="consent">
-                            <input type="checkbox" name="marketing_consent" value="1" @checked(old('marketing_consent'))>
-                            <span>I agree to receive future brand promotions and offers.</span>
+                            <input type="checkbox" name="marketing_consent" value="1" required @checked(old('marketing_consent', true))>
+                            <span>I agree to receive future brand promotions and offers. <b>Required</b></span>
                         </label>
                         <label class="consent">
                             <input type="checkbox" name="data_consent" value="1" required @checked(old('data_consent', true))>
@@ -371,16 +371,46 @@
     document.getElementById('btn-continue-personal')?.addEventListener('click', () => {
         const nameInput = document.querySelector('input[name="name"]');
         const phoneInput = document.querySelector('input[name="phone"]');
-        if (!nameInput?.value.trim() || !phoneInput?.value.trim()) {
-            alert('Please enter your full name and phone number.');
+        const emailInput = document.querySelector('input[name="email"]');
+        const ageSelect = document.querySelector('select[name="age_band"]');
+        const genderSelect = document.querySelector('select[name="gender"]');
+
+        if (!nameInput?.value.trim() || !phoneInput?.value.trim() || !emailInput?.value.trim() || !ageSelect?.value || !genderSelect?.value) {
+            alert('Please fill out all required personal details (Name, Phone, Email, Age Range, and Gender) to proceed.');
             if (!nameInput?.value.trim()) nameInput?.focus();
-            else phoneInput?.focus();
+            else if (!phoneInput?.value.trim()) phoneInput?.focus();
+            else if (!emailInput?.value.trim()) emailInput?.focus();
             return;
         }
         goToStep(2);
     });
 
     document.getElementById('btn-continue-profile')?.addEventListener('click', () => {
+        const locationInput = document.querySelector('input[name="location"]');
+        const choiceInput = document.querySelector('input[name="current_choice"]');
+
+        if (locationInput && !locationInput.value.trim()) {
+            alert('Please enter your activation location.');
+            locationInput.focus();
+            return;
+        }
+        if (choiceInput && !choiceInput.value.trim()) {
+            alert('Please enter your current choice / competitor brand.');
+            choiceInput.focus();
+            return;
+        }
+
+        if (stepProfile) {
+            const requiredSelects = Array.from(stepProfile.querySelectorAll('select[required]'));
+            for (const select of requiredSelects) {
+                if (!select.value) {
+                    alert('Please select an option for all brand profile questions.');
+                    select.focus();
+                    return;
+                }
+            }
+        }
+
         goToStep(3);
     });
 
@@ -397,14 +427,21 @@
     consumerForm?.addEventListener('submit', (e) => {
         const nameInput = document.querySelector('input[name="name"]');
         const phoneInput = document.querySelector('input[name="phone"]');
+        const emailInput = document.querySelector('input[name="email"]');
+        const marketingConsent = document.querySelector('input[name="marketing_consent"]');
         const dataConsentInput = document.querySelector('input[name="data_consent"]');
 
-        if (!nameInput?.value.trim() || !phoneInput?.value.trim()) {
+        if (!nameInput?.value.trim() || !phoneInput?.value.trim() || !emailInput?.value.trim()) {
             e.preventDefault();
-            alert('Please enter your full name and phone number on step 1.');
+            alert('Please complete all required fields on step 1.');
             goToStep(1);
-            if (!nameInput?.value.trim()) nameInput?.focus();
-            else phoneInput?.focus();
+            return false;
+        }
+
+        if (marketingConsent && !marketingConsent.checked) {
+            e.preventDefault();
+            alert('Please check the marketing consent box to proceed.');
+            marketingConsent.focus();
             return false;
         }
 

@@ -726,20 +726,39 @@ class BrandsPlatformController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'phone' => ['required', 'string', 'max:50'],
-            'email' => ['nullable', 'email', 'max:255'],
-            'age_band' => ['nullable', 'string', 'max:50'],
-            'gender' => ['nullable', 'string', 'max:50'],
-            'location' => ['nullable', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255'],
+            'age_band' => ['required', 'string', 'max:50'],
+            'gender' => ['required', 'string', 'max:50'],
+            'location' => ['required', 'string', 'max:255'],
             'source' => ['nullable', 'string', 'max:100'],
             'result_type' => ['nullable', 'string', 'max:100'],
-            'current_choice' => ['nullable', 'string', 'max:255'],
+            'current_choice' => ['required', 'string', 'max:255'],
             'purchase_intent' => ['nullable', 'string', 'max:100'],
             'preferred_channel' => ['nullable', 'string', 'max:255'],
             'is_new_to_brand' => ['nullable', 'boolean'],
-            'marketing_consent' => ['nullable', 'boolean'],
+            'marketing_consent' => ['required', 'boolean'],
             'data_consent' => ['accepted'],
             'answers' => ['nullable', 'array'],
         ]);
+
+        // Anti-exploit check: Block duplicate code requests until previous code is scanned & redeemed by retail personnel
+        $activeUnredeemed = BrandConsumerEntry::query()
+            ->where('brand_id', $brand->id)
+            ->where(function ($q) use ($validated) {
+                $q->where('phone', $validated['phone']);
+                if (! empty($validated['email'])) {
+                    $q->orWhere('email', $validated['email']);
+                }
+            })
+            ->whereNotNull('reward_code')
+            ->whereNull('redeemed_at')
+            ->first();
+
+        if ($activeUnredeemed) {
+            return redirect()
+                ->route('brands-platform.consumer-entry.verify', [$brand->slug ?: $brand->id, $activeUnredeemed->verification_token])
+                ->with('status', "You currently have an active unredeemed discount code ({$activeUnredeemed->reward_code}). Please present your barcode at a retail outlet to redeem your offer before requesting a new discount.");
+        }
 
         $otpCode = (string) random_int(100000, 999999);
         $entry = BrandConsumerEntry::create([
@@ -874,6 +893,14 @@ class BrandsPlatformController extends Controller
             'conversion_count' => $validated['conversion_count'] ?? 0,
             'evidence_path' => $evidencePath,
         ]);
+
+        if (! empty($validated['reference_code'])) {
+            $refCode = trim((string) $validated['reference_code']);
+            $matchedEntry = BrandConsumerEntry::where('reward_code', $refCode)->first();
+            if ($matchedEntry && ! $matchedEntry->redeemed_at) {
+                $matchedEntry->forceFill(['redeemed_at' => now()])->save();
+            }
+        }
 
         $this->logBrandActivity($request, $brand, $activation, 'field_activity_created', 'field', [
             'activity_id' => $activity->id,
@@ -1827,9 +1854,18 @@ class BrandsPlatformController extends Controller
         return array_values(array_unique($roles));
     }
 
+    private function isPlatformAdmin(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        return $user->isCvoOrSuperAdmin() || $user->isLineManager();
+    }
+
     private function guardPlatformAdmin(?User $user): void
     {
-        if (! $user || ! $user->isCvoOrSuperAdmin()) {
+        if (! $this->isPlatformAdmin($user)) {
             abort(403, 'Only the Brands Platform admin can manage brand assignments.');
         }
     }
@@ -1840,7 +1876,7 @@ class BrandsPlatformController extends Controller
             abort(403);
         }
 
-        if ($user->isCvoOrSuperAdmin()) {
+        if ($this->isPlatformAdmin($user)) {
             return;
         }
 

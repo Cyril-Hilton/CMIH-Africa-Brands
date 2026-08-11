@@ -31,6 +31,7 @@ class BrandConsumerEntry extends Model
         'otp_code',
         'otp_verified_at',
         'reward_code',
+        'redeemed_at',
         'answers',
     ];
 
@@ -42,6 +43,7 @@ class BrandConsumerEntry extends Model
             'marketing_consent' => 'boolean',
             'data_consent' => 'boolean',
             'otp_verified_at' => 'datetime',
+            'redeemed_at' => 'datetime',
         ];
     }
 

@@ -69,6 +69,10 @@ return new class extends Migration
                 if (! Schema::hasColumn('brand_consumer_entries', 'reward_code')) {
                     $table->string('reward_code')->nullable()->index()->after('otp_verified_at');
                 }
+
+                if (! Schema::hasColumn('brand_consumer_entries', 'redeemed_at')) {
+                    $table->timestamp('redeemed_at')->nullable()->index()->after('reward_code');
+                }
             });
         }
 
