@@ -52,6 +52,10 @@ class AuthenticatedSessionController extends Controller
             'last_login_user_agent' => substr((string) $request->userAgent(), 0, 255),
         ])->save();
 
+        if ($request->filled('redirect_to')) {
+            return redirect()->to($request->input('redirect_to'));
+        }
+
         if ($request->session()->has('url.intended')) {
             return redirect()->intended();
         }
@@ -83,11 +87,8 @@ class AuthenticatedSessionController extends Controller
             return redirect()->route('brands-platform.support', $brandKey);
         }
 
-        if ($user->hasRole(['agency'])) {
-            $firstBrand = \App\Models\Brand::first();
-            if ($firstBrand) {
-                return redirect()->route('brands-platform.agency', $firstBrand->slug ?: $firstBrand->id);
-            }
+        if ($user->hasRole(['agency']) || $user->isCvoOrSuperAdmin() || $user->isLineManager()) {
+            return redirect()->route('brands-platform.index');
         }
 
         $redirectTo = $user->hasRole(['admin', 'super_admin'])

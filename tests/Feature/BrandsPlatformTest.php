@@ -585,4 +585,22 @@ class BrandsPlatformTest extends TestCase
 
         $this->assertFalse($promoterAssignment->refresh()->is_active);
     }
+
+    public function test_brand_support_login_redirects_to_support_workspace_without_external_split_redirect(): void
+    {
+        $admin = User::factory()->create([
+            'status' => 'active',
+            'access_role' => 'super_admin',
+            'password' => bcrypt('password123'),
+        ]);
+        $brand = Brand::where('slug', 'rexona')->firstOrFail();
+
+        $response = $this->post(route('login'), [
+            'email' => $admin->email,
+            'password' => 'password123',
+            'redirect_to' => route('brands-platform.support', $brand->slug),
+        ]);
+
+        $response->assertRedirect(route('brands-platform.support', $brand->slug));
+    }
 }

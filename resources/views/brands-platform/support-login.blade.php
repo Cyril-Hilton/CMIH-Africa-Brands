@@ -35,6 +35,7 @@
 
         <form method="POST" action="{{ route('login') }}" style="display:flex; flex-direction:column; gap:16px;">
             @csrf
+            <input type="hidden" name="redirect_to" value="{{ route('brands-platform.support', $brandKey) }}">
             <div class="field">
                 <label>Staff Email</label>
                 <input name="email" id="staffUser" value="{{ old('email') }}" required autofocus autocomplete="username" placeholder="staff@cmih.africa" style="width:100%; box-sizing:border-box;">
