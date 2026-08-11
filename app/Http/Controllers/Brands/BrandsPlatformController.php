@@ -238,10 +238,13 @@ class BrandsPlatformController extends Controller
             ->take(50)
             ->get();
 
+        $allBrands = Brand::orderBy('name')->get();
+
         $this->logBrandActivity($request, $brand, $activation, 'page_view', 'agency_dashboard');
 
         return view('brands-platform.agency', compact(
             'brand',
+            'allBrands',
             'activation',
             'metrics',
             'filters',
