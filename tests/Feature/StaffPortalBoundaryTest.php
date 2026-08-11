@@ -111,7 +111,10 @@ class StaffPortalBoundaryTest extends TestCase
 
     public function test_brands_split_keeps_staff_admin_login_on_brands_domain(): void
     {
-        config(['cmih.app_kind' => 'brands']);
+        config([
+            'cmih.app_kind' => 'brands',
+            'cmih.testing_enforce_split_middleware' => true,
+        ]);
 
         $response = $this->get('/login');
 
@@ -123,6 +126,7 @@ class StaffPortalBoundaryTest extends TestCase
         config([
             'cmih.app_kind' => 'brands',
             'cmih.urls.staff' => 'https://portal.cmih.africa',
+            'cmih.testing_enforce_split_middleware' => true,
         ]);
 
         $response = $this->get('/portal/tasks');
@@ -135,6 +139,7 @@ class StaffPortalBoundaryTest extends TestCase
         config([
             'cmih.app_kind' => 'staff',
             'cmih.urls.brands' => 'https://brands.cmih.africa',
+            'cmih.testing_enforce_split_middleware' => true,
         ]);
 
         $response = $this->get('/merchandisers/login');
@@ -148,6 +153,7 @@ class StaffPortalBoundaryTest extends TestCase
             'cmih.app_kind' => 'all',
             'cmih.urls.website' => 'https://www.cmih.africa',
             'cmih.urls.staff' => 'https://portal.cmih.africa',
+            'cmih.testing_enforce_split_middleware' => true,
         ]);
 
         $response = $this->get('https://cmih.africa/dashboard?weekly_department=client_relations');
@@ -161,6 +167,7 @@ class StaffPortalBoundaryTest extends TestCase
             'cmih.app_kind' => 'all',
             'cmih.urls.website' => 'https://www.cmih.africa',
             'cmih.urls.brands' => 'https://brands.cmih.africa',
+            'cmih.testing_enforce_split_middleware' => true,
         ]);
 
         $response = $this->get('https://cmih.africa/merchandisers/admin');

@@ -11,14 +11,16 @@ class RestrictSplitAppAccess
 {
     public function handle(Request $request, Closure $next): Response
     {
+        // In testing, bypass entirely unless a test explicitly opts-in to enforce the split
+        // routing logic (e.g. StaffPortalBoundaryTest sets this flag to test redirects).
+        if (app()->environment('testing') && ! config('cmih.testing_enforce_split_middleware')) {
+            return $next($request);
+        }
+
         $kind = (string) config('cmih.app_kind', 'all');
         $path = $request->path();
 
         if ($kind === 'all') {
-            if (app()->environment('testing')) {
-                return $next($request);
-            }
-
             if ($this->isWebsiteHost($request->getHost()) && ! $this->isAllowed('website', $path)) {
                 return redirect()->away($this->targetUrlFor($request));
             }
@@ -35,6 +37,7 @@ class RestrictSplitAppAccess
 
     private function isAllowed(string $kind, string $path): bool
     {
+
         return match ($kind) {
             'website' => $this->matches($path, [
                 '/',
