@@ -76,6 +76,14 @@ return new class extends Migration
             });
         }
 
+        if (Schema::hasTable('brand_staff_assignments')) {
+            Schema::table('brand_staff_assignments', function (Blueprint $table) {
+                if (! Schema::hasColumn('brand_staff_assignments', 'permissions')) {
+                    $table->json('permissions')->nullable()->after('role');
+                }
+            });
+        }
+
         if (Schema::hasTable('brand_field_activities')) {
             Schema::table('brand_field_activities', function (Blueprint $table) {
                 if (! Schema::hasColumn('brand_field_activities', 'status')) {

@@ -212,6 +212,16 @@ class BrandsPlatformController extends Controller
             ->take(12)
             ->get();
         $clientDurations = $this->clientLinkDurations();
+        $assignedStaff = $brand->staffAssignments()
+            ->with(['user', 'assigner'])
+            ->where('is_active', true)
+            ->latest()
+            ->get();
+
+        $availableUsers = User::query()
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get(['id', 'name', 'email', 'staff_id_number', 'access_role']);
 
         $this->logBrandActivity($request, $brand, $activation, 'page_view', 'agency_dashboard');
 
@@ -230,7 +240,9 @@ class BrandsPlatformController extends Controller
             'consumerTrend',
             'activityTrend',
             'reportImages',
-            'clientDurations'
+            'clientDurations',
+            'assignedStaff',
+            'availableUsers'
         ));
     }
 
@@ -1854,19 +1866,118 @@ class BrandsPlatformController extends Controller
         return array_values(array_unique($roles));
     }
 
+    public function storeAgencyTeamMember(Request $request, string $brand): RedirectResponse
+    {
+        $brand = $this->resolveBrand($brand);
+        $this->guardCanManageTeam($request->user(), $brand);
+
+        $validated = $request->validate([
+            'user_id' => ['required', 'exists:users,id'],
+            'role' => ['required', 'string', 'in:'.implode(',', BrandStaffAssignment::ROLES)],
+            'can_manage_team' => ['nullable', 'boolean'],
+            'can_record_activity' => ['nullable', 'boolean'],
+            'can_export' => ['nullable', 'boolean'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $permissions = [
+            'can_manage_team' => (bool) ($validated['can_manage_team'] ?? false),
+            'can_record_activity' => (bool) ($validated['can_record_activity'] ?? true),
+            'can_export' => (bool) ($validated['can_export'] ?? false),
+        ];
+
+        BrandStaffAssignment::updateOrCreate(
+            [
+                'brand_id' => $brand->id,
+                'user_id' => $validated['user_id'],
+            ],
+            [
+                'role' => $validated['role'],
+                'permissions' => $permissions,
+                'is_active' => true,
+                'notes' => $validated['notes'] ?? 'Assigned via Agency Portal',
+                'assigned_by' => $request->user()->id,
+            ]
+        );
+
+        return back()->with('status', 'Staff team member and privileges saved successfully.');
+    }
+
+    public function updateAgencyTeamMember(Request $request, string $brand, BrandStaffAssignment $assignment): RedirectResponse
+    {
+        $brand = $this->resolveBrand($brand);
+        $this->guardCanManageTeam($request->user(), $brand);
+        abort_unless((int) $assignment->brand_id === (int) $brand->id, 404);
+
+        $validated = $request->validate([
+            'role' => ['required', 'string', 'in:'.implode(',', BrandStaffAssignment::ROLES)],
+            'can_manage_team' => ['nullable', 'boolean'],
+            'can_record_activity' => ['nullable', 'boolean'],
+            'can_export' => ['nullable', 'boolean'],
+            'is_active' => ['nullable', 'boolean'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $permissions = [
+            'can_manage_team' => (bool) ($validated['can_manage_team'] ?? false),
+            'can_record_activity' => (bool) ($validated['can_record_activity'] ?? false),
+            'can_export' => (bool) ($validated['can_export'] ?? false),
+        ];
+
+        $assignment->update([
+            'role' => $validated['role'],
+            'permissions' => $permissions,
+            'is_active' => (bool) ($validated['is_active'] ?? true),
+            'notes' => $validated['notes'] ?? $assignment->notes,
+        ]);
+
+        return back()->with('status', 'Staff privileges updated successfully.');
+    }
+
+    public function archiveAgencyTeamMember(Request $request, string $brand, BrandStaffAssignment $assignment): RedirectResponse
+    {
+        $brand = $this->resolveBrand($brand);
+        $this->guardCanManageTeam($request->user(), $brand);
+        abort_unless((int) $assignment->brand_id === (int) $brand->id, 404);
+
+        $assignment->update(['is_active' => false]);
+
+        return back()->with('status', 'Staff brand access archived successfully.');
+    }
+
+    private function guardCanManageTeam(?User $user, Brand $brand): void
+    {
+        if (! $user) {
+            abort(403);
+        }
+
+        if ($user->isCvoOrSuperAdmin() || $user->isLineManager()) {
+            return;
+        }
+
+        $assignment = BrandStaffAssignment::where('brand_id', $brand->id)
+            ->where('user_id', $user->id)
+            ->where('is_active', true)
+            ->first();
+
+        if (! $assignment || ! $assignment->canManageTeam()) {
+            abort(403, 'You do not have privileges to manage brand team members.');
+        }
+    }
+
     private function isPlatformAdmin(?User $user): bool
     {
         if (! $user) {
             return false;
         }
 
-        return $user->isCvoOrSuperAdmin() || $user->isLineManager();
+        return $user->isCvoOrSuperAdmin();
     }
 
     private function guardPlatformAdmin(?User $user): void
     {
         if (! $this->isPlatformAdmin($user)) {
-            abort(403, 'Only the Brands Platform admin can manage brand assignments.');
+            abort(403, 'Only Super Admin or CVO can access the main Brands Admin Console.');
         }
     }
 
@@ -1876,7 +1987,19 @@ class BrandsPlatformController extends Controller
             abort(403);
         }
 
-        if ($this->isPlatformAdmin($user)) {
+        if ($user->isCvoOrSuperAdmin()) {
+            return;
+        }
+
+        if ($user->isLineManager()) {
+            $restricted = BrandStaffAssignment::where('brand_id', $brand->id)
+                ->where('user_id', $user->id)
+                ->where('is_active', false)
+                ->exists();
+
+            if ($restricted) {
+                abort(403, 'Your access to this brand has been restricted.');
+            }
             return;
         }
 

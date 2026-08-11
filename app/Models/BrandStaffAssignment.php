@@ -34,6 +34,7 @@ class BrandStaffAssignment extends Model
         'brand_id',
         'user_id',
         'role',
+        'permissions',
         'is_active',
         'notes',
         'assigned_by',
@@ -43,7 +44,33 @@ class BrandStaffAssignment extends Model
     {
         return [
             'is_active' => 'boolean',
+            'permissions' => 'array',
         ];
+    }
+
+    public function hasPermission(string $permission): bool
+    {
+        if ($this->role === self::ROLE_ADMIN || $this->role === self::ROLE_AGENCY) {
+            return true;
+        }
+
+        $perms = $this->permissions ?? [];
+        return ! empty($perms[$permission]);
+    }
+
+    public function canManageTeam(): bool
+    {
+        return $this->hasPermission('can_manage_team');
+    }
+
+    public function canRecordActivity(): bool
+    {
+        return $this->hasPermission('can_record_activity');
+    }
+
+    public function canExport(): bool
+    {
+        return $this->hasPermission('can_export');
     }
 
     public function brand(): BelongsTo

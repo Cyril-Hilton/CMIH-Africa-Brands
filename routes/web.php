@@ -95,6 +95,9 @@ Route::middleware(['auth', 'active'])->prefix('brands')->name('brands-platform.'
         ->whereIn('type', ['current', 'daily', 'weekly', 'retail', 'promoter', 'consumer-insights', 'closeout'])
         ->name('export');
     Route::post('/{brand}/field-activity', [BrandsPlatformController::class, 'storeFieldActivity'])->name('field-activity.store');
+    Route::post('/{brand}/team', [BrandsPlatformController::class, 'storeAgencyTeamMember'])->name('team.store');
+    Route::put('/{brand}/team/{assignment}', [BrandsPlatformController::class, 'updateAgencyTeamMember'])->name('team.update');
+    Route::delete('/{brand}/team/{assignment}', [BrandsPlatformController::class, 'archiveAgencyTeamMember'])->name('team.destroy');
 });
 
 Route::get('/dashboard', [DashboardController::class, 'index'])

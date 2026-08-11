@@ -50,7 +50,7 @@
                 @include('partials.site-header')
             @endif
 
-            @if(request()->routeIs('brands-platform.*') && ! request()->routeIs('brands-platform.index', 'brands-platform.show', 'brands-platform.publications', 'brands-platform.activation', 'brands-platform.consumer'))
+            @if(request()->routeIs('brands-platform.*'))
                 @include('brands-platform.partials.notifications')
             @endif
 

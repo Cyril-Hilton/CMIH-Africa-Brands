@@ -311,6 +311,131 @@
                 </div>
             </div>
 
+            <!-- TEAM & STAFF PRIVILEGES MANAGEMENT PANEL -->
+            <div id="team-privileges" class="dash-grid" style="margin-top:20px;">
+                <div class="panel" style="grid-column: 1 / -1;">
+                    <div class="panel-head" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                        <div>
+                            <h3 style="color:#171115; font-size:18px; font-weight:900; margin:0;">Brand Team & Delegated Staff Privileges</h3>
+                            <small style="color:#8b747a;">Enrol brand staff, manage access levels, and assign delegated team management privileges</small>
+                        </div>
+                        <span class="chip" style="background:#ff1020; color:#fff; font-weight:800; padding:6px 12px; border-radius:20px; font-size:11px;">
+                            {{ count($assignedStaff) }} Active Team Member{{ count($assignedStaff) === 1 ? '' : 's' }}
+                        </span>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: 1fr 2fr; gap:20px; margin-top:20px;">
+                        <!-- Add / Assign Staff Form -->
+                        <div style="background:#fcf8f9; border:1px solid #e4dadd; border-radius:12px; padding:18px;">
+                            <h4 style="margin:0 0 12px; color:#171115; font-size:14px; font-weight:800;">Grant Staff Brand Access</h4>
+                            <form method="POST" action="{{ route('brands-platform.team.store', $brandKey) }}" style="display:flex; flex-direction:column; gap:12px;">
+                                @csrf
+                                <div class="field">
+                                    <label style="color:#171115; font-size:10px; font-weight:700;">Select Staff Member *</label>
+                                    <select name="user_id" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                                        <option value="">Select User</option>
+                                        @foreach($availableUsers as $u)
+                                            <option value="{{ $u->id }}">{{ $u->name }} ({{ $u->email }}) — {{ \Illuminate\Support\Str::headline($u->access_role ?: 'User') }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div class="field">
+                                    <label style="color:#171115; font-size:10px; font-weight:700;">Assigned Role *</label>
+                                    <select name="role" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                                        <option value="agency_staff">Agency Staff</option>
+                                        <option value="field_supervisor">Field Supervisor</option>
+                                        <option value="supporting_staff">Supporting Staff</option>
+                                        <option value="promoter">Promoter</option>
+                                        <option value="retail_staff">Retail Attendant</option>
+                                        <option value="sales_personnel">Sales Representative</option>
+                                    </select>
+                                </div>
+
+                                <div style="display:flex; flex-direction:column; gap:8px; background:#fff; padding:12px; border-radius:8px; border:1px solid #e4dadd;">
+                                    <label style="font-size:10px; font-weight:800; color:#171115; text-transform:uppercase;">Privileges & Delegated Rights</label>
+                                    
+                                    <label style="display:flex; align-items:center; gap:8px; font-size:11px; color:#171115; cursor:pointer;">
+                                        <input type="checkbox" name="can_manage_team" value="1">
+                                        <span><strong>Delegated Team Manager</strong> (Can add/edit staff privileges)</span>
+                                    </label>
+                                    
+                                    <label style="display:flex; align-items:center; gap:8px; font-size:11px; color:#171115; cursor:pointer;">
+                                        <input type="checkbox" name="can_record_activity" value="1" checked>
+                                        <span>Field Activity Logging</span>
+                                    </label>
+
+                                    <label style="display:flex; align-items:center; gap:8px; font-size:11px; color:#171115; cursor:pointer;">
+                                        <input type="checkbox" name="can_export" value="1">
+                                        <span>Report Export Rights</span>
+                                    </label>
+                                </div>
+
+                                <div class="field">
+                                    <label style="color:#171115; font-size:10px; font-weight:700;">Assignment Notes</label>
+                                    <input name="notes" placeholder="e.g. Assigned to Accra campaign activation" style="width:100%; padding:10px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                                </div>
+
+                                <button type="submit" class="btn red" style="width:100%; padding:12px; border-radius:8px; font-size:12px; font-weight:800; cursor:pointer;">Assign Brand Privileges</button>
+                            </form>
+                        </div>
+
+                        <!-- Active Team Members Table -->
+                        <div>
+                            <table style="width:100%; border-collapse:collapse; color:#171115;">
+                                <thead>
+                                    <tr style="border-bottom:2px solid #e4dadd; font-size:11px; text-transform:uppercase; color:#8b747a;">
+                                        <th style="text-align:left; padding:8px;">Team Member</th>
+                                        <th style="text-align:left; padding:8px;">Role</th>
+                                        <th style="text-align:left; padding:8px;">Privileges</th>
+                                        <th style="text-align:right; padding:8px;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($assignedStaff as $assign)
+                                        <tr style="border-bottom:1px solid #f0e6e9; font-size:12px;">
+                                            <td style="padding:10px 8px;">
+                                                <strong>{{ $assign->user?->name ?: 'Staff Member' }}</strong>
+                                                <small style="display:block; color:#8b747a; font-size:10px;">{{ $assign->user?->email }}</small>
+                                            </td>
+                                            <td style="padding:10px 8px;">
+                                                <span style="display:inline-block; background:#f0e6e9; color:#171115; padding:3px 8px; border-radius:12px; font-size:10px; font-weight:800;">
+                                                    {{ \Illuminate\Support\Str::headline($assign->role) }}
+                                                </span>
+                                            </td>
+                                            <td style="padding:10px 8px;">
+                                                <div style="display:flex; flex-wrap:wrap; gap:4px;">
+                                                    @if($assign->canManageTeam())
+                                                        <span style="background:#ff1020; color:#fff; padding:2px 6px; border-radius:10px; font-size:9px; font-weight:800;">Team Lead</span>
+                                                    @endif
+                                                    @if($assign->canRecordActivity())
+                                                        <span style="background:#0aa777; color:#fff; padding:2px 6px; border-radius:10px; font-size:9px; font-weight:800;">Logger</span>
+                                                    @endif
+                                                    @if($assign->canExport())
+                                                        <span style="background:#00a3e0; color:#fff; padding:2px 6px; border-radius:10px; font-size:9px; font-weight:800;">Exports</span>
+                                                    @endif
+                                                </div>
+                                            </td>
+                                            <td style="padding:10px 8px; text-align:right;">
+                                                <form method="POST" action="{{ route('brands-platform.team.destroy', [$brandKey, $assign->id]) }}" style="display:inline;">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" onclick="return confirm('Revoke brand access for {{ $assign->user?->name }}?')" style="background:none; border:1px solid #ff1020; color:#ff1020; padding:4px 8px; border-radius:6px; font-size:10px; font-weight:800; cursor:pointer;">Archive</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="4" style="text-align:center; padding:30px; color:#8b747a;">No assigned team members yet. Use the form on the left to assign staff members.</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="dash-grid" style="margin-top:15px;">
                 <div class="panel">
                     <div class="panel-head">

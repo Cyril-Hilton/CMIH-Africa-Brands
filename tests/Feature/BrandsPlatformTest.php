@@ -528,4 +528,61 @@ class BrandsPlatformTest extends TestCase
             ->assertOk()
             ->assertHeader('content-type', 'text/csv; charset=utf-8');
     }
+
+    public function test_agency_team_management_grant_and_archive_privileges(): void
+    {
+        $admin = User::factory()->create([
+            'status' => 'active',
+            'access_role' => 'super_admin',
+        ]);
+        $staff = User::factory()->create([
+            'status' => 'active',
+            'access_role' => 'agency_user',
+        ]);
+        $brand = Brand::where('slug', 'omo')->firstOrFail();
+
+        // Admin adds staff with delegated team management
+        $this->actingAs($admin)
+            ->post(route('brands-platform.team.store', $brand->slug), [
+                'user_id' => $staff->id,
+                'role' => 'agency_staff',
+                'can_manage_team' => '1',
+                'can_record_activity' => '1',
+                'can_export' => '1',
+                'notes' => 'Delegated manager',
+            ])->assertRedirect();
+
+        $assignment = BrandStaffAssignment::where('brand_id', $brand->id)
+            ->where('user_id', $staff->id)
+            ->firstOrFail();
+
+        $this->assertTrue($assignment->canManageTeam());
+        $this->assertTrue($assignment->canRecordActivity());
+
+        // Delegated staff can now manage other team members
+        $promoter = User::factory()->create([
+            'status' => 'active',
+            'access_role' => 'promoter',
+        ]);
+
+        $this->actingAs($staff)
+            ->post(route('brands-platform.team.store', $brand->slug), [
+                'user_id' => $promoter->id,
+                'role' => 'promoter',
+                'can_record_activity' => '1',
+            ])->assertRedirect();
+
+        $promoterAssignment = BrandStaffAssignment::where('brand_id', $brand->id)
+            ->where('user_id', $promoter->id)
+            ->firstOrFail();
+
+        $this->assertFalse($promoterAssignment->canManageTeam());
+
+        // Archive promoter
+        $this->actingAs($staff)
+            ->delete(route('brands-platform.team.destroy', [$brand->slug, $promoterAssignment->id]))
+            ->assertRedirect();
+
+        $this->assertFalse($promoterAssignment->refresh()->is_active);
+    }
 }
