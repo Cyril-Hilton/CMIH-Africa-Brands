@@ -710,10 +710,22 @@
                                                 @endif
                                             </td>
                                             <td style="padding:10px 6px;">
-                                                <small style="color:#8b747a;">{{ $assign->shift_start_time }} – {{ $assign->shift_end_time }}</small>
+                                                <strong style="display:block; font-size:12px; color:#171115;">{{ $assign->shift_start_time }} – {{ $assign->shift_end_time }}</strong>
+                                                <small style="color:#8b747a; font-size:10px;">Grace: {{ $assign->grace_period_minutes }}m · Penalty: GHS {{ number_format($assign->lateness_deduction_amount, 2) }}</small>
                                             </td>
                                             <td style="padding:10px 6px; text-align:right;">
                                                 <div style="display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap;">
+                                                    <!-- Edit Shift -->
+                                                    <button onclick="openShiftModal(
+                                                        {{ $assign->id }},
+                                                        '{{ addslashes($assign->display_name) }}',
+                                                        '{{ $assign->shift_start_time }}',
+                                                        '{{ $assign->shift_end_time }}',
+                                                        {{ $assign->grace_period_minutes }},
+                                                        {{ $assign->lateness_deduction_amount }}
+                                                    )" style="background:#ff6f00; color:#fff; border:none; padding:4px 8px; border-radius:6px; font-size:10px; font-weight:800; cursor:pointer;">
+                                                        ⏱ Edit Shift
+                                                    </button>
                                                     <!-- Edit Venue -->
                                                     <button onclick="openVenueModal({{ $assign->id }}, '{{ addslashes($assign->display_name) }}', '{{ addslashes($assign->assigned_location) }}')"
                                                         style="background:none; border:1px solid #0055d4; color:#0055d4; padding:4px 8px; border-radius:6px; font-size:10px; font-weight:800; cursor:pointer;">
@@ -747,6 +759,47 @@
                             </table>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- EDIT SHIFT MODAL -->
+            <div id="shiftModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+                <div style="background:#fff; border-radius:16px; padding:28px; width:420px; max-width:95vw; box-shadow:0 20px 60px rgba(0,0,0,0.3); position:relative;">
+                    <button onclick="closeShiftModal()" style="position:absolute; top:14px; right:16px; background:none; border:none; font-size:20px; cursor:pointer; color:#8b747a;">×</button>
+                    <h3 style="margin:0 0 4px; color:#171115; font-size:16px; font-weight:900;">⏱ Edit Shift Times</h3>
+                    <p id="shiftModalSubtitle" style="margin:0 0 18px; color:#8b747a; font-size:12px;"></p>
+                    <form id="shiftModalForm" method="POST" style="display:flex; flex-direction:column; gap:14px;">
+                        @csrf
+                        @method('PATCH')
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                            <div class="field">
+                                <label style="color:#171115; font-size:10px; font-weight:700;">Shift Start Time</label>
+                                <input type="time" id="shift_modal_start" name="shift_start_time" style="width:100%; padding:10px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:14px; font-weight:700;">
+                            </div>
+                            <div class="field">
+                                <label style="color:#171115; font-size:10px; font-weight:700;">Shift End Time</label>
+                                <input type="time" id="shift_modal_end" name="shift_end_time" style="width:100%; padding:10px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:14px; font-weight:700;">
+                            </div>
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                            <div class="field">
+                                <label style="color:#171115; font-size:10px; font-weight:700;">Grace Period (Minutes)</label>
+                                <input type="number" id="shift_modal_grace" name="grace_period_minutes" min="0" max="120" style="width:100%; padding:10px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:13px;">
+                                <small style="color:#8b747a; font-size:10px;">Minutes allowed after shift start before marked Late</small>
+                            </div>
+                            <div class="field">
+                                <label style="color:#171115; font-size:10px; font-weight:700;">Late Penalty (GHS)</label>
+                                <input type="number" id="shift_modal_penalty" name="lateness_deduction_amount" min="0" step="0.01" style="width:100%; padding:10px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:13px;">
+                                <small style="color:#8b747a; font-size:10px;">Amount deducted from pay for late clock-in</small>
+                            </div>
+                        </div>
+                        <div style="background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; padding:10px;">
+                            <small style="color:#92400e; font-size:11px; font-weight:700;">ℹ️ Shift change takes effect immediately. The next clock-in will use the updated times for geofence and lateness checks.</small>
+                        </div>
+                        <button type="submit" style="background:#ff6f00; color:#fff; padding:12px; border-radius:8px; font-size:13px; font-weight:800; border:none; cursor:pointer;">
+                            ⏱ Save Shift Times
+                        </button>
+                    </form>
                 </div>
             </div>
 
@@ -1301,9 +1354,26 @@ function closeHistoryModal() {
     document.getElementById('historyModal').style.display = 'none';
 }
 
+// ── SHIFT MODAL ────────────────────────────────────────────────────────────
+function openShiftModal(assignmentId, staffName, startTime, endTime, graceMins, penalty) {
+    const modal = document.getElementById('shiftModal');
+    const form  = document.getElementById('shiftModalForm');
+    document.getElementById('shiftModalSubtitle').textContent = 'Adjusting shift for: ' + staffName;
+    form.action = '/brands/{{ $brandKey }}/staff/' + assignmentId + '/shift';
+    document.getElementById('shift_modal_start').value   = startTime;
+    document.getElementById('shift_modal_end').value     = endTime;
+    document.getElementById('shift_modal_grace').value   = graceMins;
+    document.getElementById('shift_modal_penalty').value = penalty;
+    modal.style.display = 'flex';
+}
+
+function closeShiftModal() {
+    document.getElementById('shiftModal').style.display = 'none';
+}
+
 // Close modals on backdrop click
 document.addEventListener('DOMContentLoaded', function() {
-    ['venueModal', 'historyModal'].forEach(id => {
+    ['venueModal', 'historyModal', 'shiftModal'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('click', function(e) {
             if (e.target === el) el.style.display = 'none';

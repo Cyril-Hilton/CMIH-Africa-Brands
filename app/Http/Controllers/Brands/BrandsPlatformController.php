@@ -2259,10 +2259,38 @@ class BrandsPlatformController extends Controller
         return back()->with('status', 'Staff brand access revoked.');
     }
 
+    /**
+     * Update shift times, grace period, and late penalty in-place.
+     * This is a direct update — no new venue history row is created.
+     */
+    public function updateStaffShift(Request $request, string $brand, BrandStaffAssignment $assignment): RedirectResponse
+    {
+        $brand = $this->resolveBrand($brand);
+        $this->guardCanManageTeam($request->user(), $brand);
+        abort_unless((int) $assignment->brand_id === (int) $brand->id, 404);
+
+        $validated = $request->validate([
+            'shift_start_time'          => ['required', 'string', 'max:10'],
+            'shift_end_time'            => ['required', 'string', 'max:10'],
+            'grace_period_minutes'      => ['nullable', 'integer', 'min:0', 'max:120'],
+            'lateness_deduction_amount' => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        $assignment->update([
+            'shift_start_time'          => $validated['shift_start_time'],
+            'shift_end_time'            => $validated['shift_end_time'],
+            'grace_period_minutes'      => isset($validated['grace_period_minutes']) ? (int) $validated['grace_period_minutes'] : $assignment->grace_period_minutes,
+            'lateness_deduction_amount' => isset($validated['lateness_deduction_amount']) ? (float) $validated['lateness_deduction_amount'] : $assignment->lateness_deduction_amount,
+        ]);
+
+        return back()->with('status', "⏱ Shift updated for {$assignment->display_name}: {$validated['shift_start_time']} – {$validated['shift_end_time']} (grace: " . ($validated['grace_period_minutes'] ?? $assignment->grace_period_minutes) . "m).");
+    }
+
     public function clockIn(Request $request, string $brand): RedirectResponse
     {
         $brand = $this->resolveBrand($brand);
         $this->guardBrandAccess($request->user(), $brand);
+
 
         $validated = $request->validate([
             'latitude' => ['required', 'numeric', 'between:-90,90'],

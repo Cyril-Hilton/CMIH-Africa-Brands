@@ -105,6 +105,8 @@ Route::middleware(['auth', 'active'])->prefix('brands')->name('brands-platform.'
     Route::post('/{brand}/staff/enroll', [BrandsPlatformController::class, 'enrollStaff'])->name('staff.enroll');
     // Venue change (preserves history)
     Route::put('/{brand}/staff/{assignment}/venue', [BrandsPlatformController::class, 'updateStaffVenue'])->name('staff.update-venue');
+    // Shift time adjustment (in-place update, no history row needed)
+    Route::patch('/{brand}/staff/{assignment}/shift', [BrandsPlatformController::class, 'updateStaffShift'])->name('staff.update-shift');
     // Venue history (JSON endpoint for modal)
     Route::get('/{brand}/staff/{assignment}/history', [BrandsPlatformController::class, 'staffVenueHistory'])->name('staff.venue-history');
 });
