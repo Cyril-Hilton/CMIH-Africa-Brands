@@ -43,7 +43,11 @@
 
     <div class="home-hero">
         <div class="eyebrow">CMIH BRANDS PLATFORM</div>
-        <h1>ACTIVATION. ENGAGEMENT. <span>INTELLIGENCE.</span></h1>
+        <h1>
+            <span class="hero-line">ACTIVATION.</span>
+            <span class="hero-line">ENGAGEMENT.</span>
+            <span class="hero-line hero-accent">INTELLIGENCE.</span>
+        </h1>
         <p>One simple gateway into every CMIH-managed brand activation, built for consumers, field teams, retail partners and agency reporting.</p>
         <div class="home-cta">
             <a href="#brands" class="btn red" data-scroll-to-brands>Explore Brands</a>
@@ -144,12 +148,13 @@
     const previous = document.querySelector('[data-carousel-prev]');
     const next = document.querySelector('[data-carousel-next]');
     const rexonaIdx = cards.findIndex(c => (c.getAttribute('href') || '').toLowerCase().includes('rexona') || c.textContent.toLowerCase().includes('rexona'));
-    let index = rexonaIdx >= 0 ? (rexonaIdx - 2 + cards.length) % cards.length : 0;
+    let index = rexonaIdx >= 0 ? (rexonaIdx - 3 + cards.length) % cards.length : 0;
 
     const visibleCount = () => {
         if (window.matchMedia('(max-width: 620px)').matches) return 1;
-        if (window.matchMedia('(max-width: 1050px)').matches) return 3;
-        return 5;
+        if (window.matchMedia('(max-width: 850px)').matches) return 3;
+        if (window.matchMedia('(max-width: 1050px)').matches) return 5;
+        return 7;
     };
 
     const render = () => {
@@ -167,7 +172,8 @@
         });
 
         if (count) {
-            const centerIdx = (index + Math.floor(visible / 2)) % cards.length;
+            const centerSlot = visible >= 7 ? 3 : Math.floor(visible / 2);
+            const centerIdx = (index + centerSlot) % cards.length;
             count.textContent = `${centerIdx + 1} / ${cards.length}`;
         }
     };
@@ -184,7 +190,12 @@
 
     document.querySelector('[data-scroll-to-brands]')?.addEventListener('click', (event) => {
         event.preventDefault();
-        document.getElementById('brands')?.scrollIntoView({ behavior: 'smooth' });
+        const brandsTarget = document.getElementById('brands');
+        if (!brandsTarget) return;
+
+        const offset = window.matchMedia('(max-width: 620px)').matches ? 95 : 155;
+        const top = brandsTarget.getBoundingClientRect().top + window.scrollY - offset;
+        window.scrollTo({ top: Math.max(top, 0), behavior: 'smooth' });
     });
 
     window.addEventListener('resize', render, { passive: true });
