@@ -92,6 +92,45 @@ class BrandsPlatformTest extends TestCase
         $this->assertNotNull($notification->refresh()->read_at);
     }
 
+    public function test_staff_feed_excludes_merchandiser_portal_accounts(): void
+    {
+        $admin = User::factory()->create([
+            'status' => 'active',
+            'access_role' => 'super_admin',
+        ]);
+        $staff = User::factory()->create([
+            'name' => 'Internal CMIH Staff',
+            'status' => 'active',
+            'access_role' => 'staff',
+        ]);
+        $merchandiser = User::factory()->create([
+            'name' => 'Field Merchandiser',
+            'status' => 'active',
+            'access_role' => User::MERCHANDISER_ROLE,
+        ]);
+        $supervisor = User::factory()->create([
+            'name' => 'Field Supervisor',
+            'status' => 'active',
+            'access_role' => User::MERCHANDISER_SUPERVISOR_ROLE,
+        ]);
+
+        $this->actingAs($admin)
+            ->getJson(route('brands-platform.admin.staff-feed'))
+            ->assertOk()
+            ->assertJsonFragment([
+                'id' => $staff->id,
+                'name' => 'Internal CMIH Staff',
+            ])
+            ->assertJsonMissing([
+                'id' => $merchandiser->id,
+                'name' => 'Field Merchandiser',
+            ])
+            ->assertJsonMissing([
+                'id' => $supervisor->id,
+                'name' => 'Field Supervisor',
+            ]);
+    }
+
     public function test_regular_admin_cannot_open_brands_admin_console(): void
     {
         $admin = User::factory()->create([
