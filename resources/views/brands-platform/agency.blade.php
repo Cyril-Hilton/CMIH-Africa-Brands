@@ -422,8 +422,8 @@
                                 <div style="display:flex; flex-direction:column; gap:10px;">
                                     @forelse($todayAttendances as $att)
                                         @php
-                                            $lat = $att->clock_in_latitude ?: $att->assigned_latitude ?: 5.673841;
-                                            $lng = $att->clock_in_longitude ?: $att->assigned_longitude ?: -0.198322;
+                                            $lat = $att->clock_in_latitude ?: $att->assigned_latitude ?: 5.6817954;
+                                            $lng = $att->clock_in_longitude ?: $att->assigned_longitude ?: -0.1944273;
                                         @endphp
                                         <div onclick="focusStaffOnMap({{ $att->user_id }}, {{ $lat }}, {{ $lng }}, '{{ addslashes($att->user?->name ?: 'Staff') }}', '{{ addslashes($att->assigned_location_name ?: 'Venue') }}', '{{ $att->clock_in_time ? $att->clock_in_time->format('h:i A') : 'Not Clocked In' }}', {{ $att->is_late ? 'true' : 'false' }}, {{ $att->lateness_minutes }}, {{ $att->deduction_amount }}, {{ $att->clock_in_distance_meters ?: 0 }})" 
                                              style="background:#fff; border:1px solid #e4dadd; border-radius:10px; padding:12px; cursor:pointer; transition:all 0.2s ease; display:flex; align-items:center; gap:12px;">
@@ -1082,7 +1082,7 @@
                         <div class="panel-head" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
                             <div>
                                 <h3 style="color:#171115; font-size:18px; font-weight:900; margin:0;">👥 Staff Enrollment Centre</h3>
-                                <small style="color:#8b747a;">Import CMIH staff or manually enrol promoters and retail terminal cashiers — assign venue on enrollment, full venue history preserved</small>
+                                <small style="color:#8b747a;">Import CMIH staff-portal users for agency supervision, or manually enrol promoters and retail terminal cashiers for geofenced field shifts.</small>
                             </div>
                             <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                                 <span style="background:#0055d4; color:#fff; font-weight:800; padding:5px 12px; border-radius:20px; font-size:11px;">
@@ -1121,7 +1121,7 @@
                                 <div id="panel-cmih">
                                     <div style="background:#f0f4ff; border:1px solid #c7d7ff; border-radius:12px; padding:16px; margin-bottom:12px;">
                                         <p style="margin:0; font-size:11px; color:#1e40af; font-weight:700;">
-                                            🔗 CMIH Portal API — These staff are already in the CMIH system. Select them below to assign them to this brand with a venue.
+                                            🔗 CMIH Portal API — This list shows internal CMIH staff-portal users only. Agency, supervisor, and brand admin users do not need geofenced clock-in.
                                         </p>
                                     </div>
                                     <form method="POST" action="{{ route('brands-platform.team.store', $brandKey) }}" style="display:flex; flex-direction:column; gap:12px;">
@@ -1147,22 +1147,9 @@
                                                 <option value="brand_admin">Brand Admin</option>
                                             </select>
                                         </div>
-                                        <div class="field">
-                                            <label style="color:#171115; font-size:10px; font-weight:700;">Assigned Venue (Google Autocomplete) *</label>
-                                            <input type="text" name="assigned_location" id="cmih_location_ac" placeholder="Search venue…" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #c7d7ff; background:#fff; font-size:12px;">
-                                            <input type="hidden" name="assigned_address" id="cmih_address">
-                                            <input type="hidden" name="assigned_latitude" id="cmih_lat" value="5.673841">
-                                            <input type="hidden" name="assigned_longitude" id="cmih_lng" value="-0.198322">
-                                        </div>
-                                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-                                            <div class="field">
-                                                <label style="color:#171115; font-size:10px; font-weight:700;">Shift Start</label>
-                                                <input type="time" name="shift_start_time" value="08:30" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
-                                            </div>
-                                            <div class="field">
-                                                <label style="color:#171115; font-size:10px; font-weight:700;">Shift End</label>
-                                                <input type="time" name="shift_end_time" value="17:00" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
-                                            </div>
+                                        <div style="background:#fff; border:1px solid #c7d7ff; border-radius:10px; padding:12px;">
+                                            <strong style="display:block; color:#1e40af; font-size:11px; font-weight:900;">No field clock-in required</strong>
+                                            <small style="display:block; margin-top:4px; color:#64748b; font-size:10px; line-height:1.5;">These users supervise brand activity, view reports, monitor support staff attendance, and manage publications. Location assignment is only required for promoters and retail terminal personnel.</small>
                                         </div>
                                         <div style="display:flex; flex-direction:column; gap:8px; background:#fff; padding:10px; border-radius:8px; border:1px solid #e4dadd;">
                                             <label style="font-size:10px; font-weight:800; color:#171115;">Privileges</label>
@@ -1231,8 +1218,9 @@
                                             <label style="color:#171115; font-size:10px; font-weight:700;">Assigned Venue (Google Autocomplete) *</label>
                                             <input type="text" name="assigned_location" id="promo_location_ac" placeholder="Search activation venue…" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #c4b5fd; background:#fff; font-size:12px;">
                                             <input type="hidden" name="assigned_address" id="promo_address">
-                                            <input type="hidden" name="assigned_latitude" id="promo_lat" value="5.673841">
-                                            <input type="hidden" name="assigned_longitude" id="promo_lng" value="-0.198322">
+                                            <input type="hidden" name="assigned_latitude" id="promo_lat">
+                                            <input type="hidden" name="assigned_longitude" id="promo_lng">
+                                            <small class="venue-coordinate-hint" data-coordinate-hint-for="promo_location_ac" style="display:block; margin-top:5px; color:#64748b; font-size:10px;">Select a Google Maps result to lock the geofence coordinates.</small>
                                         </div>
                                         <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px;">
                                             <div class="field">
@@ -1307,8 +1295,9 @@
                                             <label style="color:#171115; font-size:10px; font-weight:700;">Retail Outlet / Store *</label>
                                             <input type="text" name="assigned_location" id="retail_location_ac" placeholder="e.g. Shoprite - Accra Mall" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #86efac; background:#fff; font-size:12px;">
                                             <input type="hidden" name="assigned_address" id="retail_address">
-                                            <input type="hidden" name="assigned_latitude" id="retail_lat" value="5.673841">
-                                            <input type="hidden" name="assigned_longitude" id="retail_lng" value="-0.198322">
+                                            <input type="hidden" name="assigned_latitude" id="retail_lat">
+                                            <input type="hidden" name="assigned_longitude" id="retail_lng">
+                                            <small class="venue-coordinate-hint" data-coordinate-hint-for="retail_location_ac" style="display:block; margin-top:5px; color:#64748b; font-size:10px;">Select a Google Maps result to lock the geofence coordinates.</small>
                                         </div>
                                         <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px;">
                                             <div class="field">
@@ -1353,6 +1342,10 @@
                                     </thead>
                                     <tbody>
                                         @forelse($assignedStaff as $assign)
+                                            @php
+                                                $needsFieldClockIn = in_array($assign->enrollment_type, ['promoter', 'retail_terminal'], true)
+                                                    || in_array($assign->role, ['promoter', 'supporting_staff', 'sales_personnel', 'retail_staff', 'merchandiser'], true);
+                                            @endphp
                                             <tr style="border-bottom:1px solid #f0e6e9;">
                                                 <td style="padding:10px 6px;">
                                                     <div style="display:flex; align-items:center; gap:9px;">
@@ -1382,19 +1375,30 @@
                                                     </div>
                                                 </td>
                                                 <td style="padding:10px 6px; max-width:180px;">
+                                                    @if($needsFieldClockIn)
                                                     <div style="font-size:11px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                                                         📍 {{ Str::limit($assign->assigned_location ?: '—', 40) }}
                                                     </div>
                                                     @if($assign->venue_assigned_at)
                                                         <small style="color:#8b747a; font-size:10px;">Since {{ $assign->venue_assigned_at->format('d M Y') }}</small>
                                                     @endif
+                                                    @else
+                                                        <strong style="display:block; color:#1e40af; font-size:11px;">Agency / supervisory access</strong>
+                                                        <small style="color:#8b747a; font-size:10px;">No geofence or venue clock-in required</small>
+                                                    @endif
                                                 </td>
                                                 <td style="padding:10px 6px;">
+                                                    @if($needsFieldClockIn)
                                                     <strong style="display:block; font-size:12px; color:#171115;">{{ $assign->shift_start_time }} – {{ $assign->shift_end_time }}</strong>
                                                     <small style="color:#8b747a; font-size:10px;">Grace: {{ $assign->grace_period_minutes }}m · Penalty: GHS {{ number_format($assign->lateness_deduction_amount, 2) }}</small>
+                                                    @else
+                                                        <strong style="display:block; font-size:12px; color:#171115;">No shift clock-in</strong>
+                                                        <small style="color:#8b747a; font-size:10px;">Monitors support staff performance</small>
+                                                    @endif
                                                 </td>
                                                 <td style="padding:10px 6px; text-align:right;">
                                                     <div style="display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap;">
+                                                        @if($needsFieldClockIn)
                                                         <button onclick="openShiftModal({{ $assign->id }}, '{{ addslashes($assign->display_name) }}', '{{ $assign->shift_start_time }}', '{{ $assign->shift_end_time }}', {{ $assign->grace_period_minutes }}, {{ $assign->lateness_deduction_amount }})" style="background:#ff6f00; color:#fff; border:none; padding:4px 8px; border-radius:6px; font-size:10px; font-weight:800; cursor:pointer;">
                                                             ⏱ Edit Shift
                                                         </button>
@@ -1404,6 +1408,7 @@
                                                         <button onclick="openHistoryModal({{ $assign->id }}, '{{ addslashes($assign->display_name) }}')" style="background:none; border:1px solid #8b747a; color:#8b747a; padding:4px 8px; border-radius:6px; font-size:10px; font-weight:800; cursor:pointer;">
                                                             📋 History
                                                         </button>
+                                                        @endif
                                                         <form method="POST" action="{{ route('brands-platform.team.destroy', [$brandKey, $assign->id]) }}" style="display:inline;">
                                                             @csrf
                                                             @method('DELETE')
@@ -1479,6 +1484,7 @@
                             <input type="hidden" name="assigned_address" id="venue_modal_address">
                             <input type="hidden" name="assigned_latitude" id="venue_modal_lat">
                             <input type="hidden" name="assigned_longitude" id="venue_modal_lng">
+                            <small class="venue-coordinate-hint" data-coordinate-hint-for="venue_modal_location" style="display:block; margin-top:5px; color:#64748b; font-size:10px;">Select a Google Maps result to lock the geofence coordinates.</small>
                         </div>
                         <div class="field">
                             <label style="color:#171115; font-size:10px; font-weight:700;">Reason for Change</label>
@@ -1653,7 +1659,7 @@ function initAgencyMap() {
     if (agencyMap || typeof google === 'undefined' || !google.maps) return;
 
     agencyMap = new google.maps.Map(mapEl, {
-        center: { lat: 5.673841, lng: -0.198322 },
+        center: { lat: 5.6817954, lng: -0.1944273 },
         zoom: 13,
         styles: [
             { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] }
@@ -1664,20 +1670,47 @@ function initAgencyMap() {
 
     if (typeof google !== 'undefined' && google.maps && google.maps.places) {
         const acFields = [
-            { input: 'cmih_location_ac', lat: 'cmih_lat', lng: 'cmih_lng', addr: 'cmih_address' },
             { input: 'promo_location_ac', lat: 'promo_lat', lng: 'promo_lng', addr: 'promo_address' },
             { input: 'retail_location_ac', lat: 'retail_lat', lng: 'retail_lng', addr: 'retail_address' },
         ];
         acFields.forEach(f => {
             const el = document.getElementById(f.input);
             if (!el) return;
+            const latField = document.getElementById(f.lat);
+            const lngField = document.getElementById(f.lng);
+            const addressField = document.getElementById(f.addr);
+            const hint = document.querySelector(`[data-coordinate-hint-for="${f.input}"]`);
+            const markPending = () => {
+                if (latField) latField.value = '';
+                if (lngField) lngField.value = '';
+                if (addressField) addressField.value = '';
+                if (hint) {
+                    hint.textContent = 'Select a Google Maps result to lock the geofence coordinates.';
+                    hint.style.color = '#64748b';
+                }
+            };
+            const markResolved = () => {
+                if (hint) {
+                    hint.textContent = 'Geofence coordinates locked from Google Maps.';
+                    hint.style.color = '#0a9d70';
+                }
+            };
             const ac = new google.maps.places.Autocomplete(el, { types: ['establishment', 'geocode'] });
+            el.addEventListener('input', markPending);
+            el.addEventListener('keydown', event => {
+                if (event.key !== 'Enter') return;
+                const pacContainer = document.querySelector('.pac-container');
+                if (pacContainer && pacContainer.style.display !== 'none') {
+                    event.preventDefault();
+                }
+            });
             ac.addListener('place_changed', function() {
                 const place = ac.getPlace();
                 if (place.geometry) {
-                    document.getElementById(f.lat).value = place.geometry.location.lat();
-                    document.getElementById(f.lng).value = place.geometry.location.lng();
-                    document.getElementById(f.addr).value = place.formatted_address || place.name;
+                    if (latField) latField.value = place.geometry.location.lat();
+                    if (lngField) lngField.value = place.geometry.location.lng();
+                    if (addressField) addressField.value = place.formatted_address || place.name;
+                    markResolved();
                 }
             });
         });
@@ -1688,8 +1721,8 @@ function initAgencyMap() {
         const bounds = new google.maps.LatLngBounds();
         
         attendances.forEach(att => {
-            const lat = parseFloat(att.clock_in_latitude || att.assigned_latitude || 5.673841);
-            const lng = parseFloat(att.clock_in_longitude || att.assigned_longitude || -0.198322);
+            const lat = parseFloat(att.clock_in_latitude || att.assigned_latitude || 5.6817954);
+            const lng = parseFloat(att.clock_in_longitude || att.assigned_longitude || -0.1944273);
             const pos = { lat: lat, lng: lng };
             bounds.extend(pos);
 
@@ -1789,17 +1822,48 @@ function openVenueModal(assignmentId, staffName, currentVenue) {
         'Changing venue for: ' + staffName + ' (current: ' + (currentVenue || '—') + ')';
     form.action = '/brands/{{ $brandKey }}/staff/' + assignmentId + '/venue';
     document.getElementById('venue_modal_location').value = '';
+    document.getElementById('venue_modal_address').value = '';
+    document.getElementById('venue_modal_lat').value = '';
+    document.getElementById('venue_modal_lng').value = '';
+    const venueHint = document.querySelector('[data-coordinate-hint-for="venue_modal_location"]');
+    if (venueHint) {
+        venueHint.textContent = 'Select a Google Maps result to lock the geofence coordinates.';
+        venueHint.style.color = '#64748b';
+    }
     modal.style.display = 'flex';
 
     if (!window._venueModalAcInited && typeof google !== 'undefined' && google.maps && google.maps.places) {
         const el = document.getElementById('venue_modal_location');
+        const markVenuePending = () => {
+            document.getElementById('venue_modal_address').value = '';
+            document.getElementById('venue_modal_lat').value = '';
+            document.getElementById('venue_modal_lng').value = '';
+            const hint = document.querySelector('[data-coordinate-hint-for="venue_modal_location"]');
+            if (hint) {
+                hint.textContent = 'Select a Google Maps result to lock the geofence coordinates.';
+                hint.style.color = '#64748b';
+            }
+        };
         const ac = new google.maps.places.Autocomplete(el, { types: ['establishment', 'geocode'] });
+        el.addEventListener('input', markVenuePending);
+        el.addEventListener('keydown', event => {
+            if (event.key !== 'Enter') return;
+            const pacContainer = document.querySelector('.pac-container');
+            if (pacContainer && pacContainer.style.display !== 'none') {
+                event.preventDefault();
+            }
+        });
         ac.addListener('place_changed', function() {
             const place = ac.getPlace();
             if (place.geometry) {
                 document.getElementById('venue_modal_lat').value = place.geometry.location.lat();
                 document.getElementById('venue_modal_lng').value = place.geometry.location.lng();
                 document.getElementById('venue_modal_address').value = place.formatted_address || place.name;
+                const hint = document.querySelector('[data-coordinate-hint-for="venue_modal_location"]');
+                if (hint) {
+                    hint.textContent = 'Geofence coordinates locked from Google Maps.';
+                    hint.style.color = '#0a9d70';
+                }
             }
         });
         window._venueModalAcInited = true;

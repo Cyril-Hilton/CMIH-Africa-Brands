@@ -737,32 +737,48 @@ class BrandsPlatformTest extends TestCase
 
         $this->assertTrue($assignment->canManageTeam());
         $this->assertTrue($assignment->canRecordActivity());
+        $this->assertSame(BrandStaffAssignment::TYPE_AGENCY_STAFF, $assignment->enrollment_type);
+        $this->assertNull($assignment->assigned_location);
+        $this->assertNull($assignment->assigned_latitude);
 
-        // Delegated staff can now manage other team members
-        $promoter = User::factory()->create([
+        // Delegated staff can now manage other agency/supervisory team members
+        $supervisor = User::factory()->create([
             'status' => 'active',
-            'access_role' => 'promoter',
+            'access_role' => 'staff',
         ]);
 
         $this->actingAs($staff)
             ->post(route('brands-platform.team.store', $brand->slug), [
-                'user_id' => $promoter->id,
-                'role' => 'promoter',
+                'user_id' => $supervisor->id,
+                'role' => BrandStaffAssignment::ROLE_SUPERVISOR,
                 'can_record_activity' => '1',
             ])->assertRedirect();
 
-        $promoterAssignment = BrandStaffAssignment::where('brand_id', $brand->id)
-            ->where('user_id', $promoter->id)
+        $supervisorAssignment = BrandStaffAssignment::where('brand_id', $brand->id)
+            ->where('user_id', $supervisor->id)
             ->firstOrFail();
 
-        $this->assertFalse($promoterAssignment->canManageTeam());
+        $this->assertFalse($supervisorAssignment->canManageTeam());
+        $this->assertSame(BrandStaffAssignment::TYPE_AGENCY_STAFF, $supervisorAssignment->enrollment_type);
 
-        // Archive promoter
+        $merchandiser = User::factory()->create([
+            'status' => 'active',
+            'access_role' => User::MERCHANDISER_ROLE,
+        ]);
+
         $this->actingAs($staff)
-            ->delete(route('brands-platform.team.destroy', [$brand->slug, $promoterAssignment->id]))
+            ->post(route('brands-platform.team.store', $brand->slug), [
+                'user_id' => $merchandiser->id,
+                'role' => BrandStaffAssignment::ROLE_AGENCY,
+            ])
+            ->assertSessionHasErrors('user_id');
+
+        // Archive supervisor
+        $this->actingAs($staff)
+            ->delete(route('brands-platform.team.destroy', [$brand->slug, $supervisorAssignment->id]))
             ->assertRedirect();
 
-        $this->assertFalse($promoterAssignment->refresh()->is_active);
+        $this->assertFalse($supervisorAssignment->refresh()->is_active);
     }
 
     public function test_brand_support_login_redirects_to_support_workspace_without_external_split_redirect(): void

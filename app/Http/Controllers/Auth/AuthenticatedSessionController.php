@@ -78,11 +78,19 @@ class AuthenticatedSessionController extends Controller
             $brand = $assignment->brand;
             $brandKey = $brand->slug ?: $brand->id;
             
-            if ($assignment->role === \App\Models\BrandStaffAssignment::ROLE_RETAIL) {
+            if (
+                $assignment->role === \App\Models\BrandStaffAssignment::ROLE_RETAIL
+                || $assignment->enrollment_type === \App\Models\BrandStaffAssignment::TYPE_RETAIL_TERMINAL
+            ) {
                 return redirect()->route('brands-platform.retail', $brandKey);
             }
-            
-            if ($assignment->role === \App\Models\BrandStaffAssignment::ROLE_AGENCY) {
+
+            if (
+                $assignment->role === \App\Models\BrandStaffAssignment::ROLE_AGENCY
+                || $assignment->role === \App\Models\BrandStaffAssignment::ROLE_ADMIN
+                || $assignment->role === \App\Models\BrandStaffAssignment::ROLE_SUPERVISOR
+                || $assignment->enrollment_type === \App\Models\BrandStaffAssignment::TYPE_AGENCY_STAFF
+            ) {
                 return redirect()->route('brands-platform.agency', $brandKey);
             }
             

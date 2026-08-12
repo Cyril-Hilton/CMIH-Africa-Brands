@@ -18,15 +18,22 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class BrandsPlatformController extends Controller
 {
+    private const CMIH_DEFAULT_LOCATION = 'Concepts Make It Happen (No. 7 Affum Street, North Legon, Haatso)';
+    private const CMIH_DEFAULT_ADDRESS = 'No. 7 Affum Street, North Legon, Haatso, Accra';
+    private const CMIH_DEFAULT_LATITUDE = 5.6817954;
+    private const CMIH_DEFAULT_LONGITUDE = -0.1944273;
+
     public function showSupportLogin(Request $request, string $brand): View
     {
         $brand = $this->resolveBrand($brand);
@@ -225,6 +232,7 @@ class BrandsPlatformController extends Controller
         $alreadyEnrolledUserIds = $assignedStaff->pluck('user_id')->filter()->values()->toArray();
 
         $availableUsers = User::query()
+            ->internalStaff()
             ->where('status', 'active')
             ->orderBy('name')
             ->get(['id', 'name', 'email', 'staff_id_number', 'access_role', 'department']);
@@ -375,30 +383,33 @@ class BrandsPlatformController extends Controller
         ));
     }
 
-    public function support(Request $request, string $brand): View
+    public function support(Request $request, string $brand): View|RedirectResponse
     {
         $brand = $this->resolveBrand($brand);
-        $this->guardBrandAccess($request->user(), $brand);
+        $user = $request->user();
+        $this->guardBrandAccess($user, $brand);
 
         $activation = $this->primaryActivation($brand);
         $filters = $this->reportFilters($request);
         $metrics = $this->brandMetrics($brand, $activation, $filters);
-        $assignedLocations = $this->assignedPlanLocationsFor($request->user(), $activation);
-        $allowedRoles = $this->allowedStaffRolesFor($request->user(), $brand);
+        $assignedLocations = $this->assignedPlanLocationsFor($user, $activation);
+        $allowedRoles = $this->allowedStaffRolesFor($user, $brand);
+
+        $myStaffAssignment = $this->currentBrandAssignmentForUser($user, $brand);
+        if (! $user->isCvoOrSuperAdmin() && ! $user->isLineManager() && ! $this->assignmentIsPromoterFieldStaff($myStaffAssignment)) {
+            return redirect()
+                ->route('brands-platform.agency', $brand->slug ?: $brand->id)
+                ->withErrors(['attendance' => $this->fieldWorkspaceError()]);
+        }
 
         $activeAttendance = \App\Models\BrandStaffAttendance::where('brand_id', $brand->id)
-            ->where('user_id', $request->user()->id)
+            ->where('user_id', $user->id)
             ->where('status', 'clocked_in')
             ->latest()
             ->first();
 
-        $myStaffAssignment = \App\Models\BrandStaffAssignment::where('brand_id', $brand->id)
-            ->where('user_id', $request->user()->id)
-            ->where('is_active', true)
-            ->first();
-
         $myActivities = $this->fieldActivityQuery($brand, $activation, $filters)
-            ->where('user_id', $request->user()->id)
+            ->where('user_id', $user->id)
             ->latest()
             ->paginate(12)
             ->withQueryString();
@@ -421,48 +432,70 @@ class BrandsPlatformController extends Controller
         return view('brands-platform.support', compact('brand', 'activation', 'metrics', 'filters', 'myActivities', 'leaderboard', 'assignedLocations', 'allowedRoles', 'promoterDailyTrend', 'activeAttendance', 'myStaffAssignment'));
     }
 
-    public function retail(Request $request, string $brand): View
+    public function retail(Request $request, string $brand): View|RedirectResponse
     {
         $brand = $this->resolveBrand($brand);
-        $this->guardBrandAccess($request->user(), $brand);
+        $user = $request->user();
+        $this->guardBrandAccess($user, $brand);
 
         $activation = $this->primaryActivation($brand);
         $filters = $this->reportFilters($request);
         $metrics = $this->brandMetrics($brand, $activation, $filters);
-        $assignedLocations = $this->assignedPlanLocationsFor($request->user(), $activation);
+        $assignedLocations = $this->assignedPlanLocationsFor($user, $activation);
+
+        $myStaffAssignment = $this->currentBrandAssignmentForUser($user, $brand);
+        if (! $user->isCvoOrSuperAdmin() && ! $user->isLineManager() && ! $this->assignmentIsRetailTerminal($myStaffAssignment)) {
+            $fallback = $this->assignmentIsPromoterFieldStaff($myStaffAssignment) ? 'brands-platform.support' : 'brands-platform.agency';
+
+            return redirect()
+                ->route($fallback, $brand->slug ?: $brand->id)
+                ->withErrors(['attendance' => 'The retail terminal is only for assigned retail staff. Agency users should monitor retail activity from the agency dashboard.']);
+        }
 
         $activeAttendance = \App\Models\BrandStaffAttendance::where('brand_id', $brand->id)
-            ->where('user_id', $request->user()->id)
+            ->where('user_id', $user->id)
             ->where('status', 'clocked_in')
             ->latest()
             ->first();
 
-        $myStaffAssignment = \App\Models\BrandStaffAssignment::where('brand_id', $brand->id)
-            ->where('user_id', $request->user()->id)
-            ->where('is_active', true)
-            ->first();
+        $retailActivityTypes = ['reward_redeemed', 'retail_update', 'retail_scan'];
+        $retailBaseQuery = $this->fieldActivityQuery($brand, $activation, $filters)
+            ->whereIn('activity_type', $retailActivityTypes);
 
-        $redemptions = $this->fieldActivityQuery($brand, $activation, $filters)
-            ->whereIn('activity_type', ['reward_redeemed', 'retail_update', 'retail_scan'])
+        $redemptions = (clone $retailBaseQuery)
             ->with('user')
             ->latest()
             ->paginate(15)
             ->withQueryString();
 
         $redemptionDailyTrend = $this->dailyTrend(
-            $this->fieldActivityQuery($brand, $activation, $filters)->whereIn('activity_type', ['reward_redeemed', 'retail_update', 'retail_scan']),
+            clone $retailBaseQuery,
             'created_at'
         );
 
         $redemptionStatus = [
-            'verified' => $this->fieldActivityQuery($brand, $activation, $filters)->where('activity_type', 'reward_redeemed')->where('status', 'done')->count(),
-            'pending' => $this->fieldActivityQuery($brand, $activation, $filters)->where('activity_type', 'reward_redeemed')->where('status', 'pending')->count(),
-            'failed' => $this->fieldActivityQuery($brand, $activation, $filters)->where('activity_type', 'reward_redeemed')->where('status', 'failed')->count(),
+            'verified' => (clone $retailBaseQuery)->where('activity_type', 'reward_redeemed')->where('status', 'done')->count(),
+            'pending' => (clone $retailBaseQuery)->whereIn('status', ['pending', 'recorded'])->count(),
+            'failed' => (clone $retailBaseQuery)->whereIn('status', ['failed', 'used', 'expired', 'invalid'])->count(),
         ];
+
+        $retailSummary = [
+            'attempts' => (clone $retailBaseQuery)->count(),
+            'successful' => $redemptionStatus['verified'],
+            'pending' => $redemptionStatus['pending'],
+            'failed' => $redemptionStatus['failed'],
+            'value_redeemed' => (float) (clone $retailBaseQuery)
+                ->where('activity_type', 'reward_redeemed')
+                ->where('status', 'done')
+                ->sum('transaction_value'),
+        ];
+        $retailSummary['failed_rate'] = $retailSummary['attempts'] > 0
+            ? round(($retailSummary['failed'] / $retailSummary['attempts']) * 100, 1)
+            : 0.0;
 
         $this->logBrandActivity($request, $brand, $activation, 'page_view', 'retail_workspace');
 
-        return view('brands-platform.retail', compact('brand', 'activation', 'metrics', 'filters', 'redemptions', 'assignedLocations', 'redemptionDailyTrend', 'redemptionStatus', 'activeAttendance', 'myStaffAssignment'));
+        return view('brands-platform.retail', compact('brand', 'activation', 'metrics', 'filters', 'redemptions', 'assignedLocations', 'redemptionDailyTrend', 'redemptionStatus', 'retailSummary', 'activeAttendance', 'myStaffAssignment'));
     }
 
     public function gallery(Request $request, ?string $brand = null): View
@@ -2198,6 +2231,75 @@ class BrandsPlatformController extends Controller
         return array_values(array_unique($roles));
     }
 
+    private function currentBrandAssignmentForUser(?User $user, Brand $brand): ?BrandStaffAssignment
+    {
+        if (! $user) {
+            return null;
+        }
+
+        return BrandStaffAssignment::where('brand_id', $brand->id)
+            ->where('user_id', $user->id)
+            ->where('is_active', true)
+            ->where('is_current_venue', true)
+            ->latest()
+            ->first();
+    }
+
+    private function roleUsesGeofencedShift(?string $role): bool
+    {
+        return in_array($role, [
+            BrandStaffAssignment::ROLE_PROMOTER,
+            BrandStaffAssignment::ROLE_SUPPORT,
+            BrandStaffAssignment::ROLE_SALES,
+            BrandStaffAssignment::ROLE_RETAIL,
+            BrandStaffAssignment::ROLE_MERCHANDISER,
+        ], true);
+    }
+
+    private function assignmentUsesGeofencedShift(?BrandStaffAssignment $assignment): bool
+    {
+        if (! $assignment) {
+            return false;
+        }
+
+        return in_array($assignment->enrollment_type, [
+            BrandStaffAssignment::TYPE_PROMOTER,
+            BrandStaffAssignment::TYPE_RETAIL_TERMINAL,
+        ], true) || $this->roleUsesGeofencedShift($assignment->role);
+    }
+
+    private function assignmentIsRetailTerminal(?BrandStaffAssignment $assignment): bool
+    {
+        return $assignment
+            && (
+                $assignment->enrollment_type === BrandStaffAssignment::TYPE_RETAIL_TERMINAL
+                || $assignment->role === BrandStaffAssignment::ROLE_RETAIL
+            );
+    }
+
+    private function assignmentIsPromoterFieldStaff(?BrandStaffAssignment $assignment): bool
+    {
+        return $this->assignmentUsesGeofencedShift($assignment)
+            && ! $this->assignmentIsRetailTerminal($assignment);
+    }
+
+    private function enrollmentTypeForRole(string $role): string
+    {
+        return match ($role) {
+            BrandStaffAssignment::ROLE_RETAIL => BrandStaffAssignment::TYPE_RETAIL_TERMINAL,
+            BrandStaffAssignment::ROLE_PROMOTER,
+            BrandStaffAssignment::ROLE_SUPPORT,
+            BrandStaffAssignment::ROLE_SALES,
+            BrandStaffAssignment::ROLE_MERCHANDISER => BrandStaffAssignment::TYPE_PROMOTER,
+            default => BrandStaffAssignment::TYPE_AGENCY_STAFF,
+        };
+    }
+
+    private function fieldWorkspaceError(): string
+    {
+        return 'Clock-in is only required for promoters and retail/supporting field staff. Agency staff should use the agency dashboard to supervise and monitor field performance.';
+    }
+
     private function guardCanManageTeam(?User $user, Brand $brand): void
     {
         if (! $user) {
@@ -2321,7 +2423,11 @@ class BrandsPlatformController extends Controller
 
         $validated = $request->validate([
             'user_id'                   => ['required', 'integer', 'exists:users,id'],
-            'role'                      => ['required', Rule::in(BrandStaffAssignment::ROLES)],
+            'role'                      => ['required', Rule::in([
+                BrandStaffAssignment::ROLE_AGENCY,
+                BrandStaffAssignment::ROLE_SUPERVISOR,
+                BrandStaffAssignment::ROLE_ADMIN,
+            ])],
             'assigned_location'         => ['nullable', 'string', 'max:255'],
             'assigned_address'          => ['nullable', 'string', 'max:255'],
             'assigned_latitude'         => ['nullable', 'numeric', 'between:-90,90'],
@@ -2337,11 +2443,19 @@ class BrandsPlatformController extends Controller
         ]);
 
         $user = User::findOrFail($validated['user_id']);
+        if ($user->isMerchandiserAccount()) {
+            throw ValidationException::withMessages([
+                'user_id' => 'Only internal CMIH staff-portal users can be imported here. Merchandiser portal field accounts must use the merchandiser portal flow.',
+            ]);
+        }
+
         $permissions = [
             'can_manage_team'    => (bool) ($request->input('can_manage_team', 0)),
             'can_record_activity'=> (bool) ($request->input('can_record_activity', 1)),
             'can_export'         => (bool) ($request->input('can_export', 0)),
         ];
+        $enrollmentType = $this->enrollmentTypeForRole($validated['role']);
+        $usesGeofence = $this->roleUsesGeofencedShift($validated['role']);
 
         // Archive any existing current-venue row for this user+brand
         $existing = BrandStaffAssignment::where('brand_id', $brand->id)
@@ -2353,21 +2467,35 @@ class BrandsPlatformController extends Controller
             $existing->update(['is_current_venue' => false, 'is_active' => false, 'venue_changed_reason' => 'Reassigned']);
         }
 
+        $venue = $usesGeofence
+            ? $this->resolveVenueCoordinates(
+                $validated['assigned_location'] ?? null,
+                $validated['assigned_address'] ?? null,
+                $validated['assigned_latitude'] ?? null,
+                $validated['assigned_longitude'] ?? null
+            )
+            : [
+                'location' => null,
+                'address' => null,
+                'latitude' => null,
+                'longitude' => null,
+            ];
+
         BrandStaffAssignment::create([
             'brand_id'                  => $brand->id,
             'user_id'                   => $user->id,
             'role'                      => $validated['role'],
             'enrollment_source'         => BrandStaffAssignment::SOURCE_CMIH_API,
-            'enrollment_type'           => BrandStaffAssignment::TYPE_AGENCY_STAFF,
+            'enrollment_type'           => $enrollmentType,
             'permissions'               => $permissions,
-            'assigned_location'         => $validated['assigned_location'] ?? 'Concepts Make It Happen (No. 7 Affum Street, North Legon, Haatso)',
-            'assigned_address'          => $validated['assigned_address'] ?? 'No. 7 Affum Street, North Legon, Haatso, Accra',
-            'assigned_latitude'         => isset($validated['assigned_latitude']) ? (float) $validated['assigned_latitude'] : 5.673841,
-            'assigned_longitude'        => isset($validated['assigned_longitude']) ? (float) $validated['assigned_longitude'] : -0.198322,
-            'shift_start_time'          => $validated['shift_start_time'] ?? '08:30',
-            'shift_end_time'            => $validated['shift_end_time'] ?? '17:00',
-            'grace_period_minutes'      => isset($validated['grace_period_minutes']) ? (int) $validated['grace_period_minutes'] : 10,
-            'lateness_deduction_amount' => isset($validated['lateness_deduction_amount']) ? (float) $validated['lateness_deduction_amount'] : 20.00,
+            'assigned_location'         => $venue['location'],
+            'assigned_address'          => $venue['address'],
+            'assigned_latitude'         => $venue['latitude'],
+            'assigned_longitude'        => $venue['longitude'],
+            'shift_start_time'          => $usesGeofence ? ($validated['shift_start_time'] ?? '08:30') : null,
+            'shift_end_time'            => $usesGeofence ? ($validated['shift_end_time'] ?? '17:00') : null,
+            'grace_period_minutes'      => $usesGeofence ? (isset($validated['grace_period_minutes']) ? (int) $validated['grace_period_minutes'] : 10) : 0,
+            'lateness_deduction_amount' => $usesGeofence ? (isset($validated['lateness_deduction_amount']) ? (float) $validated['lateness_deduction_amount'] : 20.00) : 0.00,
             'is_active'                 => true,
             'is_current_venue'          => true,
             'venue_assigned_at'         => now(),
@@ -2378,11 +2506,13 @@ class BrandsPlatformController extends Controller
         $this->logBrandActivity($request, $brand, null, 'agency_team_member_added', 'agency', [
             'staff_id' => $user->id,
             'role'     => $validated['role'],
-            'location' => $validated['assigned_location'] ?? 'Concepts Make It Happen',
+            'location' => $venue['location'],
             'source'   => 'cmih_api',
         ]);
 
-        return back()->with('status', "✅ {$user->name} imported from CMIH portal and assigned to {$brand->name}.");
+        $assignmentNote = $usesGeofence ? 'with a geofenced field venue' : 'as an agency/supervisory user with no clock-in requirement';
+
+        return back()->with('status', "✅ {$user->name} imported from CMIH portal and assigned to {$brand->name} {$assignmentNote}.");
     }
 
     /**
@@ -2425,6 +2555,13 @@ class BrandsPlatformController extends Controller
             $photoPath = $request->file('photo')->store('brand-staff-photos', 'public');
         }
 
+        $venue = $this->resolveVenueCoordinates(
+            $validated['assigned_location'] ?? null,
+            $validated['assigned_address'] ?? null,
+            $validated['assigned_latitude'] ?? null,
+            $validated['assigned_longitude'] ?? null
+        );
+
         BrandStaffAssignment::create([
             'brand_id'                  => $brand->id,
             'user_id'                   => null, // external — no CMIH account
@@ -2438,10 +2575,10 @@ class BrandsPlatformController extends Controller
             'external_id_number'        => $validated['external_id_number'],
             'photo_path'                => $photoPath,
             'permissions'               => ['can_record_activity' => true, 'can_manage_team' => false, 'can_export' => false],
-            'assigned_location'         => $validated['assigned_location'],
-            'assigned_address'          => $validated['assigned_address'] ?? null,
-            'assigned_latitude'         => isset($validated['assigned_latitude']) ? (float) $validated['assigned_latitude'] : 5.673841,
-            'assigned_longitude'        => isset($validated['assigned_longitude']) ? (float) $validated['assigned_longitude'] : -0.198322,
+            'assigned_location'         => $venue['location'],
+            'assigned_address'          => $venue['address'],
+            'assigned_latitude'         => $venue['latitude'],
+            'assigned_longitude'        => $venue['longitude'],
             'shift_start_time'          => $validated['shift_start_time'] ?? '08:30',
             'shift_end_time'            => $validated['shift_end_time'] ?? '17:00',
             'grace_period_minutes'      => isset($validated['grace_period_minutes']) ? (int) $validated['grace_period_minutes'] : 10,
@@ -2466,6 +2603,10 @@ class BrandsPlatformController extends Controller
         $this->guardCanManageTeam($request->user(), $brand);
         abort_unless((int) $assignment->brand_id === (int) $brand->id, 404);
 
+        if (! $this->assignmentUsesGeofencedShift($assignment)) {
+            return back()->withErrors(['assigned_location' => 'Agency and supervisory users do not use geofenced venues. Assign venues only to promoters and retail/supporting field staff.']);
+        }
+
         $validated = $request->validate([
             'assigned_location'         => ['required', 'string', 'max:255'],
             'assigned_address'          => ['nullable', 'string', 'max:255'],
@@ -2478,12 +2619,19 @@ class BrandsPlatformController extends Controller
             'venue_changed_reason'      => ['nullable', 'string', 'max:255'],
         ]);
 
+        $venue = $this->resolveVenueCoordinates(
+            $validated['assigned_location'] ?? null,
+            $validated['assigned_address'] ?? null,
+            $validated['assigned_latitude'] ?? null,
+            $validated['assigned_longitude'] ?? null
+        );
+
         $newAssignment = $assignment->changeVenueTo(
             venueData: [
-                'assigned_location'         => $validated['assigned_location'],
-                'assigned_address'          => $validated['assigned_address'] ?? null,
-                'assigned_latitude'         => isset($validated['assigned_latitude']) ? (float) $validated['assigned_latitude'] : $assignment->assigned_latitude,
-                'assigned_longitude'        => isset($validated['assigned_longitude']) ? (float) $validated['assigned_longitude'] : $assignment->assigned_longitude,
+                'assigned_location'         => $venue['location'],
+                'assigned_address'          => $venue['address'],
+                'assigned_latitude'         => $venue['latitude'],
+                'assigned_longitude'        => $venue['longitude'],
                 'shift_start_time'          => $validated['shift_start_time'] ?? $assignment->shift_start_time,
                 'shift_end_time'            => $validated['shift_end_time'] ?? $assignment->shift_end_time,
                 'grace_period_minutes'      => isset($validated['grace_period_minutes']) ? (int) $validated['grace_period_minutes'] : $assignment->grace_period_minutes,
@@ -2557,6 +2705,10 @@ class BrandsPlatformController extends Controller
         $this->guardCanManageTeam($request->user(), $brand);
         abort_unless((int) $assignment->brand_id === (int) $brand->id, 404);
 
+        if (! $this->assignmentUsesGeofencedShift($assignment)) {
+            return back()->withErrors(['shift_start_time' => 'Agency and supervisory users do not need shift clock-in settings. Set shifts only for promoters and retail/supporting field staff.']);
+        }
+
         $validated = $request->validate([
             'shift_start_time'          => ['required', 'string', 'max:10'],
             'shift_end_time'            => ['required', 'string', 'max:10'],
@@ -2589,14 +2741,21 @@ class BrandsPlatformController extends Controller
         $user = $request->user();
         $activation = $this->primaryActivation($brand);
 
-        $assignment = BrandStaffAssignment::where('brand_id', $brand->id)
-            ->where('user_id', $user->id)
-            ->where('is_active', true)
-            ->first();
+        $assignment = $this->currentBrandAssignmentForUser($user, $brand);
 
-        $assignedName = $assignment?->assigned_location ?: ($activation?->locations[0]['name'] ?? 'Concepts Make It Happen (No. 7 Affum Street, North Legon, Haatso)');
-        $assignedLat = (float) ($assignment?->assigned_latitude ?: ($activation?->locations[0]['latitude'] ?? 5.673841));
-        $assignedLng = (float) ($assignment?->assigned_longitude ?: ($activation?->locations[0]['longitude'] ?? -0.198322));
+        if (! $this->assignmentUsesGeofencedShift($assignment)) {
+            return back()->withErrors(['attendance' => $this->fieldWorkspaceError()]);
+        }
+
+        if (! is_numeric($assignment->assigned_latitude) || ! is_numeric($assignment->assigned_longitude)) {
+            return back()->withErrors([
+                'geofence' => 'This field user does not have locked venue coordinates yet. Ask the agency/admin team to edit the assigned venue using Google Maps autocomplete before clock-in.',
+            ]);
+        }
+
+        $assignedName = $assignment->assigned_location ?: self::CMIH_DEFAULT_LOCATION;
+        $assignedLat = (float) $assignment->assigned_latitude;
+        $assignedLng = (float) $assignment->assigned_longitude;
 
         $userLat = (float) $validated['latitude'];
         $userLng = (float) $validated['longitude'];
@@ -2613,9 +2772,12 @@ class BrandsPlatformController extends Controller
         }
 
         // SHIFT TIMING & LATENESS CALCULATION
-        $startTimeStr = $assignment?->shift_start_time ?: '08:30';
-        $graceMins = (int) ($assignment?->grace_period_minutes ?: 10);
-        $deductionAmount = (float) ($assignment?->lateness_deduction_amount ?: 20.00);
+        $startTimeStr = $assignment->shift_start_time ?: '08:30';
+        $graceMins = (int) ($assignment->grace_period_minutes ?: 10);
+        $deductionAmount = (float) ($assignment->lateness_deduction_amount ?: 20.00);
+        $staffRole = $this->assignmentIsRetailTerminal($assignment)
+            ? BrandStaffAssignment::ROLE_RETAIL
+            : ($this->roleUsesGeofencedShift($assignment->role) ? $assignment->role : BrandStaffAssignment::ROLE_PROMOTER);
 
         $now = now();
         $todayShiftStart = Carbon::parse($now->toDateString() . ' ' . $startTimeStr);
@@ -2635,7 +2797,7 @@ class BrandsPlatformController extends Controller
             'brand_id' => $brand->id,
             'brand_activation_id' => $activation?->id,
             'user_id' => $user->id,
-            'staff_role' => $validated['staff_role'] ?? 'promoter',
+            'staff_role' => $staffRole,
             'assigned_location_name' => $assignedName,
             'assigned_latitude' => $assignedLat,
             'assigned_longitude' => $assignedLng,
@@ -2676,6 +2838,12 @@ class BrandsPlatformController extends Controller
         ]);
 
         $user = $request->user();
+        $assignment = $this->currentBrandAssignmentForUser($user, $brand);
+
+        if (! $this->assignmentUsesGeofencedShift($assignment)) {
+            return back()->withErrors(['attendance' => $this->fieldWorkspaceError()]);
+        }
+
         $attendance = \App\Models\BrandStaffAttendance::where('brand_id', $brand->id)
             ->where('user_id', $user->id)
             ->where('status', 'clocked_in')
@@ -2686,8 +2854,8 @@ class BrandsPlatformController extends Controller
             return back()->withErrors(['attendance' => 'No active shift clock-in found.']);
         }
 
-        $assignedLat = (float) ($attendance->assigned_latitude ?: 5.673841);
-        $assignedLng = (float) ($attendance->assigned_longitude ?: -0.198322);
+        $assignedLat = (float) ($attendance->assigned_latitude ?: self::CMIH_DEFAULT_LATITUDE);
+        $assignedLng = (float) ($attendance->assigned_longitude ?: self::CMIH_DEFAULT_LONGITUDE);
         $userLat = (float) $validated['latitude'];
         $userLng = (float) $validated['longitude'];
 
@@ -2725,6 +2893,122 @@ class BrandsPlatformController extends Controller
              sin($dLon / 2) * sin($dLon / 2);
         $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
         return $earthRadius * $c;
+    }
+
+    private function resolveVenueCoordinates(?string $location, ?string $address, mixed $latitude, mixed $longitude, bool $allowDefault = false): array
+    {
+        $location = trim((string) $location);
+        $address = trim((string) $address);
+        $query = trim(collect([$location, $address])->filter()->implode(', '));
+        $hasCoordinates = is_numeric($latitude) && is_numeric($longitude);
+        $looksLikeCmih = $this->looksLikeCmihVenue($query);
+
+        if ($hasCoordinates) {
+            $lat = (float) $latitude;
+            $lng = (float) $longitude;
+            $isCurrentDefault = $this->sameCoordinate($lat, $lng, self::CMIH_DEFAULT_LATITUDE, self::CMIH_DEFAULT_LONGITUDE);
+            $isOldCmihDefault = $this->sameCoordinate($lat, $lng, 5.673841, -0.198322);
+
+            if ($isOldCmihDefault && $looksLikeCmih) {
+                return $this->defaultCmihVenuePayload($location, $address);
+            }
+
+            if (! $isCurrentDefault || $looksLikeCmih) {
+                return [
+                    'location' => $location !== '' ? $location : self::CMIH_DEFAULT_LOCATION,
+                    'address' => $address !== '' ? $address : ($location !== '' ? $location : self::CMIH_DEFAULT_ADDRESS),
+                    'latitude' => $lat,
+                    'longitude' => $lng,
+                ];
+            }
+        }
+
+        if ($looksLikeCmih) {
+            return $this->defaultCmihVenuePayload($location, $address);
+        }
+
+        if ($query !== '' && ($geocoded = $this->geocodeVenue($query))) {
+            return [
+                'location' => $location !== '' ? $location : $geocoded['address'],
+                'address' => $address !== '' ? $address : $geocoded['address'],
+                'latitude' => $geocoded['latitude'],
+                'longitude' => $geocoded['longitude'],
+            ];
+        }
+
+        if ($allowDefault && $query === '') {
+            return $this->defaultCmihVenuePayload($location, $address);
+        }
+
+        throw ValidationException::withMessages([
+            'assigned_location' => 'Select the venue from Google Maps autocomplete, or enter a complete Google-resolvable address so the portal can set the geofence coordinates.',
+        ]);
+    }
+
+    private function geocodeVenue(string $query): ?array
+    {
+        $apiKey = config('services.google.maps_api_key');
+
+        if (! $apiKey) {
+            return null;
+        }
+
+        try {
+            $response = Http::timeout(6)->retry(1, 150)->get('https://maps.googleapis.com/maps/api/geocode/json', [
+                'address' => $query,
+                'region' => 'gh',
+                'key' => $apiKey,
+            ]);
+
+            if (! $response->ok() || $response->json('status') !== 'OK') {
+                return null;
+            }
+
+            $result = $response->json('results.0');
+            $lat = data_get($result, 'geometry.location.lat');
+            $lng = data_get($result, 'geometry.location.lng');
+
+            if (! is_numeric($lat) || ! is_numeric($lng)) {
+                return null;
+            }
+
+            return [
+                'address' => (string) data_get($result, 'formatted_address', $query),
+                'latitude' => (float) $lat,
+                'longitude' => (float) $lng,
+            ];
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function sameCoordinate(float $lat, float $lng, float $targetLat, float $targetLng): bool
+    {
+        return abs($lat - $targetLat) < 0.00001 && abs($lng - $targetLng) < 0.00001;
+    }
+
+    private function looksLikeCmihVenue(string $query): bool
+    {
+        $value = Str::lower($query);
+
+        return Str::contains($value, [
+            'concepts make it happen',
+            'cmih',
+            'affum street',
+            'afum street',
+            'jewels of the millennium',
+            'jewels of the millenium',
+        ]);
+    }
+
+    private function defaultCmihVenuePayload(?string $location = null, ?string $address = null): array
+    {
+        return [
+            'location' => trim((string) $location) !== '' ? trim((string) $location) : self::CMIH_DEFAULT_LOCATION,
+            'address' => trim((string) $address) !== '' ? trim((string) $address) : self::CMIH_DEFAULT_ADDRESS,
+            'latitude' => self::CMIH_DEFAULT_LATITUDE,
+            'longitude' => self::CMIH_DEFAULT_LONGITUDE,
+        ];
     }
 
     public static function storageUrl(?string $path): ?string
