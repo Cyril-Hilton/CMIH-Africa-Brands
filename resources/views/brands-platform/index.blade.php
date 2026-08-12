@@ -144,13 +144,12 @@
     const previous = document.querySelector('[data-carousel-prev]');
     const next = document.querySelector('[data-carousel-next]');
     const rexonaIdx = cards.findIndex(c => (c.getAttribute('href') || '').toLowerCase().includes('rexona') || c.textContent.toLowerCase().includes('rexona'));
-    let index = rexonaIdx >= 0 ? (rexonaIdx - 3 + cards.length) % cards.length : 0;
+    let index = rexonaIdx >= 0 ? (rexonaIdx - 2 + cards.length) % cards.length : 0;
 
     const visibleCount = () => {
         if (window.matchMedia('(max-width: 620px)').matches) return 1;
-        if (window.matchMedia('(max-width: 900px)').matches) return 3;
-        if (window.matchMedia('(max-width: 1200px)').matches) return 5;
-        return 7;
+        if (window.matchMedia('(max-width: 1050px)').matches) return 3;
+        return 5;
     };
 
     const render = () => {
@@ -168,7 +167,7 @@
         });
 
         if (count) {
-            const centerIdx = (index + 3) % cards.length;
+            const centerIdx = (index + Math.floor(visible / 2)) % cards.length;
             count.textContent = `${centerIdx + 1} / ${cards.length}`;
         }
     };

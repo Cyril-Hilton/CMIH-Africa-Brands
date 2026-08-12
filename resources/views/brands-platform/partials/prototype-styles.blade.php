@@ -158,71 +158,41 @@ button{cursor:pointer}
 
 /* ==========================================================
    HOME BRAND CAROUSEL — SINGLE CURVED ROW
-   Total visual bend is kept subtle (about 15 degrees).
+   Uses the supplied prototype styling: five cards on desktop,
+   three on tablet, one on mobile.
    ========================================================== */
-.brand-carousel-wrap{position:relative;overflow:visible;}
+.brand-carousel-wrap{position:relative}
 .brand-carousel-viewport{
-  overflow:visible;padding:70px 20px 45px;max-width:1400px;margin:0 auto;
+  overflow:hidden;padding:12px 10px 42px;
 }
 .liquid-grid{
-  display:flex !important;
-  justify-content:center;
-  align-items:flex-end;
-  position:relative;
-  width:100%;
+  display:grid !important;
+  grid-template-columns:repeat(5,minmax(0,1fr)) !important;
+  gap:16px !important;
+  align-items:start;
 }
-.liquid-tile {
-  min-width: 0;
-  flex: 0 0 210px;
-  width: 210px;
-  height: 140px;
-  border-radius: 16px;
-  margin: 0 -28px;
-  transform-origin: 50% 100%;
-  transition: transform .35s cubic-bezier(0.25, 1, 0.5, 1), scale .35s cubic-bezier(0.25, 1, 0.5, 1), box-shadow .28s ease, border-color .28s ease;
-  box-shadow: 0 14px 35px rgba(0,0,0,0.45);
+.liquid-tile{
+  min-width:0;
+  min-height:190px;
+  transform-origin:50% 115%;
+  transition:transform .32s ease,box-shadow .28s ease,border-color .28s ease;
 }
-
-/* 7-Card Ascending Staircase Arc Rules ( Rexona = Center Peak, 3-1-3 Symmetrical Balance ) */
-.liquid-tile.arc-0 { transform: translateX(50px) translateY(60px) rotate(-10deg); scale: 0.70; z-index: 1; opacity: 0.80; }
-.liquid-tile.arc-1 { transform: translateY(36px) rotate(-6deg); scale: 0.85; z-index: 3; opacity: 0.90; }
-.liquid-tile.arc-2 { transform: translateY(14px) rotate(-2.5deg); scale: 0.98; z-index: 5; opacity: 0.97; }
-
-/* Center Card (Rexona) - Extra Wide & Tall Landscape Rectangle (BIGGEST PEAK) */
-.liquid-tile.arc-3 { 
-  flex: 0 0 270px; 
-  width: 270px; 
-  height: 175px; 
-  transform: translateY(0px) rotate(0deg); 
-  scale: 1.22; 
-  z-index: 10; 
-  opacity: 1; 
-  filter: drop-shadow(0 25px 50px rgba(0,0,0,0.65)); 
+.liquid-tile.arc-0{transform:translateY(30px) rotate(-7.5deg)}
+.liquid-tile.arc-1{transform:translateY(10px) rotate(-3.5deg)}
+.liquid-tile.arc-2{transform:translateY(0) rotate(0deg)}
+.liquid-tile.arc-3{transform:translateY(10px) rotate(3.5deg)}
+.liquid-tile.arc-4{transform:translateY(30px) rotate(7.5deg)}
+.liquid-tile:hover{
+  transform:translateY(-5px) rotate(0deg) scale(1.025) !important;
+  z-index:5;
 }
-
-.liquid-tile.arc-4 { transform: translateY(14px) rotate(2.5deg); scale: 0.98; z-index: 5; opacity: 0.97; }
-.liquid-tile.arc-5 { transform: translateY(36px) rotate(6deg); scale: 0.85; z-index: 3; opacity: 0.90; }
-.liquid-tile.arc-6 { transform: translateX(-50px) translateY(60px) rotate(10deg); scale: 0.70; z-index: 1; opacity: 0.80; }
-
-/* Hover States */
-.liquid-tile.arc-0:hover { transform: translateX(50px) translateY(46px) rotate(-10deg); scale: 0.78; z-index: 20; opacity: 1; }
-.liquid-tile.arc-1:hover { transform: translateY(24px) rotate(-6deg); scale: 0.93; z-index: 20; opacity: 1; }
-.liquid-tile.arc-2:hover { transform: translateY(4px) rotate(-2.5deg); scale: 1.06; z-index: 20; opacity: 1; }
-.liquid-tile.arc-3:hover { transform: translateY(-12px) rotate(0deg); scale: 1.28; z-index: 20; opacity: 1; }
-.liquid-tile.arc-4:hover { transform: translateY(4px) rotate(2.5deg); scale: 1.06; z-index: 20; opacity: 1; }
-.liquid-tile.arc-5:hover { transform: translateY(24px) rotate(6deg); scale: 0.93; z-index: 20; opacity: 1; }
-.liquid-tile.arc-6:hover { transform: translateX(-50px) translateY(46px) rotate(10deg); scale: 0.78; z-index: 20; opacity: 1; }
-
 .liquid-tile .tile-category{display:none}
 .liquid-tile .tile-bottom small{display:none}
-.liquid-tile .tile-bottom{align-items:center; padding: 8px 14px; height: 44px;}
-.liquid-tile.arc-3 .tile-bottom{height: 52px; padding: 10px 18px;}
-.liquid-tile .tile-logo-wrap{height: calc(100% - 44px); display: flex; align-items: center; justify-content: center;}
-.liquid-tile.arc-3 .tile-logo-wrap{height: calc(100% - 52px);}
-.liquid-tile .tile-logo{max-width: 80%; max-height: 56px; object-fit: contain;}
-.liquid-tile.arc-3 .tile-logo{max-width: 85%; max-height: 78px;}
+.liquid-tile .tile-bottom{align-items:center}
+.liquid-tile .tile-logo-wrap{height:126px}
+.liquid-tile .tile-logo{max-width:88%;max-height:104px}
 .carousel-controls{
-  display:flex;align-items:center;justify-content:center;gap:12px;margin-top:28px
+  display:flex;align-items:center;justify-content:center;gap:12px;margin-top:-8px
 }
 .carousel-arrow{
   width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.14);
@@ -235,18 +205,17 @@ button{cursor:pointer}
 .carousel-count{
   min-width:78px;text-align:center;color:#9f878d;font-size:9px;
   letter-spacing:.12em;text-transform:uppercase;font-weight:900;
-}@media(max-width:1200px){
-  .liquid-tile { flex: 0 0 190px; width: 190px; height: 135px; margin: 0 -22px; }
-  .liquid-tile.arc-3 { flex: 0 0 250px; width: 250px; height: 165px; }
 }
-@media(max-width:850px){
-  .liquid-tile { flex: 0 0 150px; width: 150px; height: 115px; margin: 0 -15px; }
-  .liquid-tile.arc-3 { flex: 0 0 190px; width: 190px; height: 135px; }
+@media(max-width:1050px){
+  .liquid-grid{grid-template-columns:repeat(3,minmax(0,1fr)) !important}
+  .liquid-tile.arc-0{transform:translateY(20px) rotate(-7.5deg)}
+  .liquid-tile.arc-1{transform:translateY(0) rotate(0deg)}
+  .liquid-tile.arc-2{transform:translateY(20px) rotate(7.5deg)}
 }
 @media(max-width:620px){
-  .liquid-grid { display: flex !important; flex-direction: column; align-items: center; gap: 16px !important; }
-  .liquid-tile { flex: none !important; width: 100% !important; max-width: 320px; height: 140px !important; margin: 0 !important; transform: none !important; scale: 1 !important; }
-  .brand-carousel-viewport{padding:30px 16px 30px}
+  .liquid-grid{grid-template-columns:1fr !important}
+  .liquid-tile{transform:none !important}
+  .brand-carousel-viewport{padding-left:16px;padding-right:16px}
 }
 
 /* Agency sign-in has no public-home presence; only Activation > Agency. */
