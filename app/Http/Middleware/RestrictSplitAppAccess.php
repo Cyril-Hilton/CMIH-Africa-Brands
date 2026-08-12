@@ -167,6 +167,7 @@ class RestrictSplitAppAccess
             'login/*',
             'register',
             'forgot-password',
+            'reset-password',
             'reset-password/*',
             'verify-email',
             'verify-email/*',
