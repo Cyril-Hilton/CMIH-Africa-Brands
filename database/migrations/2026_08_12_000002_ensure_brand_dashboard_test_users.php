@@ -38,7 +38,7 @@ return new class extends Migration
                     'name' => $item['name'],
                     'contact_email' => $item['email'],
                     'password' => Hash::make('Password@123'),
-                    'access_role' => 'staff',
+                    'access_role' => User::BRAND_PROMOTER_ROLE,
                     'job_level' => 'promoter',
                     'status' => 'active',
                     'email_verified_at' => now(),

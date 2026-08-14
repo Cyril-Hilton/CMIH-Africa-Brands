@@ -171,6 +171,70 @@ class BrandsPlatformTest extends TestCase
             ->assertDontSee($supportNotification->title);
     }
 
+    public function test_admin_enrollment_only_lists_brand_account_managers(): void
+    {
+        $admin = User::factory()->create([
+            'status' => 'active',
+            'access_role' => 'super_admin',
+        ]);
+        $manager = User::factory()->create([
+            'name' => 'Agency Brand Lead',
+            'status' => 'active',
+            'access_role' => 'staff',
+        ]);
+        $promoter = User::factory()->create([
+            'name' => 'Demo Promoter',
+            'status' => 'active',
+            'access_role' => User::BRAND_PROMOTER_ROLE,
+        ]);
+        $retail = User::factory()->create([
+            'name' => 'Demo Retail Staff',
+            'status' => 'active',
+            'access_role' => User::BRAND_PROMOTER_ROLE,
+        ]);
+        $brand = Brand::where('slug', 'rexona')->firstOrFail();
+
+        BrandStaffAssignment::create([
+            'brand_id' => $brand->id,
+            'user_id' => $manager->id,
+            'role' => BrandStaffAssignment::ROLE_AGENCY,
+            'enrollment_source' => BrandStaffAssignment::SOURCE_CMIH_API,
+            'enrollment_type' => BrandStaffAssignment::TYPE_AGENCY_STAFF,
+            'permissions' => ['access_level' => 'brand_account_manager'],
+            'notes' => 'Brand Account Manager',
+            'is_active' => true,
+            'is_current_venue' => true,
+        ]);
+        BrandStaffAssignment::create([
+            'brand_id' => $brand->id,
+            'user_id' => $promoter->id,
+            'role' => BrandStaffAssignment::ROLE_PROMOTER,
+            'enrollment_source' => BrandStaffAssignment::SOURCE_MANUAL,
+            'enrollment_type' => BrandStaffAssignment::TYPE_PROMOTER,
+            'is_active' => true,
+            'is_current_venue' => true,
+        ]);
+        BrandStaffAssignment::create([
+            'brand_id' => $brand->id,
+            'user_id' => $retail->id,
+            'role' => BrandStaffAssignment::ROLE_RETAIL,
+            'enrollment_source' => BrandStaffAssignment::SOURCE_MANUAL,
+            'enrollment_type' => BrandStaffAssignment::TYPE_RETAIL_TERMINAL,
+            'is_active' => true,
+            'is_current_venue' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('brands-platform.admin').'#enrollment')
+            ->assertOk()
+            ->assertSee('Recent Brand Account Managers')
+            ->assertSee('Agency Brand Lead')
+            ->assertDontSee('Demo Agency Staff')
+            ->assertDontSee('Demo Field Supervisor')
+            ->assertDontSee('Demo Promoter')
+            ->assertDontSee('Demo Retail Staff');
+    }
+
     public function test_staff_feed_excludes_merchandiser_portal_accounts(): void
     {
         $admin = User::factory()->create([

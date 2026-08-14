@@ -258,7 +258,7 @@
             <div class="retail-form-grid">
                 <div class="field">
                     <label>Quantity</label>
-                    <input name="conversion_count" type="number" min="0" value="1">
+                    <input id="retailConversionCount" name="conversion_count" type="number" min="0" placeholder="0">
                 </div>
                 <div class="field">
                     <label>Value Redeemed (GHS)</label>
@@ -449,6 +449,7 @@
     const activityTypeInput = el('retailActivityType');
     const activityStatusInput = el('retailActivityStatus');
     const notesInput = el('retailValidationNotes');
+    const conversionCountInput = el('retailConversionCount');
     let mediaStream = null;
     let scanInterval = null;
     let zxingControls = null;
@@ -498,6 +499,9 @@
         }
         if (notesInput && mode !== 'done' && !notesInput.value.trim()) {
             notesInput.value = `${title}.`;
+        }
+        if (conversionCountInput && mode === 'done' && !conversionCountInput.value.trim()) {
+            conversionCountInput.value = '1';
         }
         setRedeemReady();
     };

@@ -45,7 +45,10 @@ return new class extends Migration
                     'name' => $demo['name'],
                     'contact_email' => $demo['email'],
                     'password' => Hash::make('Password@123'),
-                    'access_role' => 'staff',
+                    'access_role' => in_array($demo['role'], [
+                        BrandStaffAssignment::ROLE_PROMOTER,
+                        BrandStaffAssignment::ROLE_RETAIL,
+                    ], true) ? User::BRAND_PROMOTER_ROLE : 'staff',
                     'status' => 'active',
                     'email_verified_at' => now(),
                     'must_reset_password' => false,

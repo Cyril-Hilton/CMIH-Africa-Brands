@@ -77,8 +77,8 @@
 
             <!-- Live 300m Geofenced Clock-In Widget -->
             @php
-                $assignedVenue = $myStaffAssignment?->assigned_location ?: ($activation?->locations[0]['name'] ?? 'Concepts Make It Happen (No. 7 Affum Street, North Legon, Haatso)');
-                $assignedAddr = $myStaffAssignment?->assigned_address ?: 'No. 7 Affum Street, North Legon, Haatso, Accra';
+                $assignedVenue = $myStaffAssignment?->assigned_location ?: ($activation?->locations[0]['name'] ?? 'No venue assigned');
+                $assignedAddr = $myStaffAssignment?->assigned_address ?: 'No address saved';
                 $shiftStart = $activationWorkStatus['work_start'] ?? ($myStaffAssignment?->shift_start_time ?: '08:00');
                 $shiftEnd = $activationWorkStatus['work_end'] ?? ($myStaffAssignment?->shift_end_time ?: '17:00');
                 $breakStart = $activationWorkStatus['break_start'] ?? null;
@@ -262,7 +262,7 @@
                         <canvas id="promoterTargetChart"></canvas>
                     </div>
                     <p style="text-align:center; font-size:11px; color:rgba(255,255,255,0.5); margin-top:10px;">
-                        {{ number_format($metrics['verified_entries']) }} reached / target {{ number_format(max((int)($activation?->target_reach ?? 0), (int)($metrics['verified_entries'] ?? 0))) }}
+                        {{ number_format($metrics['verified_entries']) }} reached / target {{ number_format((int)($activation?->target_reach ?? 0)) }}
                     </p>
                 </div>
             </div>
@@ -340,7 +340,7 @@
                         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:10px; margin-top:15px;">
                             @forelse($assignedLocations as $location)
                                 <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:12px;">
-                                    <p style="font-weight:800; font-size:13px; color:#fff; margin:0;">{{ $location['name'] ?? 'Accra Mall' }}</p>
+                                    <p style="font-weight:800; font-size:13px; color:#fff; margin:0;">{{ $location['name'] ?? 'Unnamed location' }}</p>
                                     <p style="font-size:10px; color:rgba(255,255,255,0.5); margin:5px 0 0;">Target {{ number_format((int)($location['target'] ?? 0)) }} · daily {{ number_format((int)($location['daily_target'] ?? 0)) }}</p>
                                     <p style="font-size:9px; color:rgba(255,255,255,0.35); margin:2px 0 0; text-transform:uppercase;">{{ count($location['staff_ids'] ?? []) }} staff assigned</p>
                                 </div>
@@ -453,13 +453,14 @@
     });
 
     const reached = {{ $metrics['verified_entries'] ?? 0 }};
-    const target = Math.max(reached, {{ (int) ($activation?->target_reach ?? 0) }});
+    const target = {{ (int) ($activation?->target_reach ?? 0) }};
+    const remaining = target > 0 ? Math.max(0, target - reached) : 0;
     new Chart(document.getElementById('promoterTargetChart'), {
         type: 'doughnut',
         data: {
             labels: ['Reached', 'Remaining'],
             datasets: [{
-                data: [reached, Math.max(0, target - reached)],
+                data: [reached, remaining],
                 backgroundColor: [chartColor, 'rgba(255,255,255,0.07)'],
                 borderWidth: 0,
             }]

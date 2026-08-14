@@ -42,6 +42,19 @@ class BrandsPlatformController extends Controller
         BrandStaffAssignment::ROLE_AGENCY,
         BrandStaffAssignment::ROLE_SUPERVISOR,
     ];
+    private const FIELD_STAFF_ROLES = [
+        BrandStaffAssignment::ROLE_PROMOTER,
+        BrandStaffAssignment::ROLE_SUPPORT,
+        BrandStaffAssignment::ROLE_SALES,
+        BrandStaffAssignment::ROLE_RETAIL,
+        BrandStaffAssignment::ROLE_MERCHANDISER,
+    ];
+    private const BRAND_PORTAL_TEST_EMAILS = [
+        'agency@cmih.africa',
+        'promoter@cmih.africa',
+        'retail@cmih.africa',
+        'supervisor@cmih.africa',
+    ];
 
     public function showSupportLogin(Request $request, string $brand): View
     {
@@ -173,7 +186,12 @@ class BrandsPlatformController extends Controller
         $brand = $this->resolveBrand($brand);
         $this->guardAgencyWorkspaceAccess($request->user(), $brand);
 
-        $activation = $this->primaryActivation($brand);
+        $allBrands = Brand::with(['activations' => fn ($query) => $query->latest()])
+            ->where('platform_status', 'active')
+            ->orderBy('name')
+            ->get();
+        $brandActivations = $allBrands->firstWhere('id', $brand->id)?->activations ?? collect();
+        $activation = $this->selectedActivation($brand, $request);
         $filters = $this->reportFilters($request);
         $metrics = $this->brandMetrics($brand, $activation, $filters);
         $entriesByGender = $this->consumerEntryQuery($brand, $activation, $filters)
@@ -240,8 +258,7 @@ class BrandsPlatformController extends Controller
         // Users already enrolled for this brand (for the CMIH import tab — exclude from dropdown)
         $alreadyEnrolledUserIds = $assignedStaff->pluck('user_id')->filter()->values()->toArray();
 
-        $availableUsers = User::query()
-            ->internalStaff()
+        $availableUsers = $this->agencyEnrollableStaffQuery()
             ->where('status', 'active')
             ->orderBy('name')
             ->get(['id', 'name', 'email', 'staff_id_number', 'access_role', 'department']);
@@ -260,6 +277,40 @@ class BrandsPlatformController extends Controller
             'labels' => $portfolioBrandSummaries->pluck('name')->values()->all(),
             'data' => $portfolioBrandSummaries->pluck('consumer_count')->map(fn ($value) => (int) $value)->values()->all(),
         ];
+        $portfolioConversionChart = [
+            'labels' => $portfolioBrandSummaries->pluck('name')->values()->all(),
+            'data' => $portfolioBrandSummaries->pluck('conversions')->map(fn ($value) => (int) $value)->values()->all(),
+        ];
+        $portfolioStaffChart = [
+            'labels' => $portfolioBrandSummaries->pluck('name')->values()->all(),
+            'promoters' => $portfolioBrandSummaries->pluck('promoters')->map(fn ($value) => (int) $value)->values()->all(),
+            'agency' => $portfolioBrandSummaries->pluck('agency_staff')->map(fn ($value) => (int) $value)->values()->all(),
+        ];
+        $brandActivationSummaries = $brandActivations
+            ->map(function (BrandActivation $brandActivation) use ($brand, $filters) {
+                $consumerCount = (clone $this->consumerEntryQuery($brand, $brandActivation, $filters))->count();
+                $fieldActivityQuery = $this->fieldActivityQuery($brand, $brandActivation, $filters);
+                $updates = (int) (clone $fieldActivityQuery)->count();
+                $units = (int) (clone $fieldActivityQuery)->sum('units');
+                $conversions = (int) (clone $fieldActivityQuery)->sum('conversion_count');
+                $target = (int) $brandActivation->target_reach;
+                $reached = max((int) $brandActivation->actual_reach, $consumerCount);
+
+                return [
+                    'id' => $brandActivation->id,
+                    'name' => $brandActivation->name,
+                    'type' => $brandActivation->activation_type ?: 'Not set',
+                    'status' => $brandActivation->status ?: 'draft',
+                    'consumers' => $consumerCount,
+                    'updates' => $updates,
+                    'units' => $units,
+                    'conversions' => $conversions,
+                    'target_rate' => $target > 0 ? round(min(100, ($reached / $target) * 100), 1) : 0.0,
+                    'starts_at' => $brandActivation->starts_at,
+                    'ends_at' => $brandActivation->ends_at,
+                ];
+            })
+            ->values();
 
         $promoterRoles = [
             BrandStaffAssignment::ROLE_PROMOTER,
@@ -282,6 +333,9 @@ class BrandsPlatformController extends Controller
         $promoterUnits = (int) $promoterRows->sum('units');
         $promoterConversions = (int) $promoterRows->sum('conversions');
         $promoterUserIds = $enrolledPromoters->pluck('user_id')->filter()->map(fn ($id) => (int) $id)->values()->all();
+        $todayAttendances = $todayAttendances
+            ->filter(fn ($attendance) => in_array((int) $attendance->user_id, $promoterUserIds, true))
+            ->values();
         $promoterStats = [
             'promoters' => $enrolledPromoters->count(),
             'checked_in' => $todayAttendances
@@ -351,6 +405,32 @@ class BrandsPlatformController extends Controller
                 ];
             })
             ->values();
+        $roleActivityRows = $this->fieldActivityQuery($brand, $activation, $filters)
+            ->reorder()
+            ->selectRaw("COALESCE(NULLIF(staff_role, ''), 'Unspecified') as label, COUNT(*) as updates, SUM(units) as units, SUM(conversion_count) as conversions")
+            ->groupBy('label')
+            ->orderByDesc('updates')
+            ->get();
+        $roleActivityChart = [
+            'labels' => $roleActivityRows->pluck('label')->map(fn ($label) => Str::headline((string) $label))->values()->all(),
+            'updates' => $roleActivityRows->pluck('updates')->map(fn ($value) => (int) $value)->values()->all(),
+            'units' => $roleActivityRows->pluck('units')->map(fn ($value) => (int) $value)->values()->all(),
+            'conversions' => $roleActivityRows->pluck('conversions')->map(fn ($value) => (int) $value)->values()->all(),
+        ];
+        $attendanceStatusCounts = $promoterWorkRows->countBy('status');
+        $attendanceStatusKeys = collect(['at_work', 'on_break', 'closed', 'not_started', 'not_covered'])
+            ->filter(fn ($status) => $attendanceStatusCounts->has($status) || in_array($status, ['at_work', 'on_break', 'not_started'], true))
+            ->values();
+        $attendanceStatusChart = [
+            'labels' => $attendanceStatusKeys->map(fn ($status) => Str::headline($status))->all(),
+            'data' => $attendanceStatusKeys->map(fn ($status) => (int) $attendanceStatusCounts->get($status, 0))->all(),
+        ];
+        $locationActivityChart = [
+            'labels' => $locationPerformance->pluck('label')->values()->all(),
+            'units' => $locationPerformance->pluck('units')->map(fn ($value) => (int) $value)->values()->all(),
+            'conversions' => $locationPerformance->pluck('conversions')->map(fn ($value) => (int) $value)->values()->all(),
+            'updates' => $locationPerformance->pluck('updates')->map(fn ($value) => (int) $value)->values()->all(),
+        ];
 
         $genderDistribution = $this->distributionRows($entriesByGender, (int) $entriesByGender->sum('total'));
         $ageDistribution = $this->distributionRows($entriesByAge, (int) $entriesByAge->sum('total'));
@@ -379,6 +459,19 @@ class BrandsPlatformController extends Controller
             'labels' => $ageDistribution->pluck('label')->values()->all(),
             'data' => $ageDistribution->pluck('total')->map(fn ($value) => (int) $value)->values()->all(),
         ];
+        $trendLabels = collect($consumerTrend['labels'] ?? [])
+            ->merge($activityTrend['labels'] ?? [])
+            ->unique()
+            ->values();
+        $consumerTrendLookup = collect($consumerTrend['labels'] ?? [])
+            ->mapWithKeys(fn ($label, $index) => [$label => (int) ($consumerTrend['data'][$index] ?? 0)]);
+        $activityTrendLookup = collect($activityTrend['labels'] ?? [])
+            ->mapWithKeys(fn ($label, $index) => [$label => (int) ($activityTrend['data'][$index] ?? 0)]);
+        $dailyPerformanceChart = [
+            'labels' => $trendLabels->all(),
+            'consumer_entries' => $trendLabels->map(fn ($label) => (int) ($consumerTrendLookup[$label] ?? 0))->all(),
+            'field_updates' => $trendLabels->map(fn ($label) => (int) ($activityTrendLookup[$label] ?? 0))->all(),
+        ];
 
         $publications = $brand->publications()
             ->with(['activation', 'creator'])
@@ -387,13 +480,12 @@ class BrandsPlatformController extends Controller
             ->take(12)
             ->get();
 
-        $allBrands = Brand::with('activations')->orderBy('name')->get();
-
         $this->logBrandActivity($request, $brand, $activation, 'page_view', 'agency_dashboard');
 
         return view('brands-platform.agency', compact(
             'brand',
             'allBrands',
+            'brandActivations',
             'activation',
             'metrics',
             'filters',
@@ -419,6 +511,9 @@ class BrandsPlatformController extends Controller
             'portfolioBrandSummaries',
             'portfolioLeaderboard',
             'portfolioChart',
+            'portfolioConversionChart',
+            'portfolioStaffChart',
+            'brandActivationSummaries',
             'promoterStats',
             'promoterRows',
             'retailStats',
@@ -427,11 +522,15 @@ class BrandsPlatformController extends Controller
             'promoterStaffRows',
             'promoterWorkRows',
             'activationWorkStatus',
+            'roleActivityChart',
+            'attendanceStatusChart',
+            'locationActivityChart',
             'genderDistribution',
             'ageDistribution',
             'consumerInsightStats',
             'genderChart',
             'ageChart',
+            'dailyPerformanceChart',
             'publications'
         ));
     }
@@ -534,11 +633,20 @@ class BrandsPlatformController extends Controller
             ->withCount(['activations', 'consumerEntries', 'fieldActivities'])
             ->orderBy('name')
             ->get();
-        $staff = User::internalStaff()
+        $staff = $this->agencyEnrollableStaffQuery()
             ->where('status', 'active')
             ->orderBy('name')
             ->get(['id', 'name', 'email', 'department', 'access_role', 'job_title', 'position_title']);
         $assignments = BrandStaffAssignment::with(['brand', 'user', 'assigner'])
+            ->whereIn('role', [BrandStaffAssignment::ROLE_AGENCY, BrandStaffAssignment::ROLE_ADMIN])
+            ->where(function ($query) {
+                $query->whereNull('enrollment_type')
+                    ->orWhere('enrollment_type', BrandStaffAssignment::TYPE_AGENCY_STAFF);
+            })
+            ->where(function ($query) {
+                $query->where('notes', 'Brand Account Manager')
+                    ->orWhere('permissions->access_level', 'brand_account_manager');
+            })
             ->when($request->filled('filter_brand'), fn ($q) => $q->where('brand_id', $request->input('filter_brand')))
             ->when($request->filled('filter_role'), fn ($q) => $q->where('role', $request->input('filter_role')))
             ->when($request->filled('filter_status'), fn ($q) => match ($request->input('filter_status')) {
@@ -572,14 +680,16 @@ class BrandsPlatformController extends Controller
             ->orderByDesc('updates')
             ->get();
 
+        $staffIds = $staff->pluck('id')->all();
         $availableStaff = max(0, $staff->count() - BrandStaffAssignment::query()
             ->where('is_active', true)
+            ->whereIn('user_id', $staffIds)
             ->distinct('user_id')
             ->count('user_id'));
 
         // --- Overview stats ---
         $totalActivations   = BrandActivation::count();
-        $promoterRoleSet    = ['promoter', 'supporting_staff', 'sales_personnel', 'retail_staff', 'merchandiser'];
+        $promoterRoleSet    = self::FIELD_STAFF_ROLES;
         $totalPromoters     = BrandStaffAssignment::where('is_active', true)->whereIn('role', $promoterRoleSet)->count();
         $totalRetailStaff   = $totalPromoters;
         $totalSupervisors   = BrandStaffAssignment::where('is_active', true)->whereIn('role', ['field_supervisor', 'supervisor'])->count();
@@ -592,20 +702,10 @@ class BrandsPlatformController extends Controller
             'merchandisers' => BrandStaffAssignment::where('is_active', false)->where('role', 'merchandiser')->count(),
         ];
 
-        // Brand performance table for overview
-        $brandPerformance = Brand::where('platform_status', 'active')
-            ->with(['activations' => fn ($q) => $q->latest()->limit(1)])
-            ->withCount(['staffAssignments as assigned_staff_count' => fn ($q) => $q->where('is_active', true)])
-            ->withCount(['staffAssignments as available_staff_count' => fn ($q) => $q->where('is_active', false)])
-            ->withCount('consumerEntries as consumer_actions_count')
-            ->withCount('fieldActivities as retail_actions_count')
-            ->orderBy('name')
-            ->get();
-
         return view('brands-platform.admin', compact(
             'brands', 'staff', 'assignments', 'activityLogs', 'roleProductivity', 'availableStaff',
             'totalActivations', 'totalPromoters', 'totalRetailStaff', 'totalSupervisors',
-            'totalMerchandisers', 'activeAccounts', 'availabilitySnapshot', 'brandPerformance',
+            'totalMerchandisers', 'activeAccounts', 'availabilitySnapshot',
         ));
     }
 
@@ -616,7 +716,7 @@ class BrandsPlatformController extends Controller
             abort(403, 'You do not have access to the CMIH staff feed.');
         }
 
-        $staff = User::internalStaff()
+        $staff = $this->agencyEnrollableStaffQuery()
             ->where('status', 'active')
             ->orderBy('name')
             ->get(['id', 'name', 'email', 'department', 'access_role', 'job_title', 'position_title'])
@@ -728,6 +828,7 @@ class BrandsPlatformController extends Controller
         $this->guardCanManageTeam($request->user(), $brand);
 
         $validated = $request->validate([
+            'activation_id' => ['nullable', 'integer', Rule::exists('brand_activations', 'id')->where('brand_id', $brand->id)],
             'name' => ['required', 'string', 'max:255'],
             'activation_type' => ['nullable', 'string', 'max:100'],
             'status' => ['required', 'in:draft,live,completed,paused,archived'],
@@ -752,21 +853,25 @@ class BrandsPlatformController extends Controller
         ]);
 
         $activationPlan = $this->activationPlanPayload($validated);
-        $activation = $brand->activations()->updateOrCreate(
-            ['name' => $validated['name']],
-            [
-                'activation_type' => $validated['activation_type'] ?? 'activation',
-                'status' => $validated['status'],
-                'starts_at' => $validated['starts_at'] ?? null,
-                'ends_at' => $validated['ends_at'] ?? null,
-                'target_reach' => $validated['target_reach'] ?? 0,
-                'target_unit' => $validated['target_unit'] ?? null,
-                'locations' => $this->normalizeActivationLocations($validated['locations'] ?? []),
-                'activation_plan' => $activationPlan,
-                'description' => $validated['description'] ?? null,
-                'created_by' => $request->user()->id,
-            ]
-        );
+        $activationPayload = [
+            'name' => $validated['name'],
+            'activation_type' => $validated['activation_type'] ?? 'activation',
+            'status' => $validated['status'],
+            'starts_at' => $validated['starts_at'] ?? null,
+            'ends_at' => $validated['ends_at'] ?? null,
+            'target_reach' => $validated['target_reach'] ?? 0,
+            'target_unit' => $validated['target_unit'] ?? null,
+            'locations' => $this->normalizeActivationLocations($validated['locations'] ?? []),
+            'activation_plan' => $activationPlan,
+            'description' => $validated['description'] ?? null,
+            'created_by' => $request->user()->id,
+        ];
+        if (filled($validated['activation_id'] ?? null)) {
+            $activation = $brand->activations()->whereKey($validated['activation_id'])->firstOrFail();
+            $activation->update($activationPayload);
+        } else {
+            $activation = $brand->activations()->create($activationPayload);
+        }
 
         $this->syncActivationPlanAssignments($brand, $activationPlan, $request->user());
 
@@ -785,7 +890,10 @@ class BrandsPlatformController extends Controller
             $request->user()->id
         );
 
-        return back()->with('status', "{$activation->name} activation plan saved.");
+        return redirect(route('brands-platform.agency', [
+            $brand->slug ?: $brand->id,
+            'activation_id' => $activation->id,
+        ]).'#activation-setup')->with('status', "{$activation->name} activation plan saved.");
     }
 
     public function storePublication(Request $request, string $brand): RedirectResponse
@@ -889,7 +997,7 @@ class BrandsPlatformController extends Controller
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $staff = User::internalStaff()->whereKey($validated['user_id'])->firstOrFail();
+        $staff = $this->agencyEnrollableStaffQuery()->whereKey($validated['user_id'])->firstOrFail();
         $role = BrandStaffAssignment::ROLE_AGENCY;
 
         BrandStaffAssignment::updateOrCreate(
@@ -1835,6 +1943,25 @@ class BrandsPlatformController extends Controller
             ?: $brand->activations()->latest()->first();
     }
 
+    private function selectedActivation(Brand $brand, Request $request): ?BrandActivation
+    {
+        if ($request->boolean('new_activation')) {
+            return null;
+        }
+
+        if ($request->filled('activation_id')) {
+            $activation = $brand->activations()
+                ->whereKey((int) $request->input('activation_id'))
+                ->first();
+
+            if ($activation) {
+                return $activation;
+            }
+        }
+
+        return $this->primaryActivation($brand);
+    }
+
     private function brandMetrics(Brand $brand, ?BrandActivation $activation = null, array $filters = []): array
     {
         $activationQuery = $brand->activations();
@@ -1899,11 +2026,13 @@ class BrandsPlatformController extends Controller
                 $promoters = (clone $activeAssignments)
                     ->where(function ($query) {
                         $query->where('enrollment_type', BrandStaffAssignment::TYPE_PROMOTER)
+                            ->orWhere('enrollment_type', BrandStaffAssignment::TYPE_RETAIL_TERMINAL)
                             ->orWhereIn('role', [
                                 BrandStaffAssignment::ROLE_PROMOTER,
                                 BrandStaffAssignment::ROLE_SUPPORT,
                                 BrandStaffAssignment::ROLE_SALES,
                                 BrandStaffAssignment::ROLE_SUPERVISOR,
+                                BrandStaffAssignment::ROLE_RETAIL,
                             ]);
                     })
                     ->count();
@@ -1912,6 +2041,9 @@ class BrandsPlatformController extends Controller
                         $query->where('enrollment_type', BrandStaffAssignment::TYPE_RETAIL_TERMINAL)
                             ->orWhere('role', BrandStaffAssignment::ROLE_RETAIL);
                     })
+                    ->count();
+                $agencyStaff = (clone $activeAssignments)
+                    ->whereIn('role', [BrandStaffAssignment::ROLE_AGENCY, BrandStaffAssignment::ROLE_ADMIN])
                     ->count();
                 $staff = (clone $activeAssignments)->distinct('user_id')->count('user_id');
 
@@ -1927,6 +2059,7 @@ class BrandsPlatformController extends Controller
                     'updates' => $updates,
                     'promoters' => $promoters,
                     'retail_partners' => $retail,
+                    'agency_staff' => $agencyStaff,
                     'staff' => $staff,
                     'primary_result' => $activation?->target_unit ?: 'No target unit set',
                     'status' => $activation?->status ?: $brand->platform_status,
@@ -1945,14 +2078,19 @@ class BrandsPlatformController extends Controller
             'support_staff' => BrandStaffAssignment::where('is_active', true)
                 ->where(function ($query) {
                     $query->where('enrollment_type', BrandStaffAssignment::TYPE_PROMOTER)
+                        ->orWhere('enrollment_type', BrandStaffAssignment::TYPE_RETAIL_TERMINAL)
                         ->orWhereIn('role', [
                             BrandStaffAssignment::ROLE_PROMOTER,
                             BrandStaffAssignment::ROLE_SUPPORT,
                             BrandStaffAssignment::ROLE_SALES,
                             BrandStaffAssignment::ROLE_SUPERVISOR,
                             BrandStaffAssignment::ROLE_MERCHANDISER,
+                            BrandStaffAssignment::ROLE_RETAIL,
                         ]);
                 })
+                ->count(),
+            'agency_staff' => BrandStaffAssignment::where('is_active', true)
+                ->whereIn('role', [BrandStaffAssignment::ROLE_AGENCY, BrandStaffAssignment::ROLE_ADMIN])
                 ->count(),
             'retail_partners' => BrandStaffAssignment::where('is_active', true)
                 ->where(function ($query) {
@@ -2237,13 +2375,24 @@ class BrandsPlatformController extends Controller
 
     private function roleUsesGeofencedShift(?string $role): bool
     {
-        return in_array($role, [
-            BrandStaffAssignment::ROLE_PROMOTER,
-            BrandStaffAssignment::ROLE_SUPPORT,
-            BrandStaffAssignment::ROLE_SALES,
-            BrandStaffAssignment::ROLE_RETAIL,
-            BrandStaffAssignment::ROLE_MERCHANDISER,
-        ], true);
+        return in_array($role, self::FIELD_STAFF_ROLES, true);
+    }
+
+    private function agencyEnrollableStaffQuery()
+    {
+        return User::query()
+            ->internalStaff()
+            ->whereNotIn('email', self::BRAND_PORTAL_TEST_EMAILS)
+            ->whereDoesntHave('brandStaffAssignments', function ($query) {
+                $query->where('is_active', true)
+                    ->where(function ($fieldQuery) {
+                        $fieldQuery->whereIn('role', self::FIELD_STAFF_ROLES)
+                            ->orWhereIn('enrollment_type', [
+                                BrandStaffAssignment::TYPE_PROMOTER,
+                                BrandStaffAssignment::TYPE_RETAIL_TERMINAL,
+                            ]);
+                    });
+            });
     }
 
     private function assignmentUsesGeofencedShift(?BrandStaffAssignment $assignment): bool

@@ -155,6 +155,121 @@
             justify-content: center;
             margin-bottom: 12px;
         }
+        .agency-chart-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+            margin: 20px 0;
+        }
+        .agency-chart-card {
+            background: #fff;
+            border: 1px solid #e4dadd;
+            border-radius: 18px;
+            padding: 18px;
+            min-height: 310px;
+        }
+        .agency-chart-card h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 900;
+            color: #171115;
+        }
+        .agency-chart-card small {
+            display: block;
+            margin-top: 4px;
+            color: #8b747a;
+            font-size: 11px;
+        }
+        .agency-chart-frame {
+            height: 230px;
+            margin-top: 14px;
+            position: relative;
+        }
+        .activation-step-grid {
+            display: grid;
+            grid-template-columns: 0.9fr 1.1fr;
+            gap: 16px;
+            margin: 20px 0;
+        }
+        .activation-picker-list {
+            display: grid;
+            gap: 10px;
+        }
+        .activation-picker-card {
+            display: block;
+            text-decoration: none;
+            color: #171115;
+            border: 1px solid #eadde0;
+            background: #fff;
+            border-radius: 16px;
+            padding: 14px;
+            transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .activation-picker-card:hover,
+        .activation-picker-card.active {
+            border-color: #ff1020;
+            box-shadow: 0 12px 28px rgba(255, 16, 32, 0.12);
+            transform: translateY(-2px);
+        }
+        .agency-map-grid {
+            display: grid;
+            grid-template-columns: minmax(280px, 0.85fr) minmax(0, 1.6fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .promoter-live-roster {
+            background: #fcf8f9;
+            border: 1px solid #e4dadd;
+            border-radius: 18px;
+            padding: 16px;
+            max-height: 560px;
+            overflow-y: auto;
+        }
+        .promoter-live-card {
+            width: 100%;
+            border: 1px solid #eadde0;
+            background: #fff;
+            border-radius: 14px;
+            padding: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-align: left;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+        .promoter-live-card:hover {
+            transform: translateY(-2px);
+            border-color: #ff1020;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.06);
+        }
+        .agency-map-shell {
+            border-radius: 22px;
+            overflow: hidden;
+            border: 1px solid #d9c8cd;
+            min-height: 560px;
+            position: relative;
+            box-shadow: 0 20px 55px rgba(23, 17, 21, 0.12);
+            background: #120a0d;
+        }
+        .agency-map-overlay {
+            position: absolute;
+            left: 16px;
+            top: 16px;
+            z-index: 2;
+            background: rgba(12, 8, 9, 0.82);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-radius: 16px;
+            padding: 12px 14px;
+            backdrop-filter: blur(10px);
+        }
+        @media (max-width: 1100px) {
+            .agency-chart-grid,
+            .activation-step-grid,
+            .agency-map-grid { grid-template-columns: 1fr; }
+            .agency-map-shell { min-height: 430px; }
+        }
     </style>
 @endpush
 
@@ -186,7 +301,8 @@
 
         return '<span style="'.$style.' padding:3px 10px; border-radius:12px; font-size:9px; font-weight:900;">'.e(strtoupper(str_replace('_', ' ', $status))).'</span>';
     };
-    $activationOptions = $allBrands->flatMap(fn ($b) => $b->activations)->filter()->unique('id')->values();
+    $activationOptions = $brandActivations ?? collect();
+    $selectedActivationId = $activation?->id;
 @endphp
 
 <section class="brands-prototype view active big-dashboard" id="view-agency" style="{{ $brandStyle }}">
@@ -265,10 +381,10 @@
                                 <option value="{{ route('brands-platform.agency', $b->slug ?: $b->id) }}" @selected($b->id === $brand->id)>{{ $b->name }}</option>
                             @endforeach
                         </select>
-                        <select class="filter-select">
+                        <select class="filter-select" onchange="if(this.value) window.location.href=this.value;">
                             <option value="">All Activations</option>
                             @foreach($activationOptions as $optionActivation)
-                                <option value="{{ $optionActivation->id }}" @selected($activation?->id === $optionActivation->id)>{{ $optionActivation->name }}</option>
+                                <option value="{{ route('brands-platform.agency', [$brandKey, 'activation_id' => $optionActivation->id]).'#overview' }}" @selected($selectedActivationId === $optionActivation->id)>{{ $optionActivation->name }}</option>
                             @endforeach
                         </select>
                         <select class="filter-select">
@@ -295,12 +411,12 @@
                         <strong>{{ $formatNumber($portfolioStats['consumers']) }}</strong>
                     </div>
                     <div class="stat-card-6">
-                        <small>SUPPORT STAFF</small>
+                        <small>PROMOTERS</small>
                         <strong>{{ $formatNumber($portfolioStats['support_staff']) }}</strong>
                     </div>
                     <div class="stat-card-6">
-                        <small>RETAIL PARTNERS</small>
-                        <strong>{{ $formatNumber($portfolioStats['retail_partners']) }}</strong>
+                        <small>AGENCY STAFF</small>
+                        <strong>{{ $formatNumber($portfolioStats['agency_staff']) }}</strong>
                     </div>
                     <div class="stat-card-6">
                         <small>CONVERSIONS</small>
@@ -356,6 +472,24 @@
                     </div>
                 </div>
 
+                <div class="agency-chart-grid">
+                    <div class="agency-chart-card">
+                        <h3>Conversions by brand</h3>
+                        <small>Total conversions recorded from field activity rows.</small>
+                        <div class="agency-chart-frame"><canvas id="portfolioConversionChart"></canvas></div>
+                    </div>
+                    <div class="agency-chart-card">
+                        <h3>Team mix by brand</h3>
+                        <small>Agency collaborators against enrolled promoters.</small>
+                        <div class="agency-chart-frame"><canvas id="portfolioStaffChart"></canvas></div>
+                    </div>
+                    <div class="agency-chart-card" style="grid-column:1 / -1;">
+                        <h3>Daily performance tracker</h3>
+                        <small>Consumer entries and field updates over the selected date range.</small>
+                        <div class="agency-chart-frame"><canvas id="dailyPerformanceChart"></canvas></div>
+                    </div>
+                </div>
+
                 <!-- BRAND & ACTIVATION SUMMARY TABLE -->
                 <div class="panel">
                     <div class="panel-head">
@@ -372,7 +506,7 @@
                                 <th style="text-align:left; padding:10px 6px;">TYPE</th>
                                 <th style="text-align:right; padding:10px 6px;">CONSUMERS</th>
                                 <th style="text-align:right; padding:10px 6px;">PROMOTERS</th>
-                                <th style="text-align:right; padding:10px 6px;">RETAIL PARTNERS</th>
+                                <th style="text-align:right; padding:10px 6px;">AGENCY STAFF</th>
                                 <th style="text-align:left; padding:10px 6px;">PRIMARY RESULT</th>
                                 <th style="text-align:right; padding:10px 6px;">STATUS</th>
                             </tr>
@@ -385,7 +519,7 @@
                                     <td style="padding:12px 6px;"><span style="background:#e0f2fe; color:#0369a1; padding:3px 8px; border-radius:12px; font-size:9px; font-weight:800;">{{ strtoupper($summary['activation_type']) }}</span></td>
                                     <td style="padding:12px 6px; text-align:right; font-weight:800;">{{ $formatNumber($summary['consumer_count']) }}</td>
                                     <td style="padding:12px 6px; text-align:right;">{{ $formatNumber($summary['promoters']) }}</td>
-                                    <td style="padding:12px 6px; text-align:right;">{{ $formatNumber($summary['retail_partners']) }}</td>
+                                    <td style="padding:12px 6px; text-align:right;">{{ $formatNumber($summary['agency_staff']) }}</td>
                                     <td style="padding:12px 6px; color:#555;">{{ $summary['primary_result'] }}</td>
                                     <td style="padding:12px 6px; text-align:right;">{!! $statusBadge($summary['status']) !!}</td>
                                 </tr>
@@ -398,6 +532,7 @@
                     </table>
                 </div>
 
+                @if(false)
                 <!-- LIVE STAFF ATTENDANCE & FIELD GPS MAP CLUSTER -->
                 <div class="dash-grid" style="margin-top:20px;">
                     <div class="panel" style="grid-column: 1 / -1;">
@@ -455,6 +590,70 @@
                         </div>
                     </div>
                 </div>
+                @endif
+
+                <div class="panel" style="margin-top:20px;">
+                    <div class="panel-head" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                        <div>
+                            <h3 style="color:#171115; font-size:18px; font-weight:900; margin:0;">Live Promoter Location Map</h3>
+                            <small style="color:#8b747a;">Promoter clock-in locations plotted from today's live attendance records.</small>
+                        </div>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            <span class="chip" style="background:#0aa777; color:#fff; font-weight:800; padding:6px 12px; border-radius:20px; font-size:11px;">
+                                {{ $todayAttendances->whereIn('status', ['clocked_in', 'on_break'])->count() }} Live
+                            </span>
+                            <span class="chip" style="background:#ff1020; color:#fff; font-weight:800; padding:6px 12px; border-radius:20px; font-size:11px;">
+                                {{ $todayAttendances->where('is_late', true)->count() }} Late
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="agency-map-grid">
+                        <div class="promoter-live-roster">
+                            <h4 style="margin:0 0 12px; color:#171115; font-size:13px; font-weight:900;">Promoter Roster</h4>
+                            <div style="display:flex; flex-direction:column; gap:10px;">
+                                @forelse($promoterWorkRows as $row)
+                                    @php
+                                        $assignment = $row['assignment'];
+                                        $att = $row['attendance'];
+                                        $lat = $att?->clock_in_latitude ?: $att?->assigned_latitude ?: $assignment->assigned_latitude;
+                                        $lng = $att?->clock_in_longitude ?: $att?->assigned_longitude ?: $assignment->assigned_longitude;
+                                        $canMap = filled($lat) && filled($lng);
+                                    @endphp
+                                    <button type="button"
+                                        class="promoter-live-card"
+                                        @if($canMap)
+                                            onclick="focusStaffOnMap({{ (int) $assignment->user_id }}, {{ (float) $lat }}, {{ (float) $lng }}, @js($assignment->display_name), @js($att?->assigned_location_name ?: $assignment->assigned_location ?: 'Venue'), @js($att?->clock_in_time?->format('h:i A') ?: 'Not clocked in'), {{ $att?->is_late ? 'true' : 'false' }}, {{ (int) ($att?->lateness_minutes ?? 0) }}, {{ (float) ($att?->deduction_amount ?? 0) }}, {{ (float) ($att?->clock_in_distance_meters ?? 0) }})"
+                                        @else
+                                            disabled
+                                        @endif>
+                                        <div style="position:relative;">
+                                            <div style="width:42px; height:42px; border-radius:14px; background:#171115; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:13px;">
+                                                {{ strtoupper(substr($assignment->display_name ?: 'P', 0, 2)) }}
+                                            </div>
+                                            <span style="position:absolute; bottom:-2px; right:-2px; width:12px; height:12px; border-radius:50%; background:{{ $row['status'] === 'at_work' ? '#0aa777' : ($row['status'] === 'on_break' ? '#f59e0b' : '#94a3b8') }}; border:2px solid #fff;"></span>
+                                        </div>
+                                        <div style="flex:1; min-width:0;">
+                                            <strong style="display:block; font-size:12px; color:#171115;">{{ $assignment->display_name }}</strong>
+                                            <small style="display:block; color:#8b747a; font-size:10px;">{{ Str::limit($att?->assigned_location_name ?: $assignment->assigned_location ?: 'No venue assigned', 36) }}</small>
+                                            <span style="display:inline-block; color:#171115; font-size:9px; font-weight:900; margin-top:4px;">{{ Str::headline($row['status']) }}{{ $canMap ? ' - Tap to zoom' : ' - No coordinates' }}</span>
+                                        </div>
+                                    </button>
+                                @empty
+                                    <div style="text-align:center; padding:30px; color:#8b747a; font-size:12px;">No promoters have been enrolled for this brand yet.</div>
+                                @endforelse
+                            </div>
+                        </div>
+
+                        <div class="agency-map-shell">
+                            <div class="agency-map-overlay">
+                                <strong style="display:block; font-size:12px;">Satellite zoom mode</strong>
+                                <small style="display:block; color:#d9c8cd; font-size:10px; margin-top:3px;">Click a promoter to zoom near 50 meters.</small>
+                            </div>
+                            <div id="agencyStaffMap" style="width:100%; height:100%; min-height:560px;"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
 
@@ -464,7 +663,7 @@
             <div id="tab-activation-setup" class="agency-tab-content">
                 @php
                     $plan = $activation?->activation_plan ?? [];
-                    $planLocations = collect($plan['locations'] ?? $activation?->locations ?? [])->take(4)->values();
+                    $planLocations = collect($plan['locations'] ?? $activation?->locations ?? [])->values();
                     if ($planLocations->isEmpty()) {
                         $planLocations = collect([['name' => '', 'target' => '', 'daily_target' => '', 'staff_ids' => []]]);
                     }
@@ -477,8 +676,72 @@
                     </div>
                 </div>
 
+                <div class="activation-step-grid">
+                    <div class="panel">
+                        <div class="panel-head">
+                            <div>
+                                <h3 style="margin:0; color:#171115; font-size:17px; font-weight:900;">1. Select brand</h3>
+                                <small style="color:#8b747a;">Open the brand whose activation you want to manage.</small>
+                            </div>
+                        </div>
+                        <div class="activation-picker-list" style="margin-top:14px;">
+                            @foreach($allBrands as $setupBrand)
+                                @php $setupBrandKey = $setupBrand->slug ?: $setupBrand->id; @endphp
+                                <a class="activation-picker-card {{ $setupBrand->id === $brand->id ? 'active' : '' }}"
+                                   href="{{ route('brands-platform.agency', $setupBrandKey).'#activation-setup' }}">
+                                    <div style="display:flex; justify-content:space-between; gap:12px; align-items:center;">
+                                        <div>
+                                            <strong style="display:block; font-size:14px;">{{ $setupBrand->display_name ?: $setupBrand->name }}</strong>
+                                            <small style="color:#8b747a;">{{ $setupBrand->activations->count() }} activation{{ $setupBrand->activations->count() === 1 ? '' : 's' }}</small>
+                                        </div>
+                                        {!! $statusBadge($setupBrand->platform_status) !!}
+                                    </div>
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-head">
+                            <div>
+                                <h3 style="margin:0; color:#171115; font-size:17px; font-weight:900;">2. Open activation</h3>
+                                <small style="color:#8b747a;">Pick an activation under {{ $brand->name }} to load its exact setup form.</small>
+                            </div>
+                            <a class="btn red" href="{{ route('brands-platform.agency', [$brandKey, 'new_activation' => 1]).'#activation-setup' }}" style="text-decoration:none;">New Activation</a>
+                        </div>
+                        <div class="activation-picker-list" style="margin-top:14px;">
+                            @forelse($brandActivationSummaries as $setupActivation)
+                                <a class="activation-picker-card {{ $selectedActivationId === $setupActivation['id'] ? 'active' : '' }}"
+                                   href="{{ route('brands-platform.agency', [$brandKey, 'activation_id' => $setupActivation['id']]).'#activation-setup' }}">
+                                    <div style="display:flex; justify-content:space-between; gap:12px; align-items:center;">
+                                        <div>
+                                            <strong style="display:block; font-size:14px;">{{ $setupActivation['name'] }}</strong>
+                                            <small style="color:#8b747a;">{{ Str::headline($setupActivation['type']) }} • {{ $formatNumber($setupActivation['consumers']) }} consumers • {{ $formatNumber($setupActivation['updates']) }} updates</small>
+                                        </div>
+                                        <div style="text-align:right;">
+                                            {!! $statusBadge($setupActivation['status']) !!}
+                                            <small style="display:block; color:#8b747a; margin-top:5px;">{{ $formatPercent($setupActivation['target_rate']) }} target</small>
+                                        </div>
+                                    </div>
+                                </a>
+                            @empty
+                                <div style="padding:18px; text-align:center; border:1px dashed #e4dadd; border-radius:16px; color:#8b747a;">
+                                    No activation has been created for {{ $brand->name }} yet. Use New Activation to create the first one.
+                                </div>
+                            @endforelse
+                        </div>
+                    </div>
+                </div>
+
                 <form method="POST" action="{{ route('brands-platform.admin.activations.store', $brandKey) }}" enctype="multipart/form-data" class="panel" style="margin-top:20px;">
                     @csrf
+                    @if($activation)
+                        <input type="hidden" name="activation_id" value="{{ $activation->id }}">
+                    @endif
+                    <div style="margin-bottom:16px;">
+                        <div class="eyebrow">3. Activation Details</div>
+                        <h2 style="margin:4px 0 0; color:#171115; font-size:22px; font-weight:900;">{{ $activation ? $activation->name : 'Create new activation' }}</h2>
+                    </div>
                     <div style="display:grid; grid-template-columns:2fr 1fr; gap:16px; align-items:start;">
                         <div style="display:grid; gap:14px;">
                             <div class="field">
@@ -673,7 +936,7 @@
                 <div class="big-top" style="margin-top: 15px;">
                     <div>
                         <div class="eyebrow">AGENCY COMMAND CENTRE</div>
-                        <h1 style="color:#171115; font-size:32px; font-weight:900; margin:4px 0 0;">Brand Performance</h1>
+                        <h1 style="color:#171115; font-size:32px; font-weight:900; margin:4px 0 0;">Brand & Staff Performance</h1>
                     </div>
                     <div style="display:flex; gap:8px; align-items:center;">
                         <select class="filter-select">
@@ -711,8 +974,8 @@
                 <div class="panel">
                     <div class="panel-head">
                         <div>
-                            <h3 style="font-size:16px; font-weight:900; color:#171115;">Brand comparison</h3>
-                            <small style="color:#8b747a;">Click a brand or activation row to open its operational drill-down</small>
+                            <h3 style="font-size:16px; font-weight:900; color:#171115;">Brand & staff performance</h3>
+                            <small style="color:#8b747a;">Real brand, activation, assignment, consumer and field activity totals.</small>
                         </div>
                     </div>
                     <table class="leader" style="width:100%; margin-top:15px; color:#171115;">
@@ -723,7 +986,9 @@
                                 <th style="text-align:left; padding:10px 6px;">TYPE</th>
                                 <th style="text-align:right; padding:10px 6px;">CONSUMERS / ACTIONS</th>
                                 <th style="text-align:right; padding:10px 6px;">CONVERSIONS</th>
-                                <th style="text-align:right; padding:10px 6px;">STAFF</th>
+                                <th style="text-align:right; padding:10px 6px;">AGENCY STAFF</th>
+                                <th style="text-align:right; padding:10px 6px;">PROMOTERS</th>
+                                <th style="text-align:right; padding:10px 6px;">ALL STAFF</th>
                                 <th style="text-align:right; padding:10px 6px;">STATUS</th>
                             </tr>
                         </thead>
@@ -735,12 +1000,14 @@
                                     <td style="padding:12px 6px; color:#666;">{{ $summary['activation_type'] }}</td>
                                     <td style="padding:12px 6px; text-align:right; font-weight:800;">{{ $formatNumber($summary['consumer_count']) }}</td>
                                     <td style="padding:12px 6px; text-align:right;">{{ $formatNumber($summary['conversions']) }}</td>
+                                    <td style="padding:12px 6px; text-align:right;">{{ $formatNumber($summary['agency_staff']) }}</td>
+                                    <td style="padding:12px 6px; text-align:right;">{{ $formatNumber($summary['promoters']) }}</td>
                                     <td style="padding:12px 6px; text-align:right;">{{ $formatNumber($summary['staff']) }}</td>
                                     <td style="padding:12px 6px; text-align:right;">{!! $statusBadge($summary['status']) !!}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" style="padding:24px 6px; color:#8b747a; text-align:center;">No active brand records are available yet.</td>
+                                    <td colspan="9" style="padding:24px 6px; color:#8b747a; text-align:center;">No active brand records are available yet.</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -780,6 +1047,23 @@
                     <div class="stat-card-6"><small>AVG CONVERSION</small><strong>{{ $formatPercent($promoterStats['avg_conversion']) }}</strong></div>
                     <div class="stat-card-6"><small>TOP ACTIVITY</small><strong>{{ $formatNumber($promoterStats['top_activity']) }}</strong></div>
                     <div class="stat-card-6"><small>LOCATIONS COVERED</small><strong>{{ $formatNumber($promoterStats['locations_covered']) }}</strong></div>
+                </div>
+                <div class="agency-chart-grid">
+                    <div class="agency-chart-card">
+                        <h3>Activity by role</h3>
+                        <small>Updates, units and conversions grouped by submitted staff role.</small>
+                        <div class="agency-chart-frame"><canvas id="roleActivityChart"></canvas></div>
+                    </div>
+                    <div class="agency-chart-card">
+                        <h3>Promoter work status</h3>
+                        <small>Current clock-in, break, closed and not-started state for enrolled promoters.</small>
+                        <div class="agency-chart-frame"><canvas id="attendanceStatusChart"></canvas></div>
+                    </div>
+                    <div class="agency-chart-card" style="grid-column:1 / -1;">
+                        <h3>Location output tracker</h3>
+                        <small>Units, conversions and submitted updates by activation location.</small>
+                        <div class="agency-chart-frame"><canvas id="locationActivityChart"></canvas></div>
+                    </div>
                 </div>
                 <!-- PROMOTER PERFORMANCE TABLE -->
                 <div class="panel">
@@ -1755,6 +2039,7 @@
 let agencyMap = null;
 let agencyInfoWindow = null;
 let agencyStaffMarkers = {};
+let agencyStaffAccuracyCircles = {};
 
 document.addEventListener('DOMContentLoaded', function() {
     // 1. Initialise Tab Switching based on Hash
@@ -1797,9 +2082,51 @@ function switchAgencyTab(tabId) {
 
 // ── CHARTS INITIALISATION ─────────────────────────────────────────────────
 function initAgencyCharts() {
-        const activationPerformanceData = @json($portfolioChart);
+    const activationPerformanceData = @json($portfolioChart);
+    const portfolioConversionData = @json($portfolioConversionChart);
+    const portfolioStaffData = @json($portfolioStaffChart);
+    const dailyPerformanceData = @json($dailyPerformanceChart);
+    const roleActivityData = @json($roleActivityChart);
+    const attendanceStatusData = @json($attendanceStatusChart);
+    const locationActivityData = @json($locationActivityChart);
     const genderDistributionData = @json($genderChart);
     const ageDistributionData = @json($ageChart);
+    const chartColors = ['#ff1020', '#171115', '#0aa777', '#f59e0b', '#2563eb', '#7c3aed', '#14b8a6', '#ef4444'];
+    const makeBar = (id, labels, datasets, stacked = false) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        new Chart(el.getContext('2d'), {
+            type: 'bar',
+            data: { labels, datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: datasets.length > 1 } },
+                scales: {
+                    y: { beginAtZero: true, stacked, grid: { color: '#f0e6e9' } },
+                    x: { stacked, grid: { display: false } }
+                }
+            }
+        });
+    };
+    const makeLine = (id, labels, datasets) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        new Chart(el.getContext('2d'), {
+            type: 'line',
+            data: { labels, datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                tension: 0.35,
+                plugins: { legend: { display: true } },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: '#f0e6e9' } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    };
 // Chart 1: Activation Performance Bar Chart (Overview Tab)
     const ctx1 = document.getElementById('activationPerformanceChart');
     if (ctx1) {
@@ -1828,6 +2155,57 @@ function initAgencyCharts() {
             }
         });
     }
+
+    makeBar('portfolioConversionChart', portfolioConversionData.labels || [], [{
+        label: 'Conversions',
+        data: portfolioConversionData.data || [],
+        backgroundColor: '#0aa777',
+        borderRadius: 8
+    }]);
+
+    makeBar('portfolioStaffChart', portfolioStaffData.labels || [], [
+        { label: 'Agency staff', data: portfolioStaffData.agency || [], backgroundColor: '#171115', borderRadius: 8 },
+        { label: 'Promoters', data: portfolioStaffData.promoters || [], backgroundColor: '#ff1020', borderRadius: 8 }
+    ], true);
+
+    makeLine('dailyPerformanceChart', dailyPerformanceData.labels || [], [
+        { label: 'Consumer entries', data: dailyPerformanceData.consumer_entries || [], borderColor: '#ff1020', backgroundColor: 'rgba(255,16,32,0.12)', fill: true, pointRadius: 3 },
+        { label: 'Field updates', data: dailyPerformanceData.field_updates || [], borderColor: '#171115', backgroundColor: 'rgba(23,17,21,0.08)', fill: true, pointRadius: 3 }
+    ]);
+
+    makeBar('roleActivityChart', roleActivityData.labels || [], [
+        { label: 'Updates', data: roleActivityData.updates || [], backgroundColor: '#ff1020', borderRadius: 8 },
+        { label: 'Units', data: roleActivityData.units || [], backgroundColor: '#171115', borderRadius: 8 },
+        { label: 'Conversions', data: roleActivityData.conversions || [], backgroundColor: '#0aa777', borderRadius: 8 }
+    ]);
+
+    const statusEl = document.getElementById('attendanceStatusChart');
+    if (statusEl) {
+        new Chart(statusEl.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: attendanceStatusData.labels || [],
+                datasets: [{
+                    data: attendanceStatusData.data || [],
+                    backgroundColor: chartColors,
+                    borderWidth: 3,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '64%',
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+    }
+
+    makeBar('locationActivityChart', locationActivityData.labels || [], [
+        { label: 'Units', data: locationActivityData.units || [], backgroundColor: '#ff1020', borderRadius: 8 },
+        { label: 'Conversions', data: locationActivityData.conversions || [], backgroundColor: '#0aa777', borderRadius: 8 },
+        { label: 'Updates', data: locationActivityData.updates || [], backgroundColor: '#2563eb', borderRadius: 8 }
+    ]);
 
     // Chart 2: Gender Donut Chart (Insights Tab)
     const ctx2 = document.getElementById('insightsGenderDonutChart');
@@ -1872,7 +2250,7 @@ function initAgencyCharts() {
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
-                    x: { beginAtZero: true, max: 40, grid: { color: '#f0e6e9' } },
+                    x: { beginAtZero: true, grid: { color: '#f0e6e9' } },
                     y: { grid: { display: false } }
                 }
             }
@@ -1897,7 +2275,12 @@ function initAgencyMap() {
 
     agencyMap = new google.maps.Map(mapEl, {
         center: { lat: 5.6817954, lng: -0.1944273 },
-        zoom: 13,
+        zoom: 15,
+        mapTypeId: 'satellite',
+        tilt: 0,
+        streetViewControl: true,
+        fullscreenControl: true,
+        mapTypeControl: true,
         styles: [
             { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] }
         ]
@@ -1971,12 +2354,22 @@ function initAgencyMap() {
                 title: (att.user ? att.user.name : 'Staff') + ' @ ' + (att.assigned_location_name || 'Venue'),
                 icon: {
                     path: google.maps.SymbolPath.CIRCLE,
-                    scale: 10,
+                    scale: 11,
                     fillColor: markerColor,
                     fillOpacity: 0.9,
-                    strokeWeight: 2,
+                    strokeWeight: 3,
                     strokeColor: '#ffffff'
                 }
+            });
+            const radiusCircle = new google.maps.Circle({
+                strokeColor: markerColor,
+                strokeOpacity: 0.7,
+                strokeWeight: 2,
+                fillColor: markerColor,
+                fillOpacity: 0.12,
+                map: agencyMap,
+                center: pos,
+                radius: 50
             });
 
             marker.addListener('click', () => {
@@ -1994,6 +2387,7 @@ function initAgencyMap() {
             });
 
             agencyStaffMarkers[att.user_id] = marker;
+            agencyStaffAccuracyCircles[att.user_id] = radiusCircle;
         });
 
         agencyMap.fitBounds(bounds);
@@ -2005,7 +2399,9 @@ function focusStaffOnMap(userId, lat, lng, name, locationName, clockInTime, isLa
 
     const pos = { lat: parseFloat(lat), lng: parseFloat(lng) };
     agencyMap.setCenter(pos);
-    agencyMap.setZoom(17);
+    agencyMap.setMapTypeId('satellite');
+    agencyMap.setTilt(0);
+    agencyMap.setZoom(20);
 
     const marker = agencyStaffMarkers[userId];
     const lateText = isLate ? `<span style="color:#ef4444; font-weight:800;">🚨 LATE (${latenessMins}m) &bull; Penalty: GHS ${penalty}</span>` : `<span style="color:#10b981; font-weight:800;">✅ CLOCKED IN ON-TIME</span>`;
@@ -2021,6 +2417,9 @@ function focusStaffOnMap(userId, lat, lng, name, locationName, clockInTime, isLa
 
     agencyInfoWindow.setContent(infoContent);
     if (marker) {
+        if (agencyStaffAccuracyCircles[userId]) {
+            agencyStaffAccuracyCircles[userId].setOptions({ strokeWeight: 4, fillOpacity: 0.18 });
+        }
         agencyInfoWindow.open(agencyMap, marker);
     } else {
         agencyInfoWindow.setPosition(pos);

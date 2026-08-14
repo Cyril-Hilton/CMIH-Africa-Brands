@@ -370,10 +370,10 @@
                         </form>
                     </div>
 
-                    {{-- RECENT ENROLLMENTS --}}
+                    {{-- RECENT BRAND ACCOUNT MANAGERS --}}
                     <div class="admin-card">
-                        <h3 style="margin:0 0 4px; font-size:16px; font-weight:900;">Recent enrollment</h3>
-                        <p style="margin:0 0 16px; color:#bda7ad; font-size:11px;">Newest platform accounts</p>
+                        <h3 style="margin:0 0 4px; font-size:16px; font-weight:900;">Recent Brand Account Managers</h3>
+                        <p style="margin:0 0 16px; color:#bda7ad; font-size:11px;">Newest internal CMIH brand leads</p>
                         <table class="dark-table">
                             <thead>
                                 <tr>
@@ -386,8 +386,9 @@
                             <tbody>
                                 @forelse($assignments->take(6) as $a)
                                     <tr>
+                                        @php $accessLabel = $a->permissions['access_level'] ?? ($a->notes === 'Brand Account Manager' ? 'brand_account_manager' : $a->role); @endphp
                                         <td style="font-weight:800;">{{ $a->user?->name ?? $a->external_name ?? 'N/A' }}</td>
-                                        <td style="color:#bda7ad;">{{ \Illuminate\Support\Str::headline($a->role) }}</td>
+                                        <td style="color:#bda7ad;">{{ \Illuminate\Support\Str::headline($accessLabel) }}</td>
                                         <td>{{ $a->brand?->name ?? '—' }}</td>
                                         <td style="text-align:right;">
                                             <span class="{{ $a->is_active ? 'badge-assigned' : 'badge-unassigned' }}">
@@ -477,7 +478,8 @@
                     </div>
                 </div>
 
-                {{-- BRAND PERFORMANCE TABLE --}}
+                {{-- BRAND PERFORMANCE TABLE moved to Agency Portal --}}
+                @if(false)
                 <div class="admin-card">
                     <h3 style="margin:0 0 4px; font-size:16px; font-weight:900;">Brand & staff performance</h3>
                     <p style="margin:0 0 16px; color:#bda7ad; font-size:11px;">Metrics and table view</p>
@@ -519,6 +521,7 @@
                         </tbody>
                     </table>
                 </div>
+                @endif
             </div>
 
             {{-- ============================================================ --}}

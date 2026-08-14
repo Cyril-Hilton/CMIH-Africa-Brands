@@ -76,8 +76,8 @@
 
             <!-- Live 300m Geofenced Clock-In Widget for Retail Personnel -->
             @php
-                $assignedVenue = $myStaffAssignment?->assigned_location ?: ($activation?->locations[0]['name'] ?? 'Concepts Make It Happen (No. 7 Affum Street, North Legon, Haatso)');
-                $assignedAddr = $myStaffAssignment?->assigned_address ?: 'No. 7 Affum Street, North Legon, Haatso, Accra';
+                $assignedVenue = $myStaffAssignment?->assigned_location ?: ($activation?->locations[0]['name'] ?? 'No venue assigned');
+                $assignedAddr = $myStaffAssignment?->assigned_address ?: 'No address saved';
                 $shiftStart = $myStaffAssignment?->shift_start_time ?: '08:30';
                 $shiftEnd = $myStaffAssignment?->shift_end_time ?: '17:00';
                 $graceMins = $myStaffAssignment?->grace_period_minutes ?: 10;
@@ -445,7 +445,7 @@
                         <div class="retail-form-grid">
                             <div class="field">
                                 <label>Quantity</label>
-                                <input name="conversion_count" type="number" min="0" value="1">
+                                <input id="retailConversionCount" name="conversion_count" type="number" min="0" placeholder="0">
                             </div>
                             <div class="field">
                                 <label>Value Redeemed (GHS)</label>
@@ -499,7 +499,7 @@
                     <div class="panel-head">
                         <div>
                             <h3>Scan / Validate</h3>
-                            <small>Simulated live validation & redemption</small>
+                            <small>Live validation and redemption records</small>
                         </div>
                     </div>
                     
@@ -529,11 +529,11 @@
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
                             <div class="field">
                                 <label>Quantity</label>
-                                <input name="conversion_count" type="number" min="0" value="1" style="width:100%; padding:10px; border-radius:8px; background:#24191c; color:#fff; border:1px solid rgba(255,255,255,0.14);">
+                                <input name="conversion_count" type="number" min="0" placeholder="0" style="width:100%; padding:10px; border-radius:8px; background:#24191c; color:#fff; border:1px solid rgba(255,255,255,0.14);">
                             </div>
                             <div class="field">
                                 <label>Value Redeemed (GHS)</label>
-                                <input name="transaction_value" type="number" min="0" step="0.01" value="5.00" style="width:100%; padding:10px; border-radius:8px; background:#24191c; color:#fff; border:1px solid rgba(255,255,255,0.14);">
+                                <input name="transaction_value" type="number" min="0" step="0.01" placeholder="0.00" style="width:100%; padding:10px; border-radius:8px; background:#24191c; color:#fff; border:1px solid rgba(255,255,255,0.14);">
                             </div>
                         </div>
 
@@ -773,6 +773,7 @@
     const activityTypeInput = document.getElementById('retailActivityType');
     const activityStatusInput = document.getElementById('retailActivityStatus');
     const notesInput = document.getElementById('retailValidationNotes');
+    const conversionCountInput = document.getElementById('retailConversionCount');
     let mediaStream = null;
     let scanInterval = null;
     let zxingControls = null;
@@ -829,6 +830,9 @@
         }
         if (notesInput && mode !== 'done' && !notesInput.value.trim()) {
             notesInput.value = `${title}.`;
+        }
+        if (conversionCountInput && mode === 'done' && !conversionCountInput.value.trim()) {
+            conversionCountInput.value = '1';
         }
         setRedeemReady();
     };
