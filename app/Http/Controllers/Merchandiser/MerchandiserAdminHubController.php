@@ -380,7 +380,7 @@ class MerchandiserAdminHubController extends Controller
                 ->take(10)
                 ->get()
             : collect();
-        $clockSettings = MerchandiserClockWindows::settings();
+        $clockSettings = MerchandiserClockWindows::visitSettings();
         $skuCount = Sku::count();
         $skuReferenceCount = Sku::whereNotNull('reference_image_path')->count();
         $skuCategories = $activeTab === 'skus'
@@ -1006,11 +1006,11 @@ class MerchandiserAdminHubController extends Controller
     {
         $this->guardAdmin();
 
-        $validated = $request->validate(MerchandiserClockWindows::validationRules());
+        $validated = $request->validate(MerchandiserClockWindows::visitValidationRules());
 
-        MerchandiserClockWindows::persist($validated, (int) $request->user()->id);
+        MerchandiserClockWindows::persistVisitWindow($validated, (int) $request->user()->id);
 
-        return back()->with('success', 'Merchandiser clock-in and clock-out windows updated successfully.');
+        return back()->with('success', 'Merchandiser outlet visit window updated successfully.');
     }
 
     // ── KD Management ─────────────────────────────────────────────────────────

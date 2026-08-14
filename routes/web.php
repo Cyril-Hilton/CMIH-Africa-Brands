@@ -465,6 +465,7 @@ Route::prefix('merchandisers')->name('merchandisers.')->group(function () {
         Route::patch('/outlets/{outlet}/coordinates', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'updateOutletCoordinates'])->name('outlets.coordinates.update');
         Route::post('/pcm-clock-in', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'clockInPcm'])->name('pcm-clock-in');
         Route::post('/clock-in', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'clockIn'])->name('clock-in');
+        Route::post('/clock-out', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'clockOut'])->name('clock-out');
         Route::get('/visit/{outlet}', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'visit'])->name('visit');
         Route::post('/visit/{outlet}/ai-detect', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'analyzeVisitShelf'])->name('visit.ai-detect');
         Route::get('/visit/{outlet}/ai-detect/{token}', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'aiDetectionStatus'])->name('visit.ai-detect.status');
