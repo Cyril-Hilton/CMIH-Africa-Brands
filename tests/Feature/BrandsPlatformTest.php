@@ -82,7 +82,12 @@ class BrandsPlatformTest extends TestCase
         $this->actingAs($staff)
             ->get(route('brands-platform.index'))
             ->assertOk()
-            ->assertSee('Brands Notifications')
+            ->assertDontSee('Brands Notifications')
+            ->assertDontSee('Brand access granted');
+
+        $this->actingAs($staff)
+            ->get(route('brands-platform.notifications'))
+            ->assertOk()
             ->assertSee('Brand access granted');
 
         $this->actingAs($staff)
@@ -90,6 +95,80 @@ class BrandsPlatformTest extends TestCase
             ->assertRedirect($notification->url);
 
         $this->assertNotNull($notification->refresh()->read_at);
+    }
+
+    public function test_brands_notifications_are_scoped_to_brand_workspace_and_role(): void
+    {
+        $brand = Brand::where('slug', 'rexona')->firstOrFail();
+        $support = User::factory()->create([
+            'status' => 'active',
+            'access_role' => 'staff',
+        ]);
+        $agency = User::factory()->create([
+            'status' => 'active',
+            'access_role' => 'staff',
+        ]);
+
+        BrandStaffAssignment::create([
+            'brand_id' => $brand->id,
+            'user_id' => $support->id,
+            'role' => BrandStaffAssignment::ROLE_PROMOTER,
+            'enrollment_type' => BrandStaffAssignment::TYPE_PROMOTER,
+            'is_active' => true,
+        ]);
+        BrandStaffAssignment::create([
+            'brand_id' => $brand->id,
+            'user_id' => $agency->id,
+            'role' => BrandStaffAssignment::ROLE_AGENCY,
+            'enrollment_type' => BrandStaffAssignment::TYPE_AGENCY_STAFF,
+            'is_active' => true,
+        ]);
+
+        $staffPortalNotification = Notification::create([
+            'user_id' => $support->id,
+            'title' => 'CMIH portal task',
+            'message' => 'This belongs to the staff portal.',
+            'url' => route('portal.tasks'),
+        ]);
+        $supportNotification = Notification::create([
+            'user_id' => $support->id,
+            'title' => 'Support field update',
+            'message' => 'This belongs to the support workspace.',
+            'url' => route('brands-platform.support', $brand->slug),
+        ]);
+        $agencyOnlyForSupport = Notification::create([
+            'user_id' => $support->id,
+            'title' => 'Agency only report',
+            'message' => 'This should not show to support users.',
+            'url' => route('brands-platform.agency', $brand->slug),
+        ]);
+        $agencyNotification = Notification::create([
+            'user_id' => $agency->id,
+            'title' => 'Agency performance report',
+            'message' => 'This belongs to the agency workspace.',
+            'url' => route('brands-platform.agency', $brand->slug),
+        ]);
+
+        $this->actingAs($support)
+            ->get(route('brands-platform.notifications'))
+            ->assertOk()
+            ->assertSee($supportNotification->title)
+            ->assertDontSee($staffPortalNotification->title)
+            ->assertDontSee($agencyOnlyForSupport->title);
+
+        $this->actingAs($support)
+            ->post(route('brands-platform.notifications.readAll'))
+            ->assertRedirect();
+
+        $this->assertNotNull($supportNotification->refresh()->read_at);
+        $this->assertNull($staffPortalNotification->refresh()->read_at);
+        $this->assertNull($agencyOnlyForSupport->refresh()->read_at);
+
+        $this->actingAs($agency)
+            ->get(route('brands-platform.notifications'))
+            ->assertOk()
+            ->assertSee($agencyNotification->title)
+            ->assertDontSee($supportNotification->title);
     }
 
     public function test_staff_feed_excludes_merchandiser_portal_accounts(): void

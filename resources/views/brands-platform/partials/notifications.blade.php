@@ -1,10 +1,10 @@
 @auth
     @php
-        $brandNotifications = \App\Models\Notification::where('user_id', auth()->id())
+        $brandNotifications = \App\Support\BrandNotificationScope::queryFor(auth()->user())
             ->latest()
             ->take(6)
             ->get();
-        $brandUnreadCount = \App\Models\Notification::where('user_id', auth()->id())
+        $brandUnreadCount = \App\Support\BrandNotificationScope::queryFor(auth()->user())
             ->whereNull('read_at')
             ->count();
     @endphp

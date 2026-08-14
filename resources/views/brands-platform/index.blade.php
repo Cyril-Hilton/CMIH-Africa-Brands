@@ -6,9 +6,6 @@
 @section('content')
 @php
     $companyLogo = asset('brands-platform-reference/assets/asset_01_abc0e3abce39.png');
-    $brandNotifications = auth()->check()
-        ? \App\Models\Notification::where('user_id', auth()->id())->latest()->take(5)->get()
-        : collect();
 @endphp
 
 <section class="brands-prototype view active home" id="view-home">
@@ -22,7 +19,6 @@
 
         <div>
             @auth
-                <a href="{{ route('brands-platform.notifications') }}" class="home-admin home-notifications">Brands Notifications</a>
                 <a href="{{ route('brands-platform.admin') }}" class="home-admin">Admin</a>
             @else
                 <a href="{{ route('brands-platform.admin') }}" class="home-admin">Admin</a>
@@ -31,15 +27,6 @@
     </div>
 
     @include('brands-platform.partials.breadcrumbs')
-
-    @auth
-        <div class="sr-only" aria-live="polite">
-            Brands Notifications
-            @foreach($brandNotifications as $notification)
-                {{ $notification->title }} {{ $notification->message }}
-            @endforeach
-        </div>
-    @endauth
 
     <div class="home-hero">
         <div class="eyebrow">CMIH BRANDS PLATFORM</div>

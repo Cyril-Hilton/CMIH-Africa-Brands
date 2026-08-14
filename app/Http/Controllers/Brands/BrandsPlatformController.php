@@ -13,10 +13,12 @@ use App\Models\BrandStaffAssignment;
 use App\Models\Notification;
 use App\Models\User;
 use App\Services\NotificationService;
+use App\Support\BrandNotificationScope;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
@@ -33,6 +35,11 @@ class BrandsPlatformController extends Controller
     private const CMIH_DEFAULT_ADDRESS = 'No. 7 Affum Street, North Legon, Haatso, Accra';
     private const CMIH_DEFAULT_LATITUDE = 5.6817954;
     private const CMIH_DEFAULT_LONGITUDE = -0.1944273;
+    private const AGENCY_NOTIFICATION_ROLES = [
+        BrandStaffAssignment::ROLE_ADMIN,
+        BrandStaffAssignment::ROLE_AGENCY,
+        BrandStaffAssignment::ROLE_SUPERVISOR,
+    ];
 
     public function showSupportLogin(Request $request, string $brand): View
     {
@@ -633,10 +640,10 @@ class BrandsPlatformController extends Controller
 
     public function notifications(Request $request): View
     {
-        $notifications = Notification::where('user_id', $request->user()->id)
+        $notifications = BrandNotificationScope::queryFor($request->user())
             ->latest()
             ->paginate(20);
-        $unreadCount = Notification::where('user_id', $request->user()->id)
+        $unreadCount = BrandNotificationScope::queryFor($request->user())
             ->whereNull('read_at')
             ->count();
 
@@ -645,7 +652,7 @@ class BrandsPlatformController extends Controller
 
     public function markNotificationAsRead(Request $request, Notification $notification): RedirectResponse
     {
-        if ($notification->user_id !== $request->user()->id) {
+        if (! BrandNotificationScope::userCanSee($request->user(), $notification)) {
             abort(403);
         }
 
@@ -660,7 +667,7 @@ class BrandsPlatformController extends Controller
 
     public function markAllNotificationsAsRead(Request $request): RedirectResponse
     {
-        Notification::where('user_id', $request->user()->id)
+        BrandNotificationScope::queryFor($request->user())
             ->whereNull('read_at')
             ->update(['read_at' => now()]);
 
@@ -911,7 +918,8 @@ class BrandsPlatformController extends Controller
             'Client report link generated',
             "{$activation->brand->name} client view is available until {$activation->client_share_expires_at?->format('M d, Y H:i')}.",
             route('brands-platform.agency', $activation->brand->slug ?: $activation->brand->id),
-            $request->user()->id
+            $request->user()->id,
+            self::AGENCY_NOTIFICATION_ROLES
         );
 
         return back()->with('status', 'Temporary client report link generated.')
@@ -952,7 +960,7 @@ class BrandsPlatformController extends Controller
             $staff->id,
             'Brand access granted',
             "You have been assigned to {$brand->name} as ".Str::headline($validated['role']).'.',
-            route('brands-platform.agency', $brand->slug ?: $brand->id)
+            BrandNotificationScope::workspaceUrlForRole($brand, $validated['role'])
         );
 
         return back()->with('status', "{$staff->name} has been assigned to {$brand->name}.");
@@ -1042,7 +1050,9 @@ class BrandsPlatformController extends Controller
             $brand,
             'New consumer entry',
             "{$entry->name} was captured for {$brand->name}.",
-            route('brands-platform.agency', $brand->slug ?: $brand->id)
+            route('brands-platform.agency', $brand->slug ?: $brand->id),
+            null,
+            self::AGENCY_NOTIFICATION_ROLES
         );
 
         return redirect()
@@ -1103,7 +1113,9 @@ class BrandsPlatformController extends Controller
             $brand,
             'Consumer verified',
             "{$entry->name} completed OTP verification for {$brand->name}.",
-            route('brands-platform.agency', $brand->slug ?: $brand->id)
+            route('brands-platform.agency', $brand->slug ?: $brand->id),
+            null,
+            self::AGENCY_NOTIFICATION_ROLES
         );
 
         return redirect()
@@ -1170,7 +1182,8 @@ class BrandsPlatformController extends Controller
             'Brand field update',
             "{$request->user()->name} recorded ".Str::headline($activity->activity_type)." for {$brand->name}.",
             route('brands-platform.agency', $brand->slug ?: $brand->id),
-            $request->user()->id
+            $request->user()->id,
+            self::AGENCY_NOTIFICATION_ROLES
         );
 
         return back()->with('status', 'Field activity saved successfully.');
@@ -2384,19 +2397,52 @@ class BrandsPlatformController extends Controller
         ]);
     }
 
-    private function notifyAssignedBrandStaff(Brand $brand, string $title, string $message, ?string $url = null, ?int $excludeUserId = null): void
+    private function notifyAssignedBrandStaff(Brand $brand, string $title, string $message, ?string $url = null, ?int $excludeUserId = null, ?array $roles = null): void
     {
-        $ids = $brand->staffAssignments()
+        $assignments = $brand->staffAssignments()
             ->where('is_active', true)
-            ->pluck('user_id')
-            ->map(fn ($id) => (int) $id)
-            ->merge(NotificationService::activeSuperAdminIds($excludeUserId))
-            ->when($excludeUserId, fn ($collection) => $collection->reject(fn ($id) => (int) $id === $excludeUserId))
-            ->unique()
+            ->when($roles, fn ($query) => $query->whereIn('role', $roles))
+            ->with('brand')
+            ->get()
+            ->filter(fn (BrandStaffAssignment $assignment) => filled($assignment->user_id))
+            ->when($excludeUserId, fn ($collection) => $collection->reject(fn (BrandStaffAssignment $assignment) => (int) $assignment->user_id === $excludeUserId))
+            ->groupBy('user_id');
+
+        foreach ($assignments as $userAssignments) {
+            $assignment = $this->preferredNotificationAssignment($userAssignments);
+
+            NotificationService::send(
+                (int) $assignment->user_id,
+                $title,
+                $message,
+                BrandNotificationScope::workspaceUrlForAssignment($brand, $assignment, $url)
+            );
+        }
+
+        $adminIds = collect(NotificationService::activeSuperAdminIds($excludeUserId))
+            ->reject(fn ($id) => $assignments->has((string) $id) || $assignments->has((int) $id))
             ->values()
             ->all();
 
-        NotificationService::sendToMany($ids, $title, $message, $url);
+        NotificationService::sendToMany($adminIds, $title, $message, $url);
+    }
+
+    private function preferredNotificationAssignment(Collection $assignments): BrandStaffAssignment
+    {
+        $priority = [
+            BrandStaffAssignment::ROLE_ADMIN => 1,
+            BrandStaffAssignment::ROLE_AGENCY => 2,
+            BrandStaffAssignment::ROLE_SUPERVISOR => 3,
+            BrandStaffAssignment::ROLE_RETAIL => 4,
+            BrandStaffAssignment::ROLE_SUPPORT => 5,
+            BrandStaffAssignment::ROLE_PROMOTER => 6,
+            BrandStaffAssignment::ROLE_SALES => 7,
+            BrandStaffAssignment::ROLE_MERCHANDISER => 8,
+        ];
+
+        return $assignments
+            ->sortBy(fn (BrandStaffAssignment $assignment) => $priority[$assignment->role] ?? 99)
+            ->first();
     }
 
     private function notifyPlatformAdmins(string $title, string $message, ?string $url = null, ?int $excludeUserId = null): void
