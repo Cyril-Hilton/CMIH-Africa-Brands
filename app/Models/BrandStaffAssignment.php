@@ -168,10 +168,20 @@ class BrandStaffAssignment extends Model
 
     public function hasPermission(string $permission): bool
     {
-        if ($this->role === self::ROLE_ADMIN || $this->role === self::ROLE_AGENCY) {
+        if ($this->role === self::ROLE_ADMIN) {
             return true;
         }
+
         $perms = $this->permissions ?? [];
+
+        if (($perms['access_level'] ?? null) === 'brand_account_manager') {
+            return true;
+        }
+
+        if ($this->role === self::ROLE_AGENCY && empty($perms)) {
+            return true;
+        }
+
         return ! empty($perms[$permission]);
     }
 

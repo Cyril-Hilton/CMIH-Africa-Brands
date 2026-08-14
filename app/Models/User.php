@@ -20,6 +20,7 @@ class User extends Authenticatable
 
     public const MERCHANDISER_ROLE = 'merchandiser';
     public const MERCHANDISER_SUPERVISOR_ROLE = 'merchandiser_supervisor';
+    public const BRAND_PROMOTER_ROLE = 'brand_promoter';
     public const MERCHANDISER_FIELD_ROLES = [
         self::MERCHANDISER_ROLE,
         self::MERCHANDISER_SUPERVISOR_ROLE,
@@ -879,7 +880,10 @@ class User extends Authenticatable
     {
         return $query->where(function ($q) {
             $q->whereNull('access_role')
-              ->orWhereNotIn('access_role', self::MERCHANDISER_FIELD_ROLES);
+              ->orWhereNotIn('access_role', [
+                  ...self::MERCHANDISER_FIELD_ROLES,
+                  self::BRAND_PROMOTER_ROLE,
+              ]);
         });
     }
 
@@ -896,6 +900,11 @@ class User extends Authenticatable
     public function isMerchandiserAccount(): bool
     {
         return in_array($this->access_role, self::MERCHANDISER_FIELD_ROLES, true);
+    }
+
+    public function isBrandPromoterAccount(): bool
+    {
+        return $this->access_role === self::BRAND_PROMOTER_ROLE;
     }
 
     public function isMerchandiserSupervisor(): bool

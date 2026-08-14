@@ -82,7 +82,7 @@ class AuthenticatedSessionController extends Controller
                 $assignment->role === \App\Models\BrandStaffAssignment::ROLE_RETAIL
                 || $assignment->enrollment_type === \App\Models\BrandStaffAssignment::TYPE_RETAIL_TERMINAL
             ) {
-                return redirect()->route('brands-platform.retail', $brandKey);
+                return redirect()->route('brands-platform.support', $brandKey);
             }
 
             if (

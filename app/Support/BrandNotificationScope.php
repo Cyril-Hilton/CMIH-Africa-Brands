@@ -27,9 +27,11 @@ class BrandNotificationScope
             ->where('is_active', true)
             ->get();
 
-        return $query->where(function (Builder $q) use ($assignments) {
-            self::whereBrandsIndexUrl($q);
+        if ($assignments->isEmpty()) {
+            return $query->whereRaw('1 = 0');
+        }
 
+        return $query->where(function (Builder $q) use ($assignments) {
             foreach ($assignments as $assignment) {
                 foreach (self::brandKeys($assignment->brand) as $key) {
                     self::orWhereAssignedBrandUrl($q, $assignment, $key);
@@ -47,14 +49,11 @@ class BrandNotificationScope
     {
         $brandKey = $brand->slug ?: $brand->id;
 
-        if ($role === BrandStaffAssignment::ROLE_RETAIL) {
-            return route('brands-platform.retail', $brandKey);
-        }
-
         if (in_array($role, [
             BrandStaffAssignment::ROLE_PROMOTER,
             BrandStaffAssignment::ROLE_SUPPORT,
             BrandStaffAssignment::ROLE_SALES,
+            BrandStaffAssignment::ROLE_RETAIL,
             BrandStaffAssignment::ROLE_MERCHANDISER,
         ], true)) {
             return route('brands-platform.support', $brandKey);
@@ -103,36 +102,24 @@ class BrandNotificationScope
     {
         $base = '%/brands/'.self::escapeLike($brandKey);
 
-        $patterns = [
-            $base,
-            $base.'?%',
-            $base.'#%',
-            $base.'/activation%',
-            $base.'/publications%',
-        ];
-
-        if ($assignment->role === BrandStaffAssignment::ROLE_RETAIL) {
-            $patterns[] = $base.'/retail%';
-
-            return $patterns;
-        }
-
         if (in_array($assignment->role, [
             BrandStaffAssignment::ROLE_PROMOTER,
             BrandStaffAssignment::ROLE_SUPPORT,
             BrandStaffAssignment::ROLE_SALES,
+            BrandStaffAssignment::ROLE_RETAIL,
             BrandStaffAssignment::ROLE_MERCHANDISER,
         ], true)) {
-            $patterns[] = $base.'/support%';
-
-            return $patterns;
+            return [
+                $base.'/support%',
+                $base.'/retail%',
+            ];
         }
 
-        $patterns[] = $base.'/agency%';
-        $patterns[] = $base.'/export%';
-        $patterns[] = $base.'/gallery%';
-
-        return $patterns;
+        return [
+            $base.'/agency%',
+            $base.'/export%',
+            $base.'/gallery%',
+        ];
     }
 
     /**

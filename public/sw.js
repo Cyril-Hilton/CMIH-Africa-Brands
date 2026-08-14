@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cmih-portal-20260715-notifications';
+const CACHE_NAME = 'cmih-portal-20260814-brands-workspaces';
 const CORE_ASSETS = [
   '/manifest.json',
   '/images/logo/favicon.png',
@@ -6,7 +6,9 @@ const CORE_ASSETS = [
   '/images/logo/icon-512.png'
 ];
 
-const DEFAULT_NOTIFICATION_URL = '/portal/notifications';
+const DEFAULT_NOTIFICATION_URL = self.location.hostname.startsWith('brands.')
+  ? '/brands'
+  : '/portal/notifications';
 
 const toAbsoluteUrl = (url) => {
   try {

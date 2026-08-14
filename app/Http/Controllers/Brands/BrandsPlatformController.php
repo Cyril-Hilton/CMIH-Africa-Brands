@@ -20,7 +20,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -169,7 +171,7 @@ class BrandsPlatformController extends Controller
     public function agency(Request $request, string $brand): View
     {
         $brand = $this->resolveBrand($brand);
-        $this->guardBrandAccess($request->user(), $brand);
+        $this->guardAgencyWorkspaceAccess($request->user(), $brand);
 
         $activation = $this->primaryActivation($brand);
         $filters = $this->reportFilters($request);
@@ -230,9 +232,9 @@ class BrandsPlatformController extends Controller
             ->latest()
             ->get();
 
-        // Separate enrolled staff by type for the roster
-        $enrolledPromoters   = $assignedStaff->where('enrollment_type', BrandStaffAssignment::TYPE_PROMOTER);
-        $enrolledRetail      = $assignedStaff->where('enrollment_type', BrandStaffAssignment::TYPE_RETAIL_TERMINAL);
+        // Retail terminal users now share the promoter workspace and roster.
+        $enrolledPromoters   = $assignedStaff->filter(fn (BrandStaffAssignment $assignment) => $this->assignmentUsesGeofencedShift($assignment))->values();
+        $enrolledRetail      = collect();
         $enrolledAgencyStaff = $assignedStaff->whereIn('enrollment_type', [BrandStaffAssignment::TYPE_AGENCY_STAFF, null]);
 
         // Users already enrolled for this brand (for the CMIH import tab — exclude from dropdown)
@@ -245,6 +247,7 @@ class BrandsPlatformController extends Controller
             ->get(['id', 'name', 'email', 'staff_id_number', 'access_role', 'department']);
 
         $todayAttendances = \App\Models\BrandStaffAttendance::where('brand_id', $brand->id)
+            ->whereDate('created_at', today())
             ->with('user')
             ->latest()
             ->take(50)
@@ -263,6 +266,8 @@ class BrandsPlatformController extends Controller
             BrandStaffAssignment::ROLE_SUPPORT,
             BrandStaffAssignment::ROLE_SALES,
             BrandStaffAssignment::ROLE_SUPERVISOR,
+            BrandStaffAssignment::ROLE_RETAIL,
+            BrandStaffAssignment::ROLE_MERCHANDISER,
         ];
         $promoterRows = $this->fieldActivityQuery($brand, $activation, $filters)
             ->reorder()
@@ -280,7 +285,7 @@ class BrandsPlatformController extends Controller
         $promoterStats = [
             'promoters' => $enrolledPromoters->count(),
             'checked_in' => $todayAttendances
-                ->where('status', 'clocked_in')
+                ->whereIn('status', ['clocked_in', 'on_break'])
                 ->filter(fn ($attendance) => in_array((int) $attendance->user_id, $promoterUserIds, true))
                 ->count(),
             'active' => $enrolledPromoters->where('is_active', true)->count(),
@@ -309,6 +314,43 @@ class BrandsPlatformController extends Controller
             'value' => (float) $retailRows->sum('transaction_value'),
             'failed' => (int) $retailRows->sum('failed_count'),
         ];
+
+        $teamSearch = Str::lower(trim((string) $request->input('team_search', '')));
+        $teamStatus = trim((string) $request->input('team_status', ''));
+        $filterTeamRows = function (Collection $rows) use ($teamSearch, $teamStatus): Collection {
+            return $rows
+                ->when($teamStatus !== '', fn (Collection $items) => $items->filter(fn (BrandStaffAssignment $assignment) => $teamStatus === 'active' ? $assignment->is_active : ! $assignment->is_active))
+                ->when($teamSearch !== '', fn (Collection $items) => $items->filter(function (BrandStaffAssignment $assignment) use ($teamSearch) {
+                    return Str::contains(
+                        Str::lower($assignment->display_name.' '.$assignment->display_email.' '.$assignment->external_phone.' '.$assignment->assigned_location),
+                        $teamSearch
+                    );
+                }))
+                ->values();
+        };
+        $agencyStaffRows = $filterTeamRows($enrolledAgencyStaff->values());
+        $promoterStaffRows = $filterTeamRows($enrolledPromoters);
+        $attendanceByUser = $todayAttendances
+            ->groupBy('user_id')
+            ->map(fn (Collection $rows) => $rows->sortByDesc('created_at')->first());
+        $activationWorkStatus = $this->activationWorkStatus($activation);
+        $promoterWorkRows = $promoterStaffRows
+            ->map(function (BrandStaffAssignment $assignment) use ($attendanceByUser, $activationWorkStatus) {
+                $attendance = $assignment->user_id ? $attendanceByUser->get($assignment->user_id) : null;
+                $status = match ($attendance?->status) {
+                    'clocked_in' => 'at_work',
+                    'on_break' => 'on_break',
+                    'clocked_out' => 'closed',
+                    default => $activationWorkStatus['state'] === 'closed' ? 'not_covered' : 'not_started',
+                };
+
+                return [
+                    'assignment' => $assignment,
+                    'attendance' => $attendance,
+                    'status' => $status,
+                ];
+            })
+            ->values();
 
         $genderDistribution = $this->distributionRows($entriesByGender, (int) $entriesByGender->sum('total'));
         $ageDistribution = $this->distributionRows($entriesByAge, (int) $entriesByAge->sum('total'));
@@ -381,6 +423,10 @@ class BrandsPlatformController extends Controller
             'promoterRows',
             'retailStats',
             'retailRows',
+            'agencyStaffRows',
+            'promoterStaffRows',
+            'promoterWorkRows',
+            'activationWorkStatus',
             'genderDistribution',
             'ageDistribution',
             'consumerInsightStats',
@@ -409,11 +455,8 @@ class BrandsPlatformController extends Controller
                 ->withErrors(['attendance' => $this->fieldWorkspaceError()]);
         }
 
-        $activeAttendance = \App\Models\BrandStaffAttendance::where('brand_id', $brand->id)
-            ->where('user_id', $user->id)
-            ->where('status', 'clocked_in')
-            ->latest()
-            ->first();
+        $activeAttendance = $this->activeBrandAttendanceFor($user, $brand);
+        $activationWorkStatus = $this->activationWorkStatus($activation, $activeAttendance);
 
         $myActivities = $this->fieldActivityQuery($brand, $activation, $filters)
             ->where('user_id', $user->id)
@@ -433,76 +476,23 @@ class BrandsPlatformController extends Controller
             $this->fieldActivityQuery($brand, $activation, $filters)->where('user_id', $request->user()->id),
             'created_at'
         );
+        $retailWorkspace = $this->retailWorkspaceData($brand, $activation, $filters);
+        $redemptions = $retailWorkspace['redemptions'];
+        $redemptionDailyTrend = $retailWorkspace['redemptionDailyTrend'];
+        $redemptionStatus = $retailWorkspace['redemptionStatus'];
+        $retailSummary = $retailWorkspace['retailSummary'];
 
         $this->logBrandActivity($request, $brand, $activation, 'page_view', 'support_workspace');
 
-        return view('brands-platform.support', compact('brand', 'activation', 'metrics', 'filters', 'myActivities', 'leaderboard', 'assignedLocations', 'allowedRoles', 'promoterDailyTrend', 'activeAttendance', 'myStaffAssignment'));
+        return view('brands-platform.support', compact('brand', 'activation', 'metrics', 'filters', 'myActivities', 'leaderboard', 'assignedLocations', 'allowedRoles', 'promoterDailyTrend', 'activeAttendance', 'myStaffAssignment', 'activationWorkStatus', 'redemptions', 'redemptionDailyTrend', 'redemptionStatus', 'retailSummary'));
     }
 
     public function retail(Request $request, string $brand): View|RedirectResponse
     {
         $brand = $this->resolveBrand($brand);
-        $user = $request->user();
-        $this->guardBrandAccess($user, $brand);
-
-        $activation = $this->primaryActivation($brand);
-        $filters = $this->reportFilters($request);
-        $metrics = $this->brandMetrics($brand, $activation, $filters);
-        $assignedLocations = $this->assignedPlanLocationsFor($user, $activation);
-
-        $myStaffAssignment = $this->currentBrandAssignmentForUser($user, $brand);
-        if (! $user->isCvoOrSuperAdmin() && ! $user->isLineManager() && ! $this->assignmentIsRetailTerminal($myStaffAssignment)) {
-            $fallback = $this->assignmentIsPromoterFieldStaff($myStaffAssignment) ? 'brands-platform.support' : 'brands-platform.agency';
-
-            return redirect()
-                ->route($fallback, $brand->slug ?: $brand->id)
-                ->withErrors(['attendance' => 'The retail terminal is only for assigned retail staff. Agency users should monitor retail activity from the agency dashboard.']);
-        }
-
-        $activeAttendance = \App\Models\BrandStaffAttendance::where('brand_id', $brand->id)
-            ->where('user_id', $user->id)
-            ->where('status', 'clocked_in')
-            ->latest()
-            ->first();
-
-        $retailActivityTypes = ['reward_redeemed', 'retail_update', 'retail_scan'];
-        $retailBaseQuery = $this->fieldActivityQuery($brand, $activation, $filters)
-            ->whereIn('activity_type', $retailActivityTypes);
-
-        $redemptions = (clone $retailBaseQuery)
-            ->with('user')
-            ->latest()
-            ->paginate(15)
-            ->withQueryString();
-
-        $redemptionDailyTrend = $this->dailyTrend(
-            clone $retailBaseQuery,
-            'created_at'
-        );
-
-        $redemptionStatus = [
-            'verified' => (clone $retailBaseQuery)->where('activity_type', 'reward_redeemed')->where('status', 'done')->count(),
-            'pending' => (clone $retailBaseQuery)->whereIn('status', ['pending', 'recorded'])->count(),
-            'failed' => (clone $retailBaseQuery)->whereIn('status', ['failed', 'used', 'expired', 'invalid'])->count(),
-        ];
-
-        $retailSummary = [
-            'attempts' => (clone $retailBaseQuery)->count(),
-            'successful' => $redemptionStatus['verified'],
-            'pending' => $redemptionStatus['pending'],
-            'failed' => $redemptionStatus['failed'],
-            'value_redeemed' => (float) (clone $retailBaseQuery)
-                ->where('activity_type', 'reward_redeemed')
-                ->where('status', 'done')
-                ->sum('transaction_value'),
-        ];
-        $retailSummary['failed_rate'] = $retailSummary['attempts'] > 0
-            ? round(($retailSummary['failed'] / $retailSummary['attempts']) * 100, 1)
-            : 0.0;
-
-        $this->logBrandActivity($request, $brand, $activation, 'page_view', 'retail_workspace');
-
-        return view('brands-platform.retail', compact('brand', 'activation', 'metrics', 'filters', 'redemptions', 'assignedLocations', 'redemptionDailyTrend', 'redemptionStatus', 'retailSummary', 'activeAttendance', 'myStaffAssignment'));
+        return redirect()
+            ->route('brands-platform.support', $brand->slug ?: $brand->id)
+            ->with('status', 'Retail scanning now lives inside the Promoter Portal.');
     }
 
     public function gallery(Request $request, ?string $brand = null): View
@@ -589,14 +579,15 @@ class BrandsPlatformController extends Controller
 
         // --- Overview stats ---
         $totalActivations   = BrandActivation::count();
-        $totalPromoters     = BrandStaffAssignment::where('is_active', true)->where('role', 'promoter')->count();
-        $totalRetailStaff   = BrandStaffAssignment::where('is_active', true)->where('role', 'retail_staff')->count();
+        $promoterRoleSet    = ['promoter', 'supporting_staff', 'sales_personnel', 'retail_staff', 'merchandiser'];
+        $totalPromoters     = BrandStaffAssignment::where('is_active', true)->whereIn('role', $promoterRoleSet)->count();
+        $totalRetailStaff   = $totalPromoters;
         $totalSupervisors   = BrandStaffAssignment::where('is_active', true)->whereIn('role', ['field_supervisor', 'supervisor'])->count();
         $totalMerchandisers = BrandStaffAssignment::where('is_active', true)->where('role', 'merchandiser')->count();
         $activeAccounts     = User::where('status', 'active')->count();
         $availabilitySnapshot = [
-            'promoters'     => BrandStaffAssignment::where('is_active', false)->where('role', 'promoter')->count(),
-            'retail'        => BrandStaffAssignment::where('is_active', false)->where('role', 'retail_staff')->count(),
+            'promoters'     => BrandStaffAssignment::where('is_active', false)->whereIn('role', $promoterRoleSet)->count(),
+            'retail'        => BrandStaffAssignment::where('is_active', false)->whereIn('role', $promoterRoleSet)->count(),
             'supervisors'   => BrandStaffAssignment::where('is_active', false)->whereIn('role', ['field_supervisor', 'supervisor'])->count(),
             'merchandisers' => BrandStaffAssignment::where('is_active', false)->where('role', 'merchandiser')->count(),
         ];
@@ -620,7 +611,10 @@ class BrandsPlatformController extends Controller
 
     public function staffFeed(Request $request): JsonResponse
     {
-        $this->guardPlatformAdmin($request->user());
+        $user = $request->user();
+        if (! $this->isPlatformAdmin($user) && ! $this->canManageAnyBrandTeam($user)) {
+            abort(403, 'You do not have access to the CMIH staff feed.');
+        }
 
         $staff = User::internalStaff()
             ->where('status', 'active')
@@ -685,23 +679,7 @@ class BrandsPlatformController extends Controller
             'description' => ['nullable', 'string', 'max:3000'],
             'primary_color' => ['nullable', 'string', 'max:20'],
             'secondary_color' => ['nullable', 'string', 'max:20'],
-            'activation_name' => ['nullable', 'string', 'max:255'],
-            'activation_type' => ['nullable', 'string', 'max:100'],
-            'activation_description' => ['nullable', 'string', 'max:3000'],
-            'starts_at' => ['nullable', 'date'],
-            'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
-            'target_reach' => ['nullable', 'integer', 'min:0', 'max:100000000'],
-            'target_unit' => ['nullable', 'string', 'max:100'],
-            'modules' => ['nullable', 'array'],
-            'modules.*' => ['string', Rule::in(['publication', 'consumer_form', 'agency_reporting', 'coupons_rewards', 'geofence', 'retail_scanner', 'merchandising'])],
-            'locations' => ['nullable', 'array'],
-            'locations.*.name' => ['nullable', 'string', 'max:255'],
-            'locations.*.target' => ['nullable', 'integer', 'min:0', 'max:10000000'],
-            'locations.*.daily_target' => ['nullable', 'integer', 'min:0', 'max:10000000'],
-            'locations.*.staff_ids' => ['nullable', 'array'],
-            'locations.*.staff_ids.*' => ['integer', 'exists:users,id'],
             'logo' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,avif,svg', 'max:4096'],
-            'banner' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,avif', 'max:6144'],
         ]);
 
         $slug = Str::slug($validated['name']);
@@ -723,9 +701,6 @@ class BrandsPlatformController extends Controller
             'category' => $validated['category'] ?? 'Other',
             'headline' => $validated['headline'] ?? null,
             'description' => $validated['description'] ?? null,
-            'activation_name' => $validated['activation_name'] ?? null,
-            'activation_type' => $validated['activation_type'] ?? null,
-            'activation_description' => $validated['activation_description'] ?? null,
             'primary_color' => $validated['primary_color'] ?? '#e50914',
             'secondary_color' => $validated['secondary_color'] ?? '#ffffff',
             'platform_status' => 'active',
@@ -736,48 +711,21 @@ class BrandsPlatformController extends Controller
             $brand->forceFill(['logo_path' => $path, 'logo_dark_path' => $path])->save();
         }
 
-        if (! empty($validated['activation_name'])) {
-            $activationPlan = $this->activationPlanPayload($validated);
-            $activation = $brand->activations()->updateOrCreate(
-                ['name' => $validated['activation_name']],
-                [
-                    'activation_type' => $validated['activation_type'] ?? 'activation',
-                    'status' => 'live',
-                    'starts_at' => $validated['starts_at'] ?? null,
-                    'ends_at' => $validated['ends_at'] ?? null,
-                    'target_reach' => $validated['target_reach'] ?? 0,
-                    'target_unit' => $validated['target_unit'] ?? null,
-                    'locations' => $this->normalizeActivationLocations($validated['locations'] ?? []),
-                    'activation_plan' => $activationPlan,
-                    'description' => $validated['activation_description'] ?? null,
-                    'created_by' => $request->user()->id,
-                ]
-            );
-
-            $this->syncActivationPlanAssignments($brand, $activationPlan, $request->user());
-
-            if ($request->hasFile('banner')) {
-                $activation->forceFill([
-                    'banner_path' => $request->file('banner')->store('brand-platform/banners', 'public'),
-                ])->save();
-            }
-        }
-
-        $this->logBrandActivity($request, $brand, $brand->activations()->latest()->first(), 'brand_saved', 'admin');
+        $this->logBrandActivity($request, $brand, null, 'brand_saved', 'admin');
         $this->notifyPlatformAdmins(
-            'Brand plan saved',
-            "{$brand->name} has a new or updated brand activation plan.",
+            'Brand saved',
+            "{$brand->name} has been created or updated. Assign a Brand Account Manager to complete activation setup.",
             route('brands-platform.admin'),
             $request->user()->id
         );
 
-        return back()->with('status', "{$brand->name} brand plan saved.");
+        return back()->with('status', "{$brand->name} brand saved. Assign a Brand Account Manager from Enrollment.");
     }
 
     public function storeActivation(Request $request, string $brand): RedirectResponse
     {
-        $this->guardPlatformAdmin($request->user());
         $brand = $this->resolveBrand($brand);
+        $this->guardCanManageTeam($request->user(), $brand);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -785,6 +733,10 @@ class BrandsPlatformController extends Controller
             'status' => ['required', 'in:draft,live,completed,paused,archived'],
             'starts_at' => ['nullable', 'date'],
             'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
+            'work_start_time' => ['nullable', 'date_format:H:i'],
+            'work_end_time' => ['nullable', 'date_format:H:i'],
+            'break_start_time' => ['nullable', 'date_format:H:i'],
+            'break_end_time' => ['nullable', 'date_format:H:i'],
             'target_reach' => ['nullable', 'integer', 'min:0', 'max:100000000'],
             'target_unit' => ['nullable', 'string', 'max:100'],
             'description' => ['nullable', 'string', 'max:3000'],
@@ -824,7 +776,7 @@ class BrandsPlatformController extends Controller
             ])->save();
         }
 
-        $this->logBrandActivity($request, $brand, $activation, 'activation_saved', 'admin');
+        $this->logBrandActivity($request, $brand, $activation, 'activation_saved', 'agency');
         $this->notifyAssignedBrandStaff(
             $brand,
             'Activation plan updated',
@@ -849,7 +801,7 @@ class BrandsPlatformController extends Controller
     public function storeAgencyPublication(Request $request, string $brand): RedirectResponse
     {
         $brand = $this->resolveBrand($brand);
-        $this->guardBrandAccess($request->user(), $brand);
+        $this->guardCanEditBrand($request->user(), $brand);
 
         $publication = $this->createBrandPublication($request, $brand, 'agency');
 
@@ -933,37 +885,48 @@ class BrandsPlatformController extends Controller
 
         $validated = $request->validate([
             'user_id' => ['required', 'integer', 'exists:users,id'],
-            'role' => ['required', Rule::in(BrandStaffAssignment::ROLES)],
+            'role' => ['nullable', Rule::in([BrandStaffAssignment::ROLE_AGENCY])],
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $staff = User::internalStaff()->whereKey($validated['user_id'])->firstOrFail();
+        $role = BrandStaffAssignment::ROLE_AGENCY;
 
         BrandStaffAssignment::updateOrCreate(
             [
                 'brand_id' => $brand->id,
                 'user_id' => $staff->id,
-                'role' => $validated['role'],
+                'role' => $role,
             ],
             [
                 'is_active' => true,
-                'notes' => $validated['notes'] ?? null,
+                'enrollment_source' => BrandStaffAssignment::SOURCE_CMIH_API,
+                'enrollment_type' => BrandStaffAssignment::TYPE_AGENCY_STAFF,
+                'permissions' => [
+                    'access_level' => 'brand_account_manager',
+                    'can_manage_team' => true,
+                    'can_record_activity' => true,
+                    'can_export' => true,
+                    'can_edit' => true,
+                    'can_archive' => true,
+                ],
+                'notes' => $validated['notes'] ?? 'Brand Account Manager',
                 'assigned_by' => $request->user()->id,
             ]
         );
 
         $this->logBrandActivity($request, $brand, null, 'staff_assigned', 'admin', [
             'staff_id' => $staff->id,
-            'role' => $validated['role'],
+            'role' => $role,
         ]);
         NotificationService::send(
             $staff->id,
             'Brand access granted',
-            "You have been assigned to {$brand->name} as ".Str::headline($validated['role']).'.',
-            BrandNotificationScope::workspaceUrlForRole($brand, $validated['role'])
+            "You have been assigned to {$brand->name} as Brand Account Manager.",
+            BrandNotificationScope::workspaceUrlForRole($brand, $role)
         );
 
-        return back()->with('status', "{$staff->name} has been assigned to {$brand->name}.");
+        return back()->with('status', "{$staff->name} is now the Brand Account Manager for {$brand->name}.");
     }
 
     public function destroyAssignment(Request $request, BrandStaffAssignment $assignment): RedirectResponse
@@ -2142,6 +2105,10 @@ class BrandsPlatformController extends Controller
                 ->values()
                 ->all(),
             'days' => $days,
+            'work_start_time' => $validated['work_start_time'] ?? '08:00',
+            'work_end_time' => $validated['work_end_time'] ?? '17:00',
+            'break_start_time' => $validated['break_start_time'] ?? null,
+            'break_end_time' => $validated['break_end_time'] ?? null,
             'location_target' => $locationTarget,
             'daily_target_total' => $dailyTarget,
             'assigned_staff_ids' => collect($locations)->flatMap(fn ($location) => $location['staff_ids'] ?? [])->unique()->values()->all(),
@@ -2162,10 +2129,11 @@ class BrandsPlatformController extends Controller
                 [
                     'brand_id' => $brand->id,
                     'user_id' => $staffId,
-                    'role' => BrandStaffAssignment::ROLE_SUPPORT,
+                    'role' => BrandStaffAssignment::ROLE_PROMOTER,
                 ],
                 [
                     'is_active' => true,
+                    'enrollment_type' => BrandStaffAssignment::TYPE_PROMOTER,
                     'notes' => 'Auto-assigned from activation execution plan.',
                     'assigned_by' => $assigner->id,
                 ]
@@ -2241,6 +2209,15 @@ class BrandsPlatformController extends Controller
             ]);
         }
 
+        if (collect($roles)->contains(fn (string $role) => $this->roleUsesGeofencedShift($role))) {
+            $roles = array_merge($roles, [
+                BrandStaffAssignment::ROLE_PROMOTER,
+                BrandStaffAssignment::ROLE_SUPPORT,
+                BrandStaffAssignment::ROLE_SALES,
+                BrandStaffAssignment::ROLE_RETAIL,
+            ]);
+        }
+
         return array_values(array_unique($roles));
     }
 
@@ -2292,8 +2269,7 @@ class BrandsPlatformController extends Controller
 
     private function assignmentIsPromoterFieldStaff(?BrandStaffAssignment $assignment): bool
     {
-        return $this->assignmentUsesGeofencedShift($assignment)
-            && ! $this->assignmentIsRetailTerminal($assignment);
+        return $this->assignmentUsesGeofencedShift($assignment);
     }
 
     private function enrollmentTypeForRole(string $role): string
@@ -2310,7 +2286,7 @@ class BrandsPlatformController extends Controller
 
     private function fieldWorkspaceError(): string
     {
-        return 'Clock-in is only required for promoters and retail/supporting field staff. Agency staff should use the agency dashboard to supervise and monitor field performance.';
+        return 'Clock-in is only required for promoter portal users. Agency staff should use the agency dashboard to supervise and monitor field performance.';
     }
 
     private function guardCanManageTeam(?User $user, Brand $brand): void
@@ -2331,6 +2307,70 @@ class BrandsPlatformController extends Controller
         if (! $assignment || ! $assignment->canManageTeam()) {
             abort(403, 'You do not have privileges to manage brand team members.');
         }
+    }
+
+    private function guardAgencyWorkspaceAccess(?User $user, Brand $brand): void
+    {
+        if (! $user) {
+            abort(403);
+        }
+
+        if ($this->isPlatformAdmin($user) || $user->isLineManager()) {
+            return;
+        }
+
+        $assignment = BrandStaffAssignment::where('brand_id', $brand->id)
+            ->where('user_id', $user->id)
+            ->where('is_active', true)
+            ->first();
+
+        if (
+            ! $assignment
+            || $this->assignmentUsesGeofencedShift($assignment)
+            || ! in_array($assignment->role, [
+                BrandStaffAssignment::ROLE_ADMIN,
+                BrandStaffAssignment::ROLE_AGENCY,
+                BrandStaffAssignment::ROLE_SUPERVISOR,
+            ], true)
+        ) {
+            abort(403, 'Only assigned agency collaborators can access this brand agency portal.');
+        }
+    }
+
+    private function guardCanEditBrand(?User $user, Brand $brand): void
+    {
+        if (! $user) {
+            abort(403);
+        }
+
+        if ($user->isCvoOrSuperAdmin() || $user->isLineManager()) {
+            return;
+        }
+
+        $assignment = BrandStaffAssignment::where('brand_id', $brand->id)
+            ->where('user_id', $user->id)
+            ->where('is_active', true)
+            ->first();
+
+        if (! $assignment || (! $assignment->hasPermission('can_edit') && ! $assignment->canManageTeam())) {
+            abort(403, 'You have view-only access for this brand.');
+        }
+    }
+
+    private function canManageAnyBrandTeam(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        if ($user->isCvoOrSuperAdmin() || $user->isLineManager()) {
+            return true;
+        }
+
+        return BrandStaffAssignment::where('user_id', $user->id)
+            ->where('is_active', true)
+            ->get()
+            ->contains(fn (BrandStaffAssignment $assignment) => $assignment->canManageTeam());
     }
 
     private function isPlatformAdmin(?User $user): bool
@@ -2469,11 +2509,8 @@ class BrandsPlatformController extends Controller
 
         $validated = $request->validate([
             'user_id'                   => ['required', 'integer', 'exists:users,id'],
-            'role'                      => ['required', Rule::in([
-                BrandStaffAssignment::ROLE_AGENCY,
-                BrandStaffAssignment::ROLE_SUPERVISOR,
-                BrandStaffAssignment::ROLE_ADMIN,
-            ])],
+            'role'                      => ['nullable', Rule::in([BrandStaffAssignment::ROLE_AGENCY])],
+            'access_level'              => ['nullable', Rule::in(['view', 'edit', 'archive'])],
             'assigned_location'         => ['nullable', 'string', 'max:255'],
             'assigned_address'          => ['nullable', 'string', 'max:255'],
             'assigned_latitude'         => ['nullable', 'numeric', 'between:-90,90'],
@@ -2482,26 +2519,29 @@ class BrandsPlatformController extends Controller
             'shift_end_time'            => ['nullable', 'string', 'max:10'],
             'grace_period_minutes'      => ['nullable', 'integer', 'min:0', 'max:120'],
             'lateness_deduction_amount' => ['nullable', 'numeric', 'min:0'],
-            'can_manage_team'           => ['nullable', 'boolean'],
-            'can_record_activity'       => ['nullable', 'boolean'],
-            'can_export'                => ['nullable', 'boolean'],
             'notes'                     => ['nullable', 'string', 'max:1000'],
         ]);
 
         $user = User::findOrFail($validated['user_id']);
-        if ($user->isMerchandiserAccount()) {
+        if ($user->isMerchandiserAccount() || $user->isBrandPromoterAccount()) {
             throw ValidationException::withMessages([
-                'user_id' => 'Only internal CMIH staff-portal users can be imported here. Merchandiser portal field accounts must use the merchandiser portal flow.',
+                'user_id' => 'Only internal CMIH staff-portal users can be imported here. Merchandiser and promoter field accounts must use their field enrollment flow.',
             ]);
         }
 
+        $accessLevel = $validated['access_level']
+            ?? ($request->boolean('can_manage_team') || $request->boolean('can_export') || $request->boolean('can_edit') ? 'edit' : 'view');
+        $role = BrandStaffAssignment::ROLE_AGENCY;
         $permissions = [
-            'can_manage_team'    => (bool) ($request->input('can_manage_team', 0)),
-            'can_record_activity'=> (bool) ($request->input('can_record_activity', 1)),
-            'can_export'         => (bool) ($request->input('can_export', 0)),
+            'access_level' => $accessLevel,
+            'can_manage_team' => in_array($accessLevel, ['edit', 'archive'], true),
+            'can_record_activity' => $accessLevel !== 'archive',
+            'can_export' => in_array($accessLevel, ['edit', 'archive'], true),
+            'can_edit' => in_array($accessLevel, ['edit', 'archive'], true),
+            'can_archive' => $accessLevel === 'archive',
         ];
-        $enrollmentType = $this->enrollmentTypeForRole($validated['role']);
-        $usesGeofence = $this->roleUsesGeofencedShift($validated['role']);
+        $enrollmentType = BrandStaffAssignment::TYPE_AGENCY_STAFF;
+        $usesGeofence = false;
 
         // Archive any existing current-venue row for this user+brand
         $existing = BrandStaffAssignment::where('brand_id', $brand->id)
@@ -2530,7 +2570,7 @@ class BrandsPlatformController extends Controller
         BrandStaffAssignment::create([
             'brand_id'                  => $brand->id,
             'user_id'                   => $user->id,
-            'role'                      => $validated['role'],
+            'role'                      => $role,
             'enrollment_source'         => BrandStaffAssignment::SOURCE_CMIH_API,
             'enrollment_type'           => $enrollmentType,
             'permissions'               => $permissions,
@@ -2551,14 +2591,20 @@ class BrandsPlatformController extends Controller
 
         $this->logBrandActivity($request, $brand, null, 'agency_team_member_added', 'agency', [
             'staff_id' => $user->id,
-            'role'     => $validated['role'],
+            'role'     => $role,
             'location' => $venue['location'],
             'source'   => 'cmih_api',
+            'access_level' => $accessLevel,
         ]);
 
-        $assignmentNote = $usesGeofence ? 'with a geofenced field venue' : 'as an agency/supervisory user with no clock-in requirement';
+        NotificationService::send(
+            $user->id,
+            'Brand collaborator access granted',
+            "You have been added to {$brand->name} as an agency collaborator with {$accessLevel} access.",
+            route('brands-platform.agency', $brand->slug ?: $brand->id)
+        );
 
-        return back()->with('status', "✅ {$user->name} imported from CMIH portal and assigned to {$brand->name} {$assignmentNote}.");
+        return back()->with('status', "{$user->name} added to {$brand->name} as an agency collaborator ({$accessLevel}).");
     }
 
     /**
@@ -2569,13 +2615,17 @@ class BrandsPlatformController extends Controller
         $brand = $this->resolveBrand($brand);
         $this->guardCanManageTeam($request->user(), $brand);
 
-        $enrollmentType = $request->input('enrollment_type', BrandStaffAssignment::TYPE_PROMOTER);
+        $enrollmentType = BrandStaffAssignment::TYPE_PROMOTER;
 
         $validated = $request->validate([
-            'enrollment_type'           => ['required', Rule::in(BrandStaffAssignment::ENROLLMENT_TYPES)],
+            'enrollment_type'           => ['nullable', Rule::in([BrandStaffAssignment::TYPE_PROMOTER])],
             'external_name'             => ['required', 'string', 'max:120'],
             'external_phone'            => ['required', 'string', 'max:30'],
-            'external_email'            => ['nullable', 'email', 'max:120'],
+            'external_email'            => ['required', 'email', 'max:120'],
+            'date_of_birth'             => ['nullable', 'date'],
+            'education_level'           => ['nullable', 'string', 'max:120'],
+            'previous_brand_experience' => ['nullable', 'string', 'max:30'],
+            'previous_brand_names'      => ['nullable', 'string', 'max:500'],
             'external_id_type'          => ['required', Rule::in(BrandStaffAssignment::ID_TYPES)],
             'external_id_number'        => ['required', 'string', 'max:80'],
             'photo'                     => ['nullable', 'image', 'max:3072'],
@@ -2590,16 +2640,39 @@ class BrandsPlatformController extends Controller
             'notes'                     => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $role = match ($enrollmentType) {
-            BrandStaffAssignment::TYPE_RETAIL_TERMINAL => BrandStaffAssignment::ROLE_RETAIL,
-            default                                    => BrandStaffAssignment::ROLE_PROMOTER,
-        };
+        $role = BrandStaffAssignment::ROLE_PROMOTER;
 
         // Handle photo upload
         $photoPath = null;
         if ($request->hasFile('photo')) {
             $photoPath = $request->file('photo')->store('brand-staff-photos', 'public');
         }
+
+        $email = Str::lower(trim($validated['external_email']));
+        $existingUser = User::where('email', $email)->first();
+        if ($existingUser && ! $existingUser->isBrandPromoterAccount()) {
+            throw ValidationException::withMessages([
+                'external_email' => 'This email already belongs to an internal CMIH account. Use the CMIH staff collaborator import for agency staff.',
+            ]);
+        }
+
+        $temporaryPassword = 'CMIH-'.Str::upper(Str::random(5)).random_int(10, 99).'!';
+        $promoterUser = $existingUser ?: new User();
+        $promoterUser->fill([
+            'name' => $validated['external_name'],
+            'email' => $email,
+            'contact_email' => $email,
+            'phone' => $validated['external_phone'],
+            'profile_photo_path' => $photoPath ?: $promoterUser->profile_photo_path,
+            'access_role' => User::BRAND_PROMOTER_ROLE,
+            'job_level' => 'promoter',
+            'department' => 'Brands Activations',
+            'status' => 'active',
+            'date_of_birth' => $validated['date_of_birth'] ?? $promoterUser->date_of_birth,
+            'must_reset_password' => true,
+        ]);
+        $promoterUser->password = Hash::make($temporaryPassword);
+        $promoterUser->save();
 
         $venue = $this->resolveVenueCoordinates(
             $validated['assigned_location'] ?? null,
@@ -2610,17 +2683,27 @@ class BrandsPlatformController extends Controller
 
         BrandStaffAssignment::create([
             'brand_id'                  => $brand->id,
-            'user_id'                   => null, // external — no CMIH account
             'role'                      => $role,
+            'user_id'                   => $promoterUser->id,
             'enrollment_source'         => BrandStaffAssignment::SOURCE_MANUAL,
             'enrollment_type'           => $enrollmentType,
             'external_name'             => $validated['external_name'],
             'external_phone'            => $validated['external_phone'],
-            'external_email'            => $validated['external_email'] ?? null,
+            'external_email'            => $email,
             'external_id_type'          => $validated['external_id_type'],
             'external_id_number'        => $validated['external_id_number'],
             'photo_path'                => $photoPath,
-            'permissions'               => ['can_record_activity' => true, 'can_manage_team' => false, 'can_export' => false],
+            'permissions'               => [
+                'can_record_activity' => true,
+                'can_manage_team' => false,
+                'can_export' => false,
+                'profile' => [
+                    'education_level' => $validated['education_level'] ?? null,
+                    'previous_brand_experience' => $validated['previous_brand_experience'] ?? null,
+                    'previous_brand_names' => $validated['previous_brand_names'] ?? null,
+                    'date_of_birth' => $validated['date_of_birth'] ?? null,
+                ],
+            ],
             'assigned_location'         => $venue['location'],
             'assigned_address'          => $venue['address'],
             'assigned_latitude'         => $venue['latitude'],
@@ -2636,7 +2719,19 @@ class BrandsPlatformController extends Controller
             'assigned_by'               => $request->user()->id,
         ]);
 
-        $typeLabel = $enrollmentType === BrandStaffAssignment::TYPE_RETAIL_TERMINAL ? 'Retail Terminal Cashier' : 'Promoter';
+        try {
+            Mail::raw(
+                "Hello {$validated['external_name']},\n\nYour {$brand->name} Promoter Portal account has been created.\n\nLogin URL: ".route('brands-platform.support-login', $brand->slug ?: $brand->id)."\nEmail: {$email}\nTemporary password: {$temporaryPassword}\n\nYou will be asked to reset this password after signing in.\n\nCMIH Africa",
+                function ($message) use ($email, $validated, $brand) {
+                    $message->to($email, $validated['external_name'])
+                        ->subject("{$brand->name} Promoter Portal login details");
+                }
+            );
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
+
+        $typeLabel = 'Promoter';
         return back()->with('status', "✅ {$validated['external_name']} enrolled as {$typeLabel} for {$brand->name} at {$validated['assigned_location']}.");
     }
 
@@ -2793,6 +2888,17 @@ class BrandsPlatformController extends Controller
             return back()->withErrors(['attendance' => $this->fieldWorkspaceError()]);
         }
 
+        $windowStatus = $this->activationWorkStatus($activation);
+        if (! in_array($windowStatus['state'], ['working', 'break'], true)) {
+            return back()->withErrors([
+                'attendance' => "Clock-in is available from {$windowStatus['work_start']} to {$windowStatus['work_end']} for this activation.",
+            ]);
+        }
+
+        if ($this->activeBrandAttendanceFor($user, $brand)) {
+            return back()->with('status_warning', 'You already have an open promoter session. Clock out before opening another session.');
+        }
+
         if (! is_numeric($assignment->assigned_latitude) || ! is_numeric($assignment->assigned_longitude)) {
             return back()->withErrors([
                 'geofence' => 'This field user does not have locked venue coordinates yet. Ask the agency/admin team to edit the assigned venue using Google Maps autocomplete before clock-in.',
@@ -2818,12 +2924,10 @@ class BrandsPlatformController extends Controller
         }
 
         // SHIFT TIMING & LATENESS CALCULATION
-        $startTimeStr = $assignment->shift_start_time ?: '08:30';
+        $startTimeStr = $windowStatus['work_start'] ?? ($assignment->shift_start_time ?: '08:00');
         $graceMins = (int) ($assignment->grace_period_minutes ?: 10);
         $deductionAmount = (float) ($assignment->lateness_deduction_amount ?: 20.00);
-        $staffRole = $this->assignmentIsRetailTerminal($assignment)
-            ? BrandStaffAssignment::ROLE_RETAIL
-            : ($this->roleUsesGeofencedShift($assignment->role) ? $assignment->role : BrandStaffAssignment::ROLE_PROMOTER);
+        $staffRole = BrandStaffAssignment::ROLE_PROMOTER;
 
         $now = now();
         $todayShiftStart = Carbon::parse($now->toDateString() . ' ' . $startTimeStr);
@@ -2890,11 +2994,7 @@ class BrandsPlatformController extends Controller
             return back()->withErrors(['attendance' => $this->fieldWorkspaceError()]);
         }
 
-        $attendance = \App\Models\BrandStaffAttendance::where('brand_id', $brand->id)
-            ->where('user_id', $user->id)
-            ->where('status', 'clocked_in')
-            ->latest()
-            ->first();
+        $attendance = $this->activeBrandAttendanceFor($user, $brand);
 
         if (! $attendance) {
             return back()->withErrors(['attendance' => 'No active shift clock-in found.']);
@@ -2927,6 +3027,164 @@ class BrandsPlatformController extends Controller
         ]);
 
         return back()->with('status', "Clock-Out Verified for {$attendance->assigned_location_name}. Thank you for your work today!");
+    }
+
+    public function startBreak(Request $request, string $brand): RedirectResponse
+    {
+        $brand = $this->resolveBrand($brand);
+        $this->guardBrandAccess($request->user(), $brand);
+
+        $assignment = $this->currentBrandAssignmentForUser($request->user(), $brand);
+        if (! $this->assignmentUsesGeofencedShift($assignment)) {
+            return back()->withErrors(['attendance' => $this->fieldWorkspaceError()]);
+        }
+
+        $attendance = $this->activeBrandAttendanceFor($request->user(), $brand);
+        if (! $attendance || $attendance->status !== 'clocked_in') {
+            return back()->withErrors(['attendance' => 'Clock in before starting a break.']);
+        }
+
+        $attendance->update([
+            'status' => 'on_break',
+            'notes' => trim((string) $attendance->notes."\nBreak started at ".now()->format('H:i')),
+        ]);
+
+        $this->logBrandActivity($request, $brand, $attendance->activation, 'break_started', 'attendance', [
+            'location' => $attendance->assigned_location_name,
+        ]);
+
+        return back()->with('status', 'Break started. Your agency team will see you as on break.');
+    }
+
+    public function endBreak(Request $request, string $brand): RedirectResponse
+    {
+        $brand = $this->resolveBrand($brand);
+        $this->guardBrandAccess($request->user(), $brand);
+
+        $assignment = $this->currentBrandAssignmentForUser($request->user(), $brand);
+        if (! $this->assignmentUsesGeofencedShift($assignment)) {
+            return back()->withErrors(['attendance' => $this->fieldWorkspaceError()]);
+        }
+
+        $attendance = $this->activeBrandAttendanceFor($request->user(), $brand);
+        if (! $attendance || $attendance->status !== 'on_break') {
+            return back()->withErrors(['attendance' => 'No active break session found.']);
+        }
+
+        $attendance->update([
+            'status' => 'clocked_in',
+            'notes' => trim((string) $attendance->notes."\nBreak ended at ".now()->format('H:i')),
+        ]);
+
+        $this->logBrandActivity($request, $brand, $attendance->activation, 'break_ended', 'attendance', [
+            'location' => $attendance->assigned_location_name,
+        ]);
+
+        return back()->with('status', 'Break ended. You are marked as actively working again.');
+    }
+
+    private function activeBrandAttendanceFor(User $user, Brand $brand): ?\App\Models\BrandStaffAttendance
+    {
+        return \App\Models\BrandStaffAttendance::where('brand_id', $brand->id)
+            ->where('user_id', $user->id)
+            ->whereDate('clock_in_time', now()->toDateString())
+            ->whereIn('status', ['clocked_in', 'on_break'])
+            ->latest()
+            ->first();
+    }
+
+    private function activationWorkStatus(?BrandActivation $activation, ?\App\Models\BrandStaffAttendance $attendance = null): array
+    {
+        $plan = $activation?->activation_plan ?? [];
+        $workStart = $plan['work_start_time'] ?? '08:00';
+        $workEnd = $plan['work_end_time'] ?? '17:00';
+        $breakStart = $plan['break_start_time'] ?? null;
+        $breakEnd = $plan['break_end_time'] ?? null;
+        $now = now();
+
+        $state = 'working';
+        if ($activation?->starts_at && $now->toDateString() < $activation->starts_at->toDateString()) {
+            $state = 'scheduled';
+        } elseif ($activation?->ends_at && $now->toDateString() > $activation->ends_at->toDateString()) {
+            $state = 'closed';
+        } else {
+            $start = Carbon::parse($now->toDateString().' '.$workStart);
+            $end = Carbon::parse($now->toDateString().' '.$workEnd);
+            if ($now->lt($start)) {
+                $state = 'scheduled';
+            } elseif ($now->gt($end)) {
+                $state = 'closed';
+            } elseif ($breakStart && $breakEnd) {
+                $breakStartTime = Carbon::parse($now->toDateString().' '.$breakStart);
+                $breakEndTime = Carbon::parse($now->toDateString().' '.$breakEnd);
+                if ($now->betweenIncluded($breakStartTime, $breakEndTime)) {
+                    $state = 'break';
+                }
+            }
+        }
+
+        if ($attendance?->status === 'on_break') {
+            $state = 'on_break';
+        } elseif ($attendance?->status === 'clocked_in') {
+            $state = 'at_work';
+        }
+
+        $label = match ($state) {
+            'at_work' => 'Actively Working',
+            'on_break', 'break' => 'On Break',
+            'closed' => 'Closed',
+            'scheduled' => 'Not Open Yet',
+            default => 'Open',
+        };
+
+        return [
+            'state' => $state,
+            'label' => $label,
+            'work_start' => $workStart,
+            'work_end' => $workEnd,
+            'break_start' => $breakStart,
+            'break_end' => $breakEnd,
+        ];
+    }
+
+    private function retailWorkspaceData(Brand $brand, ?BrandActivation $activation, array $filters): array
+    {
+        $retailActivityTypes = ['reward_redeemed', 'retail_update', 'retail_scan'];
+        $retailBaseQuery = $this->fieldActivityQuery($brand, $activation, $filters)
+            ->whereIn('activity_type', $retailActivityTypes);
+
+        $redemptions = (clone $retailBaseQuery)
+            ->with('user')
+            ->latest()
+            ->paginate(15, ['*'], 'redemptions_page')
+            ->withQueryString();
+
+        $redemptionDailyTrend = $this->dailyTrend(
+            clone $retailBaseQuery,
+            'created_at'
+        );
+
+        $redemptionStatus = [
+            'verified' => (clone $retailBaseQuery)->where('activity_type', 'reward_redeemed')->where('status', 'done')->count(),
+            'pending' => (clone $retailBaseQuery)->whereIn('status', ['pending', 'recorded'])->count(),
+            'failed' => (clone $retailBaseQuery)->whereIn('status', ['failed', 'used', 'expired', 'invalid'])->count(),
+        ];
+
+        $retailSummary = [
+            'attempts' => (clone $retailBaseQuery)->count(),
+            'successful' => $redemptionStatus['verified'],
+            'pending' => $redemptionStatus['pending'],
+            'failed' => $redemptionStatus['failed'],
+            'value_redeemed' => (float) (clone $retailBaseQuery)
+                ->where('activity_type', 'reward_redeemed')
+                ->where('status', 'done')
+                ->sum('transaction_value'),
+        ];
+        $retailSummary['failed_rate'] = $retailSummary['attempts'] > 0
+            ? round(($retailSummary['failed'] / $retailSummary['attempts']) * 100, 1)
+            : 0.0;
+
+        return compact('redemptions', 'redemptionDailyTrend', 'redemptionStatus', 'retailSummary');
     }
 
     private function haversineDistance($lat1, $lon1, $lat2, $lon2): float

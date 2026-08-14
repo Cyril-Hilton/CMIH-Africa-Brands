@@ -1,6 +1,6 @@
 @extends('layouts.site')
 
-@section('title', 'Brands Notifications')
+@section('title', 'Workspace Notifications')
 @section('description', 'CMIH Brands Platform notifications for assignments, activations, publications, reports, and approvals.')
 
 @section('content')

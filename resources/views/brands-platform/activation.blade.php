@@ -57,11 +57,11 @@
 
         <article class="role-card">
             <div>
-                <div class="icon">S</div>
-                <h3>Support Staff</h3>
-                <p>Promoters, sales personnel and field teams record assigned work, images, location updates and retail actions.</p>
+                <div class="icon">P</div>
+                <h3>Promoter Portal</h3>
+                <p>Promoters, brand advisors and QR scanning personnel clock in, manage breaks, record activity and validate reward codes.</p>
             </div>
-            <a href="{{ route('brands-platform.support-login', $brandKey) }}" class="btn dark">Support Staff Sign In</a>
+            <a href="{{ route('brands-platform.support-login', $brandKey) }}" class="btn dark">Promoter Sign In</a>
         </article>
 
         <article class="role-card">

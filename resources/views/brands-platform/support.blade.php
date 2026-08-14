@@ -1,6 +1,6 @@
 @extends('layouts.site')
 
-@section('title', $brand->name.' Support Staff Workspace')
+@section('title', $brand->name.' Promoter Portal')
 
 @section('content')
 @php
@@ -26,11 +26,12 @@
                 @endif
                 <div>
                     <strong>{{ $brand->name }}</strong>
-                    <small>Support Staff</small>
+                    <small>Promoter Portal</small>
                 </div>
             </div>
             <div class="side-label">Workspace</div>
             <a href="{{ route('brands-platform.support', $brandKey) }}" class="side-btn active" style="text-decoration:none; display:block;">My Dashboard</a>
+            <a href="#terminal-scanner" class="side-btn" style="text-decoration:none; display:block;">Scan / Validate</a>
             <a href="{{ route('brands-platform.activation', $brandKey) }}" class="side-btn" style="text-decoration:none; display:block;">Activation Hub</a>
 
             <div class="side-label" style="margin-top:20px;">Account</div>
@@ -53,7 +54,7 @@
                     <h1>{{ $activation?->name ?: $brand->activation_name ?: 'Brand Activation' }}</h1>
                     <p style="margin:4px 0 0; font-size:12px; color:rgba(255,255,255,0.65);">Workspace for ushers, sales representatives, and brand advisors engaging consumers on the floor.</p>
                 </div>
-                <span class="chip ok">Promoter Active</span>
+                <span class="chip {{ in_array($activationWorkStatus['state'] ?? '', ['at_work','working'], true) ? 'ok' : (($activationWorkStatus['state'] ?? '') === 'closed' ? 'warn' : 'info') }}">{{ $activationWorkStatus['label'] ?? 'Open' }}</span>
             </div>
 
             @if(session('status'))
@@ -78,10 +79,13 @@
             @php
                 $assignedVenue = $myStaffAssignment?->assigned_location ?: ($activation?->locations[0]['name'] ?? 'Concepts Make It Happen (No. 7 Affum Street, North Legon, Haatso)');
                 $assignedAddr = $myStaffAssignment?->assigned_address ?: 'No. 7 Affum Street, North Legon, Haatso, Accra';
-                $shiftStart = $myStaffAssignment?->shift_start_time ?: '08:30';
-                $shiftEnd = $myStaffAssignment?->shift_end_time ?: '17:00';
+                $shiftStart = $activationWorkStatus['work_start'] ?? ($myStaffAssignment?->shift_start_time ?: '08:00');
+                $shiftEnd = $activationWorkStatus['work_end'] ?? ($myStaffAssignment?->shift_end_time ?: '17:00');
+                $breakStart = $activationWorkStatus['break_start'] ?? null;
+                $breakEnd = $activationWorkStatus['break_end'] ?? null;
                 $graceMins = $myStaffAssignment?->grace_period_minutes ?: 10;
                 $latePenalty = $myStaffAssignment?->lateness_deduction_amount ?: 20.00;
+                $canClockNow = in_array($activationWorkStatus['state'] ?? 'working', ['working', 'break'], true);
             @endphp
             <div style="background: rgba(23, 17, 21, 0.85); border:1px solid rgba(255,255,255,0.12); border-radius:14px; padding:18px 22px; margin-bottom:20px; box-shadow:0 8px 32px rgba(0,0,0,0.3);">
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
@@ -89,7 +93,11 @@
                         <div style="font-size:11px; font-weight:800; color:#ff1020; letter-spacing:0.05em; text-transform:uppercase; margin-bottom:4px;">📍 ASSIGNED WORK VENUE & GEOFENCE STATUS</div>
                         <h3 style="margin:0; font-size:17px; font-weight:800; color:#ffffff;">{{ $assignedVenue }}</h3>
                         <p style="margin:2px 0 0; font-size:12px; color:rgba(255,255,255,0.65);">
-                            {{ $assignedAddr }} &bull; Shift: <strong>{{ $shiftStart }} - {{ $shiftEnd }}</strong> (Grace: {{ $graceMins }}m | Late Penalty: GHS {{ number_format($latePenalty, 2) }})
+                            {{ $assignedAddr }} &bull; Activation Window: <strong>{{ $shiftStart }} - {{ $shiftEnd }}</strong>
+                            @if($breakStart && $breakEnd)
+                                &bull; Break: <strong>{{ $breakStart }} - {{ $breakEnd }}</strong>
+                            @endif
+                            (Grace: {{ $graceMins }}m | Late Penalty: GHS {{ number_format($latePenalty, 2) }})
                         </p>
                     </div>
 
@@ -97,10 +105,27 @@
                         <div style="text-align:right;">
                             <div style="display:inline-flex; align-items:center; gap:8px; background:{{ $activeAttendance->is_late ? 'rgba(239,68,68,0.2)' : 'rgba(16,185,129,0.2)' }}; border:1px solid {{ $activeAttendance->is_late ? '#ef4444' : '#10b981' }}; color:#ffffff; padding:6px 14px; border-radius:30px; font-size:12px; font-weight:800; margin-bottom:8px;">
                                 <span style="width:8px; height:8px; border-radius:50%; background:{{ $activeAttendance->is_late ? '#ef4444' : '#10b981' }}; display:inline-block;"></span>
-                                {{ $activeAttendance->is_late ? 'CLOCKED IN (LATE -' . $activeAttendance->lateness_minutes . 'm | GHS ' . number_format($activeAttendance->deduction_amount, 2) . ' Penalty)' : 'CLOCKED IN ON-TIME' }}
+                                @if($activeAttendance->status === 'on_break')
+                                    ON BREAK
+                                @else
+                                    {{ $activeAttendance->is_late ? 'CLOCKED IN (LATE -' . $activeAttendance->lateness_minutes . 'm | GHS ' . number_format($activeAttendance->deduction_amount, 2) . ' Penalty)' : 'ACTIVELY WORKING' }}
+                                @endif
                             </div>
                             <div>
                                 <small style="color:rgba(255,255,255,0.5); font-size:11px; display:block;">Clocked in at: {{ $activeAttendance->clock_in_time->format('h:i A') }} (Distance: {{ $activeAttendance->clock_in_distance_meters }}m)</small>
+                                <div style="display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; margin-top:6px;">
+                                    @if($activeAttendance->status === 'clocked_in')
+                                        <form method="POST" action="{{ route('brands-platform.break-start', $brandKey) }}">
+                                            @csrf
+                                            <button type="submit" class="btn light" style="padding:8px 16px; border-radius:8px; font-size:12px; font-weight:800;">Start Break</button>
+                                        </form>
+                                    @elseif($activeAttendance->status === 'on_break')
+                                        <form method="POST" action="{{ route('brands-platform.break-end', $brandKey) }}">
+                                            @csrf
+                                            <button type="submit" class="btn brand" style="padding:8px 16px; border-radius:8px; font-size:12px; font-weight:800;">End Break</button>
+                                        </form>
+                                    @endif
+                                </div>
                                 <form method="POST" action="{{ route('brands-platform.clock-out', $brandKey) }}" id="clock-out-form" style="margin-top:6px;">
                                     @csrf
                                     <input type="hidden" name="latitude" id="clock_out_lat">
@@ -123,11 +148,11 @@
                                 <input type="hidden" name="staff_role" value="promoter">
                                 <input type="hidden" name="latitude" id="clock_in_lat">
                                 <input type="hidden" name="longitude" id="clock_in_lng">
-                                <button type="button" id="clock-in-btn" onclick="submitGeofencedClockIn()" class="btn red" style="padding:10px 20px; border-radius:8px; font-size:13px; font-weight:800; display:inline-flex; align-items:center; gap:6px;">
+                                <button type="button" id="clock-in-btn" onclick="submitGeofencedClockIn()" class="btn red" style="padding:10px 20px; border-radius:8px; font-size:13px; font-weight:800; display:inline-flex; align-items:center; gap:6px;" @disabled(! $canClockNow)>
                                     📍 Detect Live GPS & Clock In
                                 </button>
                             </form>
-                            <small id="geo-status-msg" style="display:block; color:rgba(255,255,255,0.5); font-size:11px; margin-top:4px;">Requires location permission</small>
+                            <small id="geo-status-msg" style="display:block; color:rgba(255,255,255,0.5); font-size:11px; margin-top:4px;">{{ $canClockNow ? 'Requires location permission' : 'Clock-in opens during the activation work window.' }}</small>
                         </div>
                     @endif
                 </div>
@@ -211,6 +236,8 @@
                 </div>
             </div>
 
+            @include('brands-platform.partials.promoter-scanner')
+
             <!-- Charts Row -->
             <div class="dash-grid" style="margin-bottom:20px; gap:20px;">
                 <div class="panel" style="flex:2;">
@@ -235,7 +262,7 @@
                         <canvas id="promoterTargetChart"></canvas>
                     </div>
                     <p style="text-align:center; font-size:11px; color:rgba(255,255,255,0.5); margin-top:10px;">
-                        {{ number_format($metrics['verified_entries']) }} reached · target 50
+                        {{ number_format($metrics['verified_entries']) }} reached / target {{ number_format(max((int)($activation?->target_reach ?? 0), (int)($metrics['verified_entries'] ?? 0))) }}
                     </p>
                 </div>
             </div>
@@ -249,14 +276,7 @@
                         <h3>Record My Activity</h3>
                     </div>
                     <div style="display:flex; flex-direction:column; gap:10px; margin-top:15px;">
-                        <div class="field">
-                            <label>My Role</label>
-                            <select name="staff_role" required>
-                                <option value="supporting_staff">Supporting Staff</option>
-                                <option value="promoter">Promoter</option>
-                                <option value="sales_personnel">Sales Personnel</option>
-                            </select>
-                        </div>
+                        <input type="hidden" name="staff_role" value="promoter">
                         <div class="field">
                             <label>Activity Type</label>
                             <select name="activity_type" required>
@@ -307,7 +327,7 @@
                             </div>
                             <form method="POST" action="{{ route('brands-platform.field-activity.store', $brandKey) }}" data-brand-geo-form class="flex gap-2" style="display:flex; gap:8px;">
                                 @csrf
-                                <input type="hidden" name="staff_role" value="{{ in_array('supporting_staff', $allowedRoles ?? [], true) ? 'supporting_staff' : ($allowedRoles[0] ?? 'supporting_staff') }}">
+                                <input type="hidden" name="staff_role" value="promoter">
                                 <input type="hidden" name="activity_type" value="check_in">
                                 <input type="hidden" name="status" value="checked_in">
                                 <input type="hidden" name="units" value="0">
@@ -407,14 +427,15 @@
 (function() {
     if (typeof Chart === 'undefined') return;
     const chartColor = getComputedStyle(document.documentElement).getPropertyValue('--bp').trim() || '#00656c';
-    const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const days = @json($promoterDailyTrend['labels'] ?? []);
+    const activityData = @json($promoterDailyTrend['data'] ?? []);
     new Chart(document.getElementById('promoterActivityChart'), {
         type: 'bar',
         data: {
             labels: days,
             datasets: [{
                 label: 'Activity Updates',
-                data: [3,5,2,7,4,6,1],
+                data: activityData,
                 backgroundColor: chartColor + 'aa',
                 borderColor: chartColor,
                 borderWidth: 1,
@@ -432,7 +453,7 @@
     });
 
     const reached = {{ $metrics['verified_entries'] ?? 0 }};
-    const target = Math.max(reached, 50);
+    const target = Math.max(reached, {{ (int) ($activation?->target_reach ?? 0) }});
     new Chart(document.getElementById('promoterTargetChart'), {
         type: 'doughnut',
         data: {

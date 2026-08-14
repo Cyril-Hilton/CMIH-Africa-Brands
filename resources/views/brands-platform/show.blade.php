@@ -50,7 +50,7 @@
                 <a href="{{ route('brands-platform.activation', $brandKey) }}" class="brand-entry">
                     <div class="ico">A</div>
                     <strong>Activation</strong>
-                    <small>Open the live activation experience for consumers, support staff and agency teams.</small>
+                    <small>Open the live activation experience for consumers, promoters and agency teams.</small>
                 </a>
             </div>
 

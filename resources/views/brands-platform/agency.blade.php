@@ -178,9 +178,9 @@
         $status = $status ?: 'not set';
         $key = strtolower(str_replace(' ', '_', $status));
         $style = match ($key) {
-            'live', 'active', 'published', 'approved', 'completed', 'assigned', 'online' => 'background:#dcfce7; color:#15803d;',
-            'draft', 'pending', 'in_progress', 'processing' => 'background:#fef3c7; color:#b45309;',
-            'failed', 'invalid', 'rejected', 'cancelled' => 'background:#ffe4e6; color:#e11d48;',
+            'live', 'active', 'published', 'approved', 'completed', 'assigned', 'online', 'at_work' => 'background:#dcfce7; color:#15803d;',
+            'draft', 'pending', 'in_progress', 'processing', 'not_started', 'on_break' => 'background:#fef3c7; color:#b45309;',
+            'failed', 'invalid', 'rejected', 'cancelled', 'closed', 'not_covered' => 'background:#ffe4e6; color:#e11d48;',
             default => 'background:#f4edf0; color:#6f5a60;',
         };
 
@@ -205,22 +205,22 @@
             <!-- PORTFOLIO -->
             <div class="big-nav-label">PORTFOLIO</div>
             <a href="#overview" onclick="switchAgencyTab('overview'); return false;" id="nav-overview" class="big-nav active" style="text-decoration:none; display:block; text-align:left;">Overview</a>
+            <a href="#activation-setup" onclick="switchAgencyTab('activation-setup'); return false;" id="nav-activation-setup" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Activation Setup</a>
             <a href="#brands" onclick="switchAgencyTab('brands'); return false;" id="nav-brands" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Brands</a>
+            <a href="#staff-db" onclick="switchAgencyTab('staff-db'); return false;" id="nav-staff-db" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Staff Database</a>
 
             <!-- PERFORMANCE -->
             <div class="big-nav-label">PERFORMANCE</div>
             <a href="#promoters" onclick="switchAgencyTab('promoters'); return false;" id="nav-promoters" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Promoters</a>
-            <a href="#retailers" onclick="switchAgencyTab('retailers'); return false;" id="nav-retailers" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Retailers</a>
             <a href="#insights" onclick="switchAgencyTab('insights'); return false;" id="nav-insights" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Consumer Insights</a>
             <a href="#reports" onclick="switchAgencyTab('reports'); return false;" id="nav-reports" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Reports</a>
             <a href="#publications" onclick="switchAgencyTab('publications'); return false;" id="nav-publications" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Publications</a>
-            <a href="#enrollment" onclick="switchAgencyTab('enrollment'); return false;" id="nav-enrollment" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Staff Enrollment</a>
+            <a href="#enrollment" onclick="switchAgencyTab('enrollment'); return false;" id="nav-enrollment" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Team Enrollment</a>
 
             <!-- OTHER WORKSPACES -->
             @if(auth()->user()?->isCvoOrSuperAdmin() || auth()->user()?->isLineManager() || auth()->user()?->access_role === 'admin')
                 <div class="big-nav-label">OTHER WORKSPACES</div>
-                <a href="{{ route('brands-platform.support', $brandKey) }}" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Promoter Dashboard</a>
-                <a href="{{ route('brands-platform.retail', $brandKey) }}" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Retail Dashboard</a>
+                <a href="{{ route('brands-platform.support', $brandKey) }}" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Promoter Portal</a>
             @endif
 
             <!-- NAVIGATION -->
@@ -308,7 +308,7 @@
                     </div>
                 </div>
 
-                <!-- ACTIVATION PERFORMANCE & TOP SUPPORT STAFF GRID -->
+                <!-- ACTIVATION PERFORMANCE & TOP PROMOTERS GRID -->
                 <div style="display:grid; grid-template-columns: 2fr 1fr; gap:20px; margin-bottom:20px;">
                     <div class="panel">
                         <div class="panel-head">
@@ -325,8 +325,8 @@
                     <div class="panel">
                         <div class="panel-head">
                             <div>
-                                <h3 style="font-size:16px; font-weight:900; color:#171115;">Top support staff</h3>
-                                <small style="color:#8b747a;">Promoters and retail teams</small>
+                                <h3 style="font-size:16px; font-weight:900; color:#171115;">Top promoters</h3>
+                                <small style="color:#8b747a;">Promoter Portal field and scanner activity</small>
                             </div>
                         </div>
                         <table class="leader" style="width:100%; margin-top:15px; color:#171115;">
@@ -348,7 +348,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="4" style="padding:22px 4px; color:#8b747a; text-align:center; font-size:12px;">No support staff activity has been logged for the selected period.</td>
+                                        <td colspan="4" style="padding:22px 4px; color:#8b747a; text-align:center; font-size:12px;">No promoter activity has been logged for the selected period.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -454,6 +454,214 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+
+
+            <!-- ========================================================================= -->
+            <!-- TAB 2: ACTIVATION SETUP (AGENCY OWNED) -->
+            <!-- ========================================================================= -->
+            <div id="tab-activation-setup" class="agency-tab-content">
+                @php
+                    $plan = $activation?->activation_plan ?? [];
+                    $planLocations = collect($plan['locations'] ?? $activation?->locations ?? [])->take(4)->values();
+                    if ($planLocations->isEmpty()) {
+                        $planLocations = collect([['name' => '', 'target' => '', 'daily_target' => '', 'staff_ids' => []]]);
+                    }
+                @endphp
+                <div class="big-top" style="margin-top: 15px;">
+                    <div>
+                        <div class="eyebrow">BRAND ACCOUNT MANAGER WORKSPACE</div>
+                        <h1 style="color:#171115; font-size:32px; font-weight:900; margin:4px 0 0;">Activation Setup</h1>
+                        <p style="margin:6px 0 0; color:#8b747a; font-size:12px;">Set the campaign plan, working window, break time, and execution targets for {{ $brand->name }}.</p>
+                    </div>
+                </div>
+
+                <form method="POST" action="{{ route('brands-platform.admin.activations.store', $brandKey) }}" enctype="multipart/form-data" class="panel" style="margin-top:20px;">
+                    @csrf
+                    <div style="display:grid; grid-template-columns:2fr 1fr; gap:16px; align-items:start;">
+                        <div style="display:grid; gap:14px;">
+                            <div class="field">
+                                <label>Activation Name</label>
+                                <input name="name" required value="{{ old('name', $activation?->name ?: $brand->activation_name) }}" placeholder="e.g. Campus & Gym Sampling 2026">
+                            </div>
+                            <div class="field">
+                                <label>Activation Description</label>
+                                <textarea name="description" rows="5" placeholder="Brief, objectives, reporting notes, and execution context.">{{ old('description', $activation?->description ?: $brand->activation_description) }}</textarea>
+                            </div>
+                            <div class="field">
+                                <label>Modules</label>
+                                <div style="display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:8px;">
+                                    @foreach(['publication' => 'Publications', 'consumer_form' => 'Consumer Capture', 'agency_reporting' => 'Agency Reporting', 'coupons_rewards' => 'QR Rewards', 'geofence' => 'Promoter Clock-In', 'retail_scanner' => 'Scanner', 'merchandising' => 'Merchandising'] as $value => $label)
+                                        <label style="border:1px solid #e4dadd; border-radius:10px; padding:10px; display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:11px; font-weight:800; background:#fff;">
+                                            <span>{{ $label }}</span>
+                                            <input type="checkbox" name="modules[]" value="{{ $value }}" @checked(in_array($value, old('modules', $plan['modules'] ?? ['publication','consumer_form','agency_reporting']), true))>
+                                        </label>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="display:grid; gap:12px;">
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                                <div class="field">
+                                    <label>Status</label>
+                                    <select name="status">
+                                        @foreach(['draft','live','paused','completed','archived'] as $status)
+                                            <option value="{{ $status }}" @selected(old('status', $activation?->status ?: 'draft') === $status)>{{ Str::headline($status) }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label>Type</label>
+                                    <select name="activation_type">
+                                        @foreach(['sampling','sales','consumer_capture','merchandising','brand_activation'] as $type)
+                                            <option value="{{ $type }}" @selected(old('activation_type', $activation?->activation_type ?: 'sampling') === $type)>{{ Str::headline($type) }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                                <div class="field"><label>Start Date</label><input type="date" name="starts_at" value="{{ old('starts_at', $activation?->starts_at?->format('Y-m-d')) }}"></div>
+                                <div class="field"><label>End Date</label><input type="date" name="ends_at" value="{{ old('ends_at', $activation?->ends_at?->format('Y-m-d')) }}"></div>
+                            </div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                                <div class="field"><label>Work Starts</label><input type="time" name="work_start_time" value="{{ old('work_start_time', $plan['work_start_time'] ?? '08:00') }}"></div>
+                                <div class="field"><label>Work Ends</label><input type="time" name="work_end_time" value="{{ old('work_end_time', $plan['work_end_time'] ?? '17:00') }}"></div>
+                            </div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                                <div class="field"><label>Break Starts</label><input type="time" name="break_start_time" value="{{ old('break_start_time', $plan['break_start_time'] ?? '') }}"></div>
+                                <div class="field"><label>Break Ends</label><input type="time" name="break_end_time" value="{{ old('break_end_time', $plan['break_end_time'] ?? '') }}"></div>
+                            </div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                                <div class="field"><label>Overall Target</label><input type="number" min="0" name="target_reach" value="{{ old('target_reach', $activation?->target_reach ?: 0) }}"></div>
+                                <div class="field">
+                                    <label>Target Unit</label>
+                                    <select name="target_unit">
+                                        @foreach(['Samples','Leads','Sales','Conversions','Engagements'] as $unit)
+                                            <option value="{{ $unit }}" @selected(old('target_unit', $activation?->target_unit ?: 'Samples') === $unit)>{{ $unit }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="field">
+                                <label>Activation Banner</label>
+                                <input type="file" name="banner" accept="image/*">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:18px;">
+                        <h3 style="margin:0 0 8px; color:#171115; font-size:16px; font-weight:900;">Activation Execution Plan</h3>
+                        <div style="display:grid; gap:12px;">
+                            @foreach($planLocations as $index => $location)
+                                <div style="border:1px solid #e4dadd; border-radius:14px; padding:12px; background:#fff;">
+                                    <div style="display:grid; grid-template-columns:2fr 1fr 1fr; gap:10px;">
+                                        <div class="field"><label>Location / Venue</label><input name="locations[{{ $index }}][name]" value="{{ old('locations.'.$index.'.name', $location['name'] ?? '') }}" placeholder="e.g. Accra Mall"></div>
+                                        <div class="field"><label>Total Target</label><input type="number" min="0" name="locations[{{ $index }}][target]" value="{{ old('locations.'.$index.'.target', $location['target'] ?? 0) }}"></div>
+                                        <div class="field"><label>Daily Target</label><input type="number" min="0" name="locations[{{ $index }}][daily_target]" value="{{ old('locations.'.$index.'.daily_target', $location['daily_target'] ?? 0) }}"></div>
+                                    </div>
+                                    <div class="field" style="margin-top:10px;">
+                                        <label>Assigned Promoters</label>
+                                        <select name="locations[{{ $index }}][staff_ids][]" multiple style="min-height:92px;">
+                                            @foreach($enrolledPromoters->filter(fn($member) => filled($member->user_id)) as $member)
+                                                <option value="{{ $member->user_id }}" @selected(collect(old('locations.'.$index.'.staff_ids', $location['staff_ids'] ?? []))->contains($member->user_id))>{{ $member->display_name }}{{ $member->assigned_location ? ' - '.$member->assigned_location : '' }}</option>
+                                            @endforeach
+                                        </select>
+                                        <small style="display:block; margin-top:5px; color:#8b747a; font-size:10px;">Promoters are enrolled under Team Enrollment, then assigned here per activation location.</small>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <div style="display:flex; justify-content:flex-end; margin-top:18px;">
+                        <button type="submit" class="btn red">Save Activation Setup</button>
+                    </div>
+                </form>
+            </div>
+
+
+            <!-- ========================================================================= -->
+            <!-- TAB 3: STAFF DATABASE (AGENCY OWNED) -->
+            <!-- ========================================================================= -->
+            <div id="tab-staff-db" class="agency-tab-content">
+                <div class="big-top" style="margin-top:15px;">
+                    <div>
+                        <div class="eyebrow">AGENCY COMMAND CENTRE</div>
+                        <h1 style="color:#171115; font-size:32px; font-weight:900; margin:4px 0 0;">Staff Database</h1>
+                        <p style="margin:6px 0 0; color:#8b747a; font-size:12px;">Agency collaborators and promoters are separated so management and field execution never get mixed.</p>
+                    </div>
+                </div>
+
+                <form method="GET" style="display:flex; gap:10px; flex-wrap:wrap; margin:18px 0;">
+                    <input type="hidden" name="_tab" value="staff-db">
+                    <input class="filter-select" name="team_search" value="{{ request('team_search') }}" placeholder="Search name, email, phone, venue" style="min-width:260px;">
+                    <select class="filter-select" name="team_status">
+                        <option value="">All statuses</option>
+                        <option value="active" @selected(request('team_status') === 'active')>Active</option>
+                        <option value="inactive" @selected(request('team_status') === 'inactive')>Inactive</option>
+                    </select>
+                    <button class="btn red" type="submit">Filter</button>
+                    @if(request()->hasAny(['team_search','team_status']))
+                        <a class="btn light" href="{{ route('brands-platform.agency', $brandKey).'#staff-db' }}">Clear</a>
+                    @endif
+                </form>
+
+                <div class="panel" style="margin-bottom:18px;">
+                    <div class="panel-head">
+                        <div>
+                            <h3 style="color:#171115; font-size:18px; font-weight:900; margin:0;">Agency Staff</h3>
+                            <small style="color:#8b747a;">Brand Account Manager and CMIH collaborators.</small>
+                        </div>
+                    </div>
+                    <table class="leader" style="width:100%; margin-top:15px; color:#171115;">
+                        <thead><tr><th>Name</th><th>Email</th><th>Access</th><th>Assigned By</th><th style="text-align:right;">Status</th></tr></thead>
+                        <tbody>
+                        @forelse($agencyStaffRows as $assignment)
+                            <tr>
+                                <td style="font-weight:900;">{{ $assignment->display_name }}</td>
+                                <td>{{ $assignment->display_email ?: 'No email' }}</td>
+                                <td>{{ Str::headline($assignment->permissions['access_level'] ?? ($assignment->notes === 'Brand Account Manager' ? 'brand_account_manager' : 'agency')) }}</td>
+                                <td>{{ $assignment->assigner?->name ?: 'System' }}</td>
+                                <td style="text-align:right;">{!! $statusBadge($assignment->is_active ? 'active' : 'inactive') !!}</td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="5" style="padding:20px; text-align:center; color:#8b747a;">No agency staff match this filter.</td></tr>
+                        @endforelse
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-head">
+                        <div>
+                            <h3 style="color:#171115; font-size:18px; font-weight:900; margin:0;">Promoters</h3>
+                            <small style="color:#8b747a;">Promoters include every field activation user and QR scanner user.</small>
+                        </div>
+                        <span class="chip ok">{{ $activationWorkStatus['label'] }}</span>
+                    </div>
+                    <table class="leader" style="width:100%; margin-top:15px; color:#171115;">
+                        <thead><tr><th>Name</th><th>Email / Phone</th><th>Venue</th><th>Shift</th><th>Today</th><th style="text-align:right;">Status</th></tr></thead>
+                        <tbody>
+                        @forelse($promoterWorkRows as $row)
+                            @php
+                                $assignment = $row['assignment'];
+                                $attendance = $row['attendance'];
+                            @endphp
+                            <tr>
+                                <td style="font-weight:900;">{{ $assignment->display_name }}</td>
+                                <td>{{ $assignment->display_email ?: $assignment->external_phone ?: 'No contact' }}</td>
+                                <td>{{ $assignment->assigned_location ?: 'No venue assigned' }}</td>
+                                <td>{{ $assignment->shift_start_time ?: $activationWorkStatus['work_start'] }} - {{ $assignment->shift_end_time ?: $activationWorkStatus['work_end'] }}</td>
+                                <td>{{ $attendance?->clock_in_time?->format('H:i') ?: 'Not started' }}</td>
+                                <td style="text-align:right;">{!! $statusBadge($row['status']) !!}</td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="6" style="padding:20px; text-align:center; color:#8b747a;">No promoters match this filter.</td></tr>
+                        @endforelse
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -623,6 +831,7 @@
             <!-- ========================================================================= -->
             <!-- TAB 4: RETAILERS (RETAIL & PARTNER PERFORMANCE) -->
             <!-- ========================================================================= -->
+            @if(false)
             <div id="tab-retailers" class="agency-tab-content">
                 <div class="big-top" style="margin-top: 15px;">
                     <div>
@@ -698,6 +907,7 @@
                     </table>
                 </div>
             </div>
+            @endif
 
 
             <!-- ========================================================================= -->
@@ -1082,7 +1292,7 @@
                         <div class="panel-head" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
                             <div>
                                 <h3 style="color:#171115; font-size:18px; font-weight:900; margin:0;">👥 Staff Enrollment Centre</h3>
-                                <small style="color:#8b747a;">Import CMIH staff-portal users for agency supervision, or manually enrol promoters and retail terminal cashiers for geofenced field shifts.</small>
+                                <small style="color:#8b747a;">Import CMIH staff as agency collaborators, or manually enrol promoters for field activation work and QR scanning.</small>
                             </div>
                             <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                                 <span style="background:#0055d4; color:#fff; font-weight:800; padding:5px 12px; border-radius:20px; font-size:11px;">
@@ -1091,8 +1301,8 @@
                                 <span style="background:#7c3aed; color:#fff; font-weight:800; padding:5px 12px; border-radius:20px; font-size:11px;">
                                     🎤 {{ $enrolledPromoters->count() }} Promoters
                                 </span>
-                                <span style="background:#0aa777; color:#fff; font-weight:800; padding:5px 12px; border-radius:20px; font-size:11px;">
-                                    🛒 {{ $enrolledRetail->count() }} Retail Terminal
+                                <span style="display:none; background:#0aa777; color:#fff; font-weight:800; padding:5px 12px; border-radius:20px; font-size:11px;">
+                                    {{ $enrolledPromoters->count() }} Promoter Portal Users
                                 </span>
                             </div>
                         </div>
@@ -1107,10 +1317,12 @@
                                 style="padding:10px 18px; font-size:12px; font-weight:800; border:none; border-bottom:3px solid transparent; background:none; cursor:pointer; color:#8b747a; margin-bottom:-2px;">
                                 🎤 Enrol Promoter
                             </button>
+                            @if(false)
                             <button onclick="switchEnrollTab('retail')" id="tab-retail"
                                 style="padding:10px 18px; font-size:12px; font-weight:800; border:none; border-bottom:3px solid transparent; background:none; cursor:pointer; color:#8b747a; margin-bottom:-2px;">
-                                🛒 Enrol Retail Terminal
+                                Enrol Promoter QR Scanner
                             </button>
+                            @endif
                         </div>
 
                         <div style="display:grid; grid-template-columns: 380px 1fr; gap:24px; margin-top:20px; align-items:start;">
@@ -1139,18 +1351,20 @@
                                                 @endforeach
                                             </select>
                                         </div>
+                                        <input type="hidden" name="role" value="agency_staff">
                                         <div class="field">
-                                            <label style="color:#171115; font-size:10px; font-weight:700;">Assigned Role *</label>
-                                            <select name="role" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #c7d7ff; background:#fff; font-size:12px;">
-                                                <option value="agency_staff">Agency Staff</option>
-                                                <option value="field_supervisor">Field Supervisor</option>
-                                                <option value="brand_admin">Brand Admin</option>
+                                            <label style="color:#171115; font-size:10px; font-weight:700;">Access Level *</label>
+                                            <select name="access_level" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #c7d7ff; background:#fff; font-size:12px;">
+                                                <option value="view">View Only</option>
+                                                <option value="edit">Edit</option>
+                                                <option value="archive">Archive / Full Collaborator</option>
                                             </select>
                                         </div>
                                         <div style="background:#fff; border:1px solid #c7d7ff; border-radius:10px; padding:12px;">
                                             <strong style="display:block; color:#1e40af; font-size:11px; font-weight:900;">No field clock-in required</strong>
-                                            <small style="display:block; margin-top:4px; color:#64748b; font-size:10px; line-height:1.5;">These users supervise brand activity, view reports, monitor support staff attendance, and manage publications. Location assignment is only required for promoters and retail terminal personnel.</small>
+                                            <small style="display:block; margin-top:4px; color:#64748b; font-size:10px; line-height:1.5;">These users supervise brand activity, view reports, monitor promoter attendance, and manage publications. Location assignment is only required for promoters.</small>
                                         </div>
+                                        @if(false)
                                         <div style="display:flex; flex-direction:column; gap:8px; background:#fff; padding:10px; border-radius:8px; border:1px solid #e4dadd;">
                                             <label style="font-size:10px; font-weight:800; color:#171115;">Privileges</label>
                                             <label style="display:flex; align-items:center; gap:8px; font-size:11px; cursor:pointer;">
@@ -1163,6 +1377,7 @@
                                                 <input type="checkbox" name="can_export" value="1"> <span>Report Export</span>
                                             </label>
                                         </div>
+                                        @endif
                                         <div class="field">
                                             <label style="color:#171115; font-size:10px; font-weight:700;">Notes</label>
                                             <input name="notes" placeholder="e.g. Assigned to Accra campaign" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
@@ -1193,8 +1408,16 @@
                                                 <input name="external_phone" required placeholder="0244 000 000" style="width:100%; padding:9px; border-radius:8px; border:1px solid #c4b5fd; background:#fff; font-size:12px;">
                                             </div>
                                             <div class="field">
-                                                <label style="color:#171115; font-size:10px; font-weight:700;">Email</label>
-                                                <input name="external_email" type="email" placeholder="abena@mail.com" style="width:100%; padding:9px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                                                <label style="color:#171115; font-size:10px; font-weight:700;">Email *</label>
+                                                <input name="external_email" type="email" required placeholder="abena@mail.com" style="width:100%; padding:9px; border-radius:8px; border:1px solid #c4b5fd; background:#fff; font-size:12px;">
+                                            </div>
+                                            <div class="field">
+                                                <label style="color:#171115; font-size:10px; font-weight:700;">Date of Birth</label>
+                                                <input name="date_of_birth" type="date" style="width:100%; padding:9px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                                            </div>
+                                            <div class="field">
+                                                <label style="color:#171115; font-size:10px; font-weight:700;">Education Level</label>
+                                                <input name="education_level" placeholder="e.g. Diploma, Degree, SHS" style="width:100%; padding:9px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
                                             </div>
                                             <div class="field">
                                                 <label style="color:#171115; font-size:10px; font-weight:700;">ID Type *</label>
@@ -1208,6 +1431,18 @@
                                             <div class="field">
                                                 <label style="color:#171115; font-size:10px; font-weight:700;">ID Number *</label>
                                                 <input name="external_id_number" required placeholder="GHA-000000000-0" style="width:100%; padding:9px; border-radius:8px; border:1px solid #c4b5fd; background:#fff; font-size:12px;">
+                                            </div>
+                                            <div class="field">
+                                                <label style="color:#171115; font-size:10px; font-weight:700;">Worked On A Brand Before?</label>
+                                                <select name="previous_brand_experience" style="width:100%; padding:9px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
+                                                    <option value="">Select</option>
+                                                    <option value="yes">Yes</option>
+                                                    <option value="no">No</option>
+                                                </select>
+                                            </div>
+                                            <div class="field">
+                                                <label style="color:#171115; font-size:10px; font-weight:700;">Previous Brand Names</label>
+                                                <input name="previous_brand_names" placeholder="e.g. Rexona, Guinness, OMO" style="width:100%; padding:9px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
                                             </div>
                                         </div>
                                         <div class="field">
@@ -1251,10 +1486,11 @@
                                 </div>
 
                                 <!-- TAB 3: RETAIL TERMINAL ENROLLMENT -->
+                                @if(false)
                                 <div id="panel-retail" style="display:none;">
                                     <div style="background:#f0fdf4; border:1px solid #86efac; border-radius:12px; padding:16px; margin-bottom:12px;">
                                         <p style="margin:0; font-size:11px; color:#166534; font-weight:700;">
-                                            🛒 Retail Terminal — Cashiers and tellers at Shoprite, Melcom, Palace Mall, etc. who scan consumer discount barcodes.
+                                            Promoter QR Scanner - field users who validate consumer reward codes.
                                         </p>
                                     </div>
                                     <form method="POST" action="{{ route('brands-platform.staff.enroll', $brandKey) }}" enctype="multipart/form-data" style="display:flex; flex-direction:column; gap:12px;">
@@ -1322,10 +1558,11 @@
                                             <input name="notes" placeholder="e.g. Checkout lane 3, Shoprite Accra Mall" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
                                         </div>
                                         <button type="submit" style="background:#0aa777; color:#fff; padding:11px; border-radius:8px; font-size:12px; font-weight:800; border:none; cursor:pointer; width:100%;">
-                                            🛒 Enrol Retail Terminal Staff
+                                            Enrol Promoter QR Scanner
                                         </button>
                                     </form>
                                 </div>
+                                @endif
                             </div>
 
                             <!-- RIGHT: STAFF ROSTER TABLE -->
@@ -1393,7 +1630,7 @@
                                                     <small style="color:#8b747a; font-size:10px;">Grace: {{ $assign->grace_period_minutes }}m · Penalty: GHS {{ number_format($assign->lateness_deduction_amount, 2) }}</small>
                                                     @else
                                                         <strong style="display:block; font-size:12px; color:#171115;">No shift clock-in</strong>
-                                                        <small style="color:#8b747a; font-size:10px;">Monitors support staff performance</small>
+                                                        <small style="color:#8b747a; font-size:10px;">Monitors promoter performance</small>
                                                     @endif
                                                 </td>
                                                 <td style="padding:10px 6px; text-align:right;">
@@ -1522,7 +1759,7 @@ let agencyStaffMarkers = {};
 document.addEventListener('DOMContentLoaded', function() {
     // 1. Initialise Tab Switching based on Hash
     const hash = window.location.hash.replace('#', '');
-    if (['overview', 'brands', 'promoters', 'retailers', 'insights', 'reports', 'publications', 'enrollment'].includes(hash)) {
+    if (['overview', 'activation-setup', 'brands', 'staff-db', 'promoters', 'insights', 'reports', 'publications', 'enrollment'].includes(hash)) {
         switchAgencyTab(hash);
     } else {
         switchAgencyTab('overview');
@@ -1671,7 +1908,6 @@ function initAgencyMap() {
     if (typeof google !== 'undefined' && google.maps && google.maps.places) {
         const acFields = [
             { input: 'promo_location_ac', lat: 'promo_lat', lng: 'promo_lng', addr: 'promo_address' },
-            { input: 'retail_location_ac', lat: 'retail_lat', lng: 'retail_lng', addr: 'retail_address' },
         ];
         acFields.forEach(f => {
             const el = document.getElementById(f.input);
@@ -1794,9 +2030,9 @@ function focusStaffOnMap(userId, lat, lng, name, locationName, clockInTime, isLa
 
 // ── ENROLLMENT TAB SWITCHING ───────────────────────────────────────────────
 function switchEnrollTab(tab) {
-    const panels = { cmih: 'panel-cmih', promoter: 'panel-promoter', retail: 'panel-retail' };
-    const tabs   = { cmih: 'tab-cmih',   promoter: 'tab-promoter',   retail: 'tab-retail' };
-    const colors = { cmih: '#0055d4', promoter: '#7c3aed', retail: '#0aa777' };
+    const panels = { cmih: 'panel-cmih', promoter: 'panel-promoter' };
+    const tabs   = { cmih: 'tab-cmih',   promoter: 'tab-promoter' };
+    const colors = { cmih: '#0055d4', promoter: '#7c3aed' };
 
     Object.keys(panels).forEach(key => {
         const p = document.getElementById(panels[key]);

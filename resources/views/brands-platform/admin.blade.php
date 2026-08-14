@@ -108,8 +108,7 @@
             <a href="#" onclick="switchAdminTab('add-brand'); return false;" id="nav-add-brand" class="big-nav active" style="text-decoration:none; display:block; text-align:left;">1. Add Brand</a>
             <a href="#" onclick="switchAdminTab('enrollment'); return false;" id="nav-enrollment" class="big-nav" style="text-decoration:none; display:block; text-align:left;">2. Enrollment</a>
             <a href="#" onclick="switchAdminTab('overview'); return false;" id="nav-overview" class="big-nav" style="text-decoration:none; display:block; text-align:left;">3. Overview</a>
-            <a href="#" onclick="switchAdminTab('staff-db'); return false;" id="nav-staff-db" class="big-nav" style="text-decoration:none; display:block; text-align:left;">4. Staff Database</a>
-            <a href="#" onclick="switchAdminTab('activity-logs'); return false;" id="nav-activity-logs" class="big-nav" style="text-decoration:none; display:block; text-align:left;">5. Activity Logs</a>
+            <a href="#" onclick="switchAdminTab('activity-logs'); return false;" id="nav-activity-logs" class="big-nav" style="text-decoration:none; display:block; text-align:left;">4. Activity Logs</a>
 
             <div class="big-nav-label" style="margin-top:24px;">NAVIGATION</div>
             <a href="{{ route('brands-platform.index') }}" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Brands Home</a>
@@ -131,13 +130,13 @@
             @endif
 
             {{-- ============================================================ --}}
-            {{-- TAB 1: ADD BRAND & ACTIVATION SETUP                          --}}
+            {{-- TAB 1: ADD BRAND                                             --}}
             {{-- ============================================================ --}}
             <div id="tab-add-brand" class="admin-tab-content active">
                 <div class="big-top" style="margin-top:15px;">
                     <div>
                         <small style="color:#ff1020; font-size:9px; font-weight:950; letter-spacing:0.12em; text-transform:uppercase;">ADMIN DASHBOARD</small>
-                        <h1 style="color:#ffffff; font-size:32px; font-weight:900; margin:4px 0 0;">Add Brand & Activation</h1>
+                        <h1 style="color:#ffffff; font-size:32px; font-weight:900; margin:4px 0 0;">Add Brand</h1>
                     </div>
                     @if($firstBrand)
                         <a href="{{ route('brands-platform.agency', $firstBrand->slug ?: $firstBrand->id) }}"
@@ -149,7 +148,7 @@
                     @csrf
 
                     {{-- TOP PANELS --}}
-                    <div style="display:grid; grid-template-columns: 2fr 1fr; gap:20px; margin:20px 0;">
+                    <div style="display:grid; grid-template-columns:minmax(0, 760px); gap:20px; margin:20px 0;">
 
                         {{-- LEFT: BRAND IDENTITY --}}
                         <div class="admin-card">
@@ -205,9 +204,16 @@
                                     <small style="color:#bda7ad; font-size:10px;">SVG / PNG / WebP</small>
                                 </div>
                             </div>
+
+                            <div style="display:flex; justify-content:flex-end; margin-top:18px;">
+                                <button type="submit" style="padding:14px 32px; border-radius:999px; border:none; background:#ff1020; color:#fff; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 8px 24px rgba(255,16,32,0.4);">
+                                    Save Brand
+                                </button>
+                            </div>
                         </div>
 
                         {{-- RIGHT: ACTIVATION SETUP --}}
+                        @if(false)
                         <div class="admin-card">
                             <h3 style="margin:0 0 4px; font-size:16px; font-weight:900;">Activation setup</h3>
                             <p style="margin:0 0 18px; color:#bda7ad; font-size:11px;">Campaign-specific execution</p>
@@ -258,14 +264,16 @@
                                 </div>
                             </div>
                         </div>
+                        @endif
                     </div>
 
                     {{-- EXECUTION PLAN --}}
+                    @if(false)
                     <div class="admin-card" style="margin-bottom:20px;">
                         <div style="display:flex; justify-content:space-between; align-items:start; flex-wrap:wrap; gap:12px; margin-bottom:18px;">
                             <div>
                                 <h2 style="margin:0 0 4px; font-size:20px; font-weight:900;">Activation Execution Plan</h2>
-                                <p style="margin:0; color:#bda7ad; font-size:11px;">Define the campaign period, total target, locations, daily targets and the support staff assigned to execute each location. Saving this plan feeds the Agency and Support Staff dashboards automatically.</p>
+                                <p style="margin:0; color:#bda7ad; font-size:11px;">Define the campaign period, total target, locations, daily targets and the promoters assigned to execute each location. Saving this plan feeds the Agency and Promoter Portal dashboards automatically.</p>
                             </div>
                             <div style="display:flex; gap:8px;">
                                 <button type="button" style="padding:9px 16px; border-radius:999px; border:1px solid #3d202a; background:#231318; color:#fff; font-size:11px; font-weight:800; cursor:pointer;">Reset From Current</button>
@@ -307,6 +315,7 @@
                             </button>
                         </div>
                     </div>
+                    @endif
                 </form>
             </div>
 
@@ -328,39 +337,35 @@
                 <div style="display:grid; grid-template-columns:2fr 1fr; gap:20px; margin-top:20px;">
                     {{-- ENROLL FORM --}}
                     <div class="admin-card">
-                        <h3 style="margin:0 0 4px; font-size:16px; font-weight:900;">Enroll account</h3>
-                        <p style="margin:0 0 18px; color:#bda7ad; font-size:11px;">Add support staff, promoter or agency staff</p>
+                        <h3 style="margin:0 0 4px; font-size:16px; font-weight:900;">Assign Brand Account Manager</h3>
+                        <p style="margin:0 0 18px; color:#bda7ad; font-size:11px;">Select an internal CMIH staff member and assign them as the lead manager for one brand.</p>
 
-                        <form method="POST" action="{{ route('brands-platform.admin.assignments.store', $firstBrand?->slug ?: ($firstBrand?->id ?? 'rexona')) }}" style="display:flex; flex-direction:column; gap:14px;">
+                        <form method="POST" id="brand-account-manager-form" action="{{ route('brands-platform.admin.assignments.store', $firstBrand?->slug ?: ($firstBrand?->id ?? 'rexona')) }}" style="display:flex; flex-direction:column; gap:14px;">
                             @csrf
-                            <div class="field">
-                                <label style="font-size:9px; font-weight:900; color:#bda7ad; text-transform:uppercase;">FULL NAME</label>
-                                <input name="external_name" placeholder="Staff name" value="{{ old('external_name') }}" class="admin-input">
-                            </div>
-                            <div class="field">
-                                <label style="font-size:9px; font-weight:900; color:#bda7ad; text-transform:uppercase;">STAFF ID / EMAIL</label>
-                                <input name="external_email" placeholder="PROMO027 or email" value="{{ old('external_email') }}" class="admin-input">
-                            </div>
-                            <div class="field">
-                                <label style="font-size:9px; font-weight:900; color:#bda7ad; text-transform:uppercase;">ROLE</label>
-                                <select name="role" class="admin-select">
-                                    <option value="promoter" @selected(old('role') === 'promoter')>Promoter</option>
-                                    <option value="field_supervisor" @selected(old('role') === 'field_supervisor')>Field Supervisor</option>
-                                    <option value="retail_staff" @selected(old('role') === 'retail_staff')>Retail Staff</option>
-                                    <option value="merchandiser" @selected(old('role') === 'merchandiser')>Merchandiser</option>
-                                    <option value="agency_staff" @selected(old('role') === 'agency_staff')>Agency Staff</option>
-                                </select>
-                            </div>
+                            <input type="hidden" name="role" value="agency_staff">
                             <div class="field">
                                 <label style="font-size:9px; font-weight:900; color:#bda7ad; text-transform:uppercase;">BRAND</label>
-                                <select name="brand_id" class="admin-select">
+                                <select name="brand_id" id="bam-brand-select" class="admin-select">
                                     @foreach($brands as $b)
-                                        <option value="{{ $b->id }}" @selected(old('brand_id') == $b->id)>{{ $b->name }}</option>
+                                        <option value="{{ $b->slug ?: $b->id }}" data-action="{{ route('brands-platform.admin.assignments.store', $b->slug ?: $b->id) }}" @selected(old('brand_id') == $b->id)>{{ $b->name }}</option>
                                     @endforeach
                                 </select>
                             </div>
+                            <div class="field">
+                                <label style="font-size:9px; font-weight:900; color:#bda7ad; text-transform:uppercase;">CMIH STAFF MEMBER</label>
+                                <select name="user_id" required class="admin-select">
+                                    <option value="">Select staff member</option>
+                                    @foreach($staff as $member)
+                                        <option value="{{ $member->id }}" @selected(old('user_id') == $member->id)>{{ $member->name }} ({{ $member->email }})</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label style="font-size:9px; font-weight:900; color:#bda7ad; text-transform:uppercase;">NOTES</label>
+                                <input name="notes" placeholder="e.g. Main lead for Rexona account" value="{{ old('notes') }}" class="admin-input">
+                            </div>
                             <button type="submit" style="padding:14px; border-radius:12px; border:none; background:#ff1020; color:#fff; font-size:13px; font-weight:900; cursor:pointer; box-shadow:0 6px 20px rgba(255,16,32,0.3);">
-                                Enroll Account
+                                Assign Brand Account Manager
                             </button>
                         </form>
                     </div>
@@ -419,7 +424,7 @@
                     <div class="calc-metric-card"><small>BRANDS</small><strong>{{ number_format($totalBrands) }}</strong></div>
                     <div class="calc-metric-card"><small>ACTIVATIONS</small><strong>{{ number_format($totalActivations) }}</strong></div>
                     <div class="calc-metric-card"><small>PROMOTERS</small><strong>{{ number_format($totalPromoters) }}</strong></div>
-                    <div class="calc-metric-card"><small>RETAIL STAFF</small><strong>{{ number_format($totalRetailStaff) }}</strong></div>
+                    <div class="calc-metric-card"><small>PROMOTER PORTAL</small><strong>{{ number_format($totalRetailStaff) }}</strong></div>
                     <div class="calc-metric-card"><small>AVAILABLE STAFF</small><strong>{{ number_format($availableStaff) }}</strong></div>
                     <div class="calc-metric-card"><small>ACTIVE ACCOUNTS</small><strong>{{ number_format($activeAccounts) }}</strong></div>
                 </div>
@@ -457,7 +462,7 @@
                                 <strong>{{ number_format($availabilitySnapshot['promoters']) }}</strong>
                             </div>
                             <div style="display:flex; justify-content:space-between; font-size:12px; border-bottom:1px solid #28141b; padding-bottom:8px;">
-                                <span style="color:#bda7ad;">Available retail staff</span>
+                                <span style="color:#bda7ad;">Available promoter portal users</span>
                                 <strong>{{ number_format($availabilitySnapshot['retail']) }}</strong>
                             </div>
                             <div style="display:flex; justify-content:space-between; font-size:12px; border-bottom:1px solid #28141b; padding-bottom:8px;">
@@ -519,6 +524,7 @@
             {{-- ============================================================ --}}
             {{-- TAB 4: STAFF DATABASE                                         --}}
             {{-- ============================================================ --}}
+            @if(false)
             <div id="tab-staff-db" class="admin-tab-content">
                 <div class="big-top" style="margin-top:15px;">
                     <div>
@@ -599,9 +605,10 @@
                     <div style="margin-top:15px;">{{ $assignments->links() }}</div>
                 </div>
             </div>
+            @endif
 
             {{-- ============================================================ --}}
-            {{-- TAB 5: ACTIVITY LOGS                                          --}}
+            {{-- TAB 4: ACTIVITY LOGS                                          --}}
             {{-- ============================================================ --}}
             <div id="tab-activity-logs" class="admin-tab-content">
                 <div class="big-top" style="margin-top:15px;">
@@ -682,10 +689,23 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const hash = window.location.hash.replace('#', '');
-    if (['add-brand','enrollment','overview','staff-db','activity-logs'].includes(hash)) {
+    if (['add-brand','enrollment','overview','activity-logs'].includes(hash)) {
         switchAdminTab(hash);
     } else {
         switchAdminTab('add-brand');
+    }
+
+    const bamBrandSelect = document.getElementById('bam-brand-select');
+    const bamForm = document.getElementById('brand-account-manager-form');
+    if (bamBrandSelect && bamForm) {
+        const updateBrandManagerAction = () => {
+            const selected = bamBrandSelect.options[bamBrandSelect.selectedIndex];
+            if (selected?.dataset?.action) {
+                bamForm.action = selected.dataset.action;
+            }
+        };
+        bamBrandSelect.addEventListener('change', updateBrandManagerAction);
+        updateBrandManagerAction();
     }
 });
 

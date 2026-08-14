@@ -222,7 +222,7 @@ class BrandsPlatformTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_assigned_staff_can_access_agency_dashboard_and_record_activity(): void
+    public function test_assigned_agency_staff_can_access_agency_dashboard_and_promoter_records_activity(): void
     {
         $admin = User::factory()->create([
             'status' => 'active',
@@ -232,12 +232,24 @@ class BrandsPlatformTest extends TestCase
             'status' => 'active',
             'access_role' => 'staff',
         ]);
+        $promoter = User::factory()->create([
+            'status' => 'active',
+            'access_role' => User::BRAND_PROMOTER_ROLE,
+        ]);
         $brand = Brand::where('slug', 'guinness')->firstOrFail();
 
         BrandStaffAssignment::create([
             'brand_id' => $brand->id,
             'user_id' => $staff->id,
-            'role' => BrandStaffAssignment::ROLE_SUPPORT,
+            'role' => BrandStaffAssignment::ROLE_AGENCY,
+            'enrollment_type' => BrandStaffAssignment::TYPE_AGENCY_STAFF,
+            'assigned_by' => $admin->id,
+        ]);
+        BrandStaffAssignment::create([
+            'brand_id' => $brand->id,
+            'user_id' => $promoter->id,
+            'role' => BrandStaffAssignment::ROLE_PROMOTER,
+            'enrollment_type' => BrandStaffAssignment::TYPE_PROMOTER,
             'assigned_by' => $admin->id,
         ]);
 
@@ -246,20 +258,21 @@ class BrandsPlatformTest extends TestCase
             ->assertOk()
             ->assertSee('Agency Command Centre');
 
-        $this->actingAs($staff)
+        $this->actingAs($promoter)
             ->post(route('brands-platform.field-activity.store', $brand->slug), [
-                'staff_role' => 'supporting_staff',
-            'activity_type' => 'sample_distributed',
-            'location' => 'Accra Mall',
-            'units' => 25,
-            'conversion_count' => 10,
-            'notes' => 'Sampling completed.',
-        ])
+                'staff_role' => 'promoter',
+                'activity_type' => 'sample_distributed',
+                'location' => 'Accra Mall',
+                'units' => 25,
+                'conversion_count' => 10,
+                'notes' => 'Sampling completed.',
+            ])
             ->assertRedirect();
 
         $this->assertDatabaseHas('brand_field_activities', [
             'brand_id' => $brand->id,
-            'user_id' => $staff->id,
+            'user_id' => $promoter->id,
+            'staff_role' => 'promoter',
             'activity_type' => 'sample_distributed',
             'location' => 'Accra Mall',
             'units' => 25,
@@ -276,6 +289,10 @@ class BrandsPlatformTest extends TestCase
         $staff = User::factory()->create([
             'status' => 'active',
             'access_role' => 'staff',
+        ]);
+        $promoter = User::factory()->create([
+            'status' => 'active',
+            'access_role' => User::BRAND_PROMOTER_ROLE,
         ]);
         $brand = Brand::where('slug', 'rexona')->firstOrFail();
 
@@ -397,7 +414,7 @@ class BrandsPlatformTest extends TestCase
         $this->get(route('brands-platform.activation', $brand->slug))
             ->assertOk()
             ->assertSee('Consumers')
-            ->assertSee('Support Staff')
+            ->assertSee('Promoter Portal')
             ->assertSee('Agency');
 
         $this->get(route('brands-platform.consumer', $brand->slug))
@@ -406,7 +423,7 @@ class BrandsPlatformTest extends TestCase
             ->assertSee('Registration');
     }
 
-    public function test_all_brands_render_for_consumer_staff_agency_promoter_retail_and_superadmin_roles(): void
+    public function test_all_brands_render_for_consumer_staff_agency_promoter_and_superadmin_roles(): void
     {
         $superAdmin = User::factory()->create([
             'status' => 'active',
@@ -424,11 +441,6 @@ class BrandsPlatformTest extends TestCase
             'status' => 'active',
             'access_role' => 'staff',
         ]);
-        $retailTerminal = User::factory()->create([
-            'status' => 'active',
-            'access_role' => 'staff',
-        ]);
-
         $brands = Brand::orderBy('slug')->get();
         $this->assertGreaterThanOrEqual(20, $brands->count());
 
@@ -454,14 +466,6 @@ class BrandsPlatformTest extends TestCase
                 'enrollment_type' => BrandStaffAssignment::TYPE_PROMOTER,
                 'assigned_by' => $superAdmin->id,
             ]);
-            BrandStaffAssignment::create([
-                'brand_id' => $brand->id,
-                'user_id' => $retailTerminal->id,
-                'role' => BrandStaffAssignment::ROLE_RETAIL,
-                'enrollment_type' => BrandStaffAssignment::TYPE_RETAIL_TERMINAL,
-                'assigned_by' => $superAdmin->id,
-            ]);
-
             $this->get(route('brands-platform.show', $brandKey))->assertOk();
             $this->get(route('brands-platform.publications', $brandKey))->assertOk();
             $this->get(route('brands-platform.activation', $brandKey))->assertOk();
@@ -470,14 +474,12 @@ class BrandsPlatformTest extends TestCase
             $this->get(route('brands-platform.agency-login', $brandKey))->assertOk();
 
             $this->actingAs($staff)->get(route('brands-platform.support', $brandKey))->assertOk();
-            $this->actingAs($staff)->get(route('brands-platform.agency', $brandKey))->assertOk();
+            $this->actingAs($staff)->get(route('brands-platform.agency', $brandKey))->assertForbidden();
             $this->actingAs($agency)->get(route('brands-platform.agency', $brandKey))->assertOk();
             $this->actingAs($promoter)->get(route('brands-platform.support', $brandKey))->assertOk();
-            $this->actingAs($retailTerminal)->get(route('brands-platform.retail', $brandKey))->assertOk();
 
             $this->actingAs($superAdmin)->get(route('brands-platform.agency', $brandKey))->assertOk();
             $this->actingAs($superAdmin)->get(route('brands-platform.support', $brandKey))->assertOk();
-            $this->actingAs($superAdmin)->get(route('brands-platform.retail', $brandKey))->assertOk();
             $this->actingAs($superAdmin)->get(route('brands-platform.brand-gallery', $brandKey))->assertOk();
         }
     }
@@ -681,6 +683,10 @@ class BrandsPlatformTest extends TestCase
             'status' => 'active',
             'access_role' => 'staff',
         ]);
+        $promoter = User::factory()->create([
+            'status' => 'active',
+            'access_role' => User::BRAND_PROMOTER_ROLE,
+        ]);
 
         $this->actingAs($admin)
             ->post(route('brands-platform.admin.brands.store'), [
@@ -688,9 +694,25 @@ class BrandsPlatformTest extends TestCase
                 'category' => 'Beverage',
                 'headline' => 'Test activation headline',
                 'description' => 'Test brand description',
-                'activation_name' => 'Test Campus Activation',
+            ])
+            ->assertRedirect();
+
+        $brand = Brand::where('slug', 'test-brand')->firstOrFail();
+
+        $this->actingAs($admin)
+            ->post(route('brands-platform.admin.assignments.store', $brand->slug), [
+                'user_id' => $staff->id,
+                'role' => BrandStaffAssignment::ROLE_AGENCY,
+                'notes' => 'Brand Account Manager',
+            ])
+            ->assertRedirect();
+
+        $this->actingAs($staff)
+            ->post(route('brands-platform.admin.activations.store', $brand->slug), [
+                'name' => 'Test Campus Activation',
                 'activation_type' => 'sampling',
-                'activation_description' => 'Sampling and consumer capture.',
+                'description' => 'Sampling and consumer capture.',
+                'status' => 'live',
                 'starts_at' => '2026-08-10',
                 'ends_at' => '2026-08-12',
                 'target_reach' => 300,
@@ -700,34 +722,35 @@ class BrandsPlatformTest extends TestCase
                         'name' => 'Accra Mall',
                         'target' => 150,
                         'daily_target' => 50,
-                        'staff_ids' => [$staff->id],
+                        'staff_ids' => [$promoter->id],
                     ],
                 ],
             ])
             ->assertRedirect();
 
-        $brand = Brand::where('slug', 'test-brand')->firstOrFail();
         $activation = $brand->activations()->where('name', 'Test Campus Activation')->firstOrFail();
 
         $this->assertSame('Samples', $activation->target_unit);
         $this->assertSame(1, count($activation->activation_plan['locations']));
-        $this->assertSame([$staff->id], $activation->activation_plan['assigned_staff_ids']);
+        $this->assertSame([$promoter->id], $activation->activation_plan['assigned_staff_ids']);
         $this->assertContains('consumer_form', $activation->activation_plan['modules']);
         $this->assertDatabaseHas('brand_staff_assignments', [
             'brand_id' => $brand->id,
             'user_id' => $staff->id,
-            'role' => BrandStaffAssignment::ROLE_SUPPORT,
+            'role' => BrandStaffAssignment::ROLE_AGENCY,
             'is_active' => true,
         ]);
-        $this->assertDatabaseHas('notifications', [
-            'user_id' => $staff->id,
-            'title' => 'Brand activation assignment',
+        $this->assertDatabaseHas('brand_staff_assignments', [
+            'brand_id' => $brand->id,
+            'user_id' => $promoter->id,
+            'role' => BrandStaffAssignment::ROLE_PROMOTER,
+            'is_active' => true,
         ]);
         $this->actingAs($staff)
-            ->get(route('brands-platform.support', $brand->slug))
+            ->get(route('brands-platform.agency', $brand->slug))
             ->assertOk()
             ->assertSee('Accra Mall')
-            ->assertSee('Check In');
+            ->assertSee('Activation Setup');
 
         $this->actingAs($admin)
             ->post(route('brands-platform.admin.publications.store', $brand->slug), [
@@ -800,7 +823,7 @@ class BrandsPlatformTest extends TestCase
         $this->actingAs($staff)
             ->get(route('brands-platform.support', $brand->slug))
             ->assertOk()
-            ->assertSee('Support Staff Workspace');
+            ->assertSee('Promoter Portal');
 
         $this->actingAs($staff)
             ->post(route('brands-platform.field-activity.store', $brand->slug), [
@@ -868,8 +891,8 @@ class BrandsPlatformTest extends TestCase
         $this->actingAs($staff)
             ->post(route('brands-platform.team.store', $brand->slug), [
                 'user_id' => $supervisor->id,
-                'role' => BrandStaffAssignment::ROLE_SUPERVISOR,
-                'can_record_activity' => '1',
+                'role' => BrandStaffAssignment::ROLE_AGENCY,
+                'access_level' => 'view',
             ])->assertRedirect();
 
         $supervisorAssignment = BrandStaffAssignment::where('brand_id', $brand->id)

@@ -28,9 +28,9 @@
         } elseif ($currentRoute === 'brands-platform.consumer') {
             $items[] = ['label' => 'Consumer Experience'];
         } elseif ($currentRoute === 'brands-platform.support-login') {
-            $items[] = ['label' => 'Support Staff Gateway'];
+            $items[] = ['label' => 'Promoter Gateway'];
         } elseif ($currentRoute === 'brands-platform.support') {
-            $items[] = ['label' => 'Promoter Support Staff'];
+            $items[] = ['label' => 'Promoter Portal'];
         } elseif ($currentRoute === 'brands-platform.retail') {
             $items[] = ['label' => 'Retail Redemption Terminal'];
         } elseif ($currentRoute === 'brands-platform.agency-login') {
