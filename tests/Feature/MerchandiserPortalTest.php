@@ -740,7 +740,7 @@ class MerchandiserPortalTest extends TestCase
         $response = $this->actingAs($user)->get(route('merchandisers.dashboard'));
 
         $response->assertOk();
-        $response->assertSeeText("Today's Assigned Outlets", false);
+        $response->assertSeeText('Assigned Outlets', false);
         $response->assertSee('Route Outlet 1');
         $response->assertSee('Route Outlet 2');
         $response->assertSee('Route Outlet 3');

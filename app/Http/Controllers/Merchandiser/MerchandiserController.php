@@ -264,6 +264,13 @@ class MerchandiserController extends Controller
             $dayOffset = (int) $selectedDay - 1;
             $scheduleDate = $weekStart->copy()->addDays($dayOffset);
         }
+        $activityStart = $scheduleDate->copy()->startOfDay();
+        $activityEnd = $scheduleDate->copy()->endOfDay();
+        $scheduleLabel = $selectedDay === 'all'
+            ? 'All Outlets'
+            : ($selectedDay === 'today'
+                ? 'Today, '.$scheduleDate->format('d M Y')
+                : $scheduleDate->format('l, d M Y'));
 
         $todaysAssignments = $routePlanner->assignmentsForDate($user, $scheduleDate->copy());
         $scheduledOutlets = $todaysAssignments->pluck('outlet')->filter()->values();
@@ -273,6 +280,11 @@ class MerchandiserController extends Controller
         } else {
             $outlets = $scheduledOutlets;
         }
+        $selectedOutletIds = $outlets
+            ->pluck('id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->values();
 
         // Calculate daily outlet counts for the weekly schedule tabs
         $dayOutletCounts = [];
@@ -296,7 +308,7 @@ class MerchandiserController extends Controller
         ];
 
         $attendances = MerchandiserAttendance::where('user_id', $user->id)
-            ->whereBetween('clock_in_time', [$todayStart, $todayEnd])
+            ->whereBetween('clock_in_time', [$activityStart, $activityEnd])
             ->latest('clock_in_time')
             ->get();
         $outletAttendanceByOutlet = $attendances->unique('outlet_id')->keyBy('outlet_id');
@@ -304,12 +316,19 @@ class MerchandiserController extends Controller
         $clockedOutletIdsToday = $attendances
             ->pluck('outlet_id')
             ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn (int $id) => $selectedOutletIds->contains($id))
             ->unique()
             ->values();
-        $scoredOutletIdsToday = MerchandiserVisit::where('user_id', $user->id)
-            ->whereBetween('created_at', [$todayStart, $todayEnd])
-            ->pluck('outlet_id')
-            ->unique();
+        $scoredOutletIdsToday = $selectedOutletIds->isEmpty()
+            ? collect()
+            : MerchandiserVisit::where('user_id', $user->id)
+                ->whereIn('outlet_id', $selectedOutletIds)
+                ->whereBetween('created_at', [$activityStart, $activityEnd])
+                ->pluck('outlet_id')
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values();
         $pendingOutletsToday = $outlets
             ->reject(fn (Outlet $outlet) => $clockedOutletIdsToday->contains($outlet->id))
             ->values();
@@ -319,19 +338,33 @@ class MerchandiserController extends Controller
         $scheduledCount = $outlets->count();
         $clockedCount = $clockedOutletIdsToday->count();
         $scoredCount = $scoredOutletIdsToday->count();
-        $totalVisitMinutes = $attendances->sum(function (MerchandiserAttendance $attendance) use ($timezone) {
+        $clockedNotScoredCount = $clockedOutletIdsToday
+            ->diff($scoredOutletIdsToday)
+            ->count();
+        $notCoveredCount = max($scheduledCount - $clockedOutletIdsToday->merge($scoredOutletIdsToday)->unique()->count(), 0);
+        $totalVisitMinutes = $attendances->sum(function (MerchandiserAttendance $attendance) use ($timezone, $scheduleDate) {
             if ($attendance->visit_duration_minutes !== null) {
                 return (int) $attendance->visit_duration_minutes;
             }
 
-            if (! $attendance->clock_out_time && $attendance->clock_in_time) {
+            if (! $attendance->clock_out_time && $attendance->clock_in_time && $scheduleDate->isSameDay(Carbon::today($timezone))) {
                 return max(0, $attendance->clock_in_time->copy()->timezone($timezone)->diffInMinutes(Carbon::now($timezone)));
             }
 
             return 0;
         });
+        $activeOutletClockIns = $attendances
+            ->filter(fn (MerchandiserAttendance $attendance) => $attendance->outlet_id
+                && $selectedOutletIds->contains((int) $attendance->outlet_id)
+                && ! $attendance->clock_out_time)
+            ->count();
+        $closedOutletClockIns = $attendances
+            ->filter(fn (MerchandiserAttendance $attendance) => $attendance->outlet_id
+                && $selectedOutletIds->contains((int) $attendance->outlet_id)
+                && $attendance->clock_out_time)
+            ->count();
         $pcmClockinToday = MerchandiserPcmClockin::where('user_id', $user->id)
-            ->whereBetween('clocked_in_at', [$todayStart, $todayEnd])
+            ->whereBetween('clocked_in_at', [$activityStart, $activityEnd])
             ->latest('clocked_in_at')
             ->first();
         $monthStart = Carbon::now($timezone)->startOfMonth();
@@ -340,6 +373,10 @@ class MerchandiserController extends Controller
             ->whereBetween('clock_in_time', [$monthStart, $monthEnd]);
         $monthClockIns = (clone $monthAttendances)->count();
         $onTimeClockIns = (clone $monthAttendances)->whereIn('status', ['on-time', 'in-progress', 'completed'])->count();
+        $monthlyCoveredOutlets = MerchandiserVisit::where('user_id', $user->id)
+            ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->distinct('outlet_id')
+            ->count('outlet_id');
         $merchMetrics = [
             'total_outlets' => $scheduledCount,
             'registered_outlets' => $allOutlets->count(),
@@ -347,17 +384,18 @@ class MerchandiserController extends Controller
             'completed_assignments_today' => $completedAssignmentsToday->count(),
             'outlets_visited_today' => $clockedCount,
             'outlets_scored_today' => $scoredCount,
-            'pending_outlets_today' => max($scheduledCount - $clockedCount, 0),
-            'not_covered_today' => max($scheduledCount - $clockedCount, 0),
-            'coverage_today' => $scheduledCount > 0 ? round(($scoredCount / $scheduledCount) * 100, 1) : 0,
+            'clocked_not_scored_today' => $clockedNotScoredCount,
+            'pending_outlets_today' => $notCoveredCount,
+            'not_covered_today' => $notCoveredCount,
+            'coverage_today' => $this->boundedPercent($scoredCount, $scheduledCount),
             'clockins_today' => $clockedCount,
+            'active_outlet_clockins_today' => $activeOutletClockIns,
+            'closed_outlet_clockins_today' => $closedOutletClockIns,
             'total_visit_minutes_today' => $totalVisitMinutes,
             'clockins_month' => $monthClockIns,
-            'on_time_rate' => $monthClockIns > 0 ? round(($onTimeClockIns / $monthClockIns) * 100) : 0,
-            'outlets_covered_month' => MerchandiserVisit::where('user_id', $user->id)
-                ->whereBetween('created_at', [$monthStart, $monthEnd])
-                ->distinct('outlet_id')
-                ->count('outlet_id'),
+            'on_time_rate' => $this->boundedPercent($onTimeClockIns, $monthClockIns),
+            'outlets_covered_month' => $monthlyCoveredOutlets,
+            'monthly_coverage_rate' => $this->boundedPercent($monthlyCoveredOutlets, $allOutlets->count()),
         ];
 
         $dailyPerformanceChart = [
@@ -365,6 +403,8 @@ class MerchandiserController extends Controller
             'scheduled' => [],
             'clocked' => [],
             'scored' => [],
+            'clocked_out' => [],
+            'visit_minutes' => [],
             'coverage' => [],
         ];
 
@@ -372,27 +412,50 @@ class MerchandiserController extends Controller
             $day = Carbon::today($timezone)->subDays($i);
             $dayStart = $day->copy()->startOfDay();
             $dayEnd = $day->copy()->endOfDay();
-            $scheduledForDay = MerchandiserOutletAssignment::where('user_id', $user->id)
+            $scheduledOutletIdsForDay = MerchandiserOutletAssignment::where('user_id', $user->id)
                 ->whereDate('assigned_date', $day->toDateString())
-                ->count();
-            $clockedForDay = MerchandiserAttendance::where('user_id', $user->id)
+                ->pluck('outlet_id')
+                ->filter()
+                ->unique()
+                ->values();
+            $scheduledForDay = $scheduledOutletIdsForDay->count();
+            $clockedForDay = $scheduledOutletIdsForDay->isEmpty()
+                ? 0
+                : MerchandiserAttendance::where('user_id', $user->id)
+                    ->whereIn('outlet_id', $scheduledOutletIdsForDay)
+                    ->whereBetween('clock_in_time', [$dayStart, $dayEnd])
+                    ->distinct('outlet_id')
+                    ->count('outlet_id');
+            $scoredForDay = $scheduledOutletIdsForDay->isEmpty()
+                ? 0
+                : MerchandiserVisit::where('user_id', $user->id)
+                    ->whereIn('outlet_id', $scheduledOutletIdsForDay)
+                    ->whereBetween('created_at', [$dayStart, $dayEnd])
+                    ->distinct('outlet_id')
+                    ->count('outlet_id');
+            $clockedOutForDay = $scheduledOutletIdsForDay->isEmpty()
+                ? 0
+                : MerchandiserAttendance::where('user_id', $user->id)
+                    ->whereIn('outlet_id', $scheduledOutletIdsForDay)
+                    ->whereBetween('clock_in_time', [$dayStart, $dayEnd])
+                    ->whereNotNull('clock_out_time')
+                    ->distinct('outlet_id')
+                    ->count('outlet_id');
+            $visitMinutesForDay = MerchandiserAttendance::where('user_id', $user->id)
                 ->whereBetween('clock_in_time', [$dayStart, $dayEnd])
                 ->whereNotNull('outlet_id')
-                ->distinct('outlet_id')
-                ->count('outlet_id');
-            $scoredForDay = MerchandiserVisit::where('user_id', $user->id)
-                ->whereBetween('created_at', [$dayStart, $dayEnd])
-                ->distinct('outlet_id')
-                ->count('outlet_id');
+                ->sum(DB::raw('coalesce(visit_duration_minutes, 0)'));
 
             $dailyPerformanceChart['labels'][] = $day->format('D d');
             $dailyPerformanceChart['scheduled'][] = $scheduledForDay;
             $dailyPerformanceChart['clocked'][] = $clockedForDay;
             $dailyPerformanceChart['scored'][] = $scoredForDay;
-            $dailyPerformanceChart['coverage'][] = $scheduledForDay > 0 ? round(($scoredForDay / $scheduledForDay) * 100, 1) : 0;
+            $dailyPerformanceChart['clocked_out'][] = $clockedOutForDay;
+            $dailyPerformanceChart['visit_minutes'][] = (int) $visitMinutesForDay;
+            $dailyPerformanceChart['coverage'][] = $this->boundedPercent($scoredForDay, $scheduledForDay);
         }
 
-        $googleForms = $this->googleFormsForUser($user, null, $todayStart->copy());
+        $googleForms = $this->googleFormsForUser($user, null, $activityStart->copy());
         $googleFormCompletionIds = MerchandiserGoogleFormSubmission::where('user_id', $user->id)
             ->pluck('form_assignment_id')
             ->map(fn ($id) => (int) $id)
@@ -427,7 +490,7 @@ class MerchandiserController extends Controller
             'announcements', 'notifications', 'clockWindow', 'outletAttendanceByOutlet', 'scoredOutletIdsToday', 'merchMetrics',
             'pendingOutletsToday', 'pcmClockinToday', 'todaysAssignments',
             'googleForms', 'googleFormCompletionIds', 'nativeFormCompletionIds',
-            'selectedDay', 'dayLabels', 'dayOutletCounts', 'currentIsoDay', 'dailyPerformanceChart'
+            'selectedDay', 'dayLabels', 'dayOutletCounts', 'currentIsoDay', 'dailyPerformanceChart', 'scheduleLabel'
         ));
     }
 
@@ -1096,10 +1159,10 @@ class MerchandiserController extends Controller
             $categoryTotalFacings = filled($metrics['category_total_facings'] ?? null)
                 ? (int) $metrics['category_total_facings']
                 : null;
-            $shareOfShelf = (float) $metrics['share_of_shelf'];
+            $shareOfShelf = min(100.0, max(0.0, (float) $metrics['share_of_shelf']));
 
             if ($categoryTotalFacings && $categoryTotalFacings > 0 && $categoryUnileverFacings !== null) {
-                $shareOfShelf = round(($categoryUnileverFacings / $categoryTotalFacings) * 100, 2);
+                $shareOfShelf = min(100.0, max(0.0, round(($categoryUnileverFacings / $categoryTotalFacings) * 100, 2)));
             }
 
             $skuPhotoPath = $request->hasFile("skus.{$skuId}.photo")
@@ -1871,7 +1934,9 @@ class MerchandiserController extends Controller
         $netPay = $baseSalary - $totalDeductions;
 
         $actualPresent = $expectedSlots - $missedSlots - ($lateSlots * 0.5);
-        $workRate = $expectedSlots > 0 ? round(($actualPresent / $expectedSlots) * 100, 1) : 100;
+        $workRate = $expectedSlots > 0
+            ? min(100.0, max(0.0, round(($actualPresent / $expectedSlots) * 100, 1)))
+            : 100.0;
 
         return [
             'base_salary' => $baseSalary,
@@ -1902,5 +1967,14 @@ class MerchandiserController extends Controller
         $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
 
         return $earthRadius * $c;
+    }
+
+    private function boundedPercent(int|float $part, int|float $total): float
+    {
+        if ((float) $total <= 0.0) {
+            return 0.0;
+        }
+
+        return min(100.0, max(0.0, round(((float) $part / (float) $total) * 100, 1)));
     }
 }

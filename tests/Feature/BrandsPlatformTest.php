@@ -11,6 +11,7 @@ use App\Models\BrandStaffAssignment;
 use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class BrandsPlatformTest extends TestCase
@@ -1066,6 +1067,8 @@ class BrandsPlatformTest extends TestCase
 
     public function test_geofenced_clock_in_radius_enforced_and_lateness_deduction(): void
     {
+        Carbon::setTestNow(Carbon::parse('2026-08-17 08:15:00'));
+
         $brand = Brand::where('slug', 'rexona')->firstOrFail();
         $promoter = User::factory()->create(['access_role' => 'supporting_staff']);
 
@@ -1105,5 +1108,7 @@ class BrandsPlatformTest extends TestCase
             'assigned_location_name' => 'Shoprite - Accra Mall',
             'status' => 'clocked_in',
         ]);
+
+        Carbon::setTestNow();
     }
 }

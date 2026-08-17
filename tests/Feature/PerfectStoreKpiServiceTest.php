@@ -212,4 +212,57 @@ class PerfectStoreKpiServiceTest extends TestCase
         $this->assertSame(100.0, $summary['merchandisers']->first()['facing']);
         $this->assertSame(100.0, $summary['kds']->first()['facing']);
     }
+
+    public function test_sos_kpi_score_is_capped_when_unilever_facings_exceed_category_total(): void
+    {
+        $date = Carbon::parse('2026-08-13 10:00:00');
+        $merchandiser = User::factory()->create([
+            'access_role' => User::MERCHANDISER_ROLE,
+            'status' => 'active',
+        ]);
+        $region = Region::create(['name' => 'Western', 'timezone' => 'Africa/Accra']);
+        $kd = KeyDistributor::create(['name' => 'Takoradi KD', 'region_id' => $region->id]);
+        $outlet = Outlet::create(['name' => 'Outlet E', 'code' => 'OUT-E', 'kd_id' => $kd->id]);
+
+        $visit = MerchandiserVisit::create([
+            'user_id' => $merchandiser->id,
+            'outlet_id' => $outlet->id,
+        ]);
+        $visit->forceFill(['created_at' => $date, 'updated_at' => $date])->save();
+
+        MerchandiserOutletAssignment::create([
+            'user_id' => $merchandiser->id,
+            'outlet_id' => $outlet->id,
+            'visit_id' => $visit->id,
+            'assigned_date' => $date->toDateString(),
+            'status' => 'completed',
+            'completed_at' => $date,
+        ]);
+
+        $sku = Sku::create([
+            'name' => 'Over SOS SKU',
+            'category' => 'Hair Care',
+            'track_osa' => false,
+            'facing_target' => 1,
+        ]);
+
+        MerchandiserVisitSku::create([
+            'visit_id' => $visit->id,
+            'sku_id' => $sku->id,
+            'osa_quantity' => 0,
+            'npd_present' => false,
+            'facing' => 1,
+            'facing_target_snapshot' => 1,
+            'category_unilever_facings' => 40,
+            'category_total_facings' => 10,
+            'share_of_shelf' => 400,
+            'planogram_compliant' => true,
+        ]);
+
+        $summary = app(PerfectStoreKpiService::class)->summary($date->copy()->startOfDay(), $date->copy()->endOfDay());
+
+        $this->assertSame(100.0, $summary['overview']['sos']);
+        $this->assertSame(100.0, $summary['merchandisers']->first()['sos']);
+        $this->assertSame(100.0, $summary['kds']->first()['sos']);
+    }
 }

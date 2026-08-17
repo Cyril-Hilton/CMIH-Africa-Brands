@@ -110,6 +110,8 @@ class MerchandiserAdminHubController extends Controller
         $perfectStoreSummary = PerfectStoreKpiService::emptySummary();
 
         if ($activeTab === 'overview') {
+            $currentMonthStart = now()->startOfMonth();
+            $currentMonthEnd = now()->endOfMonth();
             $perfectStoreSummary = app(PerfectStoreKpiService::class)->summary($clockFrom, $clockTo);
             $chartStart = $clockFrom->copy()->startOfDay();
             $chartEnd = $clockTo->copy()->startOfDay();
@@ -125,7 +127,7 @@ class MerchandiserAdminHubController extends Controller
 
             $topPerformers = User::merchandisers()
                 ->where('status', 'active')
-                ->withCount(['merchandiserVisits' => fn($q) => $q->whereMonth('created_at', now()->month)])
+                ->withCount(['merchandiserVisits' => fn($q) => $q->whereBetween('created_at', [$currentMonthStart, $currentMonthEnd])])
                 ->orderByDesc('merchandiser_visits_count')
                 ->take(10)
                 ->get();
@@ -378,6 +380,41 @@ class MerchandiserAdminHubController extends Controller
                 ->pluck('total_qty', 'item_name')
                 ->toArray()
             : [];
+        $outletsByRegion = $activeTab === 'overview'
+            ? DB::table('outlets')
+                ->leftJoin('key_distributors as kd', 'outlets.kd_id', '=', 'kd.id')
+                ->leftJoin('regions as r', 'kd.region_id', '=', 'r.id')
+                ->selectRaw("coalesce(r.name, 'Unassigned') as label, count(*) as total")
+                ->groupBy(DB::raw("coalesce(r.name, 'Unassigned')"))
+                ->orderByDesc('total')
+                ->pluck('total', 'label')
+                ->toArray()
+            : [];
+        $outletsByChannel = $activeTab === 'overview'
+            ? DB::table('outlets')
+                ->selectRaw("coalesce(nullif(channel_type, ''), 'Unspecified') as label, count(*) as total")
+                ->groupBy(DB::raw("coalesce(nullif(channel_type, ''), 'Unspecified')"))
+                ->orderByDesc('total')
+                ->pluck('total', 'label')
+                ->toArray()
+            : [];
+        $clockCoverageChart = ['Clocked in' => 0, 'Not clocked' => 0];
+        if ($activeTab === 'overview') {
+            $clockedUserIds = collect()
+                ->merge(MerchandiserAttendance::whereBetween('clock_in_time', [$clockFrom, $clockTo])->pluck('user_id'))
+                ->merge(MerchandiserPcmClockin::whereBetween('clocked_in_at', [$clockFrom, $clockTo])->pluck('user_id'))
+                ->merge(MerchandiserPjpClockin::whereBetween('clocked_in_at', [$clockFrom, $clockTo])->pluck('user_id'))
+                ->filter()
+                ->unique()
+                ->values();
+            $activeClockedUsers = $clockedUserIds->isEmpty()
+                ? 0
+                : User::merchandisers()->where('status', 'active')->whereIn('id', $clockedUserIds)->count();
+            $clockCoverageChart = [
+                'Clocked in' => $activeClockedUsers,
+                'Not clocked' => max($activeMerchandisers - $activeClockedUsers, 0),
+            ];
+        }
 
         // ── Recent Share Links ─────────────────────────────────────────────────
         $recentReports = $activeTab === 'overview'
@@ -545,7 +582,7 @@ class MerchandiserAdminHubController extends Controller
             'future_planned' => $futureRouteCount,
             'overdue' => $overdueRouteCount,
             'pending' => $pendingTodayRouteCount + $overdueRouteCount,
-            'completion_rate' => $routeAssignmentsTotal > 0 ? round(($completedRouteCount / $routeAssignmentsTotal) * 100, 1) : 0,
+            'completion_rate' => $this->boundedPercent($completedRouteCount, $routeAssignmentsTotal),
         ];
         $routeDailyStats = $this->constrainRouteAssignmentWindow(DB::table('merchandiser_outlet_assignments'), $routeFrom, $routeTo)
             ->select(
@@ -671,17 +708,37 @@ class MerchandiserAdminHubController extends Controller
         $execSkuCount   = $skuCount;
         if (in_array($activeTab, ['executive'], true)) {
             $execScheduled  = MerchandiserOutletAssignment::whereDate('assigned_date', '>=', $coverageStart->toDateString())->whereDate('assigned_date', '<=', $coverageEnd->toDateString())->count();
-            $execActual     = MerchandiserVisit::whereBetween('created_at', [$coverageStart, $coverageEnd])->count();
-            $execCompliance = $execScheduled > 0 ? round(($execActual / $execScheduled) * 100, 1) : 0.0;
+            $execActual     = MerchandiserOutletAssignment::whereDate('assigned_date', '>=', $coverageStart->toDateString())
+                ->whereDate('assigned_date', '<=', $coverageEnd->toDateString())
+                ->where(fn ($query) => $query
+                    ->where('status', 'completed')
+                    ->orWhereNotNull('completed_at')
+                    ->orWhereNotNull('visit_id'))
+                ->count();
+            $execCompliance = $this->boundedPercent($execActual, $execScheduled);
             $totalMerch     = User::merchandisers()->where('status', 'active')->count();
-            $activeMerch    = User::merchandisers()->where('status', 'active')->whereHas('merchandiserAttendances', fn($q) => $q->whereBetween('clock_in_time', [$coverageStart, $coverageEnd]))->count();
-            $execActiveRate = $totalMerch > 0 ? round(($activeMerch / $totalMerch) * 100, 1) : 0.0;
+            $activeUserIds = collect()
+                ->merge(MerchandiserAttendance::whereBetween('clock_in_time', [$coverageStart, $coverageEnd])->pluck('user_id'))
+                ->merge(MerchandiserPcmClockin::whereBetween('clocked_in_at', [$coverageStart, $coverageEnd])->pluck('user_id'))
+                ->merge(MerchandiserPjpClockin::whereBetween('clocked_in_at', [$coverageStart, $coverageEnd])->pluck('user_id'))
+                ->filter()
+                ->unique()
+                ->values();
+            $activeMerch = $activeUserIds->isEmpty()
+                ? 0
+                : User::merchandisers()->where('status', 'active')->whereIn('id', $activeUserIds)->count();
+            $execActiveRate = $this->boundedPercent($activeMerch, $totalMerch);
             // 7-day visit trend
             for ($i = 6; $i >= 0; $i--) {
                 $day = now()->subDays($i);
                 $execVisitTrend['labels'][]    = $day->format('d M');
                 $execVisitTrend['scheduled'][] = MerchandiserOutletAssignment::whereDate('assigned_date', $day->toDateString())->count();
-                $execVisitTrend['actual'][]    = MerchandiserVisit::whereDate('created_at', $day->toDateString())->count();
+                $execVisitTrend['actual'][]    = MerchandiserOutletAssignment::whereDate('assigned_date', $day->toDateString())
+                    ->where(fn ($query) => $query
+                        ->where('status', 'completed')
+                        ->orWhereNotNull('completed_at')
+                        ->orWhereNotNull('visit_id'))
+                    ->count();
             }
             // Image validity by day
             for ($i = 6; $i >= 0; $i--) {
@@ -698,9 +755,11 @@ class MerchandiserAdminHubController extends Controller
         if (in_array($activeTab, ['category-kpi'], true)) {
             $categoryTargets = PerfectStoreCategoryTarget::orderBy('category')->get()->keyBy('category');
             $categoryKpis = DB::table('merchandiser_visit_skus as vs')
+                ->join('merchandiser_visits as v', 'v.id', '=', 'vs.visit_id')
                 ->join('skus as s', 's.id', '=', 'vs.sku_id')
                 ->leftJoin('perfect_store_category_targets as pct', 'pct.category', '=', 's.category')
                 ->whereNotNull('s.category')
+                ->whereBetween('v.created_at', [$coverageStart, $coverageEnd])
                 ->select(
                     's.category',
                     DB::raw('count(distinct vs.visit_id) as visit_count'),
@@ -721,11 +780,11 @@ class MerchandiserAdminHubController extends Controller
                 ->orderBy('s.category')
                 ->get()
                 ->map(function ($row) {
-                    $row->osa_pct = $row->osa_total > 0 ? round(($row->osa_pass / $row->osa_total) * 100, 1) : null;
-                    $row->npd_pct = $row->npd_total > 0 ? round(($row->npd_pass / $row->npd_total) * 100, 1) : null;
-                    $row->mhs_pct = $row->mhs_total > 0 ? round(($row->mhs_pass / $row->mhs_total) * 100, 1) : null;
-                    $row->facing_pct = $row->target_facings > 0 ? min(100.0, round(($row->total_facings / $row->target_facings) * 100, 1)) : null;
-                    $row->sos_pct = $row->sos_rate !== null ? round((float) $row->sos_rate, 1) : null;
+                    $row->osa_pct = $row->osa_total > 0 ? $this->boundedPercent($row->osa_pass, $row->osa_total) : null;
+                    $row->npd_pct = $row->npd_total > 0 ? $this->boundedPercent($row->npd_pass, $row->npd_total) : null;
+                    $row->mhs_pct = $row->mhs_total > 0 ? $this->boundedPercent($row->mhs_pass, $row->mhs_total) : null;
+                    $row->facing_pct = $row->target_facings > 0 ? $this->boundedPercent($row->total_facings, $row->target_facings) : null;
+                    $row->sos_pct = $row->sos_rate !== null ? min(100.0, max(0.0, round((float) $row->sos_rate, 1))) : null;
                     $row->sos_target = $row->sos_target !== null ? round((float) $row->sos_target, 1) : null;
                     return $row;
                 });
@@ -745,14 +804,23 @@ class MerchandiserAdminHubController extends Controller
                         ->whereDate('assigned_date', '>=', $coverageStart->toDateString())
                         ->whereDate('assigned_date', '<=', $coverageEnd->toDateString())
                         ->count();
+                    $completedAssignments = MerchandiserOutletAssignment::where('user_id', $user->id)
+                        ->whereDate('assigned_date', '>=', $coverageStart->toDateString())
+                        ->whereDate('assigned_date', '<=', $coverageEnd->toDateString())
+                        ->where(fn ($query) => $query
+                            ->where('status', 'completed')
+                            ->orWhereNotNull('completed_at')
+                            ->orWhereNotNull('visit_id'))
+                        ->count();
                     $images = DB::table('merchandiser_visit_skus as vs')
                         ->join('merchandiser_visits as v', 'v.id', '=', 'vs.visit_id')
                         ->where('v.user_id', $user->id)
                         ->whereNotNull('vs.photo_path')
-                        ->whereBetween('vs.created_at', [$coverageStart, $coverageEnd])
+                        ->whereBetween('v.created_at', [$coverageStart, $coverageEnd])
                         ->count();
                     $user->scheduled_visits = $scheduled;
-                    $user->coverage_pct = $scheduled > 0 ? round(($user->total_visits / $scheduled) * 100, 1) : 0.0;
+                    $user->completed_assignments = $completedAssignments;
+                    $user->coverage_pct = $this->boundedPercent($completedAssignments, $scheduled);
                     $user->images_uploaded = $images;
                     return $user;
                 })
@@ -770,7 +838,7 @@ class MerchandiserAdminHubController extends Controller
                 ->whereExists(fn($q) => $q->from('merchandiser_visit_skus as vs')->whereColumn('vs.visit_id', 'v.id')->whereNotNull('vs.photo_path'))
                 ->whereBetween('v.created_at', [$coverageStart, $coverageEnd])
                 ->count();
-            $posmCompliance = $totalVisitsPP > 0 ? round(($withPosm / $totalVisitsPP) * 100, 1) : 0.0;
+            $posmCompliance = $this->boundedPercent($withPosm, $totalVisitsPP);
             // Price compliance: visits where price was recorded
             $withPrice = DB::table('merchandiser_visit_skus as vs')
                 ->join('merchandiser_visits as v', 'v.id', '=', 'vs.visit_id')
@@ -781,7 +849,7 @@ class MerchandiserAdminHubController extends Controller
                 ->join('merchandiser_visits as v', 'v.id', '=', 'vs.visit_id')
                 ->whereBetween('v.created_at', [$coverageStart, $coverageEnd])
                 ->count();
-            $pricingCompliance = $totalSkuChecks > 0 ? round(($withPrice / $totalSkuChecks) * 100, 1) : 0.0;
+            $pricingCompliance = $this->boundedPercent($withPrice, $totalSkuChecks);
             // By KD promo performance
             $pricePromoData = DB::table('merchandiser_visits as v')
                 ->join('outlets as o', 'o.id', '=', 'v.outlet_id')
@@ -793,7 +861,7 @@ class MerchandiserAdminHubController extends Controller
                 ->orderByDesc('visits')
                 ->get()
                 ->map(function ($row) {
-                    $row->posm_rate = $row->visits > 0 ? round(($row->posm_visits / $row->visits) * 100, 1) : 0.0;
+                    $row->posm_rate = $this->boundedPercent($row->posm_visits, $row->visits);
                     return $row;
                 });
         }
@@ -818,6 +886,7 @@ class MerchandiserAdminHubController extends Controller
             'pendingLeavesList', 'pendingClaimsList', 'pendingLoansList',
             'recentReports',
             'visitsByKd', 'assetsByItem',
+            'outletsByRegion', 'outletsByChannel', 'clockCoverageChart',
             'clockSettings',
             'skus', 'skuCount', 'skuReferenceCount', 'skuCategories', 'skuAiConfigured',
             'coverageMonth', 'coverageWeek', 'coverageStart', 'coverageEnd',
@@ -2508,5 +2577,14 @@ class MerchandiserAdminHubController extends Controller
         $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
 
         return $earthRadius * $c;
+    }
+
+    private function boundedPercent(int|float $part, int|float $total): float
+    {
+        if ((float) $total <= 0.0) {
+            return 0.0;
+        }
+
+        return min(100.0, max(0.0, round(((float) $part / (float) $total) * 100, 1)));
     }
 }

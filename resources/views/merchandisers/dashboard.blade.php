@@ -281,8 +281,8 @@
                                     <div class="lg:col-span-2 space-y-4">
                                         <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                                             <div>
-                                                <h2 class="text-xl font-display text-brand-white tracking-wider">🏬 Today's Assigned Outlets ({{ $dayLabels[$selectedDay] ?? 'Selected Day' }})</h2>
-                                                <p class="mt-1 text-xs text-brand-white/45">{{ $merchMetrics['assigned_outlets_today'] }} planned today, {{ $merchMetrics['clockins_today'] }} clocked in, {{ $merchMetrics['outlets_scored_today'] }} scored, {{ $merchMetrics['not_covered_today'] }} not covered.</p>
+                                                <h2 class="text-xl font-display text-brand-white tracking-wider">🏬 Assigned Outlets ({{ $scheduleLabel ?? ($dayLabels[$selectedDay] ?? 'Selected Day') }})</h2>
+                                                <p class="mt-1 text-xs text-brand-white/45">{{ $merchMetrics['assigned_outlets_today'] }} planned for this view, {{ $merchMetrics['clockins_today'] }} clocked in, {{ $merchMetrics['outlets_scored_today'] }} scored, {{ $merchMetrics['not_covered_today'] }} not covered.</p>
                                             </div>
                                             <div class="w-full sm:w-80">
                                                 <label class="block text-[10px] uppercase tracking-wider text-brand-ash mb-1">Search outlets</label>
@@ -383,7 +383,7 @@
                                         <div class="glass-panel rounded-2xl p-5 border border-brand-white/10 bg-brand-black/40">
                                             <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                                 <div>
-                                                    <p class="text-xs uppercase tracking-[0.2em] text-brand-ash">Today's outlet closure list</p>
+                                                    <p class="text-xs uppercase tracking-[0.2em] text-brand-ash">Outlet closure list</p>
                                                     <h3 class="mt-1 text-lg font-bold text-brand-white">{{ $merchMetrics['not_covered_today'] }} not covered of {{ $merchMetrics['total_outlets'] }}</h3>
                                                 </div>
                                                 <span class="inline-flex w-fit rounded-full border border-green-500/20 bg-green-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-green-400">
@@ -610,10 +610,11 @@
                                                 </div>
                                                 <div class="mt-3 h-2 overflow-hidden rounded-full bg-brand-white/10">
                                                     @php
-                                                        $coveragePercent = $merchMetrics['total_outlets'] > 0 ? min(100, round(($merchMetrics['outlets_covered_month'] / $merchMetrics['total_outlets']) * 100)) : 0;
+                                                        $coveragePercent = (float) ($merchMetrics['monthly_coverage_rate'] ?? 0);
                                                     @endphp
                                                     <div class="h-full rounded-full bg-brand-red" style="width: {{ $coveragePercent }}%"></div>
                                                 </div>
+                                                <p class="mt-2 text-[10px] text-brand-white/35">{{ $coveragePercent }}% of {{ $merchMetrics['registered_outlets'] }} registered outlets this month</p>
                                             </div>
                                             <div class="space-y-2">
                                                 <h4 class="text-[10px] uppercase tracking-wider text-brand-white/60 font-semibold">Outlet coverage snapshot</h4>
@@ -637,6 +638,18 @@
                                                 <h4 class="text-[10px] uppercase tracking-wider text-brand-white/60 font-semibold">Today's execution funnel</h4>
                                                 <div class="h-[130px]">
                                                     <canvas id="visitFunnelChart"></canvas>
+                                                </div>
+                                            </div>
+                                            <div class="space-y-2">
+                                                <h4 class="text-[10px] uppercase tracking-wider text-brand-white/60 font-semibold">Live visit state</h4>
+                                                <div class="h-[130px]">
+                                                    <canvas id="visitStateChart"></canvas>
+                                                </div>
+                                            </div>
+                                            <div class="space-y-2">
+                                                <h4 class="text-[10px] uppercase tracking-wider text-brand-white/60 font-semibold">7-day visit minutes</h4>
+                                                <div class="h-[120px]">
+                                                    <canvas id="visitMinutesChart"></canvas>
                                                 </div>
                                             </div>
                                         </div>
@@ -1548,9 +1561,11 @@
             var ctxOutletCoverage = document.getElementById('outletCoverageChart');
             var ctxDailyCoverageTrend = document.getElementById('dailyCoverageTrendChart');
             var ctxVisitFunnel = document.getElementById('visitFunnelChart');
+            var ctxVisitState = document.getElementById('visitStateChart');
+            var ctxVisitMinutes = document.getElementById('visitMinutesChart');
             var dailyPerformance = @json($dailyPerformanceChart);
 
-            if (!ctxPunctual && !ctxOutletCoverage && !ctxDailyCoverageTrend && !ctxVisitFunnel) {
+            if (!ctxPunctual && !ctxOutletCoverage && !ctxDailyCoverageTrend && !ctxVisitFunnel && !ctxVisitState && !ctxVisitMinutes) {
                 return;
             }
 
@@ -1635,14 +1650,14 @@
                 new Chart(ctxOutletCoverage, {
                     type: 'doughnut',
                     data: {
-                        labels: ['Clocked in', 'Not covered', 'Scored'],
+                        labels: ['Scored', 'Clocked not scored', 'Not covered'],
                         datasets: [{
                             data: [
-                                {{ (int) ($merchMetrics['outlets_visited_today'] ?? 0) }},
-                                {{ (int) ($merchMetrics['not_covered_today'] ?? 0) }},
-                                {{ (int) ($merchMetrics['outlets_scored_today'] ?? 0) }}
+                                {{ (int) ($merchMetrics['outlets_scored_today'] ?? 0) }},
+                                {{ (int) ($merchMetrics['clocked_not_scored_today'] ?? 0) }},
+                                {{ (int) ($merchMetrics['not_covered_today'] ?? 0) }}
                             ],
-                            backgroundColor: ['#10b981', '#f59e0b', '#38bdf8'],
+                            backgroundColor: ['#38bdf8', '#10b981', '#f59e0b'],
                             borderColor: 'rgba(255,255,255,0.08)',
                             borderWidth: 1
                         }]
@@ -1712,6 +1727,62 @@
                         plugins: { legend: { display: false } },
                         scales: {
                             y: { beginAtZero: true, precision: 0, ticks: { font: { size: 9 } } },
+                            x: { grid: { display: false }, ticks: { font: { size: 9 } } }
+                        }
+                    }
+                });
+            }
+
+            if (ctxVisitState) {
+                new Chart(ctxVisitState, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Active visits', 'Clocked out', 'Not covered'],
+                        datasets: [{
+                            data: [
+                                {{ (int) ($merchMetrics['active_outlet_clockins_today'] ?? 0) }},
+                                {{ (int) ($merchMetrics['closed_outlet_clockins_today'] ?? 0) }},
+                                {{ (int) ($merchMetrics['not_covered_today'] ?? 0) }}
+                            ],
+                            backgroundColor: ['#f59e0b', '#10b981', 'rgba(148,163,184,.5)'],
+                            borderColor: 'rgba(255,255,255,0.08)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { boxWidth: 10, font: { size: 10 } }
+                            }
+                        },
+                        cutout: '62%'
+                    }
+                });
+            }
+
+            if (ctxVisitMinutes) {
+                new Chart(ctxVisitMinutes, {
+                    type: 'bar',
+                    data: {
+                        labels: dailyPerformance.labels || [],
+                        datasets: [{
+                            label: 'Visit minutes',
+                            data: dailyPerformance.visit_minutes || [],
+                            backgroundColor: 'rgba(239,68,68,.58)',
+                            borderColor: '#ef4444',
+                            borderWidth: 1,
+                            borderRadius: 5
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { beginAtZero: true, ticks: { font: { size: 9 } } },
                             x: { grid: { display: false }, ticks: { font: { size: 9 } } }
                         }
                     }

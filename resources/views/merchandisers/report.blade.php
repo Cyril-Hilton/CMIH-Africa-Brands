@@ -304,7 +304,7 @@
                         <p class="text-2xl font-display text-blue-400 mt-1">{{ number_format($data['exec_scheduled']) }}</p>
                     </div>
                     <div class="rounded-xl border border-brand-white/10 bg-brand-black/40 p-4">
-                        <p class="text-[10px] uppercase tracking-widest text-brand-ash">Actual Visits</p>
+                        <p class="text-[10px] uppercase tracking-widest text-brand-ash">Completed Visits</p>
                         <p class="text-2xl font-display text-green-400 mt-1">{{ number_format($data['exec_actual']) }}</p>
                     </div>
                     <div class="rounded-xl border border-brand-white/10 bg-brand-black/40 p-4">
@@ -382,7 +382,7 @@
                                     <td class="px-5 py-3 font-medium text-brand-white">{{ $u->name }}</td>
                                     <td class="px-5 py-3 text-brand-ash text-xs">{{ $u->merchandiserKd?->name ?? '—' }}</td>
                                     <td class="px-5 py-3 text-right text-brand-ash">{{ $u->scheduled_visits }}</td>
-                                    <td class="px-5 py-3 text-right text-blue-400 font-bold">{{ $u->total_visits }}</td>
+                                    <td class="px-5 py-3 text-right text-blue-400 font-bold">{{ $u->completed_assignments }}</td>
                                     <td class="px-5 py-3 text-right font-bold {{ $u->coverage_pct >= 90 ? 'text-emerald-400' : ($u->coverage_pct >= 70 ? 'text-amber-400' : 'text-red-400') }}">{{ $u->coverage_pct }}%</td>
                                     <td class="px-5 py-3 text-right text-sky-300 font-bold">{{ number_format($u->images_uploaded) }}</td>
                                 </tr>

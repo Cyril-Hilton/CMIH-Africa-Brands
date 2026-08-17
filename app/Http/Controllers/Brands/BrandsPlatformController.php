@@ -305,7 +305,7 @@ class BrandsPlatformController extends Controller
                     'updates' => $updates,
                     'units' => $units,
                     'conversions' => $conversions,
-                    'target_rate' => $target > 0 ? round(min(100, ($reached / $target) * 100), 1) : 0.0,
+                    'target_rate' => $this->boundedPercent($reached, $target),
                     'starts_at' => $brandActivation->starts_at,
                     'ends_at' => $brandActivation->ends_at,
                 ];
@@ -343,7 +343,7 @@ class BrandsPlatformController extends Controller
                 ->filter(fn ($attendance) => in_array((int) $attendance->user_id, $promoterUserIds, true))
                 ->count(),
             'active' => $enrolledPromoters->where('is_active', true)->count(),
-            'avg_conversion' => $promoterUnits > 0 ? round(($promoterConversions / $promoterUnits) * 100, 1) : 0.0,
+            'avg_conversion' => $this->boundedPercent($promoterConversions, $promoterUnits),
             'top_activity' => (int) $promoterRows->max('units'),
             'locations_covered' => $promoterRows->pluck('location_label')->filter()->unique()->count(),
         ];
@@ -1991,18 +1991,18 @@ class BrandsPlatformController extends Controller
             'target' => $target,
             'target_unit' => $activation?->target_unit ?: 'Consumer Actions',
             'reached' => $reached,
-            'reach_rate' => $target > 0 ? round(min(100, ($reached / $target) * 100), 1) : 0.0,
+            'reach_rate' => $this->boundedPercent($reached, $target),
             'consumer_entries' => $consumerEntries,
             'verified_entries' => $verifiedEntries,
-            'verification_rate' => $consumerEntries > 0 ? round(($verifiedEntries / $consumerEntries) * 100, 1) : 0.0,
+            'verification_rate' => $this->boundedPercent($verifiedEntries, $consumerEntries),
             'field_updates' => $fieldUpdates,
             'units' => $units,
             'conversions' => $conversions,
-            'conversion_rate' => $consumerEntries > 0 ? round(($conversions / $consumerEntries) * 100, 1) : 0.0,
+            'conversion_rate' => $this->boundedPercent($conversions, $consumerEntries),
             'assigned_staff' => $staff,
-            'high_intent_rate' => $consumerEntries > 0 ? round(($highIntent / $consumerEntries) * 100, 1) : 0.0,
-            'new_audience_rate' => $consumerEntries > 0 ? round(($newAudience / $consumerEntries) * 100, 1) : 0.0,
-            'marketing_consent_rate' => $consumerEntries > 0 ? round(($marketingConsent / $consumerEntries) * 100, 1) : 0.0,
+            'high_intent_rate' => $this->boundedPercent($highIntent, $consumerEntries),
+            'new_audience_rate' => $this->boundedPercent($newAudience, $consumerEntries),
+            'marketing_consent_rate' => $this->boundedPercent($marketingConsent, $consumerEntries),
         ];
     }
 
@@ -2063,7 +2063,7 @@ class BrandsPlatformController extends Controller
                     'staff' => $staff,
                     'primary_result' => $activation?->target_unit ?: 'No target unit set',
                     'status' => $activation?->status ?: $brand->platform_status,
-                    'target_rate' => $target > 0 ? round(min(100, ($reached / $target) * 100), 1) : 0.0,
+                    'target_rate' => $this->boundedPercent($reached, $target),
                 ];
             })
             ->values();
@@ -2130,7 +2130,7 @@ class BrandsPlatformController extends Controller
                 return [
                     'label' => $row->label,
                     'total' => $rowTotal,
-                    'percentage' => $total > 0 ? round(($rowTotal / $total) * 100, 1) : 0.0,
+                    'percentage' => $this->boundedPercent($rowTotal, $total),
                 ];
             })
             ->values();
@@ -3329,9 +3329,7 @@ class BrandsPlatformController extends Controller
                 ->where('status', 'done')
                 ->sum('transaction_value'),
         ];
-        $retailSummary['failed_rate'] = $retailSummary['attempts'] > 0
-            ? round(($retailSummary['failed'] / $retailSummary['attempts']) * 100, 1)
-            : 0.0;
+        $retailSummary['failed_rate'] = $this->boundedPercent($retailSummary['failed'], $retailSummary['attempts']);
 
         return compact('redemptions', 'redemptionDailyTrend', 'redemptionStatus', 'retailSummary');
     }
@@ -3346,6 +3344,15 @@ class BrandsPlatformController extends Controller
              sin($dLon / 2) * sin($dLon / 2);
         $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
         return $earthRadius * $c;
+    }
+
+    private function boundedPercent(int|float $part, int|float $total): float
+    {
+        if ((float) $total <= 0.0) {
+            return 0.0;
+        }
+
+        return min(100.0, max(0.0, round(((float) $part / (float) $total) * 100, 1)));
     }
 
     private function resolveVenueCoordinates(?string $location, ?string $address, mixed $latitude, mixed $longitude, bool $allowDefault = false): array

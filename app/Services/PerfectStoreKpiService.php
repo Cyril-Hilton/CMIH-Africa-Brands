@@ -288,7 +288,7 @@ class PerfectStoreKpiService
                     $totalCategoryFacings = $categoryRows->max(fn (MerchandiserVisitSku $row) => max(0, (int) ($row->category_total_facings ?? 0)));
 
                     return $totalCategoryFacings > 0
-                        ? $this->percent($unileverFacings, $totalCategoryFacings)
+                        ? $this->percent($unileverFacings, $totalCategoryFacings, capAtHundred: true)
                         : null;
                 })
                 ->filter(fn ($value) => $value !== null);
@@ -300,7 +300,9 @@ class PerfectStoreKpiService
             ->pluck('share_of_shelf')
             ->filter(fn ($value) => $value !== null);
 
-        return $legacyPercentages->isNotEmpty() ? round((float) $legacyPercentages->avg(), 1) : null;
+        return $legacyPercentages->isNotEmpty()
+            ? min(100.0, max(0.0, round((float) $legacyPercentages->avg(), 1)))
+            : null;
     }
 
     private function rollupsBy(
@@ -494,6 +496,6 @@ class PerfectStoreKpiService
     {
         $value = $total > 0 ? round(((float) $part / (float) $total) * 100, 1) : 0.0;
 
-        return $capAtHundred ? min(100.0, $value) : $value;
+        return $capAtHundred ? min(100.0, max(0.0, $value)) : $value;
     }
 }

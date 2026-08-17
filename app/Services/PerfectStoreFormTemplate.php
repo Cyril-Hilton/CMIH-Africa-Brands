@@ -214,13 +214,13 @@ class PerfectStoreFormTemplate
             $metrics['section_completion'][$section['key']] = [
                 'answered' => $answered,
                 'required' => $required,
-                'rate' => $required > 0 ? round(($answered / $required) * 100, 1) : 100.0,
+                'rate' => $required > 0 ? min(100.0, max(0.0, round(($answered / $required) * 100, 1))) : 100.0,
             ];
         }
 
         $inStockPlanogramTotal = $metrics['planogram']['total'] - $metrics['planogram']['out_of_stock'];
         $metrics['planogram']['compliance_rate'] = $inStockPlanogramTotal > 0
-            ? round(($metrics['planogram']['compliant'] / $inStockPlanogramTotal) * 100, 1)
+            ? min(100.0, max(0.0, round(($metrics['planogram']['compliant'] / $inStockPlanogramTotal) * 100, 1)))
             : 0.0;
 
         return $metrics;

@@ -774,6 +774,30 @@
                         </div>
                     </div>
 
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
+                        <div class="glass-panel rounded-2xl p-5 border border-brand-white/10 flex flex-col">
+                            <p class="text-xs uppercase tracking-widest text-brand-ash mb-4">🗺️ Outlets by Region</p>
+                            <div class="h-64 relative flex-1">
+                                <canvas id="outletsRegionChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="glass-panel rounded-2xl p-5 border border-brand-white/10 flex flex-col">
+                            <p class="text-xs uppercase tracking-widest text-brand-ash mb-4">🏪 Outlet Channel Mix</p>
+                            <div class="h-64 relative flex-1">
+                                <canvas id="outletsChannelChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="glass-panel rounded-2xl p-5 border border-brand-white/10 flex flex-col">
+                            <p class="text-xs uppercase tracking-widest text-brand-ash mb-4">📍 Clock-In Coverage</p>
+                            <div class="h-64 relative flex-1">
+                                <canvas id="clockCoverageChart"></canvas>
+                            </div>
+                            <p class="mt-3 text-[10px] text-brand-ash">Selected period: {{ $clockRangeLabel }}</p>
+                        </div>
+                    </div>
+
                     <!-- Top Performers Table -->
                     <div class="glass-panel rounded-2xl border border-brand-white/10 overflow-hidden mb-6">
                         <div class="px-5 py-4 border-b border-brand-white/10 flex items-center justify-between">
@@ -3387,7 +3411,7 @@
                             <p class="text-4xl font-display text-blue-400">{{ number_format($execScheduled) }}</p>
                         </div>
                         <div class="stat-card kpi-glow-green glass-panel rounded-2xl p-5 border border-brand-white/10">
-                            <p class="text-[10px] uppercase tracking-widest text-brand-ash mb-2">Actual Visits</p>
+                            <p class="text-[10px] uppercase tracking-widest text-brand-ash mb-2">Completed Visits</p>
                             <p class="text-4xl font-display text-green-400">{{ number_format($execActual) }}</p>
                         </div>
                         <div class="stat-card kpi-glow-amber glass-panel rounded-2xl p-5 border border-brand-white/10">
@@ -3417,7 +3441,7 @@
                     {{-- Charts --}}
                     <div class="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-6">
                         <div class="glass-panel rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
-                            <p class="text-xs uppercase tracking-widest text-brand-ash mb-4">Scheduled vs Actual Visits (7-Day Trend)</p>
+                            <p class="text-xs uppercase tracking-widest text-brand-ash mb-4">Scheduled vs Completed Visits (7-Day Trend)</p>
                             <div class="h-64"><canvas id="execVisitTrendChart"></canvas></div>
                         </div>
                         <div class="glass-panel rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
@@ -3644,8 +3668,8 @@
                             <p class="text-4xl font-display text-amber-400">{{ number_format($userPerformance->sum('images_uploaded')) }}</p>
                         </div>
                         <div class="stat-card glass-panel rounded-2xl p-5 border border-brand-white/10">
-                            <p class="text-[10px] uppercase tracking-widest text-brand-ash mb-2">Total Visits</p>
-                            <p class="text-4xl font-display text-brand-white">{{ number_format($userPerformance->sum('total_visits')) }}</p>
+                            <p class="text-[10px] uppercase tracking-widest text-brand-ash mb-2">Completed Visits</p>
+                            <p class="text-4xl font-display text-brand-white">{{ number_format($userPerformance->sum('completed_assignments')) }}</p>
                         </div>
                     </div>
 
@@ -3669,7 +3693,7 @@
                                         <th class="px-5 py-3 text-left">KD</th>
                                         <th class="px-5 py-3 text-right">Clock-ins</th>
                                         <th class="px-5 py-3 text-right">Scheduled</th>
-                                        <th class="px-5 py-3 text-right">Actual Visits</th>
+                                        <th class="px-5 py-3 text-right">Completed Visits</th>
                                         <th class="px-5 py-3 text-right">Coverage</th>
                                         <th class="px-5 py-3 text-right">Images</th>
                                     </tr>
@@ -3682,7 +3706,7 @@
                                             <td class="px-5 py-3 text-brand-ash text-xs">{{ $user->merchandiserKd?->name ?? '—' }}</td>
                                             <td class="px-5 py-3 text-right text-brand-ash">{{ $user->total_clockins }}</td>
                                             <td class="px-5 py-3 text-right text-brand-ash">{{ $user->scheduled_visits }}</td>
-                                            <td class="px-5 py-3 text-right text-blue-300">{{ $user->total_visits }}</td>
+                                            <td class="px-5 py-3 text-right text-blue-300">{{ $user->completed_assignments }}</td>
                                             <td class="px-5 py-3 text-right">
                                                 @php $cov = $user->coverage_pct; @endphp
                                                 <span class="{{ $cov >= 90 ? 'text-emerald-400' : ($cov >= 70 ? 'text-amber-400' : 'text-red-400') }} font-bold">{{ $cov }}%</span>
@@ -4108,6 +4132,87 @@ if (assetsCtx && adminChartsAvailable) {
 }
 
 // ── Live Tracking Map (Google Maps) ───────────────────────────────────────
+const regionCtx = document.getElementById('outletsRegionChart');
+if (regionCtx && adminChartsAvailable) {
+    new Chart(regionCtx, {
+        type: 'bar',
+        data: {
+            labels: @json(array_keys($outletsByRegion)),
+            datasets: [{
+                label: 'Outlets',
+                data: @json(array_values($outletsByRegion)),
+                backgroundColor: 'rgba(14,165,233,0.62)',
+                borderColor: '#0ea5e9',
+                borderWidth: 1.5,
+                borderRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 9 }, stepSize: 1 }, beginAtZero: true },
+                y: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.55)', font: { size: 9 } } }
+            }
+        }
+    });
+}
+
+const channelCtx = document.getElementById('outletsChannelChart');
+if (channelCtx && adminChartsAvailable) {
+    new Chart(channelCtx, {
+        type: 'doughnut',
+        data: {
+            labels: @json(array_keys($outletsByChannel)),
+            datasets: [{
+                data: @json(array_values($outletsByChannel)),
+                backgroundColor: ['#22c55e', '#38bdf8', '#f59e0b', '#a78bfa', '#ef4444', '#14b8a6'],
+                borderColor: 'rgba(255,255,255,0.08)',
+                borderWidth: 1.5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { color: 'rgba(255,255,255,0.7)', boxWidth: 10, font: { size: 10 } }
+                }
+            },
+            cutout: '60%'
+        }
+    });
+}
+
+const clockCoverageCtx = document.getElementById('clockCoverageChart');
+if (clockCoverageCtx && adminChartsAvailable) {
+    new Chart(clockCoverageCtx, {
+        type: 'pie',
+        data: {
+            labels: @json(array_keys($clockCoverageChart)),
+            datasets: [{
+                data: @json(array_values($clockCoverageChart)),
+                backgroundColor: ['rgba(34,197,94,0.68)', 'rgba(239,68,68,0.58)'],
+                borderColor: ['#22c55e', '#ef4444'],
+                borderWidth: 1.5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { color: 'rgba(255,255,255,0.7)', boxWidth: 10, font: { size: 10 } }
+                }
+            }
+        }
+    });
+}
+
 let googleMap = null;
 let mapInitialized = false;
 let merchandiserMapMarkers = {};
@@ -4392,7 +4497,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 labels: @json($execVisitTrend['labels']),
                 datasets: [
                     { label: 'Scheduled', data: @json($execVisitTrend['scheduled']), backgroundColor: 'rgba(59,130,246,.55)', borderColor: '#3b82f6', borderWidth: 1.5, borderRadius: 5 },
-                    { label: 'Actual Visits', data: @json($execVisitTrend['actual']), backgroundColor: 'rgba(34,197,94,.55)', borderColor: '#22c55e', borderWidth: 1.5, borderRadius: 5 }
+                    { label: 'Completed Visits', data: @json($execVisitTrend['actual']), backgroundColor: 'rgba(34,197,94,.55)', borderColor: '#22c55e', borderWidth: 1.5, borderRadius: 5 }
                 ]
             },
             options: chartDefaults
