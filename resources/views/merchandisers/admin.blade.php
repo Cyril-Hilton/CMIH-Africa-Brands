@@ -543,7 +543,7 @@
                                 <p class="text-xs uppercase tracking-widest text-brand-ash">Merchandiser Perfect Store Roll-up</p>
                             </div>
                             <div class="overflow-x-auto">
-                                <table class="w-full min-w-[720px] text-sm">
+                                <table class="w-full min-w-[980px] text-sm">
                                     <thead class="border-b border-brand-white/10 text-[10px] uppercase tracking-widest text-brand-ash">
                                         <tr>
                                             <th class="px-5 py-3 text-left">Name</th>
@@ -551,6 +551,9 @@
                                             <th class="px-5 py-3 text-right">OSA</th>
                                             <th class="px-5 py-3 text-right">NPD</th>
                                             <th class="px-5 py-3 text-right">MHS</th>
+                                            <th class="px-5 py-3 text-right">Planogram</th>
+                                            <th class="px-5 py-3 text-right">Facings</th>
+                                            <th class="px-5 py-3 text-right">SOS</th>
                                             <th class="px-5 py-3 text-right">Score</th>
                                         </tr>
                                     </thead>
@@ -562,10 +565,13 @@
                                                 <td class="px-5 py-3 text-right text-sky-300">{{ $metricLabel($rollup['osa']) }}</td>
                                                 <td class="px-5 py-3 text-right text-amber-300">{{ $metricLabel($rollup['npd']) }}</td>
                                                 <td class="px-5 py-3 text-right text-violet-300">{{ $metricLabel($rollup['mhs']) }}</td>
+                                                <td class="px-5 py-3 text-right text-cyan-300">{{ $metricLabel($rollup['planogram']) }}</td>
+                                                <td class="px-5 py-3 text-right text-orange-300">{{ $metricLabel($rollup['facing']) }}</td>
+                                                <td class="px-5 py-3 text-right text-pink-300">{{ $metricLabel($rollup['sos']) }}</td>
                                                 <td class="px-5 py-3 text-right font-bold text-brand-white">{{ $metricLabel($rollup['perfect_store_score']) }}</td>
                                             </tr>
                                         @empty
-                                            <tr><td colspan="6" class="px-5 py-8 text-center text-sm text-brand-ash">No Perfect Store KPI activity in this range yet.</td></tr>
+                                            <tr><td colspan="9" class="px-5 py-8 text-center text-sm text-brand-ash">No Perfect Store KPI activity in this range yet.</td></tr>
                                         @endforelse
                                     </tbody>
                                 </table>
@@ -576,7 +582,7 @@
                                 <p class="text-xs uppercase tracking-widest text-brand-ash">KD Perfect Store Roll-up</p>
                             </div>
                             <div class="overflow-x-auto">
-                                <table class="w-full min-w-[720px] text-sm">
+                                <table class="w-full min-w-[980px] text-sm">
                                     <thead class="border-b border-brand-white/10 text-[10px] uppercase tracking-widest text-brand-ash">
                                         <tr>
                                             <th class="px-5 py-3 text-left">Key Distributor</th>
@@ -584,6 +590,9 @@
                                             <th class="px-5 py-3 text-right">OSA</th>
                                             <th class="px-5 py-3 text-right">NPD</th>
                                             <th class="px-5 py-3 text-right">MHS</th>
+                                            <th class="px-5 py-3 text-right">Planogram</th>
+                                            <th class="px-5 py-3 text-right">Facings</th>
+                                            <th class="px-5 py-3 text-right">SOS</th>
                                             <th class="px-5 py-3 text-right">Score</th>
                                         </tr>
                                     </thead>
@@ -595,10 +604,13 @@
                                                 <td class="px-5 py-3 text-right text-sky-300">{{ $metricLabel($rollup['osa']) }}</td>
                                                 <td class="px-5 py-3 text-right text-amber-300">{{ $metricLabel($rollup['npd']) }}</td>
                                                 <td class="px-5 py-3 text-right text-violet-300">{{ $metricLabel($rollup['mhs']) }}</td>
+                                                <td class="px-5 py-3 text-right text-cyan-300">{{ $metricLabel($rollup['planogram']) }}</td>
+                                                <td class="px-5 py-3 text-right text-orange-300">{{ $metricLabel($rollup['facing']) }}</td>
+                                                <td class="px-5 py-3 text-right text-pink-300">{{ $metricLabel($rollup['sos']) }}</td>
                                                 <td class="px-5 py-3 text-right font-bold text-brand-white">{{ $metricLabel($rollup['perfect_store_score']) }}</td>
                                             </tr>
                                         @empty
-                                            <tr><td colspan="6" class="px-5 py-8 text-center text-sm text-brand-ash">No KD Perfect Store KPI activity in this range yet.</td></tr>
+                                            <tr><td colspan="9" class="px-5 py-8 text-center text-sm text-brand-ash">No KD Perfect Store KPI activity in this range yet.</td></tr>
                                         @endforelse
                                     </tbody>
                                 </table>
@@ -612,7 +624,7 @@
                                 <p class="text-xs uppercase tracking-widest text-brand-ash">Regional KPI Roll-up</p>
                             </div>
                             <div class="overflow-x-auto">
-                                <table class="w-full min-w-[720px] text-sm">
+                                <table class="w-full min-w-[980px] text-sm">
                                     <thead class="border-b border-brand-white/10 text-[10px] uppercase tracking-widest text-brand-ash">
                                         <tr>
                                             <th class="px-5 py-3 text-left">Region</th>
@@ -620,6 +632,9 @@
                                             <th class="px-5 py-3 text-right">OSA</th>
                                             <th class="px-5 py-3 text-right">NPD</th>
                                             <th class="px-5 py-3 text-right">MHS</th>
+                                            <th class="px-5 py-3 text-right">Planogram</th>
+                                            <th class="px-5 py-3 text-right">Facings</th>
+                                            <th class="px-5 py-3 text-right">SOS</th>
                                             <th class="px-5 py-3 text-right">Score</th>
                                         </tr>
                                     </thead>
@@ -631,10 +646,13 @@
                                                 <td class="px-5 py-3 text-right text-sky-300">{{ $metricLabel($rollup['osa']) }}</td>
                                                 <td class="px-5 py-3 text-right text-amber-300">{{ $metricLabel($rollup['npd']) }}</td>
                                                 <td class="px-5 py-3 text-right text-violet-300">{{ $metricLabel($rollup['mhs']) }}</td>
+                                                <td class="px-5 py-3 text-right text-cyan-300">{{ $metricLabel($rollup['planogram']) }}</td>
+                                                <td class="px-5 py-3 text-right text-orange-300">{{ $metricLabel($rollup['facing']) }}</td>
+                                                <td class="px-5 py-3 text-right text-pink-300">{{ $metricLabel($rollup['sos']) }}</td>
                                                 <td class="px-5 py-3 text-right font-bold text-brand-white">{{ $metricLabel($rollup['perfect_store_score']) }}</td>
                                             </tr>
                                         @empty
-                                            <tr><td colspan="6" class="px-5 py-8 text-center text-sm text-brand-ash">No regional Perfect Store activity in this range yet.</td></tr>
+                                            <tr><td colspan="9" class="px-5 py-8 text-center text-sm text-brand-ash">No regional Perfect Store activity in this range yet.</td></tr>
                                         @endforelse
                                     </tbody>
                                 </table>
@@ -646,13 +664,15 @@
                                 <p class="text-xs uppercase tracking-widest text-brand-ash">Brand KPI Roll-up</p>
                             </div>
                             <div class="overflow-x-auto">
-                                <table class="w-full min-w-[720px] text-sm">
+                                <table class="w-full min-w-[900px] text-sm">
                                     <thead class="border-b border-brand-white/10 text-[10px] uppercase tracking-widest text-brand-ash">
                                         <tr>
                                             <th class="px-5 py-3 text-left">Brand</th>
                                             <th class="px-5 py-3 text-right">OSA</th>
                                             <th class="px-5 py-3 text-right">NPD</th>
                                             <th class="px-5 py-3 text-right">MHS</th>
+                                            <th class="px-5 py-3 text-right">Planogram</th>
+                                            <th class="px-5 py-3 text-right">Facings</th>
                                             <th class="px-5 py-3 text-right">SOS</th>
                                             <th class="px-5 py-3 text-right">Score</th>
                                         </tr>
@@ -664,11 +684,13 @@
                                                 <td class="px-5 py-3 text-right text-sky-300">{{ $metricLabel($rollup['osa']) }}</td>
                                                 <td class="px-5 py-3 text-right text-amber-300">{{ $metricLabel($rollup['npd']) }}</td>
                                                 <td class="px-5 py-3 text-right text-violet-300">{{ $metricLabel($rollup['mhs']) }}</td>
+                                                <td class="px-5 py-3 text-right text-cyan-300">{{ $metricLabel($rollup['planogram']) }}</td>
+                                                <td class="px-5 py-3 text-right text-orange-300">{{ $metricLabel($rollup['facing']) }}</td>
                                                 <td class="px-5 py-3 text-right text-pink-300">{{ $metricLabel($rollup['sos']) }}</td>
                                                 <td class="px-5 py-3 text-right font-bold text-brand-white">{{ $metricLabel($rollup['perfect_store_score']) }}</td>
                                             </tr>
                                         @empty
-                                            <tr><td colspan="6" class="px-5 py-8 text-center text-sm text-brand-ash">No brand-level SKU scoring in this range yet.</td></tr>
+                                            <tr><td colspan="8" class="px-5 py-8 text-center text-sm text-brand-ash">No brand-level SKU scoring in this range yet.</td></tr>
                                         @endforelse
                                     </tbody>
                                 </table>

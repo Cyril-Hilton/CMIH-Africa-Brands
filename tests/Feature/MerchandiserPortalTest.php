@@ -26,6 +26,7 @@ use App\Models\MerchandiserVisitSku;
 use App\Models\Sku;
 use App\Services\MerchandiserRoutePlanner;
 use App\Services\PerfectStoreFormTemplate;
+use App\Services\PerfectStoreKpiService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
@@ -2372,6 +2373,94 @@ class MerchandiserPortalTest extends TestCase
 
         $this->assertDatabaseCount('merchandiser_visits', 0);
         $this->assertDatabaseCount('merchandiser_visit_skus', 0);
+    }
+
+    #[Test]
+    public function visit_submission_stores_share_of_shelf_once_per_category()
+    {
+        $region = Region::create(['name' => 'ACCRA CATEGORY SOS', 'timezone' => 'Africa/Accra']);
+        $kd = KeyDistributor::create([
+            'name' => 'Category SOS KD',
+            'region_id' => $region->id,
+            'address' => 'Accra',
+        ]);
+        $outlet = Outlet::create([
+            'name' => 'Category SOS Outlet',
+            'code' => 'CATEGORY-SOS-001',
+            'kd_id' => $kd->id,
+            'channel_type' => 'GT',
+            'address' => 'Osu',
+            'latitude' => 5.6037,
+            'longitude' => -0.1870,
+        ]);
+        $user = User::create([
+            'name' => 'Category SOS Agent',
+            'email' => 'category-sos-agent@cmih.africa',
+            'contact_email' => 'category-sos-agent@personal.com',
+            'phone' => '12345678',
+            'date_of_birth' => '1995-05-05',
+            'password' => Hash::make('Pass123'),
+            'access_role' => 'merchandiser',
+            'status' => 'active',
+            'kd_id' => $kd->id,
+            'region_id' => $region->id,
+        ]);
+        $firstSku = Sku::create([
+            'name' => 'Rexona Roll On',
+            'category' => 'Deodorants',
+            'facing_target' => 4,
+        ]);
+        $secondSku = Sku::create([
+            'name' => 'Rexona Spray',
+            'category' => 'Deodorants',
+            'facing_target' => 3,
+        ]);
+
+        $this->recordOutletClockIn($user, $outlet);
+
+        $response = $this->actingAs($user)->post(route('merchandisers.visit.store', $outlet), [
+            'branded_shelf_available' => 1,
+            'hangers_available' => 1,
+            'sku_entry_mode' => 'manual',
+            'category_sos' => [
+                'deodorants' => [
+                    'category' => 'Deodorants',
+                    'category_unilever_facings' => 30,
+                    'category_total_facings' => 50,
+                ],
+            ],
+            'skus' => [
+                $firstSku->id => [
+                    'osa_quantity' => 12,
+                    'npd_present' => 1,
+                    'facing' => 4,
+                    'share_of_shelf' => 0,
+                    'planogram_compliant' => 1,
+                ],
+                $secondSku->id => [
+                    'osa_quantity' => 8,
+                    'npd_present' => 1,
+                    'facing' => 3,
+                    'share_of_shelf' => 0,
+                    'planogram_compliant' => 1,
+                ],
+            ],
+        ]);
+
+        $response->assertRedirect(route('merchandisers.dashboard'));
+
+        $visit = MerchandiserVisit::firstOrFail();
+        $rows = MerchandiserVisitSku::where('visit_id', $visit->id)->get();
+        $categoryRows = $rows->filter(fn (MerchandiserVisitSku $row) => $row->category_total_facings !== null);
+
+        $this->assertCount(1, $categoryRows);
+        $this->assertSame(30, (int) $categoryRows->first()->category_unilever_facings);
+        $this->assertSame(50, (int) $categoryRows->first()->category_total_facings);
+        $this->assertSame(60.0, (float) $rows->first()->share_of_shelf);
+        $this->assertSame(60.0, app(PerfectStoreKpiService::class)
+            ->categoryKpis(now()->startOfDay(), now()->endOfDay())
+            ->firstWhere('category', 'Deodorants')
+            ->sos_pct);
     }
 
     #[Test]

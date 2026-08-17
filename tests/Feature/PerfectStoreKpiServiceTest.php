@@ -78,6 +78,7 @@ class PerfectStoreKpiServiceTest extends TestCase
         $this->assertSame(80.0, $summary['overview']['planogram']);
         $this->assertSame(80.0, $summary['overview']['facing']);
         $this->assertSame(20.0, $summary['overview']['sos']);
+        $this->assertNull($summary['targets']['sos']);
         $this->assertSame(50.0, $summary['merchandisers']->first()['coverage']);
         $this->assertSame(50.0, $summary['kds']->first()['coverage']);
     }
@@ -160,6 +161,14 @@ class PerfectStoreKpiServiceTest extends TestCase
         $this->assertSame(96.0, $summary['overview']['facing']);
         $this->assertSame(60.0, $summary['overview']['sos']);
         $this->assertSame(65.0, $summary['targets']['sos']);
+
+        $categoryKpis = app(PerfectStoreKpiService::class)->categoryKpis($date->copy()->startOfDay(), $date->copy()->endOfDay());
+        $deodorants = $categoryKpis->firstWhere('category', 'Deodorants');
+
+        $this->assertNotNull($deodorants);
+        $this->assertSame(30, (int) $deodorants->unilever_facings);
+        $this->assertSame(50, (int) $deodorants->category_facings);
+        $this->assertSame(60.0, $deodorants->sos_pct);
     }
 
     public function test_facing_kpi_score_is_capped_when_actual_facings_exceed_target(): void

@@ -285,8 +285,52 @@
                     </div>
                 </div>
 
+                @php
+                    $skuCategories = $skus->groupBy(fn ($sku) => trim((string) ($sku->category ?: 'Uncategorized')));
+                @endphp
+                @if($skuCategories->isNotEmpty())
+                    <div class="mb-5 rounded-2xl border border-pink-400/20 bg-pink-500/5 p-4">
+                        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                                <p class="text-xs uppercase tracking-widest text-pink-200">Category Share of Shelf</p>
+                                <p class="mt-1 text-[11px] text-brand-white/45">Capture Unilever facings and total category facings once for each category.</p>
+                            </div>
+                        </div>
+                        <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                            @foreach($skuCategories as $categoryName => $categorySkus)
+                                @php
+                                    $categoryKey = \Illuminate\Support\Str::slug($categoryName, '_') ?: 'uncategorized';
+                                @endphp
+                                <div class="rounded-xl border border-brand-white/10 bg-brand-black/35 p-3">
+                                    <input type="hidden" name="category_sos[{{ $categoryKey }}][category]" value="{{ $categoryName }}">
+                                    <div class="mb-3 flex items-center justify-between gap-3">
+                                        <span class="text-sm font-bold text-brand-white">{{ $categoryName }}</span>
+                                        <span class="rounded-full border border-brand-white/10 px-2 py-0.5 text-[10px] text-brand-white/45">{{ $categorySkus->count() }} SKU{{ $categorySkus->count() === 1 ? '' : 's' }}</span>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <label class="block">
+                                            <span class="mb-1 block text-[10px] uppercase tracking-wider text-brand-ash">Unilever Facings</span>
+                                            <input type="number" name="category_sos[{{ $categoryKey }}][category_unilever_facings]" min="0" placeholder="0" class="w-full rounded bg-brand-black/60 border border-brand-white/10 px-3 py-2 text-brand-white focus:border-pink-400 focus:ring-0">
+                                            @error("category_sos.{$categoryKey}.category_unilever_facings")
+                                                <span class="mt-1 block text-[10px] text-red-300">{{ $message }}</span>
+                                            @enderror
+                                        </label>
+                                        <label class="block">
+                                            <span class="mb-1 block text-[10px] uppercase tracking-wider text-brand-ash">Total Facings</span>
+                                            <input type="number" name="category_sos[{{ $categoryKey }}][category_total_facings]" min="0" placeholder="0" class="w-full rounded bg-brand-black/60 border border-brand-white/10 px-3 py-2 text-brand-white focus:border-pink-400 focus:ring-0">
+                                            @error("category_sos.{$categoryKey}.category_total_facings")
+                                                <span class="mt-1 block text-[10px] text-red-300">{{ $message }}</span>
+                                            @enderror
+                                        </label>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left text-xs min-w-[1040px] border-collapse">
+                    <table class="w-full text-left text-xs min-w-[840px] border-collapse">
                         <thead>
                             <tr class="border-b border-brand-white/10 text-brand-ash uppercase tracking-wider">
                                 <th class="pb-3 w-[220px]">SKU</th>
@@ -294,9 +338,6 @@
                                 <th class="pb-3 w-[90px]">NPD Present</th>
                                 <th class="pb-3 w-[90px]">Facing Count</th>
                                 <th class="pb-3 w-[90px]">Facing Target</th>
-                                <th class="pb-3 w-[100px]">Shelf Share (%)</th>
-                                <th class="pb-3 w-[110px]">Unilever Facings</th>
-                                <th class="pb-3 w-[110px]">Category Facings</th>
                                 <th class="pb-3 w-[100px]">Shelf Price</th>
                                 <th class="pb-3 w-[150px]">SKU Photo</th>
                                 <th class="pb-3 w-[90px]">Planogram</th>
@@ -307,6 +348,7 @@
                                 <tr>
                                     <td class="py-3 pr-2">
                                         <span class="font-semibold text-brand-white block">{{ $sku->name }}</span>
+                                        <input type="hidden" name="skus[{{ $sku->id }}][share_of_shelf]" data-sku-id="{{ $sku->id }}" data-field="share_of_shelf" value="0">
                                     </td>
                                     <td class="py-3 pr-2">
                                         <input type="number" name="skus[{{ $sku->id }}][osa_quantity]" data-sku-id="{{ $sku->id }}" data-field="osa_quantity" value="0" min="0" required class="w-full rounded bg-brand-black/40 border border-brand-white/10 px-2 py-1 focus:border-amber-500 focus:ring-0 text-brand-white">
@@ -322,15 +364,6 @@
                                     </td>
                                     <td class="py-3 pr-2">
                                         <span class="block rounded bg-brand-white/5 border border-brand-white/10 px-2 py-1 text-brand-white/70">{{ $sku->facing_target ?: 1 }}</span>
-                                    </td>
-                                    <td class="py-3 pr-2">
-                                        <input type="number" name="skus[{{ $sku->id }}][share_of_shelf]" data-sku-id="{{ $sku->id }}" data-field="share_of_shelf" value="0" min="0" max="100" required class="w-full rounded bg-brand-black/40 border border-brand-white/10 px-2 py-1 focus:border-amber-500 focus:ring-0 text-brand-white">
-                                    </td>
-                                    <td class="py-3 pr-2">
-                                        <input type="number" name="skus[{{ $sku->id }}][category_unilever_facings]" data-sku-id="{{ $sku->id }}" data-field="category_unilever_facings" min="0" placeholder="--" class="w-full rounded bg-brand-black/40 border border-brand-white/10 px-2 py-1 focus:border-amber-500 focus:ring-0 text-brand-white">
-                                    </td>
-                                    <td class="py-3 pr-2">
-                                        <input type="number" name="skus[{{ $sku->id }}][category_total_facings]" data-sku-id="{{ $sku->id }}" data-field="category_total_facings" min="0" placeholder="--" class="w-full rounded bg-brand-black/40 border border-brand-white/10 px-2 py-1 focus:border-amber-500 focus:ring-0 text-brand-white">
                                     </td>
                                     <td class="py-3 pr-2">
                                         <input type="number" name="skus[{{ $sku->id }}][shelf_price]" data-sku-id="{{ $sku->id }}" data-field="shelf_price" min="0" step="0.01" placeholder="GHS" class="w-full rounded bg-brand-black/40 border border-brand-white/10 px-2 py-1 focus:border-amber-500 focus:ring-0 text-brand-white">

@@ -1058,6 +1058,10 @@ class MerchandiserController extends Controller
             'ai_shelf_photo' => ['nullable', 'required_if:sku_entry_mode,ai', 'image', 'mimes:jpg,jpeg,png,webp,avif', 'max:8192'],
             'ai_predictions_json' => ['nullable', 'json'],
             'ai_detection_notes' => ['nullable', 'string', 'max:1000'],
+            'category_sos' => ['nullable', 'array'],
+            'category_sos.*.category' => ['required_with:category_sos', 'string', 'max:255'],
+            'category_sos.*.category_unilever_facings' => ['nullable', 'integer', 'min:0'],
+            'category_sos.*.category_total_facings' => ['nullable', 'integer', 'min:0'],
             'skus' => ['required', 'array'],
             'skus.*.osa_quantity' => ['required', 'integer', 'min:0'],
             'skus.*.npd_present' => ['required', 'boolean'],
@@ -1071,6 +1075,20 @@ class MerchandiserController extends Controller
             'order_items' => ['nullable', 'array'],
             'order_items.*' => ['nullable', 'integer', 'min:1'],
         ]);
+
+        foreach ($request->input('category_sos', []) as $key => $metrics) {
+            if (! filled($metrics['category_unilever_facings'] ?? null) || ! filled($metrics['category_total_facings'] ?? null)) {
+                continue;
+            }
+
+            if ((int) $metrics['category_unilever_facings'] > (int) $metrics['category_total_facings']) {
+                return back()
+                    ->withInput()
+                    ->withErrors([
+                        "category_sos.{$key}.category_unilever_facings" => 'Unilever facings cannot exceed total category facings.',
+                    ]);
+            }
+        }
 
         foreach ($request->input('skus', []) as $skuId => $metrics) {
             if (! filled($metrics['category_unilever_facings'] ?? null) || ! filled($metrics['category_total_facings'] ?? null)) {
@@ -1149,19 +1167,57 @@ class MerchandiserController extends Controller
         ]);
 
         $skuModels = Sku::whereIn('id', array_keys($request->input('skus')))->get()->keyBy('id');
+        $normalizeCategory = fn ($category) => Str::of((string) $category)->squish()->lower()->toString() ?: 'uncategorized';
+        $categorySos = collect($request->input('category_sos', []))
+            ->mapWithKeys(function (array $metrics, string|int $key) use ($normalizeCategory) {
+                $category = Str::of((string) ($metrics['category'] ?? $key))->squish()->toString();
+
+                if ($category === '') {
+                    return [];
+                }
+
+                return [
+                    $normalizeCategory($category) => [
+                        'category' => $category,
+                        'category_unilever_facings' => filled($metrics['category_unilever_facings'] ?? null)
+                            ? (int) $metrics['category_unilever_facings']
+                            : null,
+                        'category_total_facings' => filled($metrics['category_total_facings'] ?? null)
+                            ? (int) $metrics['category_total_facings']
+                            : null,
+                    ],
+                ];
+            });
+        $usesCategoryLevelSos = $categorySos->isNotEmpty();
+        $storedCategorySos = [];
 
         foreach ($request->input('skus') as $skuId => $metrics) {
             $sku = $skuModels->get((int) $skuId);
             $aiPrediction = $predictionsBySku->get((int) $skuId, []);
-            $categoryUnileverFacings = filled($metrics['category_unilever_facings'] ?? null)
-                ? (int) $metrics['category_unilever_facings']
-                : null;
-            $categoryTotalFacings = filled($metrics['category_total_facings'] ?? null)
-                ? (int) $metrics['category_total_facings']
-                : null;
+            $categoryKey = $normalizeCategory($sku?->category);
+            $categoryMetrics = $categorySos->get($categoryKey);
+            $shouldStoreCategorySos = $categoryMetrics && ! isset($storedCategorySos[$categoryKey]);
+            $categoryUnileverFacings = null;
+            $categoryTotalFacings = null;
+
+            if ($shouldStoreCategorySos) {
+                $categoryUnileverFacings = $categoryMetrics['category_unilever_facings'];
+                $categoryTotalFacings = $categoryMetrics['category_total_facings'];
+                $storedCategorySos[$categoryKey] = true;
+            } elseif (! $usesCategoryLevelSos) {
+                $categoryUnileverFacings = filled($metrics['category_unilever_facings'] ?? null)
+                    ? (int) $metrics['category_unilever_facings']
+                    : null;
+                $categoryTotalFacings = filled($metrics['category_total_facings'] ?? null)
+                    ? (int) $metrics['category_total_facings']
+                    : null;
+            }
+
             $shareOfShelf = min(100.0, max(0.0, (float) $metrics['share_of_shelf']));
 
-            if ($categoryTotalFacings && $categoryTotalFacings > 0 && $categoryUnileverFacings !== null) {
+            if ($categoryMetrics && ($categoryMetrics['category_total_facings'] ?? 0) > 0 && $categoryMetrics['category_unilever_facings'] !== null) {
+                $shareOfShelf = min(100.0, max(0.0, round(($categoryMetrics['category_unilever_facings'] / $categoryMetrics['category_total_facings']) * 100, 2)));
+            } elseif ($categoryTotalFacings && $categoryTotalFacings > 0 && $categoryUnileverFacings !== null) {
                 $shareOfShelf = min(100.0, max(0.0, round(($categoryUnileverFacings / $categoryTotalFacings) * 100, 2)));
             }
 
