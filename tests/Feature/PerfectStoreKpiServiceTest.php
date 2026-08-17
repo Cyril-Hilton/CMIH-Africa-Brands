@@ -161,4 +161,55 @@ class PerfectStoreKpiServiceTest extends TestCase
         $this->assertSame(60.0, $summary['overview']['sos']);
         $this->assertSame(65.0, $summary['targets']['sos']);
     }
+
+    public function test_facing_kpi_score_is_capped_when_actual_facings_exceed_target(): void
+    {
+        $date = Carbon::parse('2026-08-12 10:00:00');
+        $merchandiser = User::factory()->create([
+            'access_role' => User::MERCHANDISER_ROLE,
+            'status' => 'active',
+        ]);
+        $region = Region::create(['name' => 'Central', 'timezone' => 'Africa/Accra']);
+        $kd = KeyDistributor::create(['name' => 'Cape Coast KD', 'region_id' => $region->id]);
+        $outlet = Outlet::create(['name' => 'Outlet D', 'code' => 'OUT-D', 'kd_id' => $kd->id]);
+
+        $visit = MerchandiserVisit::create([
+            'user_id' => $merchandiser->id,
+            'outlet_id' => $outlet->id,
+        ]);
+        $visit->forceFill(['created_at' => $date, 'updated_at' => $date])->save();
+
+        MerchandiserOutletAssignment::create([
+            'user_id' => $merchandiser->id,
+            'outlet_id' => $outlet->id,
+            'visit_id' => $visit->id,
+            'assigned_date' => $date->toDateString(),
+            'status' => 'completed',
+            'completed_at' => $date,
+        ]);
+
+        $sku = Sku::create([
+            'name' => 'Over Facing SKU',
+            'category' => 'Skin Cleansing',
+            'track_osa' => false,
+            'facing_target' => 2,
+        ]);
+
+        MerchandiserVisitSku::create([
+            'visit_id' => $visit->id,
+            'sku_id' => $sku->id,
+            'osa_quantity' => 0,
+            'npd_present' => false,
+            'facing' => 13,
+            'facing_target_snapshot' => 2,
+            'share_of_shelf' => 50,
+            'planogram_compliant' => true,
+        ]);
+
+        $summary = app(PerfectStoreKpiService::class)->summary($date->copy()->startOfDay(), $date->copy()->endOfDay());
+
+        $this->assertSame(100.0, $summary['overview']['facing']);
+        $this->assertSame(100.0, $summary['merchandisers']->first()['facing']);
+        $this->assertSame(100.0, $summary['kds']->first()['facing']);
+    }
 }

@@ -267,7 +267,7 @@ class PerfectStoreKpiService
             return max(1, (int) $target);
         });
 
-        return $targetFacings > 0 ? $this->percent($actualFacings, $targetFacings) : null;
+        return $targetFacings > 0 ? $this->percent($actualFacings, $targetFacings, capAtHundred: true) : null;
     }
 
     private function sosRate(Collection $rows): ?float
@@ -490,8 +490,10 @@ class PerfectStoreKpiService
         return $availableWeight > 0 ? round($weighted / $availableWeight, 1) : 0.0;
     }
 
-    private function percent(int|float $part, int|float $total): float
+    private function percent(int|float $part, int|float $total, bool $capAtHundred = false): float
     {
-        return $total > 0 ? round(((float) $part / (float) $total) * 100, 1) : 0.0;
+        $value = $total > 0 ? round(((float) $part / (float) $total) * 100, 1) : 0.0;
+
+        return $capAtHundred ? min(100.0, $value) : $value;
     }
 }

@@ -22,6 +22,7 @@ use App\Models\MerchandiserPjpClockin;
 use App\Models\MerchandiserPlanogram;
 use App\Models\MerchandiserSupervisorAssignment;
 use App\Models\MerchandiserVisit;
+use App\Models\MerchandiserVisitSku;
 use App\Models\Sku;
 use App\Services\MerchandiserRoutePlanner;
 use App\Services\PerfectStoreFormTemplate;
@@ -2843,6 +2844,64 @@ class MerchandiserPortalTest extends TestCase
         $this->assertSame($admin->id, $target->created_by);
         $this->assertSame($admin->id, $target->updated_by);
     }
+
+    #[Test]
+    public function category_kpi_tab_caps_facing_percentage_scores()
+    {
+        $admin = User::findOrFail(1);
+        $region = Region::create(['name' => 'FACING REGION', 'timezone' => 'Africa/Accra']);
+        $kd = KeyDistributor::create([
+            'name' => 'Facing KD',
+            'region_id' => $region->id,
+        ]);
+        $outlet = Outlet::create([
+            'name' => 'Facing Outlet',
+            'code' => 'FACING-OUTLET-001',
+            'kd_id' => $kd->id,
+        ]);
+        $merchandiser = User::create([
+            'name' => 'Facing Agent',
+            'email' => 'facing-agent@cmih.africa',
+            'contact_email' => 'facing-agent@cmih.africa',
+            'phone' => '12345678',
+            'date_of_birth' => '1995-05-05',
+            'password' => Hash::make('Pass123'),
+            'access_role' => User::MERCHANDISER_ROLE,
+            'status' => 'active',
+            'kd_id' => $kd->id,
+            'region_id' => $region->id,
+        ]);
+        $sku = Sku::create([
+            'name' => 'Runaway Facing SKU',
+            'category' => 'Facing Audit',
+            'track_osa' => false,
+            'facing_target' => 2,
+        ]);
+        $visit = MerchandiserVisit::create([
+            'user_id' => $merchandiser->id,
+            'outlet_id' => $outlet->id,
+        ]);
+        MerchandiserVisitSku::create([
+            'visit_id' => $visit->id,
+            'sku_id' => $sku->id,
+            'osa_quantity' => 0,
+            'npd_present' => false,
+            'facing' => 13,
+            'facing_target_snapshot' => 2,
+            'share_of_shelf' => 50,
+            'planogram_compliant' => true,
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('merchandisers.admin.dashboard', [
+            'tab' => 'category-kpi',
+        ]));
+
+        $response->assertOk();
+        $response->assertSeeText('Facing Audit');
+        $response->assertSeeText('100%');
+        $response->assertDontSeeText('650%');
+    }
+
     #[Test]
     public function brands_admin_can_add_new_brand_and_category_from_sku_catalog()
     {

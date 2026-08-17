@@ -724,7 +724,7 @@ class MerchandiserAdminHubController extends Controller
                     $row->osa_pct = $row->osa_total > 0 ? round(($row->osa_pass / $row->osa_total) * 100, 1) : null;
                     $row->npd_pct = $row->npd_total > 0 ? round(($row->npd_pass / $row->npd_total) * 100, 1) : null;
                     $row->mhs_pct = $row->mhs_total > 0 ? round(($row->mhs_pass / $row->mhs_total) * 100, 1) : null;
-                    $row->facing_pct = $row->target_facings > 0 ? round(($row->total_facings / $row->target_facings) * 100, 1) : null;
+                    $row->facing_pct = $row->target_facings > 0 ? min(100.0, round(($row->total_facings / $row->target_facings) * 100, 1)) : null;
                     $row->sos_pct = $row->sos_rate !== null ? round((float) $row->sos_rate, 1) : null;
                     $row->sos_target = $row->sos_target !== null ? round((float) $row->sos_target, 1) : null;
                     return $row;
