@@ -203,17 +203,23 @@ class MerchandiserReportController extends Controller
         if ($report->section('show_category_kpi')) {
             $data['category_kpis'] = \Illuminate\Support\Facades\DB::table('merchandiser_visit_skus as vs')
                 ->join('skus as s', 's.id', '=', 'vs.sku_id')
+                ->leftJoin('perfect_store_category_targets as pct', 'pct.category', '=', 's.category')
                 ->whereNotNull('s.category')
                 ->select(
                     's.category',
                     \Illuminate\Support\Facades\DB::raw('count(distinct vs.visit_id) as visit_count'),
-                    \Illuminate\Support\Facades\DB::raw('sum(case when s.track_osa = 1 and vs.facing_count >= s.osa_drop_size then 1 else 0 end) as osa_pass'),
+                    \Illuminate\Support\Facades\DB::raw('sum(case when s.track_osa = 1 and vs.osa_quantity >= s.osa_drop_size then 1 else 0 end) as osa_pass'),
                     \Illuminate\Support\Facades\DB::raw('sum(case when s.track_osa = 1 then 1 else 0 end) as osa_total'),
-                    \Illuminate\Support\Facades\DB::raw('sum(case when s.track_npd = 1 and vs.facing_count >= s.npd_drop_size then 1 else 0 end) as npd_pass'),
+                    \Illuminate\Support\Facades\DB::raw('sum(case when s.track_npd = 1 and vs.npd_present = 1 and vs.osa_quantity >= s.npd_drop_size then 1 else 0 end) as npd_pass'),
                     \Illuminate\Support\Facades\DB::raw('sum(case when s.track_npd = 1 then 1 else 0 end) as npd_total'),
-                    \Illuminate\Support\Facades\DB::raw('sum(case when s.track_mhs = 1 and vs.facing_count >= s.mhs_drop_size then 1 else 0 end) as mhs_pass'),
+                    \Illuminate\Support\Facades\DB::raw('sum(case when s.track_mhs = 1 and vs.osa_quantity >= s.mhs_drop_size then 1 else 0 end) as mhs_pass'),
                     \Illuminate\Support\Facades\DB::raw('sum(case when s.track_mhs = 1 then 1 else 0 end) as mhs_total'),
-                    \Illuminate\Support\Facades\DB::raw('sum(coalesce(vs.facing_count, 0)) as total_facings')
+                    \Illuminate\Support\Facades\DB::raw('sum(coalesce(vs.facing, 0)) as total_facings'),
+                    \Illuminate\Support\Facades\DB::raw('sum(coalesce(vs.facing_target_snapshot, s.facing_target, 1)) as target_facings'),
+                    \Illuminate\Support\Facades\DB::raw('sum(coalesce(vs.category_unilever_facings, 0)) as unilever_facings'),
+                    \Illuminate\Support\Facades\DB::raw('sum(coalesce(vs.category_total_facings, 0)) as category_facings'),
+                    \Illuminate\Support\Facades\DB::raw('avg(case when coalesce(vs.category_total_facings, 0) > 0 then (coalesce(vs.category_unilever_facings, 0) * 100.0 / vs.category_total_facings) else null end) as sos_rate'),
+                    \Illuminate\Support\Facades\DB::raw('coalesce(max(pct.sos_target), avg(s.sos_target)) as sos_target')
                 )
                 ->groupBy('s.category')
                 ->orderBy('s.category')
@@ -222,6 +228,9 @@ class MerchandiserReportController extends Controller
                     $row->osa_pct = $row->osa_total > 0 ? round(($row->osa_pass / $row->osa_total) * 100, 1) : null;
                     $row->npd_pct = $row->npd_total > 0 ? round(($row->npd_pass / $row->npd_total) * 100, 1) : null;
                     $row->mhs_pct = $row->mhs_total > 0 ? round(($row->mhs_pass / $row->mhs_total) * 100, 1) : null;
+                    $row->facing_pct = $row->target_facings > 0 ? round(($row->total_facings / $row->target_facings) * 100, 1) : null;
+                    $row->sos_pct = $row->sos_rate !== null ? round((float) $row->sos_rate, 1) : null;
+                    $row->sos_target = $row->sos_target !== null ? round((float) $row->sos_target, 1) : null;
                     return $row;
                 });
         }

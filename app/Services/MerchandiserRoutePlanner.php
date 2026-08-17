@@ -52,8 +52,6 @@ class MerchandiserRoutePlanner
             [$start, $end] = [$end, $start];
         }
 
-        $workingDays = $this->workingDays($user);
-
         $outlets = $this->routeableOutletsFor($user);
 
         if ($outlets->isEmpty()) {
@@ -72,36 +70,27 @@ class MerchandiserRoutePlanner
 
         $publicHolidays = $this->publicHolidayDates();
         $activeDays = $periodDays
-            ->filter(fn (Carbon $date) => in_array($date->isoWeekday(), $workingDays, true)
-                && ! in_array($date->toDateString(), $publicHolidays, true))
+            ->reject(fn (Carbon $date) => in_array($date->toDateString(), $publicHolidays, true))
             ->values();
 
         if ($activeDays->isEmpty()) {
             return collect();
         }
 
-        $frequency = $this->frequency($user);
-
-        foreach ($activeDays as $dayIndex => $date) {
-            $target = min(
-                $this->dailyTarget($user, $outlets->count(), $activeDays->count(), $frequency, $dayIndex),
-                $outlets->count()
-            );
+        foreach ($activeDays as $date) {
             $existingCount = MerchandiserOutletAssignment::where('user_id', $user->id)
                 ->whereDate('assigned_date', $date->toDateString())
                 ->count();
 
-            if ($existingCount >= $target) {
+            $eligibleOutlets = $this->eligibleOutletsForDate($user, $outlets, $date);
+
+            if ($eligibleOutlets->isEmpty()) {
                 continue;
             }
 
-            $eligibleOutlets = $this->eligibleOutletsForDate($user, $outlets, $date, $dayIndex, $target, $frequency);
-            $needed = min($target - $existingCount, $eligibleOutlets->count());
             $window = $this->assignmentWindowForDate($date, $start, $end);
 
-            for ($slot = 0; $slot < $needed; $slot++) {
-                $outlet = $eligibleOutlets[$slot];
-
+            foreach ($eligibleOutlets->values() as $slot => $outlet) {
                 $assignment = MerchandiserOutletAssignment::firstOrCreate(
                     [
                         'user_id' => $user->id,
@@ -251,7 +240,7 @@ class MerchandiserRoutePlanner
             ->all();
     }
 
-    private function eligibleOutletsForDate(User $user, EloquentCollection $outlets, Carbon $date, int $dayIndex, int $target, ?string $frequency = null): EloquentCollection
+    private function eligibleOutletsForDate(User $user, EloquentCollection $outlets, Carbon $date): EloquentCollection
     {
         $existingOutletIds = MerchandiserOutletAssignment::where('user_id', $user->id)
             ->whereDate('assigned_date', $date->toDateString())
@@ -259,55 +248,19 @@ class MerchandiserRoutePlanner
             ->map(fn ($id) => (int) $id)
             ->all();
 
-        $dayOfWeek = (int) $date->isoWeekday();
-
-        // Prioritize outlets that match this specific day of the week (via pivot visit_days or registration day)
-        $daySpecificOutlets = $outlets->filter(fn (Outlet $outlet) => $this->outletMatchesDay($outlet, $dayOfWeek));
-
-        $candidatePool = $daySpecificOutlets->isNotEmpty() ? $daySpecificOutlets : $outlets;
-
-        $frequency = $frequency ?: $this->frequency($user);
-
-        if ($frequency === 'daily') {
-            $offset = ($dayIndex * $target) % max($candidatePool->count(), 1);
-
-            return $candidatePool
-                ->sortBy(fn (Outlet $outlet, int $index) => ($index - $offset + $candidatePool->count()) % $candidatePool->count())
-                ->reject(fn (Outlet $outlet) => in_array((int) $outlet->id, $existingOutletIds, true))
-                ->values();
-        }
-
-        [$cycleStart, $cycleEnd] = $this->frequencyWindow($date, $frequency);
-        $cycleOutletIds = MerchandiserOutletAssignment::where('user_id', $user->id)
-            ->whereBetween('assigned_date', [$cycleStart->toDateString(), $cycleEnd->toDateString()])
-            ->whereDate('assigned_date', '<>', $date->toDateString())
-            ->pluck('outlet_id')
-            ->map(fn ($id) => (int) $id)
-            ->all();
-
-        return $candidatePool
-            ->reject(fn (Outlet $outlet) => in_array((int) $outlet->id, $existingOutletIds, true)
-                || in_array((int) $outlet->id, $cycleOutletIds, true))
+        return $outlets
+            ->filter(fn (Outlet $outlet) => $this->outletWasCreatedOnDate($outlet, $date))
+            ->reject(fn (Outlet $outlet) => in_array((int) $outlet->id, $existingOutletIds, true))
             ->values();
     }
 
-    private function outletMatchesDay(Outlet $outlet, int $dayOfWeek): bool
+    private function outletWasCreatedOnDate(Outlet $outlet, Carbon $date): bool
     {
-        if (! empty($outlet->pivot?->visit_days)) {
-            $visitDays = is_string($outlet->pivot->visit_days)
-                ? json_decode($outlet->pivot->visit_days, true)
-                : $outlet->pivot->visit_days;
-
-            if (is_array($visitDays) && ! empty($visitDays)) {
-                return in_array($dayOfWeek, array_map('intval', $visitDays), true);
-            }
+        if (! $outlet->created_at) {
+            return false;
         }
 
-        if ($outlet->created_at) {
-            return (int) $outlet->created_at->isoWeekday() === $dayOfWeek;
-        }
-
-        return true;
+        return $outlet->created_at->toDateString() === $date->toDateString();
     }
 
     private function assignmentWindowForDate(Carbon $date, Carbon $periodStart, Carbon $periodEnd): array

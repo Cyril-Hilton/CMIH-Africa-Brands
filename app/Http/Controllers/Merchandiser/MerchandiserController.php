@@ -236,6 +236,7 @@ class MerchandiserController extends Controller
                 'outletAttendanceByOutlet' => collect(),
                 'scoredOutletIdsToday' => collect(),
                 'clockWindow' => MerchandiserClockWindows::visitWindow('Africa/Accra'),
+                'dailyPerformanceChart' => ['labels' => [], 'scheduled' => [], 'clocked' => [], 'scored' => [], 'coverage' => []],
                 'error' => 'Your account is active but has not been paired with a Key Distributor (KD) or Region yet. Please ask an admin to pair your profile.'
             ]);
         }
@@ -358,6 +359,39 @@ class MerchandiserController extends Controller
                 ->distinct('outlet_id')
                 ->count('outlet_id'),
         ];
+
+        $dailyPerformanceChart = [
+            'labels' => [],
+            'scheduled' => [],
+            'clocked' => [],
+            'scored' => [],
+            'coverage' => [],
+        ];
+
+        for ($i = 6; $i >= 0; $i--) {
+            $day = Carbon::today($timezone)->subDays($i);
+            $dayStart = $day->copy()->startOfDay();
+            $dayEnd = $day->copy()->endOfDay();
+            $scheduledForDay = MerchandiserOutletAssignment::where('user_id', $user->id)
+                ->whereDate('assigned_date', $day->toDateString())
+                ->count();
+            $clockedForDay = MerchandiserAttendance::where('user_id', $user->id)
+                ->whereBetween('clock_in_time', [$dayStart, $dayEnd])
+                ->whereNotNull('outlet_id')
+                ->distinct('outlet_id')
+                ->count('outlet_id');
+            $scoredForDay = MerchandiserVisit::where('user_id', $user->id)
+                ->whereBetween('created_at', [$dayStart, $dayEnd])
+                ->distinct('outlet_id')
+                ->count('outlet_id');
+
+            $dailyPerformanceChart['labels'][] = $day->format('D d');
+            $dailyPerformanceChart['scheduled'][] = $scheduledForDay;
+            $dailyPerformanceChart['clocked'][] = $clockedForDay;
+            $dailyPerformanceChart['scored'][] = $scoredForDay;
+            $dailyPerformanceChart['coverage'][] = $scheduledForDay > 0 ? round(($scoredForDay / $scheduledForDay) * 100, 1) : 0;
+        }
+
         $googleForms = $this->googleFormsForUser($user, null, $todayStart->copy());
         $googleFormCompletionIds = MerchandiserGoogleFormSubmission::where('user_id', $user->id)
             ->pluck('form_assignment_id')
@@ -393,7 +427,7 @@ class MerchandiserController extends Controller
             'announcements', 'notifications', 'clockWindow', 'outletAttendanceByOutlet', 'scoredOutletIdsToday', 'merchMetrics',
             'pendingOutletsToday', 'pcmClockinToday', 'todaysAssignments',
             'googleForms', 'googleFormCompletionIds', 'nativeFormCompletionIds',
-            'selectedDay', 'dayLabels', 'dayOutletCounts', 'currentIsoDay'
+            'selectedDay', 'dayLabels', 'dayOutletCounts', 'currentIsoDay', 'dailyPerformanceChart'
         ));
     }
 
@@ -966,10 +1000,28 @@ class MerchandiserController extends Controller
             'skus.*.npd_present' => ['required', 'boolean'],
             'skus.*.facing' => ['required', 'integer', 'min:0'],
             'skus.*.share_of_shelf' => ['required', 'numeric', 'min:0', 'max:100'],
+            'skus.*.category_unilever_facings' => ['nullable', 'integer', 'min:0'],
+            'skus.*.category_total_facings' => ['nullable', 'integer', 'min:0'],
+            'skus.*.shelf_price' => ['nullable', 'numeric', 'min:0'],
+            'skus.*.photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,avif', 'max:8192'],
             'skus.*.planogram_compliant' => ['required', 'boolean'],
             'order_items' => ['nullable', 'array'],
             'order_items.*' => ['nullable', 'integer', 'min:1'],
         ]);
+
+        foreach ($request->input('skus', []) as $skuId => $metrics) {
+            if (! filled($metrics['category_unilever_facings'] ?? null) || ! filled($metrics['category_total_facings'] ?? null)) {
+                continue;
+            }
+
+            if ((int) $metrics['category_unilever_facings'] > (int) $metrics['category_total_facings']) {
+                return back()
+                    ->withInput()
+                    ->withErrors([
+                        "skus.{$skuId}.category_unilever_facings" => 'Unilever facings cannot exceed total category facings.',
+                    ]);
+            }
+        }
 
         $skuEntryMode = $request->input('sku_entry_mode', 'manual');
         $aiPredictions = $this->decodedAiPredictions($request->input('ai_predictions_json'));
@@ -1033,15 +1085,39 @@ class MerchandiserController extends Controller
             'ai_detection_completed_at' => $aiDetectionCompleted ? now() : null,
         ]);
 
+        $skuModels = Sku::whereIn('id', array_keys($request->input('skus')))->get()->keyBy('id');
+
         foreach ($request->input('skus') as $skuId => $metrics) {
+            $sku = $skuModels->get((int) $skuId);
             $aiPrediction = $predictionsBySku->get((int) $skuId, []);
+            $categoryUnileverFacings = filled($metrics['category_unilever_facings'] ?? null)
+                ? (int) $metrics['category_unilever_facings']
+                : null;
+            $categoryTotalFacings = filled($metrics['category_total_facings'] ?? null)
+                ? (int) $metrics['category_total_facings']
+                : null;
+            $shareOfShelf = (float) $metrics['share_of_shelf'];
+
+            if ($categoryTotalFacings && $categoryTotalFacings > 0 && $categoryUnileverFacings !== null) {
+                $shareOfShelf = round(($categoryUnileverFacings / $categoryTotalFacings) * 100, 2);
+            }
+
+            $skuPhotoPath = $request->hasFile("skus.{$skuId}.photo")
+                ? $request->file("skus.{$skuId}.photo")->store('merchandiser-sku-photos', 'public')
+                : null;
+
             MerchandiserVisitSku::create([
                 'visit_id' => $visit->id,
                 'sku_id' => $skuId,
                 'osa_quantity' => $metrics['osa_quantity'],
                 'npd_present' => $metrics['npd_present'],
                 'facing' => $metrics['facing'],
-                'share_of_shelf' => $metrics['share_of_shelf'],
+                'facing_target_snapshot' => max(1, (int) ($sku?->facing_target ?? 1)),
+                'share_of_shelf' => $shareOfShelf,
+                'category_unilever_facings' => $categoryUnileverFacings,
+                'category_total_facings' => $categoryTotalFacings,
+                'shelf_price' => $metrics['shelf_price'] ?? null,
+                'photo_path' => $skuPhotoPath,
                 'planogram_compliant' => $metrics['planogram_compliant'],
                 'ai_predicted_quantity' => $aiPrediction['quantity'] ?? null,
                 'ai_predicted_facing' => $aiPrediction['facing'] ?? null,

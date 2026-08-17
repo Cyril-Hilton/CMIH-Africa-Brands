@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\MerchandiserOutletAssignment;
 use App\Models\MerchandiserVisit;
 use App\Models\MerchandiserVisitSku;
+use App\Models\PerfectStoreCategoryTarget;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -26,7 +27,7 @@ class PerfectStoreKpiService
         'npd' => 100,
         'mhs' => 100,
         'planogram' => 100,
-        'facing' => 100,
+        'facing' => 95,
         'sos' => 100,
     ];
 
@@ -71,16 +72,21 @@ class PerfectStoreKpiService
             fn ($score) => (int) ($score['brand_id'] ?? 0),
             fn ($score, $key) => $score['brand_name'] ?: 'Brand #'.$key
         );
+        $targets = self::TARGETS;
+        $configuredSosTarget = $this->configuredSosTarget($visits);
+        if ($configuredSosTarget !== null) {
+            $targets['sos'] = $configuredSosTarget;
+        }
 
         return [
-            'targets' => self::TARGETS,
+            'targets' => $targets,
             'weights' => self::WEIGHTS,
             'overview' => $overview,
             'merchandisers' => $merchandiserRollups,
             'kds' => $kdRollups,
             'regions' => $regionRollups,
             'brands' => $brandRollups,
-            'alerts' => $this->alerts($overview, $merchandiserRollups, $kdRollups),
+            'alerts' => $this->alerts($overview, $merchandiserRollups, $kdRollups, $targets),
             'coaching' => $this->coaching($merchandiserRollups),
         ];
     }
@@ -172,17 +178,50 @@ class PerfectStoreKpiService
             'mhs_drop_size'
         );
 
-        $planogram = $rows->isNotEmpty()
-            ? $this->percent($rows->where('planogram_compliant', true)->count(), $rows->count())
+        $planogramRows = $rows->filter(fn (MerchandiserVisitSku $row) => (bool) ($row->sku?->track_planogram ?? true));
+        $planogram = $planogramRows->isNotEmpty()
+            ? $this->percent($planogramRows->where('planogram_compliant', true)->count(), $planogramRows->count())
             : null;
-        $facing = $rows->isNotEmpty()
-            ? $this->percent($rows->filter(fn (MerchandiserVisitSku $row) => (int) $row->facing > 0)->count(), $rows->count())
-            : null;
-        $sos = $rows->isNotEmpty()
-            ? round((float) $rows->avg(fn (MerchandiserVisitSku $row) => (float) $row->share_of_shelf), 1)
-            : null;
+        $facing = $this->facingRate($rows);
+        $sos = $this->sosRate($rows);
 
         return compact('osa', 'npd', 'mhs', 'planogram', 'facing', 'sos');
+    }
+
+    private function configuredSosTarget(Collection $visits): ?float
+    {
+        $categories = $visits
+            ->flatMap(fn (MerchandiserVisit $visit) => $visit->visitSkus)
+            ->map(fn (MerchandiserVisitSku $row) => $row->sku?->category)
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($categories->isNotEmpty()) {
+            $categoryTargets = PerfectStoreCategoryTarget::whereIn('category', $categories)
+                ->whereNotNull('sos_target')
+                ->pluck('sos_target')
+                ->map(fn ($target) => (float) $target);
+
+            if ($categoryTargets->isNotEmpty()) {
+                return round((float) $categoryTargets->avg(), 1);
+            }
+        }
+
+        $targets = $visits
+            ->flatMap(fn (MerchandiserVisit $visit) => $visit->visitSkus)
+            ->filter(fn (MerchandiserVisitSku $row) => $row->sku && $row->sku->sos_target !== null)
+            ->groupBy(fn (MerchandiserVisitSku $row) => $row->sku?->category ?: 'uncategorized')
+            ->map(function (Collection $categoryRows) {
+                $categoryTargets = $categoryRows
+                    ->map(fn (MerchandiserVisitSku $row) => $row->sku?->sos_target)
+                    ->filter(fn ($target) => $target !== null);
+
+                return $categoryTargets->isNotEmpty() ? (float) $categoryTargets->avg() : null;
+            })
+            ->filter(fn ($target) => $target !== null);
+
+        return $targets->isNotEmpty() ? round((float) $targets->avg(), 1) : null;
     }
 
     private function dropSizeRate(Collection $rows, string $dropSizeColumn): ?float
@@ -213,6 +252,55 @@ class PerfectStoreKpiService
         });
 
         return $allPassed ? 100.0 : 0.0;
+    }
+
+    private function facingRate(Collection $rows): ?float
+    {
+        if ($rows->isEmpty()) {
+            return null;
+        }
+
+        $actualFacings = $rows->sum(fn (MerchandiserVisitSku $row) => max(0, (int) $row->facing));
+        $targetFacings = $rows->sum(function (MerchandiserVisitSku $row) {
+            $target = $row->facing_target_snapshot ?? $row->sku?->facing_target ?? 1;
+
+            return max(1, (int) $target);
+        });
+
+        return $targetFacings > 0 ? $this->percent($actualFacings, $targetFacings) : null;
+    }
+
+    private function sosRate(Collection $rows): ?float
+    {
+        if ($rows->isEmpty()) {
+            return null;
+        }
+
+        $categoryFacingRows = $rows->filter(
+            fn (MerchandiserVisitSku $row) => (int) ($row->category_total_facings ?? 0) > 0
+        );
+
+        if ($categoryFacingRows->isNotEmpty()) {
+            $categoryScores = $categoryFacingRows
+                ->groupBy(fn (MerchandiserVisitSku $row) => $row->sku?->category ?: 'uncategorized')
+                ->map(function (Collection $categoryRows) {
+                    $unileverFacings = $categoryRows->max(fn (MerchandiserVisitSku $row) => max(0, (int) ($row->category_unilever_facings ?? 0)));
+                    $totalCategoryFacings = $categoryRows->max(fn (MerchandiserVisitSku $row) => max(0, (int) ($row->category_total_facings ?? 0)));
+
+                    return $totalCategoryFacings > 0
+                        ? $this->percent($unileverFacings, $totalCategoryFacings)
+                        : null;
+                })
+                ->filter(fn ($value) => $value !== null);
+
+            return $categoryScores->isNotEmpty() ? round((float) $categoryScores->avg(), 1) : null;
+        }
+
+        $legacyPercentages = $rows
+            ->pluck('share_of_shelf')
+            ->filter(fn ($value) => $value !== null);
+
+        return $legacyPercentages->isNotEmpty() ? round((float) $legacyPercentages->avg(), 1) : null;
     }
 
     private function rollupsBy(
@@ -289,11 +377,11 @@ class PerfectStoreKpiService
         ];
     }
 
-    private function alerts(array $overview, Collection $merchandisers, Collection $kds): Collection
+    private function alerts(array $overview, Collection $merchandisers, Collection $kds, array $targets): Collection
     {
         $alerts = collect();
 
-        foreach (self::TARGETS as $metric => $target) {
+        foreach ($targets as $metric => $target) {
             $value = $overview[$metric] ?? null;
             if ($value !== null && (float) $value < (float) $target) {
                 $alerts->push([

@@ -25,6 +25,7 @@ use App\Models\MerchandiserVisit;
 use App\Models\Notification;
 use App\Models\Outlet;
 use App\Models\PettyCashClaim;
+use App\Models\PerfectStoreCategoryTarget;
 use App\Models\PosmLedger;
 use App\Models\Region;
 use App\Models\SalaryAdvance;
@@ -130,7 +131,11 @@ class MerchandiserAdminHubController extends Controller
                 ->get();
         }
 
-        $outletRegistrationDay = $this->normalizedOutletRegistrationDay($request->query('outlet_day', 'all'));
+        [$outletCreatedFrom, $outletCreatedTo] = $this->outletCreatedRange($request);
+        $outletCreatedFromInput = $outletCreatedFrom?->toDateString();
+        $outletCreatedToInput = $outletCreatedTo?->toDateString();
+        $outletCreatedRangeLabel = $this->outletCreatedRangeLabel($outletCreatedFrom, $outletCreatedTo);
+        $outletRegistrationDay = 'all';
         $outletDayLabels = $this->outletDayLabels();
         $kds = collect();
         $outletManagementKds = collect();
@@ -142,12 +147,12 @@ class MerchandiserAdminHubController extends Controller
                 ->orderBy('name')
                 ->get();
 
-            $outletManagementKds = $kds->map(function (KeyDistributor $kd) use ($outletRegistrationDay) {
+            $outletManagementKds = $kds->map(function (KeyDistributor $kd) use ($outletCreatedFrom, $outletCreatedTo) {
                 $clone = clone $kd;
                 $clone->setRelation(
                     'outlets',
                     $kd->outlets
-                        ->filter(fn (Outlet $outlet) => $this->outletMatchesRegistrationDay($outlet, $outletRegistrationDay))
+                        ->filter(fn (Outlet $outlet) => $this->outletCreatedWithinRange($outlet, $outletCreatedFrom, $outletCreatedTo))
                         ->sortByDesc('created_at')
                         ->values()
                 );
@@ -282,11 +287,11 @@ class MerchandiserAdminHubController extends Controller
                 ->paginate(20, ['*'], 'outlet_assignment_page')
                 ->appends(array_merge($request->query(), ['tab' => 'routes']));
 
-            $outletAssignmentMerchandisers->getCollection()->each(function (User $merchandiser) use ($outletRegistrationDay) {
+            $outletAssignmentMerchandisers->getCollection()->each(function (User $merchandiser) use ($outletCreatedFrom, $outletCreatedTo) {
                 $merchandiser->setRelation(
                     'assignedMerchandiserOutlets',
                     $merchandiser->assignedMerchandiserOutlets
-                        ->filter(fn (Outlet $outlet) => $this->outletMatchesRegistrationDay($outlet, $outletRegistrationDay))
+                        ->filter(fn (Outlet $outlet) => $this->outletCreatedWithinRange($outlet, $outletCreatedFrom, $outletCreatedTo))
                         ->sortByDesc('created_at')
                         ->values()
                 );
@@ -300,11 +305,12 @@ class MerchandiserAdminHubController extends Controller
                 ->values();
 
             $assignableOutlets = $visibleKdIds->isNotEmpty()
-                ? $this->applyOutletRegistrationDayQuery(
+                ? $this->applyOutletCreatedRangeQuery(
                     Outlet::with(['keyDistributor', 'registeredBy', 'assignedMerchandisers'])
                         ->whereIn('kd_id', $visibleKdIds->all())
                         ->orderByDesc('created_at'),
-                    $outletRegistrationDay
+                    $outletCreatedFrom,
+                    $outletCreatedTo
                 )->get()
                 : collect();
         }
@@ -688,20 +694,28 @@ class MerchandiserAdminHubController extends Controller
 
         // ── ShelfWatch: Category Level KPIs ───────────────────────────────────
         $categoryKpis = collect();
+        $categoryTargets = collect();
         if (in_array($activeTab, ['category-kpi'], true)) {
+            $categoryTargets = PerfectStoreCategoryTarget::orderBy('category')->get()->keyBy('category');
             $categoryKpis = DB::table('merchandiser_visit_skus as vs')
                 ->join('skus as s', 's.id', '=', 'vs.sku_id')
+                ->leftJoin('perfect_store_category_targets as pct', 'pct.category', '=', 's.category')
                 ->whereNotNull('s.category')
                 ->select(
                     's.category',
                     DB::raw('count(distinct vs.visit_id) as visit_count'),
-                    DB::raw('sum(case when s.track_osa = 1 and vs.facing_count >= s.osa_drop_size then 1 else 0 end) as osa_pass'),
+                    DB::raw('sum(case when s.track_osa = 1 and vs.osa_quantity >= s.osa_drop_size then 1 else 0 end) as osa_pass'),
                     DB::raw('sum(case when s.track_osa = 1 then 1 else 0 end) as osa_total'),
-                    DB::raw('sum(case when s.track_npd = 1 and vs.facing_count >= s.npd_drop_size then 1 else 0 end) as npd_pass'),
+                    DB::raw('sum(case when s.track_npd = 1 and vs.npd_present = 1 and vs.osa_quantity >= s.npd_drop_size then 1 else 0 end) as npd_pass'),
                     DB::raw('sum(case when s.track_npd = 1 then 1 else 0 end) as npd_total'),
-                    DB::raw('sum(case when s.track_mhs = 1 and vs.facing_count >= s.mhs_drop_size then 1 else 0 end) as mhs_pass'),
+                    DB::raw('sum(case when s.track_mhs = 1 and vs.osa_quantity >= s.mhs_drop_size then 1 else 0 end) as mhs_pass'),
                     DB::raw('sum(case when s.track_mhs = 1 then 1 else 0 end) as mhs_total'),
-                    DB::raw('sum(coalesce(vs.facing_count, 0)) as total_facings')
+                    DB::raw('sum(coalesce(vs.facing, 0)) as total_facings'),
+                    DB::raw('sum(coalesce(vs.facing_target_snapshot, s.facing_target, 1)) as target_facings'),
+                    DB::raw('sum(coalesce(vs.category_unilever_facings, 0)) as unilever_facings'),
+                    DB::raw('sum(coalesce(vs.category_total_facings, 0)) as category_facings'),
+                    DB::raw('avg(case when coalesce(vs.category_total_facings, 0) > 0 then (coalesce(vs.category_unilever_facings, 0) * 100.0 / vs.category_total_facings) else null end) as sos_rate'),
+                    DB::raw('coalesce(max(pct.sos_target), avg(s.sos_target)) as sos_target')
                 )
                 ->groupBy('s.category')
                 ->orderBy('s.category')
@@ -710,6 +724,9 @@ class MerchandiserAdminHubController extends Controller
                     $row->osa_pct = $row->osa_total > 0 ? round(($row->osa_pass / $row->osa_total) * 100, 1) : null;
                     $row->npd_pct = $row->npd_total > 0 ? round(($row->npd_pass / $row->npd_total) * 100, 1) : null;
                     $row->mhs_pct = $row->mhs_total > 0 ? round(($row->mhs_pass / $row->mhs_total) * 100, 1) : null;
+                    $row->facing_pct = $row->target_facings > 0 ? round(($row->total_facings / $row->target_facings) * 100, 1) : null;
+                    $row->sos_pct = $row->sos_rate !== null ? round((float) $row->sos_rate, 1) : null;
+                    $row->sos_target = $row->sos_target !== null ? round((float) $row->sos_target, 1) : null;
                     return $row;
                 });
         }
@@ -793,6 +810,7 @@ class MerchandiserAdminHubController extends Controller
             'clockAttendanceCount', 'clockPcmCount', 'clockPjpCount',
             'kds', 'regions',
             'outletManagementKds', 'outletRegistrationDay', 'outletDayLabels',
+            'outletCreatedFromInput', 'outletCreatedToInput', 'outletCreatedRangeLabel',
             'assignableOutlets', 'outletAssignmentMerchandisers',
             'merchandiserLocations',
             'allMerchandisers',
@@ -818,7 +836,7 @@ class MerchandiserAdminHubController extends Controller
             'totalImagesCount', 'galleryImages', 'galleryFilters',
             'execScheduled', 'execActual', 'execCompliance', 'execActiveRate',
             'execVisitTrend', 'execImageValidity', 'execSkuCount',
-            'categoryKpis',
+            'categoryKpis', 'categoryTargets',
             'userPerformance',
             'pricePromoData', 'posmCompliance', 'pricingCompliance'
         ));
@@ -867,6 +885,9 @@ class MerchandiserAdminHubController extends Controller
             'npd_drop_size' => ['nullable', 'integer', 'min:1', 'max:100000'],
             'track_mhs' => ['nullable', 'boolean'],
             'mhs_drop_size' => ['nullable', 'integer', 'min:1', 'max:100000'],
+            'facing_target' => ['nullable', 'integer', 'min:1', 'max:100000'],
+            'track_planogram' => ['nullable', 'boolean'],
+            'sos_target' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'reference_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,avif', 'max:8192'],
             'aliases' => ['nullable', 'string', 'max:1000'],
             'ai_reference_notes' => ['nullable', 'string', 'max:1000'],
@@ -887,6 +908,9 @@ class MerchandiserAdminHubController extends Controller
             'npd_drop_size' => (int) ($validated['npd_drop_size'] ?? 1),
             'track_mhs' => $request->boolean('track_mhs'),
             'mhs_drop_size' => (int) ($validated['mhs_drop_size'] ?? 1),
+            'facing_target' => (int) ($validated['facing_target'] ?? 1),
+            'track_planogram' => $request->boolean('track_planogram', true),
+            'sos_target' => $validated['sos_target'] ?? null,
             'reference_image_path' => $path,
             'aliases' => $this->parseSkuAliases($validated['aliases'] ?? ''),
             'ai_reference_notes' => $validated['ai_reference_notes'] ?? null,
@@ -911,6 +935,9 @@ class MerchandiserAdminHubController extends Controller
             'npd_drop_size' => ['nullable', 'integer', 'min:1', 'max:100000'],
             'track_mhs' => ['nullable', 'boolean'],
             'mhs_drop_size' => ['nullable', 'integer', 'min:1', 'max:100000'],
+            'facing_target' => ['nullable', 'integer', 'min:1', 'max:100000'],
+            'track_planogram' => ['nullable', 'boolean'],
+            'sos_target' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'reference_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,avif', 'max:8192'],
             'aliases' => ['nullable', 'string', 'max:1000'],
             'ai_reference_notes' => ['nullable', 'string', 'max:1000'],
@@ -940,12 +967,38 @@ class MerchandiserAdminHubController extends Controller
             'npd_drop_size' => (int) ($validated['npd_drop_size'] ?? 1),
             'track_mhs' => $request->boolean('track_mhs'),
             'mhs_drop_size' => (int) ($validated['mhs_drop_size'] ?? 1),
+            'facing_target' => (int) ($validated['facing_target'] ?? 1),
+            'track_planogram' => $request->boolean('track_planogram'),
+            'sos_target' => $validated['sos_target'] ?? null,
             'reference_image_path' => $path,
             'aliases' => $this->parseSkuAliases($validated['aliases'] ?? ''),
             'ai_reference_notes' => $validated['ai_reference_notes'] ?? null,
         ]);
 
         return back()->with('success', 'SKU AI reference updated.');
+    }
+
+    public function storeCategoryTarget(Request $request)
+    {
+        $this->guardAdmin();
+
+        $validated = $request->validate([
+            'category' => ['required', 'string', 'max:255'],
+            'sos_target' => ['required', 'numeric', 'min:0', 'max:100'],
+        ]);
+
+        $target = PerfectStoreCategoryTarget::firstOrNew(['category' => trim($validated['category'])]);
+        if (! $target->exists) {
+            $target->created_by = $request->user()->id;
+        }
+        $target->fill([
+            'sos_target' => $validated['sos_target'],
+            'updated_by' => $request->user()->id,
+        ])->save();
+
+        return redirect()
+            ->to(route('merchandisers.admin.tab', ['adminTab' => 'category-kpi']) . '#category-targets')
+            ->with('success', 'Category SOS target saved.');
     }
 
     public function destroySku(Sku $sku)
@@ -1318,13 +1371,14 @@ class MerchandiserAdminHubController extends Controller
     {
         $this->guardAdmin();
 
-        $day = $this->normalizedOutletRegistrationDay($request->input('outlet_day', 'all'));
+        [$outletCreatedFrom, $outletCreatedTo] = $this->outletCreatedRange($request);
         $assigned = 0;
         $skipped = 0;
 
-        $this->applyOutletRegistrationDayQuery(
+        $this->applyOutletCreatedRangeQuery(
             Outlet::with('registeredBy')->whereNotNull('registered_by'),
-            $day
+            $outletCreatedFrom,
+            $outletCreatedTo
         )->chunkById(250, function ($outlets) use (&$assigned, &$skipped) {
             $outlets->each(function (Outlet $outlet) use (&$assigned, &$skipped) {
                     $registeredBy = $outlet->registeredBy;
@@ -1345,9 +1399,9 @@ class MerchandiserAdminHubController extends Controller
                 });
             });
 
-        $label = $this->outletDayLabels()[$day] ?? 'selected day';
+        $label = $this->outletCreatedRangeLabel($outletCreatedFrom, $outletCreatedTo);
 
-        return back()->with('success', "Assigned {$assigned} {$label} registered outlet(s) to their creators. {$skipped} skipped because the creator/KD pairing did not match.");
+        return back()->with('success', "Assigned {$assigned} outlet(s) created {$label} to their creators. {$skipped} skipped because the creator/KD pairing did not match.");
     }
 
     public function unassignOutlet(Outlet $outlet, User $user)
@@ -2218,6 +2272,72 @@ class MerchandiserAdminHubController extends Controller
         return array_key_exists($day, $this->outletDayLabels()) ? $day : 'all';
     }
 
+    private function outletCreatedRange(Request $request): array
+    {
+        $timezone = 'Africa/Accra';
+        $from = $this->parseOutletCreatedDate($request->input('outlet_created_from'), $timezone);
+        $to = $this->parseOutletCreatedDate($request->input('outlet_created_to'), $timezone);
+
+        if ($from && $to && $to->lt($from)) {
+            [$from, $to] = [$to, $from];
+        }
+
+        return [$from, $to];
+    }
+
+    private function parseOutletCreatedDate(mixed $value, string $timezone): ?Carbon
+    {
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value, $timezone)->startOfDay();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function outletCreatedWithinRange(Outlet $outlet, ?Carbon $from, ?Carbon $to): bool
+    {
+        if (! $outlet->created_at) {
+            return false;
+        }
+
+        $createdAt = $outlet->created_at->copy()->startOfDay();
+
+        if ($from && $createdAt->lt($from->copy()->startOfDay())) {
+            return false;
+        }
+
+        if ($to && $createdAt->gt($to->copy()->startOfDay())) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private function outletCreatedRangeLabel(?Carbon $from, ?Carbon $to): string
+    {
+        if ($from && $to) {
+            return $from->toDateString() === $to->toDateString()
+                ? 'on '.$from->format('d M Y')
+                : 'from '.$from->format('d M Y').' to '.$to->format('d M Y');
+        }
+
+        if ($from) {
+            return 'from '.$from->format('d M Y');
+        }
+
+        if ($to) {
+            return 'up to '.$to->format('d M Y');
+        }
+
+        return 'across all creation dates';
+    }
+
     private function outletMatchesRegistrationDay(Outlet $outlet, string $day): bool
     {
         if ($day === 'all') {
@@ -2268,6 +2388,19 @@ class MerchandiserAdminHubController extends Controller
             'sqlite' => $query->whereRaw("CAST(strftime('%w', created_at) AS INTEGER) = ?", [$targetDay === 7 ? 0 : $targetDay]),
             default => $query,
         };
+    }
+
+    private function applyOutletCreatedRangeQuery($query, ?Carbon $from, ?Carbon $to)
+    {
+        if ($from) {
+            $query->whereDate('created_at', '>=', $from->toDateString());
+        }
+
+        if ($to) {
+            $query->whereDate('created_at', '<=', $to->toDateString());
+        }
+
+        return $query;
     }
 
     private function routePlanningRange(Request $request, string $timezone): array

@@ -220,7 +220,7 @@
                     <p class="text-xs uppercase tracking-widest text-brand-ash">🏆 Top Performing Merchandisers</p>
                 </div>
                 <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
+                    <table class="w-full min-w-[980px] text-sm">
                         <thead>
                             <tr class="border-b border-brand-white/10 bg-brand-white/3">
                                 <th class="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-brand-ash">Agent Name</th>
@@ -330,6 +330,9 @@
                                 <th class="px-5 py-3 text-right">OSA Compliance</th>
                                 <th class="px-5 py-3 text-right">NPD Compliance</th>
                                 <th class="px-5 py-3 text-right">MHS Compliance</th>
+                                <th class="px-5 py-3 text-right">Facing %</th>
+                                <th class="px-5 py-3 text-right">SOS %</th>
+                                <th class="px-5 py-3 text-right">SOS Target</th>
                                 <th class="px-5 py-3 text-right">Facings Captured</th>
                             </tr>
                         </thead>
@@ -341,10 +344,13 @@
                                     <td class="px-5 py-3 text-right text-emerald-400 font-bold">{{ $cat->osa_pct !== null ? $cat->osa_pct.'%' : 'N/A' }}</td>
                                     <td class="px-5 py-3 text-right text-amber-400 font-bold">{{ $cat->npd_pct !== null ? $cat->npd_pct.'%' : 'N/A' }}</td>
                                     <td class="px-5 py-3 text-right text-sky-400 font-bold">{{ $cat->mhs_pct !== null ? $cat->mhs_pct.'%' : 'N/A' }}</td>
+                                    <td class="px-5 py-3 text-right text-lime-400 font-bold">{{ $cat->facing_pct !== null ? $cat->facing_pct.'%' : 'N/A' }}</td>
+                                    <td class="px-5 py-3 text-right text-pink-400 font-bold">{{ $cat->sos_pct !== null ? $cat->sos_pct.'%' : 'N/A' }}</td>
+                                    <td class="px-5 py-3 text-right text-brand-ash">{{ $cat->sos_target !== null ? $cat->sos_target.'%' : 'Not set' }}</td>
                                     <td class="px-5 py-3 text-right text-brand-ash">{{ number_format($cat->total_facings) }}</td>
                                 </tr>
                             @empty
-                                <tr><td colspan="6" class="px-5 py-6 text-center text-brand-ash">No category KPI data available.</td></tr>
+                                <tr><td colspan="9" class="px-5 py-6 text-center text-brand-ash">No category KPI data available.</td></tr>
                             @endforelse
                         </tbody>
                     </table>

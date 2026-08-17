@@ -20,6 +20,9 @@ class Sku extends Model
         'npd_drop_size',
         'track_mhs',
         'mhs_drop_size',
+        'facing_target',
+        'track_planogram',
+        'sos_target',
         'reference_image_path',
         'aliases',
         'ai_reference_notes',
@@ -33,6 +36,9 @@ class Sku extends Model
         'npd_drop_size' => 'integer',
         'track_mhs' => 'boolean',
         'mhs_drop_size' => 'integer',
+        'facing_target' => 'integer',
+        'track_planogram' => 'boolean',
+        'sos_target' => 'decimal:2',
     ];
 
     public function brand(): BelongsTo

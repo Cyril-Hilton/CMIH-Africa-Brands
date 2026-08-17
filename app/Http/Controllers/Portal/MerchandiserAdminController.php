@@ -185,17 +185,22 @@ class MerchandiserAdminController extends Controller
             'npd_drop_size' => ['nullable', 'integer', 'min:1'],
             'track_mhs'     => ['nullable', 'boolean'],
             'mhs_drop_size' => ['nullable', 'integer', 'min:1'],
+            'facing_target' => ['nullable', 'integer', 'min:1', 'max:100000'],
+            'track_planogram' => ['nullable', 'boolean'],
+            'sos_target' => ['nullable', 'numeric', 'min:0', 'max:100'],
         ]);
 
         // Treat unchecked checkboxes as false
         $validated['track_osa'] = $request->boolean('track_osa');
         $validated['track_npd'] = $request->boolean('track_npd');
         $validated['track_mhs'] = $request->boolean('track_mhs');
+        $validated['track_planogram'] = $request->boolean('track_planogram', true);
 
         // Default drop sizes to 1 if not provided
         $validated['osa_drop_size'] = $validated['osa_drop_size'] ?? 1;
         $validated['npd_drop_size'] = $validated['npd_drop_size'] ?? 1;
         $validated['mhs_drop_size'] = $validated['mhs_drop_size'] ?? 1;
+        $validated['facing_target'] = $validated['facing_target'] ?? 1;
 
         Sku::create($validated);
 
@@ -216,11 +221,16 @@ class MerchandiserAdminController extends Controller
             'npd_drop_size' => ['nullable', 'integer', 'min:1'],
             'track_mhs'     => ['nullable', 'boolean'],
             'mhs_drop_size' => ['nullable', 'integer', 'min:1'],
+            'facing_target' => ['nullable', 'integer', 'min:1', 'max:100000'],
+            'track_planogram' => ['nullable', 'boolean'],
+            'sos_target' => ['nullable', 'numeric', 'min:0', 'max:100'],
         ]);
 
         $validated['track_osa'] = $request->boolean('track_osa');
         $validated['track_npd'] = $request->boolean('track_npd');
         $validated['track_mhs'] = $request->boolean('track_mhs');
+        $validated['track_planogram'] = $request->boolean('track_planogram');
+        $validated['facing_target'] = $validated['facing_target'] ?? 1;
 
         $sku->update($validated);
 

@@ -622,9 +622,21 @@
                                                 </div>
                                             </div>
                                             <div class="space-y-2">
-                                                <h4 class="text-[10px] uppercase tracking-wider text-brand-white/60 font-semibold">🕒 Daily Punctuality Velocity</h4>
+                                                <h4 class="text-[10px] uppercase tracking-wider text-brand-white/60 font-semibold">7-day route execution</h4>
                                                 <div class="h-[120px]">
                                                     <canvas id="punctualityChart"></canvas>
+                                                </div>
+                                            </div>
+                                            <div class="space-y-2">
+                                                <h4 class="text-[10px] uppercase tracking-wider text-brand-white/60 font-semibold">7-day coverage trend</h4>
+                                                <div class="h-[120px]">
+                                                    <canvas id="dailyCoverageTrendChart"></canvas>
+                                                </div>
+                                            </div>
+                                            <div class="space-y-2">
+                                                <h4 class="text-[10px] uppercase tracking-wider text-brand-white/60 font-semibold">Today's execution funnel</h4>
+                                                <div class="h-[130px]">
+                                                    <canvas id="visitFunnelChart"></canvas>
                                                 </div>
                                             </div>
                                         </div>
@@ -1534,8 +1546,11 @@
         document.addEventListener("DOMContentLoaded", function () {
             var ctxPunctual = document.getElementById('punctualityChart');
             var ctxOutletCoverage = document.getElementById('outletCoverageChart');
+            var ctxDailyCoverageTrend = document.getElementById('dailyCoverageTrendChart');
+            var ctxVisitFunnel = document.getElementById('visitFunnelChart');
+            var dailyPerformance = @json($dailyPerformanceChart);
 
-            if (!ctxPunctual && !ctxOutletCoverage) {
+            if (!ctxPunctual && !ctxOutletCoverage && !ctxDailyCoverageTrend && !ctxVisitFunnel) {
                 return;
             }
 
@@ -1549,24 +1564,66 @@
                 new Chart(ctxPunctual, {
                     type: 'bar',
                     data: {
-                        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-                        datasets: [{
-                            data: [15, -5, 8, 20, 10],
-                            backgroundColor: function(context) {
-                                var val = context.raw;
-                                return val >= 0 ? '#10b981' : '#e21c1e';
+                        labels: dailyPerformance.labels || [],
+                        datasets: [
+                            {
+                                label: 'Scheduled',
+                                data: dailyPerformance.scheduled || [],
+                                backgroundColor: 'rgba(148,163,184,.42)',
+                                borderColor: 'rgba(148,163,184,.8)',
+                                borderWidth: 1,
+                                borderRadius: 4
                             },
-                            borderRadius: 4
-                        }]
+                            {
+                                label: 'Clocked',
+                                data: dailyPerformance.clocked || [],
+                                backgroundColor: 'rgba(16,185,129,.55)',
+                                borderColor: '#10b981',
+                                borderWidth: 1,
+                                borderRadius: 4
+                            },
+                            {
+                                label: 'Scored',
+                                data: dailyPerformance.scored || [],
+                                backgroundColor: 'rgba(56,189,248,.55)',
+                                borderColor: '#38bdf8',
+                                borderWidth: 1,
+                                borderRadius: 4
+                            },
+                            {
+                                type: 'line',
+                                label: 'Coverage %',
+                                data: dailyPerformance.coverage || [],
+                                borderColor: '#f59e0b',
+                                backgroundColor: 'rgba(245,158,11,.14)',
+                                borderWidth: 2,
+                                tension: .35,
+                                yAxisID: 'percentage'
+                            }
+                        ]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { boxWidth: 10, font: { size: 9 } }
+                            }
+                        },
                         scales: {
                             y: {
+                                beginAtZero: true,
                                 grid: { color: 'rgba(128, 128, 128, 0.1)' },
+                                precision: 0,
                                 ticks: { font: { size: 9 } }
+                            },
+                            percentage: {
+                                beginAtZero: true,
+                                max: 100,
+                                position: 'right',
+                                grid: { drawOnChartArea: false },
+                                ticks: { font: { size: 9 }, callback: value => value + '%' }
                             },
                             x: { grid: { display: false }, ticks: { font: { size: 9 } } }
                         }
@@ -1600,6 +1657,63 @@
                             }
                         },
                         cutout: '62%'
+                    }
+                });
+            }
+
+            if (ctxDailyCoverageTrend) {
+                new Chart(ctxDailyCoverageTrend, {
+                    type: 'line',
+                    data: {
+                        labels: dailyPerformance.labels || [],
+                        datasets: [{
+                            label: 'Coverage %',
+                            data: dailyPerformance.coverage || [],
+                            borderColor: '#ef4444',
+                            backgroundColor: 'rgba(239,68,68,.16)',
+                            fill: true,
+                            tension: .35,
+                            pointRadius: 3,
+                            pointBackgroundColor: '#ef4444'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { beginAtZero: true, max: 100, ticks: { font: { size: 9 }, callback: value => value + '%' } },
+                            x: { grid: { display: false }, ticks: { font: { size: 9 } } }
+                        }
+                    }
+                });
+            }
+
+            if (ctxVisitFunnel) {
+                new Chart(ctxVisitFunnel, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Assigned', 'Clocked', 'Scored', 'Not covered'],
+                        datasets: [{
+                            label: 'Outlets',
+                            data: [
+                                {{ (int) ($merchMetrics['assigned_outlets_today'] ?? 0) }},
+                                {{ (int) ($merchMetrics['outlets_visited_today'] ?? 0) }},
+                                {{ (int) ($merchMetrics['outlets_scored_today'] ?? 0) }},
+                                {{ (int) ($merchMetrics['not_covered_today'] ?? 0) }}
+                            ],
+                            backgroundColor: ['rgba(148,163,184,.62)', 'rgba(16,185,129,.62)', 'rgba(56,189,248,.62)', 'rgba(245,158,11,.62)'],
+                            borderRadius: 5
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { beginAtZero: true, precision: 0, ticks: { font: { size: 9 } } },
+                            x: { grid: { display: false }, ticks: { font: { size: 9 } } }
+                        }
                     }
                 });
             }

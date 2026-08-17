@@ -286,14 +286,19 @@
                 </div>
 
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left text-xs min-w-[700px] border-collapse">
+                    <table class="w-full text-left text-xs min-w-[1040px] border-collapse">
                         <thead>
                             <tr class="border-b border-brand-white/10 text-brand-ash uppercase tracking-wider">
                                 <th class="pb-3 w-[220px]">SKU</th>
                                 <th class="pb-3 w-[90px]">OSA Qty</th>
                                 <th class="pb-3 w-[90px]">NPD Present</th>
                                 <th class="pb-3 w-[90px]">Facing Count</th>
+                                <th class="pb-3 w-[90px]">Facing Target</th>
                                 <th class="pb-3 w-[100px]">Shelf Share (%)</th>
+                                <th class="pb-3 w-[110px]">Unilever Facings</th>
+                                <th class="pb-3 w-[110px]">Category Facings</th>
+                                <th class="pb-3 w-[100px]">Shelf Price</th>
+                                <th class="pb-3 w-[150px]">SKU Photo</th>
                                 <th class="pb-3 w-[90px]">Planogram</th>
                             </tr>
                         </thead>
@@ -316,7 +321,22 @@
                                         <input type="number" name="skus[{{ $sku->id }}][facing]" data-sku-id="{{ $sku->id }}" data-field="facing" value="0" min="0" required class="w-full rounded bg-brand-black/40 border border-brand-white/10 px-2 py-1 focus:border-amber-500 focus:ring-0 text-brand-white">
                                     </td>
                                     <td class="py-3 pr-2">
+                                        <span class="block rounded bg-brand-white/5 border border-brand-white/10 px-2 py-1 text-brand-white/70">{{ $sku->facing_target ?: 1 }}</span>
+                                    </td>
+                                    <td class="py-3 pr-2">
                                         <input type="number" name="skus[{{ $sku->id }}][share_of_shelf]" data-sku-id="{{ $sku->id }}" data-field="share_of_shelf" value="0" min="0" max="100" required class="w-full rounded bg-brand-black/40 border border-brand-white/10 px-2 py-1 focus:border-amber-500 focus:ring-0 text-brand-white">
+                                    </td>
+                                    <td class="py-3 pr-2">
+                                        <input type="number" name="skus[{{ $sku->id }}][category_unilever_facings]" data-sku-id="{{ $sku->id }}" data-field="category_unilever_facings" min="0" placeholder="--" class="w-full rounded bg-brand-black/40 border border-brand-white/10 px-2 py-1 focus:border-amber-500 focus:ring-0 text-brand-white">
+                                    </td>
+                                    <td class="py-3 pr-2">
+                                        <input type="number" name="skus[{{ $sku->id }}][category_total_facings]" data-sku-id="{{ $sku->id }}" data-field="category_total_facings" min="0" placeholder="--" class="w-full rounded bg-brand-black/40 border border-brand-white/10 px-2 py-1 focus:border-amber-500 focus:ring-0 text-brand-white">
+                                    </td>
+                                    <td class="py-3 pr-2">
+                                        <input type="number" name="skus[{{ $sku->id }}][shelf_price]" data-sku-id="{{ $sku->id }}" data-field="shelf_price" min="0" step="0.01" placeholder="GHS" class="w-full rounded bg-brand-black/40 border border-brand-white/10 px-2 py-1 focus:border-amber-500 focus:ring-0 text-brand-white">
+                                    </td>
+                                    <td class="py-3 pr-2">
+                                        <input type="file" name="skus[{{ $sku->id }}][photo]" accept="image/*" capture="environment" class="w-full rounded bg-brand-black/40 border border-brand-white/10 px-2 py-1 text-[10px] text-brand-white file:mr-2 file:rounded file:border-0 file:bg-amber-500 file:px-2 file:py-1 file:text-[10px] file:font-bold file:text-black">
                                     </td>
                                     <td class="py-3 text-center">
                                         <select name="skus[{{ $sku->id }}][planogram_compliant]" data-sku-id="{{ $sku->id }}" data-field="planogram_compliant" required class="w-full rounded bg-brand-black/40 border border-brand-white/10 px-2 py-1 focus:border-amber-500 focus:ring-0 text-brand-white text-xs">

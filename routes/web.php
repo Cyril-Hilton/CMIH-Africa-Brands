@@ -519,6 +519,7 @@ Route::prefix('merchandisers')->name('merchandisers.')->group(function () {
             Route::post('/skus', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'storeSku'])->name('skus.store');
             Route::put('/skus/{sku}', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'updateSku'])->name('skus.update');
             Route::delete('/skus/{sku}', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'destroySku'])->name('skus.destroy');
+            Route::post('/category-targets', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'storeCategoryTarget'])->name('category-targets.store');
             Route::post('/pairings/{user}', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'pairMerchandiser'])->name('pairings.pair');
             Route::post('/routes/generate', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'generateRoutes'])->name('routes.generate');
             Route::post('/merchandisers/{user}/route-settings', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'updateRouteSettings'])->name('merchandisers.route-settings');
