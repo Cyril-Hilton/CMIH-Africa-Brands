@@ -33,11 +33,11 @@
                             </a>
                         </th>
                         <th class="py-3">
-                            <a href="{{ route('portal.assets', array_merge(request()->query(), ['sort' => 'asset_type', 'direction' => request('sort') === 'asset_type' && request('direction') === 'asc' ? 'desc' : 'asc'])) }}" class="flex items-center gap-1 group">
+                            <a href="{{ route('portal.assets', array_merge(request()->query(), ['sort' => 'type', 'direction' => (request('sort') === 'type' || request('sort') === 'asset_type') && request('direction') === 'asc' ? 'desc' : 'asc'])) }}" class="flex items-center gap-1 group">
                                 Type
                                 <div class="flex flex-col">
-                                    <svg class="w-2 h-2 {{ request('sort') === 'asset_type' && request('direction') === 'asc' ? 'text-brand-red' : 'text-brand-white/20 group-hover:text-brand-white/50' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 15l7-7 7 7" /></svg>
-                                    <svg class="w-2 h-2 {{ request('sort') === 'asset_type' && request('direction') === 'desc' ? 'text-brand-red' : 'text-brand-white/20 group-hover:text-brand-white/50' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M19 9l-7 7-7-7" /></svg>
+                                    <svg class="w-2 h-2 {{ (request('sort') === 'type' || request('sort') === 'asset_type') && request('direction') === 'asc' ? 'text-brand-red' : 'text-brand-white/20 group-hover:text-brand-white/50' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 15l7-7 7 7" /></svg>
+                                    <svg class="w-2 h-2 {{ (request('sort') === 'type' || request('sort') === 'asset_type') && request('direction') === 'desc' ? 'text-brand-red' : 'text-brand-white/20 group-hover:text-brand-white/50' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M19 9l-7 7-7-7" /></svg>
                                 </div>
                             </a>
                         </th>

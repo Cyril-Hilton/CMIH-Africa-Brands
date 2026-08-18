@@ -32,7 +32,12 @@ class AssetController extends Controller
         }
 
         if ($type !== '') {
-            $assetsQuery->where('asset_type', $type);
+            $assetsQuery->where(function ($q) use ($type) {
+                $q->where('type', $type);
+                if (\Illuminate\Support\Facades\Schema::hasColumn('assets', 'asset_type')) {
+                    $q->orWhere('asset_type', $type);
+                }
+            });
         }
 
         if ($status !== '') {
@@ -45,10 +50,13 @@ class AssetController extends Controller
 
         switch ($sort) {
             case 'name':
-            case 'asset_type':
             case 'status':
             case 'condition':
                 $assetsQuery->orderBy($sort, $direction);
+                break;
+            case 'asset_type':
+            case 'type':
+                $assetsQuery->orderBy('type', $direction);
                 break;
             case 'assigned_to':
                 $assetsQuery->orderBy('assigned_to', $direction);
