@@ -109,6 +109,17 @@ class TaskController extends Controller
 
             $pendingTasks = $pendingQuery->paginate(15, ['*'], 'p_page')->withQueryString();
 
+            // Find tasks awaiting completion review specifically by the logged-in line manager
+            $myPendingApprovals = Task::with(['assigner', 'assignee'])
+                ->realWork()
+                ->where(function ($q) {
+                    $q->where('status', 'Awaiting Approval')
+                      ->orWhere('completion_review_status', 'pending');
+                })
+                ->get()
+                ->filter(fn (Task $task) => $this->canReviewCompletion($task, $user))
+                ->values();
+
             // Overdue breakdown
             $overdueCount = Task::query()
                 ->pendingFinalSignOff()
@@ -122,7 +133,7 @@ class TaskController extends Controller
             $totalPending = Task::query()->pendingFinalSignOff()->count();
 
             return view('portal.tasks-pending', compact(
-                'user', 'pendingTasks', 'sort', 'direction', 'pendingFilter', 'overdueCount', 'highPrioCount', 'totalPending'
+                'user', 'pendingTasks', 'sort', 'direction', 'pendingFilter', 'overdueCount', 'highPrioCount', 'totalPending', 'myPendingApprovals'
             ));
         }
 
