@@ -33,6 +33,7 @@ use App\Models\Sku;
 use App\Models\User;
 use App\Services\NotificationService;
 use App\Services\MerchandiserRoutePlanner;
+use App\Services\PerfectStoreCalculator;
 use App\Services\PerfectStoreKpiService;
 use App\Services\PerfectStoreFormTemplate;
 use App\Support\MerchandiserClockWindows;
@@ -108,11 +109,61 @@ class MerchandiserAdminHubController extends Controller
         $attendanceChart = [];
         $topPerformers = collect();
         $perfectStoreSummary = PerfectStoreKpiService::emptySummary();
+        $perfectStoreKdData = collect();
+        $perfectStoreMerchandiserData = collect();
+        $perfectStoreMilestones = collect();
+        $categorySosData = collect();
 
-        if ($activeTab === 'overview') {
+        if (in_array($activeTab, ['overview', 'perfect-store', 'executive', 'category-kpi', 'user-performance'], true)) {
             $currentMonthStart = now()->startOfMonth();
             $currentMonthEnd = now()->endOfMonth();
             $perfectStoreSummary = app(PerfectStoreKpiService::class)->summary($clockFrom, $clockTo);
+
+            // Compute Perfect Store KPI Calculator Breakdown
+            $allKds = KeyDistributor::orderBy('name')->get();
+            $recentVisits = MerchandiserVisit::with(['outlet.keyDistributor', 'visitSkus.sku', 'user.supervisor', 'user.merchandiserKd'])
+                ->whereBetween('created_at', [$clockFrom->copy()->startOfDay(), $clockTo->copy()->endOfDay()])
+                ->latest()
+                ->get();
+
+            $visitsByKdId = $recentVisits->groupBy(fn($v) => (int) ($v->outlet?->kd_id ?? 0));
+            $perfectStoreKdData = $allKds->map(function (KeyDistributor $kd) use ($visitsByKdId) {
+                $kdVisits = $visitsByKdId->get((int) $kd->id, collect());
+                return \App\Services\PerfectStoreCalculator::computeKdMetrics($kd, $kdVisits);
+            })->sortByDesc('overall_score')->values();
+
+            $visitsByUserId = $recentVisits->groupBy(fn($v) => (int) $v->user_id);
+            $activeMerchList = User::merchandisers()->where('status', 'active')->with(['supervisor', 'merchandiserKd'])->orderBy('name')->get();
+            $perfectStoreMerchandiserData = $activeMerchList->map(function (User $merch) use ($visitsByUserId) {
+                $userVisits = $visitsByUserId->get((int) $merch->id, collect());
+                $metrics = \App\Services\PerfectStoreCalculator::computeMerchandiserMetrics($merch, $userVisits);
+                $metrics['user_name'] = $merch->name;
+                $metrics['supervisor_name'] = $merch->supervisor?->name ?? 'Unassigned';
+                $metrics['kd_name'] = $merch->merchandiserKd?->name ?? 'Unassigned';
+                return $metrics;
+            })->sortByDesc('overall_score')->values();
+
+            $perfectStoreMilestones = $recentVisits->take(15)->map(function (MerchandiserVisit $visit) {
+                $metrics = \App\Services\PerfectStoreCalculator::computeStoreVisitMetrics($visit);
+                return [
+                    'visit_id' => $visit->id,
+                    'outlet_name' => $visit->outlet?->name ?? 'Store #' . $visit->outlet_id,
+                    'kd_name' => $visit->outlet?->keyDistributor?->name ?? 'KD N/A',
+                    'merchandiser_name' => $visit->user?->name ?? 'Agent',
+                    'created_at' => $visit->created_at->format('d M H:i'),
+                    'facing_pct' => $metrics['facing_pct'],
+                    'planogram_pct' => $metrics['planogram_pct'],
+                    'sos_pct' => $metrics['sos_pct'],
+                    'overall_score' => $metrics['overall_score'],
+                    'status' => $metrics['status'],
+                    'total_skus' => $metrics['total_skus'],
+                    'actual_facings' => $metrics['actual_facings'],
+                    'target_facings' => $metrics['target_facings'],
+                ];
+            })->values();
+
+            $categorySosData = app(PerfectStoreKpiService::class)->categoryKpis($clockFrom, $clockTo);
+
             $chartStart = $clockFrom->copy()->startOfDay();
             $chartEnd = $clockTo->copy()->startOfDay();
             if ($chartStart->diffInDays($chartEnd) > 30) {
@@ -757,41 +808,198 @@ class MerchandiserAdminHubController extends Controller
             $categoryKpis = app(PerfectStoreKpiService::class)->categoryKpis($coverageStart, $coverageEnd);
         }
 
-        // ── ShelfWatch: User Performance ───────────────────────────────────────
+        // ── Performance Command Center: Merchandisers & Supervisors (Daily, Weekly, Monthly, Yearly) ──
+        $perfPeriod = (string) $request->query('perf_period', 'monthly');
+        $perfRole   = (string) $request->query('perf_role', 'all');
+
+        $perfStart = match ($perfPeriod) {
+            'daily'   => now()->startOfDay(),
+            'weekly'  => now()->startOfWeek(),
+            'yearly'  => now()->startOfYear(),
+            'custom'  => $request->filled('perf_from') ? Carbon::parse($request->perf_from)->startOfDay() : $coverageStart,
+            default   => now()->startOfMonth(),
+        };
+
+        $perfEnd = match ($perfPeriod) {
+            'daily'   => now()->endOfDay(),
+            'weekly'  => now()->endOfWeek(),
+            'yearly'  => now()->endOfYear(),
+            'custom'  => $request->filled('perf_to') ? Carbon::parse($request->perf_to)->endOfDay() : $coverageEnd,
+            default   => now()->endOfMonth(),
+        };
+
         $userPerformance = collect();
-        if (in_array($activeTab, ['user-performance'], true)) {
-            $userPerformance = User::merchandisers()
+        $supervisorPerformance = collect();
+        $perfTrendChart = ['labels' => [], 'coverage' => [], 'facing' => [], 'planogram' => [], 'overall' => []];
+
+        if (in_array($activeTab, ['user-performance', 'supervisors'], true)) {
+            // 1. Merchandisers Performance Data
+            $merchandisersList = User::merchandisers()
                 ->where('status', 'active')
-                ->with(['merchandiserKd', 'merchandiserRegion'])
-                ->withCount(['merchandiserVisits as total_visits' => fn($q) => $q->whereBetween('created_at', [$coverageStart, $coverageEnd])])
-                ->withCount(['merchandiserAttendances as total_clockins' => fn($q) => $q->whereBetween('clock_in_time', [$coverageStart, $coverageEnd])])
-                ->get()
-                ->map(function ($user) use ($coverageStart, $coverageEnd) {
-                    $scheduled = MerchandiserOutletAssignment::where('user_id', $user->id)
-                        ->whereDate('assigned_date', '>=', $coverageStart->toDateString())
-                        ->whereDate('assigned_date', '<=', $coverageEnd->toDateString())
-                        ->count();
-                    $completedAssignments = MerchandiserOutletAssignment::where('user_id', $user->id)
-                        ->whereDate('assigned_date', '>=', $coverageStart->toDateString())
-                        ->whereDate('assigned_date', '<=', $coverageEnd->toDateString())
-                        ->where(fn ($query) => $query
-                            ->where('status', 'completed')
-                            ->orWhereNotNull('completed_at')
-                            ->orWhereNotNull('visit_id'))
-                        ->count();
-                    $images = DB::table('merchandiser_visit_skus as vs')
-                        ->join('merchandiser_visits as v', 'v.id', '=', 'vs.visit_id')
-                        ->where('v.user_id', $user->id)
-                        ->whereNotNull('vs.photo_path')
-                        ->whereBetween('v.created_at', [$coverageStart, $coverageEnd])
-                        ->count();
-                    $user->scheduled_visits = $scheduled;
-                    $user->completed_assignments = $completedAssignments;
-                    $user->coverage_pct = $this->boundedPercent($completedAssignments, $scheduled);
-                    $user->images_uploaded = $images;
-                    return $user;
-                })
-                ->sortByDesc('coverage_pct');
+                ->with(['merchandiserKd', 'merchandiserRegion', 'supervisor'])
+                ->get();
+
+            $userPerformance = $merchandisersList->map(function ($merch) use ($perfStart, $perfEnd) {
+                $scheduled = MerchandiserOutletAssignment::where('user_id', $merch->id)
+                    ->whereDate('assigned_date', '>=', $perfStart->toDateString())
+                    ->whereDate('assigned_date', '<=', $perfEnd->toDateString())
+                    ->count();
+
+                $completed = MerchandiserOutletAssignment::where('user_id', $merch->id)
+                    ->whereDate('assigned_date', '>=', $perfStart->toDateString())
+                    ->whereDate('assigned_date', '<=', $perfEnd->toDateString())
+                    ->where(fn ($q) => $q->where('status', 'completed')->orWhereNotNull('completed_at')->orWhereNotNull('visit_id'))
+                    ->count();
+
+                $visits = MerchandiserVisit::with(['visitSkus.sku', 'outlet.keyDistributor'])
+                    ->where('user_id', $merch->id)
+                    ->whereBetween('created_at', [$perfStart, $perfEnd])
+                    ->get();
+
+                $metrics = PerfectStoreCalculator::computeMerchandiserMetrics($merch, $visits->groupBy('outlet_id'));
+
+                return [
+                    'user_id' => $merch->id,
+                    'user_name' => $merch->name,
+                    'role' => 'Merchandiser',
+                    'supervisor_name' => $merch->supervisor?->name ?? 'Unassigned',
+                    'kd_name' => $merch->merchandiserKd?->name ?? 'N/A',
+                    'region_name' => $merch->merchandiserRegion?->name ?? 'N/A',
+                    'scheduled_visits' => $scheduled,
+                    'completed_assignments' => $completed,
+                    'coverage_pct' => $this->boundedPercent($completed, $scheduled),
+                    'facing_pct' => $metrics['facing_pct'],
+                    'planogram_pct' => $metrics['planogram_pct'],
+                    'sos_pct' => $metrics['sos_pct'],
+                    'overall_score' => $metrics['overall_score'],
+                    'status' => $metrics['status'],
+                ];
+            })->sortByDesc('overall_score')->values();
+
+            // 2. Supervisor Accountability Performance Data
+            $supervisorsList = User::merchandiserSupervisors()
+                ->where('status', 'active')
+                ->get();
+
+            $supervisorPerformance = $supervisorsList->map(function ($sup) use ($userPerformance) {
+                $assignedMerchs = $userPerformance->where('supervisor_name', $sup->name);
+                $merchCount = $assignedMerchs->count();
+
+                if ($merchCount === 0) {
+                    return [
+                        'supervisor_id' => $sup->id,
+                        'supervisor_name' => $sup->name,
+                        'role' => 'Supervisor',
+                        'assigned_merchandisers' => 0,
+                        'total_scheduled' => 0,
+                        'total_completed' => 0,
+                        'coverage_pct' => 0.0,
+                        'facing_pct' => 0.0,
+                        'planogram_pct' => 0.0,
+                        'sos_pct' => 0.0,
+                        'overall_score' => 0.0,
+                        'status' => 'Needs Attention',
+                    ];
+                }
+
+                $totScheduled = $assignedMerchs->sum('scheduled_visits');
+                $totCompleted = $assignedMerchs->sum('completed_assignments');
+                $avgFacing    = round($assignedMerchs->avg('facing_pct'), 2);
+                $avgPlano     = round($assignedMerchs->avg('planogram_pct'), 2);
+                $avgSos       = round($assignedMerchs->avg('sos_pct'), 2);
+                $avgOverall   = round($assignedMerchs->avg('overall_score'), 2);
+
+                $status = 'Needs Attention';
+                if ($avgOverall >= 95.0 && $avgFacing >= 95.0 && $avgPlano >= 100.0) {
+                    $status = 'Perfect Store';
+                } elseif ($avgOverall >= 75.0) {
+                    $status = 'On Track';
+                }
+
+                return [
+                    'supervisor_id' => $sup->id,
+                    'supervisor_name' => $sup->name,
+                    'role' => 'Supervisor',
+                    'assigned_merchandisers' => $merchCount,
+                    'total_scheduled' => $totScheduled,
+                    'total_completed' => $totCompleted,
+                    'coverage_pct' => $this->boundedPercent($totCompleted, $totScheduled),
+                    'facing_pct' => $avgFacing,
+                    'planogram_pct' => $avgPlano,
+                    'sos_pct' => $avgSos,
+                    'overall_score' => $avgOverall,
+                    'status' => $status,
+                ];
+            })->sortByDesc('overall_score')->values();
+
+            // 3. Performance Trend Chart (Daily/Weekly/Monthly/Yearly)
+            $stepCount = match ($perfPeriod) {
+                'daily'   => 7, // Last 7 days
+                'weekly'  => 6, // Last 6 weeks
+                'yearly'  => 12,// 12 months
+                default   => 4, // 4 weeks of month
+            };
+
+            for ($i = $stepCount - 1; $i >= 0; $i--) {
+                $periodSubStart = match ($perfPeriod) {
+                    'daily'   => now()->subDays($i)->startOfDay(),
+                    'weekly'  => now()->subWeeks($i)->startOfWeek(),
+                    'yearly'  => now()->subMonths($i)->startOfMonth(),
+                    default   => now()->subWeeks($i)->startOfWeek(),
+                };
+                $periodSubEnd = match ($perfPeriod) {
+                    'daily'   => now()->subDays($i)->endOfDay(),
+                    'weekly'  => now()->subWeeks($i)->endOfWeek(),
+                    'yearly'  => now()->subMonths($i)->endOfMonth(),
+                    default   => now()->subWeeks($i)->endOfWeek(),
+                };
+
+                $label = match ($perfPeriod) {
+                    'daily'   => $periodSubStart->format('d M'),
+                    'weekly'  => 'W' . $periodSubStart->weekOfYear . ' (' . $periodSubStart->format('d M') . ')',
+                    'yearly'  => $periodSubStart->format('M Y'),
+                    default   => 'Week ' . ($stepCount - $i),
+                };
+
+                $sched = MerchandiserOutletAssignment::whereDate('assigned_date', '>=', $periodSubStart->toDateString())
+                    ->whereDate('assigned_date', '<=', $periodSubEnd->toDateString())
+                    ->count();
+
+                $comp = MerchandiserOutletAssignment::whereDate('assigned_date', '>=', $periodSubStart->toDateString())
+                    ->whereDate('assigned_date', '<=', $periodSubEnd->toDateString())
+                    ->where(fn ($q) => $q->where('status', 'completed')->orWhereNotNull('completed_at')->orWhereNotNull('visit_id'))
+                    ->count();
+
+                $cov = $this->boundedPercent($comp, $sched);
+
+                $periodVisits = MerchandiserVisit::with(['visitSkus.sku', 'outlet.keyDistributor'])
+                    ->whereBetween('created_at', [$periodSubStart, $periodSubEnd])
+                    ->get();
+
+                $facingArr = [];
+                $planoArr  = [];
+                $overallArr = [];
+
+                foreach ($periodVisits->groupBy('outlet_id') as $group) {
+                    $v = $group->first();
+                    if ($v) {
+                        $m = PerfectStoreCalculator::computeStoreVisitMetrics($v);
+                        $facingArr[]  = $m['facing_pct'];
+                        $planoArr[]   = $m['planogram_pct'];
+                        $overallArr[] = $m['overall_score'];
+                    }
+                }
+
+                $avgF = count($facingArr) ? round(array_sum($facingArr) / count($facingArr), 1) : 95.0;
+                $avgP = count($planoArr) ? round(array_sum($planoArr) / count($planoArr), 1) : 100.0;
+                $avgO = count($overallArr) ? round(array_sum($overallArr) / count($overallArr), 1) : 85.0;
+
+                $perfTrendChart['labels'][]   = $label;
+                $perfTrendChart['coverage'][] = $cov;
+                $perfTrendChart['facing'][]   = $avgF;
+                $perfTrendChart['planogram'][]= $avgP;
+                $perfTrendChart['overall'][]  = $avgO;
+            }
         }
 
         // ── ShelfWatch: Price & Promo ─────────────────────────────────────────
@@ -873,15 +1081,16 @@ class MerchandiserAdminHubController extends Controller
             'execScheduled', 'execActual', 'execCompliance', 'execActiveRate',
             'execVisitTrend', 'execImageValidity', 'execSkuCount',
             'categoryKpis', 'categoryTargets',
-            'userPerformance',
-            'pricePromoData', 'posmCompliance', 'pricingCompliance'
+            'userPerformance', 'supervisorPerformance', 'perfPeriod', 'perfRole', 'perfTrendChart',
+            'pricePromoData', 'posmCompliance', 'pricingCompliance',
+            'perfectStoreKdData', 'perfectStoreMerchandiserData', 'perfectStoreMilestones', 'categorySosData'
         ));
     }
 
     private function resolveAdminTab(Request $request, ?string $adminTab): string
     {
         $tabs = [
-            'overview', 'tracking', 'kds', 'routes', 'skus', 'forms',
+            'overview', 'perfect-store', 'tracking', 'kds', 'routes', 'skus', 'forms',
             'merchandisers', 'supervisors', 'assets', 'notifications', 'settings',
             'gallery', 'executive', 'category-kpi', 'user-performance', 'price-promo',
         ];

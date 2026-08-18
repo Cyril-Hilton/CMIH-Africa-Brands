@@ -264,6 +264,14 @@
                     <span>Clock Settings</span>
                 </button>
 
+                <button @click="window.location.href = @js($adminTabUrl('perfect-store')); sidebarOpen = false"
+                    :class="activeTab === 'perfect-store' ? 'active' : ''"
+                    class="nav-item w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 text-sm text-brand-white/70 font-medium">
+                    <span class="text-lg w-6 text-center">🎯</span>
+                    <span>Perfect Store KPIs</span>
+                    <span class="ml-auto text-[10px] text-lime-300 font-bold">95% Target</span>
+                </button>
+
                 <div class="px-4 pt-5 pb-1">
                     <p class="text-[9px] font-bold uppercase tracking-[0.3em] text-brand-ash/60">ShelfWatch Analytics</p>
                 </div>
@@ -339,6 +347,7 @@
                             <p class="text-xs uppercase tracking-[0.2em] font-semibold text-brand-ash hidden sm:block">Merchandiser Admin Hub</p>
                             <p class="text-base font-display text-brand-white" x-text="{
                                 overview: '🏠 Dashboard Overview',
+                                'perfect-store': '🎯 Perfect Store KPI Command Center',
                                 tracking: '🗺️ Live Field Tracking',
                                 kds: '🏢 Key Distributors',
                                 routes: 'Route Planning',
@@ -394,6 +403,221 @@
                         </ul>
                     </div>
                 @endif
+
+                <!-- ═══════════════════════════════════════════════════════════
+                     TAB: PERFECT STORE KPI COMMAND CENTER
+                ════════════════════════════════════════════════════════════ -->
+                <div x-show="activeTab === 'perfect-store'" x-transition class="space-y-6">
+                    <!-- KPI Header Cards -->
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        <div class="glass-panel rounded-2xl border border-lime-500/30 bg-lime-500/10 p-5 shadow-xl backdrop-blur-xl">
+                            <div class="flex items-center justify-between">
+                                <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-lime-300">Facings Compliance</p>
+                                <span class="rounded-full border border-lime-400/30 bg-lime-500/20 px-2.5 py-0.5 text-[9px] font-bold text-lime-200">Target 95%</span>
+                            </div>
+                            <p class="mt-3 text-3xl font-display text-brand-white">{{ number_format($perfectOverview['facing'] ?? 0, 1) }}%</p>
+                            <div class="mt-3 h-2 w-full rounded-full bg-brand-black/60 overflow-hidden border border-brand-white/10">
+                                <div class="h-full bg-lime-400 transition-all duration-500" style="width: {{ min(100, $perfectOverview['facing'] ?? 0) }}%"></div>
+                            </div>
+                            <p class="mt-2 text-xs text-brand-white/60">Actual vs target facings recorded per SKU</p>
+                        </div>
+
+                        <div class="glass-panel rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-5 shadow-xl backdrop-blur-xl">
+                            <div class="flex items-center justify-between">
+                                <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-cyan-300">Planogram Alignment</p>
+                                <span class="rounded-full border border-cyan-400/30 bg-cyan-500/20 px-2.5 py-0.5 text-[9px] font-bold text-cyan-200">Target 100%</span>
+                            </div>
+                            <p class="mt-3 text-3xl font-display text-brand-white">{{ number_format($perfectOverview['planogram'] ?? 0, 1) }}%</p>
+                            <div class="mt-3 h-2 w-full rounded-full bg-brand-black/60 overflow-hidden border border-brand-white/10">
+                                <div class="h-full bg-cyan-400 transition-all duration-500" style="width: {{ min(100, $perfectOverview['planogram'] ?? 0) }}%"></div>
+                            </div>
+                            <p class="mt-2 text-xs text-brand-white/60">Compliant SKUs vs total planogram tracked</p>
+                        </div>
+
+                        <div class="glass-panel rounded-2xl border border-pink-500/30 bg-pink-500/10 p-5 shadow-xl backdrop-blur-xl">
+                            <div class="flex items-center justify-between">
+                                <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-pink-300">Share of Shelf (SOS)</p>
+                                <span class="rounded-full border border-pink-400/30 bg-pink-500/20 px-2.5 py-0.5 text-[9px] font-bold text-pink-200">Category Share</span>
+                            </div>
+                            <p class="mt-3 text-3xl font-display text-brand-white">{{ number_format($perfectOverview['sos'] ?? 0, 1) }}%</p>
+                            <div class="mt-3 h-2 w-full rounded-full bg-brand-black/60 overflow-hidden border border-brand-white/10">
+                                <div class="h-full bg-pink-400 transition-all duration-500" style="width: {{ min(100, $perfectOverview['sos'] ?? 0) }}%"></div>
+                            </div>
+                            <p class="mt-2 text-xs text-brand-white/60">Unilever facings vs category total facings</p>
+                        </div>
+
+                        <div class="glass-panel rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5 shadow-xl backdrop-blur-xl">
+                            <div class="flex items-center justify-between">
+                                <p class="text-[10px] font-bold uppercase tracking-[0.25em] text-emerald-300">Perfect Store Rating</p>
+                                <span class="rounded-full border border-emerald-400/30 bg-emerald-500/20 px-2.5 py-0.5 text-[9px] font-bold text-emerald-200">Composite</span>
+                            </div>
+                            <p class="mt-3 text-3xl font-display text-brand-white">{{ number_format($perfectOverview['perfect_store_score'] ?? 0, 1) }}%</p>
+                            <div class="mt-3 h-2 w-full rounded-full bg-brand-black/60 overflow-hidden border border-brand-white/10">
+                                <div class="h-full bg-emerald-400 transition-all duration-500" style="width: {{ min(100, $perfectOverview['perfect_store_score'] ?? 0) }}%"></div>
+                            </div>
+                            <p class="mt-2 text-xs text-brand-white/60">Weighted execution across {{ $perfectOverview['visits'] ?? 0 }} audits</p>
+                        </div>
+                    </div>
+
+                    <!-- Delivery/Transport-Style Milestone Trackers -->
+                    <div class="glass-panel rounded-2xl border border-brand-white/10 bg-brand-white/5 p-6 shadow-2xl">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 border-b border-brand-white/10 pb-4">
+                            <div>
+                                <h3 class="text-lg font-display text-brand-white tracking-wide uppercase">🚚 Delivery-Style Store Milestone Audit Trackers</h3>
+                                <p class="text-xs text-brand-white/50">Real-time audit progression and compliance checkpoints for store visits.</p>
+                            </div>
+                            <span class="rounded-full border border-sky-400/30 bg-sky-500/10 px-3 py-1 text-xs font-bold text-sky-200">
+                                {{ count($perfectStoreMilestones) }} Recent Audits
+                            </span>
+                        </div>
+
+                        <div class="space-y-4">
+                            @forelse($perfectStoreMilestones as $milestone)
+                                @php
+                                    $statusColor = match($milestone['status']) {
+                                        'Perfect Store' => 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300',
+                                        'On Track' => 'border-sky-500/40 bg-sky-500/10 text-sky-300',
+                                        default => 'border-amber-500/40 bg-amber-500/10 text-amber-300',
+                                    };
+                                @endphp
+                                <div class="rounded-xl border border-brand-white/10 bg-brand-black/60 p-4 transition-all duration-200 hover:border-brand-white/20">
+                                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+                                        <div>
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-sm font-bold text-brand-white">{{ $milestone['outlet_name'] }}</span>
+                                                <span class="rounded-md border border-brand-white/10 bg-brand-white/5 px-2 py-0.5 text-[10px] text-brand-white/60">{{ $milestone['kd_name'] }}</span>
+                                            </div>
+                                            <p class="text-xs text-brand-white/40 mt-0.5">Field Agent: <strong class="text-brand-white/70">{{ $milestone['merchandiser_name'] }}</strong> &bull; Audited on: {{ $milestone['created_at'] }}</p>
+                                        </div>
+                                        <div class="flex items-center gap-3">
+                                            <span class="rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wider {{ $statusColor }}">
+                                                {{ $milestone['status'] }}
+                                            </span>
+                                            <span class="text-lg font-bold text-brand-white font-mono">{{ number_format($milestone['overall_score'], 1) }}%</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Milestone Steps Line -->
+                                    <div class="grid grid-cols-5 gap-2 relative border-t border-brand-white/10 pt-4">
+                                        <!-- Step 1: Clock In -->
+                                        <div class="flex flex-col items-center text-center">
+                                            <div class="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/50 flex items-center justify-center text-emerald-300 text-xs font-bold mb-1 shadow-lg">✓</div>
+                                            <span class="text-[10px] font-bold uppercase tracking-wider text-brand-white">1. Clock In</span>
+                                            <span class="text-[9px] text-emerald-300">Verified</span>
+                                        </div>
+
+                                        <!-- Step 2: Facings Audit -->
+                                        <div class="flex flex-col items-center text-center">
+                                            <div class="w-8 h-8 rounded-full {{ $milestone['facing_pct'] >= 95 ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300' : 'bg-amber-500/20 border-amber-500/50 text-amber-300' }} border flex items-center justify-center text-xs font-bold mb-1 shadow-lg">
+                                                {{ number_format($milestone['facing_pct'], 0) }}%
+                                            </div>
+                                            <span class="text-[10px] font-bold uppercase tracking-wider text-brand-white">2. Facings</span>
+                                            <span class="text-[9px] {{ $milestone['facing_pct'] >= 95 ? 'text-emerald-300' : 'text-amber-300' }}">Target 95%</span>
+                                        </div>
+
+                                        <!-- Step 3: Planogram Check -->
+                                        <div class="flex flex-col items-center text-center">
+                                            <div class="w-8 h-8 rounded-full {{ $milestone['planogram_pct'] >= 100 ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300' : 'bg-amber-500/20 border-amber-500/50 text-amber-300' }} border flex items-center justify-center text-xs font-bold mb-1 shadow-lg">
+                                                {{ number_format($milestone['planogram_pct'], 0) }}%
+                                            </div>
+                                            <span class="text-[10px] font-bold uppercase tracking-wider text-brand-white">3. Planogram</span>
+                                            <span class="text-[9px] {{ $milestone['planogram_pct'] >= 100 ? 'text-cyan-300' : 'text-amber-300' }}">Target 100%</span>
+                                        </div>
+
+                                        <!-- Step 4: SOS Share -->
+                                        <div class="flex flex-col items-center text-center">
+                                            <div class="w-8 h-8 rounded-full bg-pink-500/20 border border-pink-500/50 flex items-center justify-center text-pink-300 text-xs font-bold mb-1 shadow-lg">
+                                                {{ number_format($milestone['sos_pct'], 0) }}%
+                                            </div>
+                                            <span class="text-[10px] font-bold uppercase tracking-wider text-brand-white">4. Share of Shelf</span>
+                                            <span class="text-[9px] text-pink-300">Category Share</span>
+                                        </div>
+
+                                        <!-- Step 5: Sign-Off -->
+                                        <div class="flex flex-col items-center text-center">
+                                            <div class="w-8 h-8 rounded-full bg-purple-500/20 border border-purple-500/50 flex items-center justify-center text-purple-300 text-xs font-bold mb-1 shadow-lg">🏁</div>
+                                            <span class="text-[10px] font-bold uppercase tracking-wider text-brand-white">5. Sign-Off</span>
+                                            <span class="text-[9px] text-purple-300">Recorded</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            @empty
+                                <div class="py-12 text-center">
+                                    <p class="text-sm text-brand-white/50">No store milestone audits recorded yet for this date range.</p>
+                                </div>
+                            @endforelse
+                        </div>
+                    </div>
+
+                    <!-- Charts Section -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- KD Level Performance Bar Chart -->
+                        <div class="glass-panel rounded-2xl border border-brand-white/10 bg-brand-white/5 p-6 shadow-2xl lg:col-span-2">
+                            <h4 class="text-sm font-bold uppercase tracking-wider text-brand-white mb-1">Key Distributor (KD) Performance Comparison</h4>
+                            <p class="text-xs text-brand-white/50 mb-4">Facings % vs Planogram Compliance % across KDs.</p>
+                            <div class="h-80">
+                                <canvas id="perfectStoreKdBarChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Category SOS Doughnut Chart -->
+                        <div class="glass-panel rounded-2xl border border-brand-white/10 bg-brand-white/5 p-6 shadow-2xl">
+                            <h4 class="text-sm font-bold uppercase tracking-wider text-brand-white mb-1">Category Share of Shelf (SOS)</h4>
+                            <p class="text-xs text-brand-white/50 mb-4">Unilever vs Total Category Facings.</p>
+                            <div class="h-80 flex items-center justify-center">
+                                <canvas id="categorySosDoughnutChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Merchandiser & Supervisor Performance Ranking Table -->
+                    <div class="glass-panel rounded-2xl border border-brand-white/10 bg-brand-white/5 p-6 shadow-2xl">
+                        <div class="flex items-center justify-between mb-4 border-b border-brand-white/10 pb-3">
+                            <h4 class="text-sm font-bold uppercase tracking-wider text-brand-white">Merchandiser & Supervisor Performance Rankings</h4>
+                            <span class="text-xs text-brand-white/50">{{ count($perfectStoreMerchandiserData) }} Field Agents</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead class="border-b border-brand-white/10 text-[10px] uppercase tracking-wider text-brand-ash">
+                                    <tr>
+                                        <th class="pb-3">Merchandiser</th>
+                                        <th class="pb-3">Supervisor</th>
+                                        <th class="pb-3">Key Distributor</th>
+                                        <th class="pb-3 text-center">Stores Audited</th>
+                                        <th class="pb-3 text-right">Facing % (95% Target)</th>
+                                        <th class="pb-3 text-right">Planogram % (100% Target)</th>
+                                        <th class="pb-3 text-right">SOS %</th>
+                                        <th class="pb-3 text-right">Overall Score</th>
+                                        <th class="pb-3 text-center">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-brand-white/5">
+                                    @forelse($perfectStoreMerchandiserData as $m)
+                                        <tr class="hover:bg-brand-white/[0.03] transition-colors">
+                                            <td class="py-3 font-semibold text-brand-white">{{ $m['user_name'] }}</td>
+                                            <td class="py-3 text-brand-white/70">{{ $m['supervisor_name'] }}</td>
+                                            <td class="py-3 text-brand-white/70">{{ $m['kd_name'] }}</td>
+                                            <td class="py-3 text-center font-mono font-bold text-brand-white">{{ $m['store_count'] }}</td>
+                                            <td class="py-3 text-right font-mono {{ $m['facing_pct'] >= 95 ? 'text-lime-300 font-bold' : 'text-amber-300' }}">{{ number_format($m['facing_pct'], 1) }}%</td>
+                                            <td class="py-3 text-right font-mono {{ $m['planogram_pct'] >= 100 ? 'text-cyan-300 font-bold' : 'text-amber-300' }}">{{ number_format($m['planogram_pct'], 1) }}%</td>
+                                            <td class="py-3 text-right font-mono text-pink-300">{{ number_format($m['sos_pct'], 1) }}%</td>
+                                            <td class="py-3 text-right font-mono font-bold text-brand-white text-sm">{{ number_format($m['overall_score'], 1) }}%</td>
+                                            <td class="py-3 text-center">
+                                                <span class="rounded-full border px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider {{ match($m['status']) { 'Perfect Store' => 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300', 'On Track' => 'border-sky-500/40 bg-sky-500/10 text-sky-300', default => 'border-amber-500/40 bg-amber-500/10 text-amber-300' } }}">
+                                                    {{ $m['status'] }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="9" class="py-8 text-center text-brand-white/40">No field merchandiser data available for this range.</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- ═══════════════════════════════════════════════════════════
                      TAB: OVERVIEW DASHBOARD
@@ -2969,38 +3193,67 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
-                        <div class="glass-panel rounded-2xl border border-brand-white/10 overflow-hidden">
-                            <div class="px-5 py-4 border-b border-brand-white/10">
-                                <p class="text-xs uppercase tracking-widest text-brand-ash font-bold">Supervisor performance metrics</p>
+                    <!-- Supervisor Accountability Performance Command Center (Daily, Weekly, Monthly, Yearly) -->
+                    <div class="glass-panel rounded-2xl border border-brand-white/10 bg-brand-white/5 p-6 shadow-2xl space-y-6">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-brand-white/10 pb-4">
+                            <div>
+                                <h3 class="text-lg font-display text-brand-white tracking-wide uppercase">🧭 Supervisor Accountability & Team Performance</h3>
+                                <p class="text-xs text-brand-white/50">Performance tracking for field supervisors aggregating team merchandiser metrics.</p>
                             </div>
-                            <div class="overflow-x-auto">
-                                <table class="w-full min-w-[760px] text-sm">
-                                    <thead>
-                                        <tr class="border-b border-brand-white/10 bg-brand-white/3">
-                                            <th class="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-brand-ash">Supervisor</th>
-                                            <th class="px-5 py-3 text-center text-[10px] uppercase tracking-widest text-brand-ash">Merchs</th>
-                                            <th class="px-5 py-3 text-center text-[10px] uppercase tracking-widest text-brand-ash">KDs</th>
-                                            <th class="px-5 py-3 text-center text-[10px] uppercase tracking-widest text-brand-ash">Clockins</th>
-                                            <th class="px-5 py-3 text-center text-[10px] uppercase tracking-widest text-brand-ash">Outlets Covered</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @forelse($supervisorStats as $stat)
-                                            <tr class="border-b border-brand-white/5">
-                                                <td class="px-5 py-3 font-semibold text-brand-white">{{ $stat['user']->name }}</td>
-                                                <td class="px-5 py-3 text-center text-blue-300 font-bold">{{ $stat['assigned_merchandisers'] }}</td>
-                                                <td class="px-5 py-3 text-center text-amber-300 font-bold">{{ $stat['assigned_kds'] }}</td>
-                                                <td class="px-5 py-3 text-center text-green-300 font-bold">{{ $stat['clockins'] }}</td>
-                                                <td class="px-5 py-3 text-center text-brand-white font-bold">{{ $stat['outlets_covered'] }}</td>
-                                            </tr>
-                                        @empty
-                                            <tr><td colspan="5" class="px-5 py-8 text-center text-brand-ash text-sm">No supervisor metrics yet.</td></tr>
-                                        @endforelse
-                                    </tbody>
-                                </table>
+                            <div class="flex items-center gap-1.5 bg-brand-black/60 p-1.5 rounded-xl border border-brand-white/10 overflow-x-auto">
+                                @foreach(['daily' => '📅 Daily', 'weekly' => '📆 Weekly', 'monthly' => '📊 Monthly', 'yearly' => '🏆 Yearly'] as $pKey => $pLabel)
+                                    <a href="{{ route('merchandisers.admin.tab', ['adminTab' => 'supervisors', 'perf_period' => $pKey]) }}"
+                                       class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 {{ $perfPeriod === $pKey ? 'bg-brand-red text-white shadow-lg' : 'text-brand-white/60 hover:text-white hover:bg-brand-white/10' }}">
+                                        {{ $pLabel }}
+                                    </a>
+                                @endforeach
                             </div>
                         </div>
+
+                        <!-- Supervisor Detail Performance Table -->
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead class="border-b border-brand-white/10 text-[10px] uppercase tracking-wider text-brand-ash">
+                                    <tr>
+                                        <th class="pb-3">Supervisor</th>
+                                        <th class="pb-3 text-center">Team Size (Merchs)</th>
+                                        <th class="pb-3 text-center">Team Scheduled</th>
+                                        <th class="pb-3 text-center">Team Completed</th>
+                                        <th class="pb-3 text-right">Team Coverage %</th>
+                                        <th class="pb-3 text-right">Team Facing % (95% Target)</th>
+                                        <th class="pb-3 text-right">Team Planogram % (100% Target)</th>
+                                        <th class="pb-3 text-right">Team SOS %</th>
+                                        <th class="pb-3 text-right">Supervisor Rating</th>
+                                        <th class="pb-3 text-center">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-brand-white/5">
+                                    @forelse($supervisorPerformance as $sup)
+                                        <tr class="hover:bg-brand-white/[0.03] transition-colors">
+                                            <td class="py-3 font-semibold text-brand-white">{{ $sup['supervisor_name'] }}</td>
+                                            <td class="py-3 text-center font-mono font-bold text-sky-300">{{ $sup['assigned_merchandisers'] }}</td>
+                                            <td class="py-3 text-center font-mono text-brand-white">{{ $sup['total_scheduled'] }}</td>
+                                            <td class="py-3 text-center font-mono font-bold text-emerald-300">{{ $sup['total_completed'] }}</td>
+                                            <td class="py-3 text-right font-mono font-bold text-sky-300">{{ number_format($sup['coverage_pct'], 1) }}%</td>
+                                            <td class="py-3 text-right font-mono {{ $sup['facing_pct'] >= 95 ? 'text-lime-300 font-bold' : 'text-amber-300' }}">{{ number_format($sup['facing_pct'], 1) }}%</td>
+                                            <td class="py-3 text-right font-mono {{ $sup['planogram_pct'] >= 100 ? 'text-cyan-300 font-bold' : 'text-amber-300' }}">{{ number_format($sup['planogram_pct'], 1) }}%</td>
+                                            <td class="py-3 text-right font-mono text-pink-300">{{ number_format($sup['sos_pct'], 1) }}%</td>
+                                            <td class="py-3 text-right font-mono font-bold text-brand-white text-sm">{{ number_format($sup['overall_score'], 1) }}%</td>
+                                            <td class="py-3 text-center">
+                                                <span class="rounded-full border px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider {{ match($sup['status']) { 'Perfect Store' => 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300', 'On Track' => 'border-sky-500/40 bg-sky-500/10 text-sky-300', default => 'border-amber-500/40 bg-amber-500/10 text-amber-300' } }}">
+                                                    {{ $sup['status'] }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="10" class="py-8 text-center text-brand-white/40">No supervisor performance metrics available for this {{ $perfPeriod }} period.</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
 
                         <div class="glass-panel rounded-2xl p-5 border border-brand-white/10">
                             <p class="text-xs uppercase tracking-widest text-brand-ash font-bold mb-4">Send compliance query</p>
@@ -3675,68 +3928,108 @@
                 {{-- ═══════════════════════════════════════════════════
                      TAB: USER PERFORMANCE (ShelfWatch)
                 ════════════════════════════════════════════════════ --}}
-                <div x-show="activeTab === 'user-performance'" x-transition>
-                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                        <div class="stat-card kpi-glow-blue glass-panel rounded-2xl p-5 border border-brand-white/10">
-                            <p class="text-[10px] uppercase tracking-widest text-brand-ash mb-2">Active Merchandisers</p>
-                            <p class="text-4xl font-display text-blue-400">{{ $activeMerchandisers }}</p>
+                <!-- ═══════════════════════════════════════════════════════════
+                     TAB: MERCHANDISER PERFORMANCE TRACKING (Daily, Weekly, Monthly, Yearly)
+                ════════════════════════════════════════════════════════════ -->
+                <div x-show="activeTab === 'user-performance'" x-transition class="space-y-6">
+                    <!-- Period Filter Controls -->
+                    <div class="glass-panel rounded-2xl border border-brand-white/10 bg-brand-white/5 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div>
+                            <h3 class="text-lg font-display text-brand-white tracking-wide uppercase">👤 Field Merchandiser Performance Tracking</h3>
+                            <p class="text-xs text-brand-white/50">Track individual merchandiser metrics over Daily, Weekly, Monthly, and Yearly time frames.</p>
                         </div>
-                        <div class="stat-card kpi-glow-green glass-panel rounded-2xl p-5 border border-brand-white/10">
-                            <p class="text-[10px] uppercase tracking-widest text-brand-ash mb-2">Avg Coverage</p>
-                            <p class="text-4xl font-display text-emerald-400">{{ $userPerformance->isNotEmpty() ? number_format($userPerformance->avg('coverage_pct'), 1) : 0 }}%</p>
-                        </div>
-                        <div class="stat-card kpi-glow-amber glass-panel rounded-2xl p-5 border border-brand-white/10">
-                            <p class="text-[10px] uppercase tracking-widest text-brand-ash mb-2">Total Images</p>
-                            <p class="text-4xl font-display text-amber-400">{{ number_format($userPerformance->sum('images_uploaded')) }}</p>
-                        </div>
-                        <div class="stat-card glass-panel rounded-2xl p-5 border border-brand-white/10">
-                            <p class="text-[10px] uppercase tracking-widest text-brand-ash mb-2">Completed Visits</p>
-                            <p class="text-4xl font-display text-brand-white">{{ number_format($userPerformance->sum('completed_assignments')) }}</p>
+                        <div class="flex items-center gap-1.5 bg-brand-black/60 p-1.5 rounded-xl border border-brand-white/10 overflow-x-auto">
+                            @foreach(['daily' => '📅 Daily', 'weekly' => '📆 Weekly', 'monthly' => '📊 Monthly', 'yearly' => '🏆 Yearly'] as $pKey => $pLabel)
+                                <a href="{{ route('merchandisers.admin.tab', ['adminTab' => 'user-performance', 'perf_period' => $pKey]) }}"
+                                   class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 {{ $perfPeriod === $pKey ? 'bg-brand-red text-white shadow-lg' : 'text-brand-white/60 hover:text-white hover:bg-brand-white/10' }}">
+                                    {{ $pLabel }}
+                                </a>
+                            @endforeach
                         </div>
                     </div>
 
-                    {{-- Top performers bar chart --}}
-                    <div class="mb-5 glass-panel rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
-                        <p class="text-xs uppercase tracking-widest text-brand-ash mb-4">Coverage % by Merchandiser (Top 10)</p>
-                        <div class="h-64"><canvas id="userPerfCoverageChart"></canvas></div>
+                    <!-- Summary Scorecards -->
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="glass-panel rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4 shadow-lg">
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-emerald-300">Merchandisers Tracked</p>
+                            <p class="text-3xl font-display text-brand-white mt-1">{{ count($userPerformance) }}</p>
+                            <p class="text-[10px] text-brand-white/45 mt-1">{{ ucfirst($perfPeriod) }} Evaluation</p>
+                        </div>
+
+                        <div class="glass-panel rounded-2xl border border-lime-500/20 bg-lime-500/5 p-4 shadow-lg">
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-lime-300">Avg Facing Compliance</p>
+                            <p class="text-3xl font-display text-brand-white mt-1">{{ number_format($userPerformance->avg('facing_pct') ?? 0, 1) }}%</p>
+                            <p class="text-[10px] text-brand-white/45 mt-1">95% Target Standard</p>
+                        </div>
+
+                        <div class="glass-panel rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-4 shadow-lg">
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-cyan-300">Avg Planogram Alignment</p>
+                            <p class="text-3xl font-display text-brand-white mt-1">{{ number_format($userPerformance->avg('planogram_pct') ?? 0, 1) }}%</p>
+                            <p class="text-[10px] text-brand-white/45 mt-1">100% Target Standard</p>
+                        </div>
+
+                        <div class="glass-panel rounded-2xl border border-brand-red/30 bg-brand-red/10 p-4 shadow-lg">
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-red-300">Overall Rating Score</p>
+                            <p class="text-3xl font-display text-brand-white mt-1">{{ number_format($userPerformance->avg('overall_score') ?? 0, 1) }}%</p>
+                            <p class="text-[10px] text-brand-white/45 mt-1">Composite KPI Average</p>
+                        </div>
                     </div>
 
-                    <div class="glass-panel rounded-2xl border border-brand-white/10 overflow-hidden">
-                        <div class="border-b border-brand-white/10 px-5 py-4 flex items-center justify-between">
-                            <p class="text-xs uppercase tracking-widest text-brand-ash">User Scorecard</p>
-                            <span class="text-xs text-brand-ash">Period: {{ $coverageStart->format('d M') }} – {{ $coverageEnd->format('d M Y') }}</span>
+                    <!-- Performance Trend Chart -->
+                    <div class="glass-panel rounded-2xl border border-brand-white/10 bg-brand-white/5 p-6 shadow-2xl">
+                        <h4 class="text-sm font-bold uppercase tracking-wider text-brand-white mb-1">Merchandiser Performance Trend ({{ ucfirst($perfPeriod) }})</h4>
+                        <p class="text-xs text-brand-white/50 mb-4">Progression of Coverage %, Facing %, Planogram %, and Overall Score.</p>
+                        <div class="h-72">
+                            <canvas id="merchPerfTrendChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Merchandiser Detail Performance Table -->
+                    <div class="glass-panel rounded-2xl border border-brand-white/10 bg-brand-white/5 p-6 shadow-2xl">
+                        <div class="flex items-center justify-between mb-4 border-b border-brand-white/10 pb-3">
+                            <h4 class="text-sm font-bold uppercase tracking-wider text-brand-white">Merchandiser Performance Rankings ({{ ucfirst($perfPeriod) }})</h4>
+                            <span class="text-xs text-brand-white/50">{{ count($userPerformance) }} Field Promoters</span>
                         </div>
                         <div class="overflow-x-auto">
-                            <table class="w-full min-w-[700px] text-sm">
-                                <thead class="border-b border-brand-white/10 text-[10px] uppercase tracking-widest text-brand-ash">
+                            <table class="w-full text-left text-xs">
+                                <thead class="border-b border-brand-white/10 text-[10px] uppercase tracking-wider text-brand-ash">
                                     <tr>
-                                        <th class="px-5 py-3 text-left">Rank</th>
-                                        <th class="px-5 py-3 text-left">Merchandiser</th>
-                                        <th class="px-5 py-3 text-left">KD</th>
-                                        <th class="px-5 py-3 text-right">Clock-ins</th>
-                                        <th class="px-5 py-3 text-right">Scheduled</th>
-                                        <th class="px-5 py-3 text-right">Completed Visits</th>
-                                        <th class="px-5 py-3 text-right">Coverage</th>
-                                        <th class="px-5 py-3 text-right">Images</th>
+                                        <th class="pb-3">Merchandiser</th>
+                                        <th class="pb-3">Supervisor</th>
+                                        <th class="pb-3">Key Distributor</th>
+                                        <th class="pb-3 text-center">Scheduled</th>
+                                        <th class="pb-3 text-center">Completed</th>
+                                        <th class="pb-3 text-right">Coverage %</th>
+                                        <th class="pb-3 text-right">Facing % (95% Target)</th>
+                                        <th class="pb-3 text-right">Planogram % (100% Target)</th>
+                                        <th class="pb-3 text-right">SOS %</th>
+                                        <th class="pb-3 text-right">Overall Rating</th>
+                                        <th class="pb-3 text-center">Status</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    @forelse($userPerformance as $rank => $user)
-                                        <tr class="border-b border-brand-white/5">
-                                            <td class="px-5 py-3 font-bold {{ $rank === 0 ? 'text-amber-400' : ($rank === 1 ? 'text-slate-300' : ($rank === 2 ? 'text-orange-400' : 'text-brand-ash')) }}">#{{ $rank + 1 }}</td>
-                                            <td class="px-5 py-3 font-semibold text-brand-white">{{ $user->name }}</td>
-                                            <td class="px-5 py-3 text-brand-ash text-xs">{{ $user->merchandiserKd?->name ?? '—' }}</td>
-                                            <td class="px-5 py-3 text-right text-brand-ash">{{ $user->total_clockins }}</td>
-                                            <td class="px-5 py-3 text-right text-brand-ash">{{ $user->scheduled_visits }}</td>
-                                            <td class="px-5 py-3 text-right text-blue-300">{{ $user->completed_assignments }}</td>
-                                            <td class="px-5 py-3 text-right">
-                                                @php $cov = $user->coverage_pct; @endphp
-                                                <span class="{{ $cov >= 90 ? 'text-emerald-400' : ($cov >= 70 ? 'text-amber-400' : 'text-red-400') }} font-bold">{{ $cov }}%</span>
+                                <tbody class="divide-y divide-brand-white/5">
+                                    @forelse($userPerformance as $m)
+                                        <tr class="hover:bg-brand-white/[0.03] transition-colors">
+                                            <td class="py-3 font-semibold text-brand-white">{{ $m['user_name'] }}</td>
+                                            <td class="py-3 text-brand-white/70">{{ $m['supervisor_name'] }}</td>
+                                            <td class="py-3 text-brand-white/70">{{ $m['kd_name'] }}</td>
+                                            <td class="py-3 text-center font-mono font-bold text-brand-white">{{ $m['scheduled_visits'] }}</td>
+                                            <td class="py-3 text-center font-mono font-bold text-emerald-300">{{ $m['completed_assignments'] }}</td>
+                                            <td class="py-3 text-right font-mono font-bold text-sky-300">{{ number_format($m['coverage_pct'], 1) }}%</td>
+                                            <td class="py-3 text-right font-mono {{ $m['facing_pct'] >= 95 ? 'text-lime-300 font-bold' : 'text-amber-300' }}">{{ number_format($m['facing_pct'], 1) }}%</td>
+                                            <td class="py-3 text-right font-mono {{ $m['planogram_pct'] >= 100 ? 'text-cyan-300 font-bold' : 'text-amber-300' }}">{{ number_format($m['planogram_pct'], 1) }}%</td>
+                                            <td class="py-3 text-right font-mono text-pink-300">{{ number_format($m['sos_pct'], 1) }}%</td>
+                                            <td class="py-3 text-right font-mono font-bold text-brand-white text-sm">{{ number_format($m['overall_score'], 1) }}%</td>
+                                            <td class="py-3 text-center">
+                                                <span class="rounded-full border px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider {{ match($m['status']) { 'Perfect Store' => 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300', 'On Track' => 'border-sky-500/40 bg-sky-500/10 text-sky-300', default => 'border-amber-500/40 bg-amber-500/10 text-amber-300' } }}">
+                                                    {{ $m['status'] }}
+                                                </span>
                                             </td>
-                                            <td class="px-5 py-3 text-right text-sky-300">{{ number_format($user->images_uploaded) }}</td>
                                         </tr>
                                     @empty
-                                        <tr><td colspan="8" class="px-5 py-10 text-center text-sm text-brand-ash">No user performance data for this period.</td></tr>
+                                        <tr>
+                                            <td colspan="11" class="py-8 text-center text-brand-white/40">No merchandiser performance data recorded for this {{ $perfPeriod }} period.</td>
+                                        </tr>
                                     @endforelse
                                 </tbody>
                             </table>
@@ -4593,7 +4886,7 @@ document.addEventListener('DOMContentLoaded', () => {
 (function () {
     const el = document.getElementById('userPerfCoverageChart');
     if (!el) return;
-    const top10 = @json($userPerformance->take(10)->map(fn($u) => ['name' => $u->name, 'cov' => $u->coverage_pct])->values());
+    const top10 = @json($userPerformance->take(10)->map(fn($u) => ['name' => $u['user_name'] ?? '', 'cov' => $u['coverage_pct'] ?? 0])->values());
     new Chart(el, {
         type: 'bar',
         data: {
@@ -4611,6 +4904,36 @@ document.addEventListener('DOMContentLoaded', () => {
             scales: {
                 x: { beginAtZero: true, max: 100, grid: { color: 'rgba(255,255,255,.07)' }, ticks: { color: 'rgba(255,255,255,.55)', callback: v => v + '%' } },
                 y: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,.75)', font: { size: 11 } } }
+            }
+        }
+    });
+})();
+</script>
+@endif
+@if($activeAdminTab === 'user-performance')
+<script>
+(function () {
+    const el = document.getElementById('merchPerfTrendChart');
+    if (!el) return;
+    const chartData = @json($perfTrendChart);
+    new Chart(el, {
+        type: 'line',
+        data: {
+            labels: chartData.labels,
+            datasets: [
+                { label: 'Coverage %', data: chartData.coverage, borderColor: '#38bdf8', backgroundColor: 'rgba(56,189,248,0.1)', borderWidth: 2.5, tension: 0.35 },
+                { label: 'Facing % (95% Target)', data: chartData.facing, borderColor: '#a3e635', backgroundColor: 'rgba(163,230,53,0.1)', borderWidth: 2.5, tension: 0.35 },
+                { label: 'Planogram % (100% Target)', data: chartData.planogram, borderColor: '#22d3ee', backgroundColor: 'rgba(34,211,238,0.1)', borderWidth: 2.5, tension: 0.35 },
+                { label: 'Overall Score %', data: chartData.overall, borderColor: '#f43f5e', backgroundColor: 'rgba(244,63,94,0.15)', borderWidth: 3, tension: 0.35 }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: true, position: 'top', labels: { color: 'rgba(255,255,255,0.7)', font: { size: 11 } } } },
+            scales: {
+                x: { grid: { color: 'rgba(255,255,255,.07)' }, ticks: { color: 'rgba(255,255,255,.6)' } },
+                y: { beginAtZero: true, max: 100, grid: { color: 'rgba(255,255,255,.07)' }, ticks: { color: 'rgba(255,255,255,.6)', callback: v => v + '%' } }
             }
         }
     });
@@ -4644,6 +4967,56 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+})();
+</script>
+@endif
+@if($activeAdminTab === 'perfect-store' || $activeAdminTab === 'overview')
+<script>
+(function() {
+    const kdData = @json($perfectStoreKdData);
+    const kdCanvas = document.getElementById('perfectStoreKdBarChart');
+    if (kdCanvas && kdData.length) {
+        new Chart(kdCanvas, {
+            type: 'bar',
+            data: {
+                labels: kdData.map(d => d.kd_name),
+                datasets: [
+                    { label: 'Facing % (Target 95%)', data: kdData.map(d => d.facing_pct), backgroundColor: 'rgba(132, 204, 22, 0.75)', borderRadius: 6 },
+                    { label: 'Planogram % (Target 100%)', data: kdData.map(d => d.planogram_pct), backgroundColor: 'rgba(6, 182, 212, 0.75)', borderRadius: 6 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: true, labels: { color: 'rgba(255,255,255,0.7)' } } },
+                scales: {
+                    x: { grid: { color: 'rgba(255,255,255,0.07)' }, ticks: { color: 'rgba(255,255,255,0.6)' } },
+                    y: { beginAtZero: true, max: 100, grid: { color: 'rgba(255,255,255,0.07)' }, ticks: { color: 'rgba(255,255,255,0.6)', callback: v => v + '%' } }
+                }
+            }
+        });
+    }
+
+    const sosData = @json($categorySosData);
+    const sosCanvas = document.getElementById('categorySosDoughnutChart');
+    if (sosCanvas && sosData.length) {
+        new Chart(sosCanvas, {
+            type: 'doughnut',
+            data: {
+                labels: sosData.map(c => c.category),
+                datasets: [{
+                    data: sosData.map(c => c.unilever_facings || c.total_facings || 10),
+                    backgroundColor: ['#ec4899', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: true, position: 'bottom', labels: { color: 'rgba(255,255,255,0.7)', font: { size: 10 } } } }
+            }
+        });
+    }
 })();
 </script>
 @endif
