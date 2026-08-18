@@ -1096,6 +1096,15 @@
                             @if($canManageActiveWeeklyDepartment || ($user->isEffectiveLineManager() && ((int) $item->created_by === (int) $user->id || (int) $item->lead_staff_id === (int) $user->id || $user->isActingLineManagerFor((int) $item->created_by) || $user->isActingLineManagerFor((int) $item->lead_staff_id))))
                                 <td class="rounded-r-2xl border-y border-r border-brand-white/10 bg-brand-black/35 px-5 py-5 text-xs">
                                     <div class="weekly-consolidated-actions">
+                                        <div class="flex flex-col gap-1 mb-1">
+                                            <label class="text-[9px] uppercase tracking-wider text-brand-ash font-bold">Quick Status</label>
+                                            <select data-update-url="{{ route('portal.dashboard.weekly-consolidated.update', $item) }}"
+                                                    class="weekly-quick-status-select w-full rounded-xl border border-brand-white/15 bg-brand-black/90 px-2.5 py-1.5 text-xs font-semibold text-brand-white focus:border-brand-red focus:outline-none cursor-pointer hover:border-brand-white/30 transition-all">
+                                                @foreach(['Planned', 'In Progress', 'Done', 'Blocked', 'Deferred'] as $st)
+                                                    <option value="{{ $st }}" @selected($item->status === $st)>{{ $st }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
                                         <details>
                                             <summary class="weekly-consolidated-action-button cursor-pointer border border-brand-white/10 bg-brand-white/10 hover:bg-brand-white/15">Edit Row</summary>
                                             <div class="weekly-consolidated-edit-panel mt-3 rounded-xl border border-brand-white/10 bg-brand-black p-4 shadow-2xl">
@@ -1302,9 +1311,12 @@
                                     <span class="font-semibold text-xs text-brand-white">{{ $point->display_assignee }}</span>
                                 </td>
                                 <td class="px-4 py-4 align-top">
-                                    <span class="inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider {{ $point->status_badge_class }}">
-                                        {{ $point->status_label }}
-                                    </span>
+                                    <select data-update-url="{{ route('portal.action-points.update', $point) }}"
+                                            class="action-point-quick-status-select rounded-xl border border-brand-white/15 bg-brand-black/90 px-2.5 py-1.5 text-xs font-bold text-brand-white focus:border-brand-red focus:outline-none cursor-pointer hover:border-brand-white/30 transition-all">
+                                        @foreach(['pending' => 'Pending', 'in_progress' => 'In Progress', 'done' => 'Done', 'not_done' => 'Not Done'] as $val => $lbl)
+                                            <option value="{{ $val }}" @selected($point->status === $val)>{{ $lbl }}</option>
+                                        @endforeach
+                                    </select>
                                 </td>
                                 <td class="px-4 py-4 align-top">
                                     <p class="text-xs text-brand-white/70 whitespace-pre-wrap">{{ $point->comments ?: 'No comments' }}</p>
@@ -1917,6 +1929,16 @@
 
                 const { pushState = false, preserveScroll = true, isUserNavigation = false, weeklyDepartment = null } = options;
                 const previousScrollY = window.scrollY;
+
+                // Capture horizontal scroll position of table scroll containers
+                const scrollPositions = new Map();
+                if (weeklyConsolidatedRegion) {
+                    weeklyConsolidatedRegion.querySelectorAll('.weekly-consolidated-scroll, .overflow-x-auto, table').forEach((container, index) => {
+                        const key = container.dataset.tableKey || index;
+                        scrollPositions.set(key, container.scrollLeft);
+                    });
+                }
+
                 const normalizedUrl = normalizeWeeklyUrl(refreshUrl, weeklyDepartment);
                 const requestedDepartment = normalizedUrl.searchParams.get('weekly_department');
                 if (requestedDepartment) {
@@ -1953,6 +1975,14 @@
                     weeklyConsolidatedRegion = freshRegion;
                     rememberWeeklyDepartment(requestedDepartment || freshDepartment);
 
+                    // Restore horizontal scroll position of table scroll containers
+                    freshRegion.querySelectorAll('.weekly-consolidated-scroll, .overflow-x-auto, table').forEach((container, index) => {
+                        const key = container.dataset.tableKey || index;
+                        if (scrollPositions.has(key)) {
+                            container.scrollLeft = scrollPositions.get(key);
+                        }
+                    });
+
                     if (pushState) {
                         window.history.pushState({ weeklyDepartment: true }, '', normalizedUrl.toString());
                     }
@@ -1979,6 +2009,7 @@
             async function refreshWeeklyConsolidatedSilently() {
                 if (!weeklyConsolidatedRegion || weeklyConsolidatedRefreshing || document.hidden) return;
                 if (weeklyConsolidatedRegion.contains(document.activeElement)) return;
+                if (weeklyConsolidatedRegion.matches(':hover')) return;
                 if (weeklyConsolidatedRegion.querySelector('#weekly-consolidated-form:not(.hidden), #weekly-column-manager:not(.hidden), details[open]')) return;
 
                 const weeklyDepartment = getPreferredWeeklyDepartment();
@@ -1987,6 +2018,197 @@
                     weeklyDepartment,
                 });
             }
+
+            // Toast Notification Helper
+            window.showDashboardToast = function(message, type = 'success') {
+                let toastContainer = document.getElementById('dashboard-toast-container');
+                if (!toastContainer) {
+                    toastContainer = document.createElement('div');
+                    toastContainer.id = 'dashboard-toast-container';
+                    toastContainer.className = 'fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none';
+                    document.body.appendChild(toastContainer);
+                }
+
+                const toast = document.createElement('div');
+                toast.className = `pointer-events-auto flex items-center gap-3 rounded-2xl border px-4 py-3 text-xs font-semibold shadow-2xl backdrop-blur-xl transition-all duration-300 transform translate-y-2 opacity-0 ${
+                    type === 'error'
+                        ? 'border-red-500/30 bg-red-950/90 text-red-200'
+                        : 'border-emerald-500/30 bg-emerald-950/90 text-emerald-200'
+                }`;
+
+                const icon = type === 'error' ? '⚠️' : '✓';
+                toast.innerHTML = `<span class="text-sm">${icon}</span><span>${message}</span>`;
+
+                toastContainer.appendChild(toast);
+
+                requestAnimationFrame(() => {
+                    toast.classList.remove('translate-y-2', 'opacity-0');
+                });
+
+                setTimeout(() => {
+                    toast.classList.add('opacity-0', 'translate-y-2');
+                    setTimeout(() => toast.remove(), 300);
+                }, 3500);
+            };
+
+            // Delegated AJAX form handler for Weekly Consolidated & Action Points
+            document.addEventListener('submit', async (event) => {
+                const form = event.target;
+                if (!form || !(form instanceof HTMLFormElement)) return;
+
+                const action = form.getAttribute('action') || '';
+                const isTargetForm = form.closest('#weekly-consolidated-live-region') ||
+                    action.includes('weekly-consolidated') ||
+                    action.includes('action-points');
+
+                if (!isTargetForm || form.hasAttribute('data-no-ajax')) return;
+
+                event.preventDefault();
+                event.stopPropagation();
+
+                const previousScrollY = window.scrollY;
+                const scrollPositions = new Map();
+                document.querySelectorAll('.weekly-consolidated-scroll, .overflow-x-auto, table').forEach((container, index) => {
+                    const key = container.dataset.tableKey || index;
+                    scrollPositions.set(key, container.scrollLeft);
+                });
+
+                const submitBtn = form.querySelector('button[type="submit"]');
+                const originalBtnContent = submitBtn ? submitBtn.innerHTML : '';
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.style.opacity = '0.6';
+                }
+
+                try {
+                    const formData = new FormData(form);
+                    const method = (form.querySelector('input[name="_method"]')?.value || form.method || 'POST').toUpperCase();
+
+                    const response = await fetch(action, {
+                        method: method === 'GET' ? 'GET' : 'POST',
+                        body: method === 'GET' ? null : formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json, text/html',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                        },
+                        credentials: 'same-origin',
+                    });
+
+                    let resultMsg = 'Updated successfully.';
+                    if (response.ok) {
+                        try {
+                            const data = await response.json();
+                            if (data.message) resultMsg = data.message;
+                        } catch (e) {}
+
+                        showDashboardToast(resultMsg, 'success');
+
+                        // Close details drawer if open
+                        const details = form.closest('details');
+                        if (details) details.removeAttribute('open');
+
+                        // Refresh region silently
+                        await loadWeeklyConsolidatedUrl(weeklyConsolidatedRegion?.dataset?.refreshUrl || window.location.href, {
+                            preserveScroll: true,
+                            weeklyDepartment: getPreferredWeeklyDepartment(),
+                        });
+
+                        window.scrollTo(window.scrollX, previousScrollY);
+                        document.querySelectorAll('.weekly-consolidated-scroll, .overflow-x-auto, table').forEach((container, index) => {
+                            const key = container.dataset.tableKey || index;
+                            if (scrollPositions.has(key)) {
+                                container.scrollLeft = scrollPositions.get(key);
+                            }
+                        });
+                    } else {
+                        let errorMsg = 'Save failed. Please check fields.';
+                        try {
+                            const data = await response.json();
+                            if (data.message) errorMsg = data.message;
+                        } catch (e) {}
+                        showDashboardToast(errorMsg, 'error');
+                    }
+                } catch (err) {
+                    console.error('Form submit error:', err);
+                    showDashboardToast('Network error occurred.', 'error');
+                } finally {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.style.opacity = '1';
+                        submitBtn.innerHTML = originalBtnContent;
+                    }
+                }
+            }, true);
+
+            // Delegated Change handler for Quick Status dropdowns
+            document.addEventListener('change', async (event) => {
+                const select = event.target;
+                if (!select || (!select.classList.contains('weekly-quick-status-select') && !select.classList.contains('action-point-quick-status-select'))) return;
+
+                const updateUrl = select.dataset.updateUrl;
+                if (!updateUrl) return;
+
+                event.preventDefault();
+                event.stopPropagation();
+
+                const previousScrollY = window.scrollY;
+                const scrollPositions = new Map();
+                document.querySelectorAll('.weekly-consolidated-scroll, .overflow-x-auto, table').forEach((container, index) => {
+                    const key = container.dataset.tableKey || index;
+                    scrollPositions.set(key, container.scrollLeft);
+                });
+
+                const newStatus = select.value;
+                select.disabled = true;
+
+                try {
+                    const formData = new FormData();
+                    formData.append('_method', 'PATCH');
+                    formData.append('_token', document.querySelector('meta[name="csrf-token"]')?.content || '');
+                    formData.append('status', newStatus);
+
+                    const response = await fetch(updateUrl, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json',
+                        },
+                        credentials: 'same-origin',
+                    });
+
+                    if (response.ok) {
+                        let msg = `Status updated to ${newStatus}`;
+                        try {
+                            const data = await response.json();
+                            if (data.message) msg = data.message;
+                        } catch (e) {}
+
+                        showDashboardToast(msg, 'success');
+
+                        await loadWeeklyConsolidatedUrl(weeklyConsolidatedRegion?.dataset?.refreshUrl || window.location.href, {
+                            preserveScroll: true,
+                            weeklyDepartment: getPreferredWeeklyDepartment(),
+                        });
+
+                        window.scrollTo(window.scrollX, previousScrollY);
+                        document.querySelectorAll('.weekly-consolidated-scroll, .overflow-x-auto, table').forEach((container, index) => {
+                            const key = container.dataset.tableKey || index;
+                            if (scrollPositions.has(key)) {
+                                container.scrollLeft = scrollPositions.get(key);
+                            }
+                        });
+                    } else {
+                        showDashboardToast('Failed to update status.', 'error');
+                        select.disabled = false;
+                    }
+                } catch (err) {
+                    console.error('Quick status change error:', err);
+                    showDashboardToast('Network error updating status.', 'error');
+                    select.disabled = false;
+                }
+            }, true);
 
             document.addEventListener('click', (event) => {
                 const target = event.target instanceof Element ? event.target : event.target?.parentElement;
