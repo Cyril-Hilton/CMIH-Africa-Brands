@@ -30,6 +30,10 @@ class MerchandiserVisit extends Model
         'ai_detection_notes',
         'ai_detection_review_required',
         'ai_detection_completed_at',
+        'client_recorded_at',
+        'sync_token',
+        'sync_source',
+        'synced_at',
     ];
 
     protected $casts = [
@@ -38,6 +42,8 @@ class MerchandiserVisit extends Model
         'ai_detection_payload' => 'array',
         'ai_detection_review_required' => 'boolean',
         'ai_detection_completed_at' => 'datetime',
+        'client_recorded_at' => 'datetime',
+        'synced_at' => 'datetime',
     ];
 
     public function user(): BelongsTo

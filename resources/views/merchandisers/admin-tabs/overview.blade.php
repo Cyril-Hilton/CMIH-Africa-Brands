@@ -483,8 +483,8 @@
                         <div class="glass-panel rounded-2xl p-5 border border-brand-white/10 flex flex-col justify-between">
                             <div>
                                 <p class="text-xs uppercase tracking-widest text-brand-ash mb-4">📥 Export Merchandiser Portal Data</p>
-                                <p class="text-xs text-brand-ash mb-4">Select operations data to download in spreadsheet format.</p>
-                                <div class="grid grid-cols-2 gap-3">
+                                <p class="text-xs text-brand-ash mb-4">Select operations data to download as CSV, Excel-compatible, or PDF.</p>
+                                <div class="grid gap-3 md:grid-cols-3">
                                     <div class="space-y-2">
                                         <p class="text-[10px] uppercase font-bold text-brand-ash tracking-wider">CSV Formats</p>
                                         <a href="{{ route('merchandisers.admin.export', 'merchandisers') }}?format=csv" class="block w-full text-left px-3 py-2 bg-brand-white/5 hover:bg-brand-white/10 rounded-xl text-xs transition">👤 Merchandisers List</a>
@@ -496,6 +496,12 @@
                                         <a href="{{ route('merchandisers.admin.export', 'leaves') }}?format=excel" class="block w-full text-left px-3 py-2 bg-brand-white/5 hover:bg-brand-white/10 rounded-xl text-xs transition">🍂 Leave applications</a>
                                         <a href="{{ route('merchandisers.admin.export', 'claims') }}?format=excel" class="block w-full text-left px-3 py-2 bg-brand-white/5 hover:bg-brand-white/10 rounded-xl text-xs transition">💰 Petty cash claims</a>
                                         <a href="{{ route('merchandisers.admin.export', 'loans') }}?format=excel" class="block w-full text-left px-3 py-2 bg-brand-white/5 hover:bg-brand-white/10 rounded-xl text-xs transition">💵 Salary advances</a>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <p class="text-[10px] uppercase font-bold text-brand-ash tracking-wider">PDF Formats</p>
+                                        <a href="{{ route('merchandisers.admin.export', 'merchandisers') }}?format=pdf" class="block w-full text-left px-3 py-2 bg-brand-white/5 hover:bg-brand-white/10 rounded-xl text-xs transition">Merchandisers PDF</a>
+                                        <a href="{{ route('merchandisers.admin.export', 'attendance') }}?format=pdf" class="block w-full text-left px-3 py-2 bg-brand-white/5 hover:bg-brand-white/10 rounded-xl text-xs transition">Attendance PDF</a>
+                                        <a href="{{ route('merchandisers.admin.export', 'assets') }}?format=pdf" class="block w-full text-left px-3 py-2 bg-brand-white/5 hover:bg-brand-white/10 rounded-xl text-xs transition">POSM / Gear PDF</a>
                                     </div>
                                 </div>
                             </div>

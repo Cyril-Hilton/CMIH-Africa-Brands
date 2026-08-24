@@ -19,6 +19,10 @@ class MerchandiserNativeFormSubmission extends Model
         'normalized_metrics',
         'source_google_form_url',
         'submitted_at',
+        'client_recorded_at',
+        'sync_token',
+        'sync_source',
+        'synced_at',
     ];
 
     protected function casts(): array
@@ -27,6 +31,8 @@ class MerchandiserNativeFormSubmission extends Model
             'answers' => 'array',
             'normalized_metrics' => 'array',
             'submitted_at' => 'datetime',
+            'client_recorded_at' => 'datetime',
+            'synced_at' => 'datetime',
         ];
     }
 

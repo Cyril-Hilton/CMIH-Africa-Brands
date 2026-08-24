@@ -145,6 +145,55 @@ Artisan::command('app:send-workday-reminders {period : morning or evening}', fun
     ->dailyAt('18:00')
     ->timezone('Africa/Accra');
 
+Artisan::command('merchandisers:reports {frequency=daily : daily or weekly} {--date= : Report date in YYYY-MM-DD}', function () {
+    $frequency = strtolower((string) $this->argument('frequency'));
+    if (! in_array($frequency, ['daily', 'weekly'], true)) {
+        $this->error('Invalid frequency. Use daily or weekly.');
+        return 1;
+    }
+
+    $date = $this->option('date')
+        ? \Illuminate\Support\Carbon::parse((string) $this->option('date'), 'Africa/Accra')
+        : null;
+
+    $delivery = app(\App\Services\MerchandiserReportAutomationService::class)->createReport($frequency, $date);
+    $this->info("Merchandiser {$frequency} report generated and delivered to ".count($delivery->sent_to ?? []).' admin recipient(s).');
+
+    return 0;
+})->purpose('Generate automated merchandiser daily/weekly report links and notify admins');
+
+\Illuminate\Support\Facades\Schedule::command('merchandisers:reports daily')
+    ->dailyAt('18:20')
+    ->timezone('Africa/Accra');
+
+\Illuminate\Support\Facades\Schedule::command('merchandisers:reports weekly')
+    ->weeklyOn(1, '08:15')
+    ->timezone('Africa/Accra');
+
+Artisan::command('merchandisers:alerts {type=all : all, low-kpi, missed-visits} {--date= : Alert date in YYYY-MM-DD}', function () {
+    $type = strtolower((string) $this->argument('type'));
+    if (! in_array($type, ['all', 'low-kpi', 'missed-visits'], true)) {
+        $this->error('Invalid type. Use all, low-kpi, or missed-visits.');
+        return 1;
+    }
+
+    $date = $this->option('date')
+        ? \Illuminate\Support\Carbon::parse((string) $this->option('date'), 'Africa/Accra')
+        : null;
+
+    $service = app(\App\Services\MerchandiserReportAutomationService::class);
+    $lowKpi = in_array($type, ['all', 'low-kpi'], true) ? $service->dispatchLowKpiAlerts($date) : 0;
+    $missedVisits = in_array($type, ['all', 'missed-visits'], true) ? $service->dispatchMissedVisitAlerts($date) : 0;
+
+    $this->info("Dispatched {$lowKpi} low-KPI alert(s) and {$missedVisits} missed-visit alert(s).");
+
+    return 0;
+})->purpose('Dispatch de-duplicated merchandiser KPI and missed-visit notifications');
+
+\Illuminate\Support\Facades\Schedule::command('merchandisers:alerts all')
+    ->dailyAt('17:10')
+    ->timezone('Africa/Accra');
+
 Artisan::command('sku-ai:generate-fixtures {--count=8} {--output=storage/app/sku-ai-fixtures}', function () {
     $result = app(\App\Support\SkuShelfFixtureGenerator::class)->generate(
         (int) $this->option('count'),

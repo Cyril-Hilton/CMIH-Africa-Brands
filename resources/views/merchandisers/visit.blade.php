@@ -25,9 +25,12 @@
 
     <main class="max-w-4xl mx-auto px-4 py-6">
         
-        <form method="POST" action="{{ route('merchandisers.visit.store', $outlet) }}" enctype="multipart/form-data" class="space-y-6"
+        <form method="POST" action="{{ route('merchandisers.visit.store', $outlet) }}" enctype="multipart/form-data" class="space-y-6" data-offline-sync-form="perfect_store_visit"
             x-data="skuAiVisitForm('{{ route('merchandisers.visit.ai-detect', $outlet) }}', '{{ old('sku_entry_mode', 'manual') }}')">
             @csrf
+            <input type="hidden" name="client_recorded_at" value="{{ old('client_recorded_at') }}">
+            <input type="hidden" name="sync_token" value="{{ old('sync_token') }}">
+            <input type="hidden" name="sync_source" value="{{ old('sync_source', 'live') }}">
 
             @if ($errors->any())
                 <div class="rounded-2xl border border-brand-red/30 bg-brand-red/10 p-4 text-sm text-red-200">

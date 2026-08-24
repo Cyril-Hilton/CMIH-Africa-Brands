@@ -6,6 +6,7 @@ use App\Models\MerchandiserOutletAssignment;
 use App\Models\MerchandiserVisit;
 use App\Models\MerchandiserVisitSku;
 use App\Models\PerfectStoreCategoryTarget;
+use App\Models\SiteContent;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -31,8 +32,21 @@ class PerfectStoreKpiService
         'sos' => null,
     ];
 
+    public const METRIC_LABELS = [
+        'coverage' => 'Coverage',
+        'osa' => 'On-Shelf Availability',
+        'npd' => 'NPD',
+        'mhs' => 'Must Have Score',
+        'planogram' => 'Planogram',
+        'facing' => 'Facings',
+        'sos' => 'Share of Shelf',
+    ];
+
     public function summary(Carbon $from, Carbon $to): array
     {
+        $weights = self::configuredWeights();
+        $targets = self::configuredTargets();
+
         $assignments = MerchandiserOutletAssignment::with(['user', 'outlet.keyDistributor.region'])
             ->whereDate('assigned_date', '>=', $from->toDateString())
             ->whereDate('assigned_date', '<=', $to->toDateString())
@@ -72,7 +86,6 @@ class PerfectStoreKpiService
             fn ($score) => (int) ($score['brand_id'] ?? 0),
             fn ($score, $key) => $score['brand_name'] ?: 'Brand #'.$key
         );
-        $targets = self::TARGETS;
         $configuredSosTarget = $this->configuredSosTarget($visits);
         if ($configuredSosTarget !== null) {
             $targets['sos'] = $configuredSosTarget;
@@ -80,7 +93,7 @@ class PerfectStoreKpiService
 
         return [
             'targets' => $targets,
-            'weights' => self::WEIGHTS,
+            'weights' => $weights,
             'overview' => $overview,
             'merchandisers' => $merchandiserRollups,
             'kds' => $kdRollups,
@@ -108,8 +121,8 @@ class PerfectStoreKpiService
         ];
 
         return [
-            'targets' => self::TARGETS,
-            'weights' => self::WEIGHTS,
+            'targets' => self::configuredTargets(),
+            'weights' => self::configuredWeights(),
             'overview' => $emptyRollup,
             'merchandisers' => collect(),
             'kds' => collect(),
@@ -508,10 +521,12 @@ class PerfectStoreKpiService
 
     private function coaching(Collection $merchandisers): Collection
     {
+        $targets = self::configuredTargets();
+
         return $merchandisers
             ->filter(fn ($rollup) => ($rollup['visits'] ?? 0) > 0 || ($rollup['scheduled'] ?? 0) > 0)
-            ->map(function ($rollup) {
-                $weakest = collect(self::TARGETS)
+            ->map(function ($rollup) use ($targets) {
+                $weakest = collect($targets)
                     ->filter(fn ($target) => $target !== null)
                     ->map(function ($target, $metric) use ($rollup) {
                         $value = $rollup[$metric] ?? null;
@@ -570,7 +585,7 @@ class PerfectStoreKpiService
         $weighted = 0;
         $availableWeight = 0;
 
-        foreach (self::WEIGHTS as $metric => $weight) {
+        foreach (self::configuredWeights() as $metric => $weight) {
             if (! array_key_exists($metric, $metrics) || $metrics[$metric] === null) {
                 continue;
             }
@@ -587,5 +602,52 @@ class PerfectStoreKpiService
         $value = $total > 0 ? round(((float) $part / (float) $total) * 100, 1) : 0.0;
 
         return $capAtHundred ? min(100.0, max(0.0, $value)) : $value;
+    }
+
+    public static function configuredWeights(): array
+    {
+        $weights = [];
+
+        foreach (self::WEIGHTS as $metric => $default) {
+            $weights[$metric] = self::numericSetting(
+                "perfect_store_weight_{$metric}",
+                (float) $default,
+                0,
+                100
+            ) ?? (float) $default;
+        }
+
+        return $weights;
+    }
+
+    public static function configuredTargets(): array
+    {
+        $targets = [];
+
+        foreach (self::TARGETS as $metric => $default) {
+            $targets[$metric] = self::numericSetting(
+                "perfect_store_target_{$metric}",
+                $default === null ? null : (float) $default,
+                0,
+                100
+            );
+        }
+
+        return $targets;
+    }
+
+    private static function numericSetting(string $key, ?float $default, float $min, float $max): ?float
+    {
+        $raw = SiteContent::getValue($key, $default === null ? '' : (string) $default);
+
+        if ($raw === '') {
+            return null;
+        }
+
+        if (! is_numeric($raw)) {
+            return $default;
+        }
+
+        return round(min($max, max($min, (float) $raw)), 2);
     }
 }

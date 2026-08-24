@@ -1,3 +1,7 @@
+@php
+    $perfectOverview = $perfectStoreSummary['overview'] ?? [];
+@endphp
+
                 <div x-show="activeTab === 'perfect-store'" x-cloak x-transition class="space-y-6">
                     <!-- KPI Header Cards -->
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

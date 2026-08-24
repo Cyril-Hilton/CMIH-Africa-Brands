@@ -495,7 +495,7 @@ Route::prefix('merchandisers')->name('merchandisers.')->group(function () {
         Route::middleware(['role:admin,super_admin'])->prefix('admin')->name('admin.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'dashboard'])->name('dashboard');
             Route::get('/hub/{adminTab}', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'dashboard'])
-                ->whereIn('adminTab', ['overview', 'tracking', 'kds', 'routes', 'skus', 'forms', 'merchandisers', 'supervisors', 'assets', 'notifications', 'settings', 'gallery', 'executive', 'perfect-store', 'category-kpi', 'user-performance', 'price-promo'])
+                ->whereIn('adminTab', ['overview', 'tracking', 'kds', 'routes', 'skus', 'forms', 'merchandisers', 'supervisors', 'assets', 'notifications', 'settings', 'gallery', 'executive', 'perfect-store', 'category-kpi', 'user-performance', 'price-promo', 'supervisor-dashboard', 'regional-dashboard', 'client-dashboard'])
                 ->name('tab');
             Route::get('/merchandisers', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'merchandisers'])->name('merchandisers');
             Route::post('/merchandisers/{user}/suspend', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'suspendMerchandiser'])->name('merchandisers.suspend');
@@ -522,6 +522,7 @@ Route::prefix('merchandisers')->name('merchandisers.')->group(function () {
             Route::put('/skus/{sku}', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'updateSku'])->name('skus.update');
             Route::delete('/skus/{sku}', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'destroySku'])->name('skus.destroy');
             Route::post('/category-targets', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'storeCategoryTarget'])->name('category-targets.store');
+            Route::post('/kpi-settings', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'updateKpiSettings'])->name('kpi-settings.update');
             Route::post('/pairings/{user}', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'pairMerchandiser'])->name('pairings.pair');
             Route::post('/routes/generate', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'generateRoutes'])->name('routes.generate');
             Route::post('/merchandisers/{user}/route-settings', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'updateRouteSettings'])->name('merchandisers.route-settings');

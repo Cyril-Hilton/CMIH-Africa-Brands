@@ -16,10 +16,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @if(in_array($activeAdminTab, ['overview', 'perfect-store', 'routes', 'executive', 'category-kpi', 'user-performance', 'price-promo'], true))
+    @if(in_array($activeAdminTab, ['overview', 'perfect-store', 'routes', 'executive', 'category-kpi', 'user-performance', 'price-promo', 'supervisor-dashboard', 'regional-dashboard', 'client-dashboard'], true))
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     @endif
-    @if($activeAdminTab === 'tracking')
+    @if(in_array($activeAdminTab, ['tracking', 'supervisor-dashboard'], true))
         <script>
             function initGoogleMaps() { window._googleMapsReady = true; window.dispatchEvent(new Event('google-maps-ready')); }
         </script>
@@ -385,6 +385,27 @@
                     <span>Category KPIs</span>
                 </button>
 
+                <button @click="window.location.href = @js($adminTabUrl('supervisor-dashboard')); sidebarOpen = false"
+                    :class="activeTab === 'supervisor-dashboard' ? 'active' : ''"
+                    class="nav-item w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 text-sm text-brand-white/70 font-medium">
+                    <span class="text-lg w-6 text-center">SD</span>
+                    <span>Supervisor Dashboard</span>
+                </button>
+
+                <button @click="window.location.href = @js($adminTabUrl('regional-dashboard')); sidebarOpen = false"
+                    :class="activeTab === 'regional-dashboard' ? 'active' : ''"
+                    class="nav-item w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 text-sm text-brand-white/70 font-medium">
+                    <span class="text-lg w-6 text-center">RD</span>
+                    <span>Regional Dashboard</span>
+                </button>
+
+                <button @click="window.location.href = @js($adminTabUrl('client-dashboard')); sidebarOpen = false"
+                    :class="activeTab === 'client-dashboard' ? 'active' : ''"
+                    class="nav-item w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 text-sm text-brand-white/70 font-medium">
+                    <span class="text-lg w-6 text-center">CD</span>
+                    <span>Client Dashboard</span>
+                </button>
+
                 <button @click="window.location.href = @js($adminTabUrl('user-performance')); sidebarOpen = false"
                     :class="activeTab === 'user-performance' ? 'active' : ''"
                     class="nav-item w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 text-sm text-brand-white/70 font-medium">
@@ -454,7 +475,7 @@
                                 'category-kpi': '🏷️ Category Level KPIs',
                                 'user-performance': '👤 User Performance',
                                 'price-promo': '💰 Price & Promo Compliance'
-                            }[activeTab]"></h1>
+                            }[activeTab] || activeTab.replaceAll('-', ' ').toUpperCase()"></h1>
                         </div>
                     </div>
                     <div class="flex items-center gap-3">
@@ -571,6 +592,10 @@
 
                                 @if($activeAdminTab === 'price-promo')
                     @include('merchandisers.admin-tabs.price_promo')
+                @endif
+
+                                @if(in_array($activeAdminTab, ['supervisor-dashboard', 'regional-dashboard', 'client-dashboard'], true))
+                    @include('merchandisers.admin-tabs.role_dashboards')
                 @endif
 
             </main>
@@ -1446,6 +1471,94 @@ document.addEventListener('DOMContentLoaded', () => {
                 maintainAspectRatio: false,
                 plugins: { legend: { display: true, position: 'bottom', labels: { color: 'rgba(255,255,255,0.7)', font: { size: 10 } } } }
             }
+        });
+    }
+})();
+</script>
+@endif
+
+@if($activeAdminTab === 'regional-dashboard')
+<script>
+(function() {
+    const payload = JSON.parse(document.querySelector('[data-regional-dashboard-json]')?.textContent || '{"regions":[],"kds":[]}');
+    const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: 'rgba(255,255,255,.7)' } } },
+        scales: {
+            x: { grid: { color: 'rgba(255,255,255,.06)' }, ticks: { color: 'rgba(255,255,255,.6)' } },
+            y: { beginAtZero: true, max: 100, grid: { color: 'rgba(255,255,255,.06)' }, ticks: { color: 'rgba(255,255,255,.6)', callback: value => value + '%' } }
+        }
+    };
+
+    const regionCanvas = document.getElementById('regionalScoreChart');
+    if (regionCanvas && payload.regions.length) {
+        new Chart(regionCanvas, {
+            type: 'bar',
+            data: {
+                labels: payload.regions.map(row => row.name),
+                datasets: [
+                    { label: 'Score', data: payload.regions.map(row => row.perfect_store_score || 0), backgroundColor: 'rgba(239,68,68,.72)', borderRadius: 6 },
+                    { label: 'Coverage', data: payload.regions.map(row => row.coverage || 0), backgroundColor: 'rgba(16,185,129,.72)', borderRadius: 6 }
+                ]
+            },
+            options: chartOptions
+        });
+    }
+
+    const kdCanvas = document.getElementById('regionalKdChart');
+    if (kdCanvas && payload.kds.length) {
+        new Chart(kdCanvas, {
+            type: 'bar',
+            data: {
+                labels: payload.kds.slice(0, 12).map(row => row.name),
+                datasets: [
+                    { label: 'Facings', data: payload.kds.slice(0, 12).map(row => row.facing || 0), backgroundColor: 'rgba(132,204,22,.72)', borderRadius: 6 },
+                    { label: 'Planogram', data: payload.kds.slice(0, 12).map(row => row.planogram || 0), backgroundColor: 'rgba(6,182,212,.72)', borderRadius: 6 }
+                ]
+            },
+            options: chartOptions
+        });
+    }
+})();
+</script>
+@endif
+
+@if($activeAdminTab === 'client-dashboard')
+<script>
+(function() {
+    const payload = JSON.parse(document.querySelector('[data-client-dashboard-json]')?.textContent || '{"brands":[],"categories":[]}');
+    const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: 'rgba(255,255,255,.7)' } } },
+        scales: {
+            x: { grid: { color: 'rgba(255,255,255,.06)' }, ticks: { color: 'rgba(255,255,255,.6)' } },
+            y: { beginAtZero: true, max: 100, grid: { color: 'rgba(255,255,255,.06)' }, ticks: { color: 'rgba(255,255,255,.6)', callback: value => value + '%' } }
+        }
+    };
+
+    const brandCanvas = document.getElementById('clientBrandScoreChart');
+    if (brandCanvas && payload.brands.length) {
+        new Chart(brandCanvas, {
+            type: 'bar',
+            data: {
+                labels: payload.brands.slice(0, 12).map(row => row.name),
+                datasets: [{ label: 'Perfect Store Score', data: payload.brands.slice(0, 12).map(row => row.perfect_store_score || 0), backgroundColor: 'rgba(239,68,68,.72)', borderRadius: 6 }]
+            },
+            options: chartOptions
+        });
+    }
+
+    const categoryCanvas = document.getElementById('clientCategoryMixChart');
+    if (categoryCanvas && payload.categories.length) {
+        new Chart(categoryCanvas, {
+            type: 'doughnut',
+            data: {
+                labels: payload.categories.slice(0, 8).map(row => row.category),
+                datasets: [{ data: payload.categories.slice(0, 8).map(row => row.osa_pct || row.facing_pct || row.sos_pct || 0), backgroundColor: ['#ef4444', '#06b6d4', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899', '#84cc16', '#38bdf8'], borderWidth: 0 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: 'rgba(255,255,255,.7)' } } } }
         });
     }
 })();

@@ -1,4 +1,36 @@
                 <div x-show="activeTab === 'supervisors'" x-cloak x-transition class="space-y-6">
+                    <div class="glass-panel rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
+                        <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                            <div>
+                                <p class="text-xs uppercase tracking-widest text-brand-ash">Roles, Permissions & Hierarchy Hub</p>
+                                <h3 class="mt-1 text-xl font-display text-brand-white">Supervisor, KD & Field Team Ownership</h3>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:min-w-[620px]">
+                                <div class="rounded-xl border border-brand-white/10 bg-brand-black/40 p-3">
+                                    <p class="text-2xl font-display text-amber-300">{{ number_format($supervisorCount ?? 0) }}</p>
+                                    <p class="text-[10px] uppercase tracking-wider text-brand-ash">Supervisors</p>
+                                </div>
+                                <div class="rounded-xl border border-brand-white/10 bg-brand-black/40 p-3">
+                                    <p class="text-2xl font-display text-emerald-300">{{ number_format(collect($allMerchandisers ?? [])->count()) }}</p>
+                                    <p class="text-[10px] uppercase tracking-wider text-brand-ash">Merchandisers</p>
+                                </div>
+                                <div class="rounded-xl border border-brand-white/10 bg-brand-black/40 p-3">
+                                    <p class="text-2xl font-display text-sky-300">{{ number_format(collect($kds ?? [])->count()) }}</p>
+                                    <p class="text-[10px] uppercase tracking-wider text-brand-ash">KDs</p>
+                                </div>
+                                <div class="rounded-xl border border-brand-white/10 bg-brand-black/40 p-3">
+                                    <p class="text-2xl font-display text-purple-300">{{ number_format(collect($regions ?? [])->count()) }}</p>
+                                    <p class="text-[10px] uppercase tracking-wider text-brand-ash">Regions</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex flex-wrap gap-2">
+                            <a href="{{ route('merchandisers.admin.tab', ['adminTab' => 'merchandisers']) }}" class="rounded-xl border border-brand-white/10 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-brand-white hover:bg-brand-white/10">Manage Users</a>
+                            <a href="{{ route('merchandisers.admin.tab', ['adminTab' => 'tracking']) }}" class="rounded-xl border border-brand-white/10 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-brand-white hover:bg-brand-white/10">Live Tracking</a>
+                            <a href="{{ route('merchandisers.admin.tab', ['adminTab' => 'routes']) }}" class="rounded-xl border border-brand-white/10 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-brand-white hover:bg-brand-white/10">PJP Routes</a>
+                        </div>
+                    </div>
+
                     <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
                         <div class="xl:col-span-2 glass-panel rounded-2xl p-5 border border-brand-white/10">
                             <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between mb-5">

@@ -1,4 +1,37 @@
-                <div x-show="activeTab === 'skus'" x-cloak x-transition>
+                <div x-show="activeTab === 'skus'" x-cloak x-transition class="space-y-5">
+                    <div class="glass-panel rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
+                        <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                            <div>
+                                <p class="text-xs uppercase tracking-widest text-brand-ash">Master Data Hub</p>
+                                <h3 class="mt-1 text-xl font-display text-brand-white">SKU, Brand, Outlet & Route Records</h3>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:min-w-[620px]">
+                                <div class="rounded-xl border border-brand-white/10 bg-brand-black/40 p-3">
+                                    <p class="text-2xl font-display text-brand-white">{{ number_format($skuCount ?? 0) }}</p>
+                                    <p class="text-[10px] uppercase tracking-wider text-brand-ash">SKUs</p>
+                                </div>
+                                <div class="rounded-xl border border-brand-white/10 bg-brand-black/40 p-3">
+                                    <p class="text-2xl font-display text-sky-300">{{ number_format(collect($brandOptions ?? [])->count()) }}</p>
+                                    <p class="text-[10px] uppercase tracking-wider text-brand-ash">Brands</p>
+                                </div>
+                                <div class="rounded-xl border border-brand-white/10 bg-brand-black/40 p-3">
+                                    <p class="text-2xl font-display text-emerald-300">{{ number_format($totalOutlets ?? 0) }}</p>
+                                    <p class="text-[10px] uppercase tracking-wider text-brand-ash">Outlets</p>
+                                </div>
+                                <div class="rounded-xl border border-brand-white/10 bg-brand-black/40 p-3">
+                                    <p class="text-2xl font-display text-amber-300">{{ number_format($routeAssignmentsTotal ?? 0) }}</p>
+                                    <p class="text-[10px] uppercase tracking-wider text-brand-ash">Route Rows</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex flex-wrap gap-2">
+                            <a href="{{ route('merchandisers.admin.tab', ['adminTab' => 'kds']) }}" class="rounded-xl border border-brand-white/10 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-brand-white hover:bg-brand-white/10">Outlets & KDs</a>
+                            <a href="{{ route('merchandisers.admin.tab', ['adminTab' => 'routes']) }}" class="rounded-xl border border-brand-white/10 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-brand-white hover:bg-brand-white/10">Routes</a>
+                            <a href="{{ route('merchandisers.admin.tab', ['adminTab' => 'forms']) }}" class="rounded-xl border border-brand-white/10 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-brand-white hover:bg-brand-white/10">Forms & Planograms</a>
+                            <a href="{{ route('merchandisers.admin.tab', ['adminTab' => 'category-kpi']) }}" class="rounded-xl border border-brand-white/10 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-brand-white hover:bg-brand-white/10">KPI Targets</a>
+                        </div>
+                    </div>
+
                     <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
                         <div class="xl:col-span-1 glass-panel rounded-2xl p-5 border border-brand-white/10">
                             <div class="mb-5">

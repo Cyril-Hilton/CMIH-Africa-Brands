@@ -13,6 +13,68 @@
                         </div>
                     </div>
 
+                    <div id="perfect-store-kpi-settings" class="mb-6 glass-panel rounded-2xl border border-cyan-400/15 bg-cyan-500/[0.04] p-4 sm:p-5">
+                        <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                            <div>
+                                <p class="text-xs uppercase tracking-widest text-brand-ash">KPI Targets & Weightings</p>
+                                <h3 class="mt-1 text-xl font-display tracking-wider text-brand-white">Perfect Store Scoring Console</h3>
+                                <p class="mt-1 text-[11px] leading-relaxed text-brand-white/45">Adjust the score mix and KPI targets without changing code. The score normalizes available KPIs, so missing data does not fake a pass.</p>
+                            </div>
+                            @php $weightTotal = collect($perfectStoreWeights ?? [])->sum(); @endphp
+                            <span class="inline-flex rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-cyan-100">
+                                Weight Total: {{ number_format($weightTotal, 1) }}
+                            </span>
+                        </div>
+
+                        <form method="POST" action="{{ route('merchandisers.admin.kpi-settings.update') }}" class="mt-4">
+                            @csrf
+                            <div class="overflow-x-auto">
+                                <table class="w-full min-w-[760px] text-sm">
+                                    <thead class="border-b border-brand-white/10 text-[10px] uppercase tracking-widest text-brand-ash">
+                                        <tr>
+                                            <th class="py-3 text-left">KPI</th>
+                                            <th class="py-3 text-left">Target %</th>
+                                            <th class="py-3 text-left">Score Weight</th>
+                                            <th class="py-3 text-left">Use</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-brand-white/5">
+                                        @foreach(\App\Services\PerfectStoreKpiService::METRIC_LABELS as $metric => $label)
+                                            <tr>
+                                                <td class="py-3 pr-4 font-semibold text-brand-white">{{ $label }}</td>
+                                                <td class="py-3 pr-4">
+                                                    <input name="targets[{{ $metric }}]" type="number" min="0" max="100" step="0.01"
+                                                        value="{{ old('targets.'.$metric, $perfectStoreTargets[$metric] ?? '') }}"
+                                                        placeholder="{{ $metric === 'sos' ? 'Set by category' : '0 - 100' }}"
+                                                        class="w-full rounded-xl border border-brand-white/10 bg-brand-black px-3 py-2 text-sm text-brand-white focus:border-brand-red focus:ring-0">
+                                                </td>
+                                                <td class="py-3 pr-4">
+                                                    <input name="weights[{{ $metric }}]" type="number" min="0" max="100" step="0.01"
+                                                        value="{{ old('weights.'.$metric, $perfectStoreWeights[$metric] ?? 0) }}"
+                                                        class="w-full rounded-xl border border-brand-white/10 bg-brand-black px-3 py-2 text-sm text-brand-white focus:border-brand-red focus:ring-0">
+                                                </td>
+                                                <td class="py-3 text-[11px] leading-relaxed text-brand-white/45">
+                                                    @switch($metric)
+                                                        @case('coverage') Scheduled outlets completed @break
+                                                        @case('osa') SKU availability against drop size @break
+                                                        @case('npd') Launch SKU presence and quantity @break
+                                                        @case('mhs') Must-have SKU compliance @break
+                                                        @case('planogram') Approved shelf sequence @break
+                                                        @case('facing') Actual facings vs SKU target @break
+                                                        @case('sos') Unilever facings vs category total @break
+                                                    @endswitch
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="mt-4 flex justify-end">
+                                <button type="submit" class="rounded-xl bg-brand-red px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-white hover:bg-red-700 transition">Save KPI Settings</button>
+                            </div>
+                        </form>
+                    </div>
+
                     <div id="category-targets" class="mb-6 grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
                         <form method="POST" action="{{ route('merchandisers.admin.category-targets.store') }}" class="glass-panel min-w-0 rounded-2xl border border-pink-400/15 bg-pink-500/[0.04] p-4 sm:p-5">
                             @csrf

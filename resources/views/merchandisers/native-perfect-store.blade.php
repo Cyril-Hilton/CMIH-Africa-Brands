@@ -83,10 +83,13 @@
             </div>
         </section>
 
-        <form method="POST" action="{{ route('merchandisers.native-forms.submit', $form) }}" class="space-y-4"
+        <form method="POST" action="{{ route('merchandisers.native-forms.submit', $form) }}" class="space-y-4" data-offline-sync-form="native_perfect_store"
             x-data="perfectStoreNativeForm({!! \Illuminate\Support\Js::from($outletDefaultMap ?? []) !!}, {!! \Illuminate\Support\Js::from($questionMeta ?? []) !!}, {!! \Illuminate\Support\Js::from($systemDefaultKeys ?? []) !!})"
             x-init="init()">
             @csrf
+            <input type="hidden" name="client_recorded_at" value="{{ old('client_recorded_at') }}">
+            <input type="hidden" name="sync_token" value="{{ old('sync_token') }}">
+            <input type="hidden" name="sync_source" value="{{ old('sync_source', 'live') }}">
 
             @if($outlet)
                 <input type="hidden" name="outlet_id" value="{{ $outlet->id }}">

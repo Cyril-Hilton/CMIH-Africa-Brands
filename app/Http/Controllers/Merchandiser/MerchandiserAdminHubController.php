@@ -29,6 +29,7 @@ use App\Models\PerfectStoreCategoryTarget;
 use App\Models\PosmLedger;
 use App\Models\Region;
 use App\Models\SalaryAdvance;
+use App\Models\SiteContent;
 use App\Models\Sku;
 use App\Models\User;
 use App\Services\NotificationService;
@@ -37,6 +38,7 @@ use App\Services\PerfectStoreCalculator;
 use App\Services\PerfectStoreKpiService;
 use App\Services\PerfectStoreFormTemplate;
 use App\Support\MerchandiserClockWindows;
+use App\Support\SimplePdf;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
@@ -109,6 +111,8 @@ class MerchandiserAdminHubController extends Controller
         $attendanceChart = [];
         $topPerformers = collect();
         $perfectStoreSummary = PerfectStoreKpiService::emptySummary();
+        $perfectStoreTargets = PerfectStoreKpiService::configuredTargets();
+        $perfectStoreWeights = PerfectStoreKpiService::configuredWeights();
         $perfectStoreKdData = collect();
         $perfectStoreMerchandiserData = collect();
         $perfectStoreMilestones = collect();
@@ -137,7 +141,7 @@ class MerchandiserAdminHubController extends Controller
                 ->orderByDesc('merchandiser_visits_count')
                 ->take(10)
                 ->get();
-        } elseif ($activeTab === 'perfect-store') {
+        } elseif (in_array($activeTab, ['perfect-store', 'regional-dashboard', 'client-dashboard'], true)) {
             $perfectStoreSummary = app(PerfectStoreKpiService::class)->summary($clockFrom, $clockTo);
             $allKds = KeyDistributor::orderBy('name')->get();
             $recentVisits = MerchandiserVisit::with(['outlet.keyDistributor', 'visitSkus.sku', 'user.supervisor', 'user.merchandiserKd'])
@@ -183,7 +187,7 @@ class MerchandiserAdminHubController extends Controller
             })->values();
         } elseif ($activeTab === 'category-kpi') {
             $categorySosData = app(PerfectStoreKpiService::class)->categoryKpis($clockFrom, $clockTo);
-        } elseif ($activeTab === 'executive') {
+        } elseif (in_array($activeTab, ['executive', 'regional-dashboard', 'client-dashboard'], true)) {
             $perfectStoreSummary = app(PerfectStoreKpiService::class)->summary($clockFrom, $clockTo);
         }
 
@@ -219,7 +223,7 @@ class MerchandiserAdminHubController extends Controller
 
         $merchandiserLocations = [];
 
-        if ($activeTab === 'tracking') {
+        if (in_array($activeTab, ['tracking', 'supervisor-dashboard'], true)) {
         // ── Latest locations for live tracking ────────────────────────────────
             $clockedInMerchandiserIds = collect()
             ->merge(MerchandiserAttendance::whereBetween('clock_in_time', [$clockFrom, $clockTo])->pluck('user_id'))
@@ -719,7 +723,7 @@ class MerchandiserAdminHubController extends Controller
         $totalImagesCount = DB::table('merchandiser_visit_skus')->whereNotNull('photo_path')->count();
         $galleryImages    = collect();
         $galleryFilters   = [];
-        if (in_array($activeTab, ['gallery'], true)) {
+        if (in_array($activeTab, ['gallery', 'supervisor-dashboard'], true)) {
             $galleryQ = DB::table('merchandiser_visit_skus as vs')
                 ->join('merchandiser_visits as v', 'v.id', '=', 'vs.visit_id')
                 ->join('outlets as o', 'o.id', '=', 'v.outlet_id')
@@ -742,14 +746,18 @@ class MerchandiserAdminHubController extends Controller
                 ->when($request->filled('date_from'), fn($q) => $q->whereDate('vs.created_at', '>=', $request->date_from))
                 ->when($request->filled('date_to'), fn($q) => $q->whereDate('vs.created_at', '<=', $request->date_to))
                 ->orderByDesc('vs.created_at');
-            $galleryImages  = $galleryQ->paginate(40, ['*'], 'gallery_page')->appends($request->query());
-            $galleryFilters = [
-                'users'      => User::merchandisers()->orderBy('name')->get(['id','name']),
-                'kds'        => KeyDistributor::orderBy('name')->get(['id','name']),
-                'outlets'    => Outlet::orderBy('name')->get(['id','name']),
-                'categories' => Sku::whereNotNull('category')->distinct()->orderBy('category')->pluck('category'),
-                'channels'   => ['SSM', 'LMT', 'GT'],
-            ];
+            if ($activeTab === 'gallery') {
+                $galleryImages  = $galleryQ->paginate(40, ['*'], 'gallery_page')->appends($request->query());
+                $galleryFilters = [
+                    'users'      => User::merchandisers()->orderBy('name')->get(['id','name']),
+                    'kds'        => KeyDistributor::orderBy('name')->get(['id','name']),
+                    'outlets'    => Outlet::orderBy('name')->get(['id','name']),
+                    'categories' => Sku::whereNotNull('category')->distinct()->orderBy('category')->pluck('category'),
+                    'channels'   => ['SSM', 'LMT', 'GT'],
+                ];
+            } else {
+                $galleryImages = $galleryQ->take(8)->get();
+            }
         }
 
         // ── ShelfWatch: Executive Summary ──────────────────────────────────────
@@ -760,7 +768,7 @@ class MerchandiserAdminHubController extends Controller
         $execVisitTrend = ['labels' => [], 'scheduled' => [], 'actual' => []];
         $execImageValidity = ['labels' => [], 'valid' => [], 'invalid' => []];
         $execSkuCount   = $skuCount;
-        if (in_array($activeTab, ['executive'], true)) {
+        if (in_array($activeTab, ['executive', 'regional-dashboard', 'client-dashboard'], true)) {
             $execScheduled  = MerchandiserOutletAssignment::whereDate('assigned_date', '>=', $coverageStart->toDateString())->whereDate('assigned_date', '<=', $coverageEnd->toDateString())->count();
             $execActual     = MerchandiserOutletAssignment::whereDate('assigned_date', '>=', $coverageStart->toDateString())
                 ->whereDate('assigned_date', '<=', $coverageEnd->toDateString())
@@ -806,7 +814,7 @@ class MerchandiserAdminHubController extends Controller
         // ── ShelfWatch: Category Level KPIs ───────────────────────────────────
         $categoryKpis = collect();
         $categoryTargets = collect();
-        if (in_array($activeTab, ['category-kpi'], true)) {
+        if (in_array($activeTab, ['category-kpi', 'regional-dashboard', 'client-dashboard'], true)) {
             $categoryTargets = PerfectStoreCategoryTarget::orderBy('category')->get()->keyBy('category');
             $categoryKpis = app(PerfectStoreKpiService::class)->categoryKpis($coverageStart, $coverageEnd);
         }
@@ -835,7 +843,7 @@ class MerchandiserAdminHubController extends Controller
         $supervisorPerformance = collect();
         $perfTrendChart = ['labels' => [], 'coverage' => [], 'facing' => [], 'planogram' => [], 'overall' => []];
 
-        if (in_array($activeTab, ['user-performance', 'supervisors'], true)) {
+        if (in_array($activeTab, ['user-performance', 'supervisors', 'supervisor-dashboard'], true)) {
             // 1. Merchandisers Performance Data
             $merchandisersList = User::merchandisers()
                 ->where('status', 'active')
@@ -1053,6 +1061,7 @@ class MerchandiserAdminHubController extends Controller
             'attendanceChart', 'topPerformers',
             'clockFromInput', 'clockToInput', 'clockRangeLabel',
             'perfectStoreSummary',
+            'perfectStoreTargets', 'perfectStoreWeights',
             'clockAttendanceCount', 'clockPcmCount', 'clockPjpCount',
             'kds', 'regions',
             'outletManagementKds', 'outletRegistrationDay', 'outletDayLabels',
@@ -1096,6 +1105,7 @@ class MerchandiserAdminHubController extends Controller
             'overview', 'perfect-store', 'tracking', 'kds', 'routes', 'skus', 'forms',
             'merchandisers', 'supervisors', 'assets', 'notifications', 'settings',
             'gallery', 'executive', 'category-kpi', 'user-performance', 'price-promo',
+            'supervisor-dashboard', 'regional-dashboard', 'client-dashboard',
         ];
 
         $candidate = $adminTab ?: (string) $request->query('tab', 'overview');
@@ -1247,6 +1257,49 @@ class MerchandiserAdminHubController extends Controller
         return redirect()
             ->to(route('merchandisers.admin.tab', ['adminTab' => 'category-kpi']) . '#category-targets')
             ->with('success', 'Category SOS target saved.');
+    }
+
+    public function updateKpiSettings(Request $request)
+    {
+        $this->guardAdmin();
+
+        $validated = $request->validate([
+            'weights' => ['required', 'array'],
+            'weights.*' => ['required', 'numeric', 'min:0', 'max:100'],
+            'targets' => ['required', 'array'],
+            'targets.*' => ['nullable', 'numeric', 'min:0', 'max:100'],
+        ]);
+
+        foreach (PerfectStoreKpiService::METRIC_LABELS as $metric => $label) {
+            if (array_key_exists($metric, $validated['weights'] ?? [])) {
+                SiteContent::updateOrCreate(
+                    ['key' => "perfect_store_weight_{$metric}"],
+                    [
+                        'value' => (string) round((float) $validated['weights'][$metric], 2),
+                        'type' => 'number',
+                        'updated_by' => $request->user()->id,
+                    ]
+                );
+            }
+
+            if (array_key_exists($metric, $validated['targets'] ?? [])) {
+                $target = $validated['targets'][$metric];
+                SiteContent::updateOrCreate(
+                    ['key' => "perfect_store_target_{$metric}"],
+                    [
+                        'value' => $target === null || $target === '' ? '' : (string) round((float) $target, 2),
+                        'type' => 'number',
+                        'updated_by' => $request->user()->id,
+                    ]
+                );
+            }
+        }
+
+        SiteContent::forgetCachedValues();
+
+        return redirect()
+            ->to(route('merchandisers.admin.tab', ['adminTab' => 'category-kpi']).'#perfect-store-kpi-settings')
+            ->with('success', 'Perfect Store targets and weightings saved.');
     }
 
     public function destroySku(Sku $sku)
@@ -2128,6 +2181,31 @@ class MerchandiserAdminHubController extends Controller
                 }
                 break;
 
+            case 'perfect-store':
+                $headers = ['Scope', 'Name', 'Scheduled', 'Scored', 'Coverage %', 'OSA %', 'NPD %', 'MHS %', 'Planogram %', 'Facings %', 'SOS %', 'Perfect Store Score %'];
+                $from = now('Africa/Accra')->startOfMonth();
+                $to = now('Africa/Accra')->endOfDay();
+                $summary = app(PerfectStoreKpiService::class)->summary($from, $to);
+                foreach (['overview' => collect([$summary['overview'] ?? []]), 'brand' => collect($summary['brands'] ?? []), 'region' => collect($summary['regions'] ?? []), 'kd' => collect($summary['kds'] ?? [])] as $scope => $data) {
+                    foreach ($data as $row) {
+                        $rows[] = [
+                            Str::title($scope),
+                            $row['name'] ?? 'Overall',
+                            $row['scheduled'] ?? 0,
+                            $row['scored'] ?? 0,
+                            $row['coverage'] ?? '',
+                            $row['osa'] ?? '',
+                            $row['npd'] ?? '',
+                            $row['mhs'] ?? '',
+                            $row['planogram'] ?? '',
+                            $row['facing'] ?? '',
+                            $row['sos'] ?? '',
+                            $row['perfect_store_score'] ?? '',
+                        ];
+                    }
+                }
+                break;
+
             default:
                 abort(404, 'Unknown export type.');
         }
@@ -2138,6 +2216,22 @@ class MerchandiserAdminHubController extends Controller
         if ($format === 'excel') {
             $mimeType = 'application/vnd.ms-excel';
             $ext      = 'xls';
+        }
+        if ($format === 'pdf') {
+            $lines = [];
+            $lines[] = 'Generated: '.now()->format('Y-m-d H:i');
+            $lines[] = '';
+            $lines[] = implode(' | ', $headers);
+            $lines[] = str_repeat('-', 100);
+            foreach ($rows as $row) {
+                $lines[] = implode(' | ', array_map(fn ($value) => (string) $value, $row));
+            }
+
+            return response(SimplePdf::make(Str::title(str_replace('-', ' ', $filename)), $lines), 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => "attachment; filename=\"{$filename}.pdf\"",
+                'Cache-Control' => 'no-store, no-cache, must-revalidate',
+            ]);
         }
 
         $callback = function () use ($rows, $headers) {

@@ -1057,6 +1057,13 @@ class MerchandiserController extends Controller
             abort(403);
         }
 
+        $syncToken = $this->normalizedSyncToken($request);
+        if ($syncToken && MerchandiserVisit::where('user_id', $user->id)->where('sync_token', $syncToken)->exists()) {
+            return redirect()
+                ->route('merchandisers.dashboard')
+                ->with('status', 'Queued Perfect Store visit was already synced.');
+        }
+
         $request->validate([
             'branded_shelf_available' => ['required', 'boolean'],
             'hangers_available' => ['required', 'boolean'],
@@ -1084,6 +1091,9 @@ class MerchandiserController extends Controller
             'skus.*.planogram_compliant' => ['required', 'boolean'],
             'order_items' => ['nullable', 'array'],
             'order_items.*' => ['nullable', 'integer', 'min:1'],
+            'client_recorded_at' => ['nullable', 'date'],
+            'sync_token' => ['nullable', 'string', 'max:100'],
+            'sync_source' => ['nullable', 'string', 'in:live,queued,offline_retry'],
         ]);
 
         foreach ($request->input('category_sos', []) as $key => $metrics) {
@@ -1130,6 +1140,7 @@ class MerchandiserController extends Controller
             $planogramPhotoPath = $request->file('planogram_photo')->store('merchandiser-planogram-photos', 'public');
         }
         $timezone = $user->merchandiserRegion->timezone ?? 'Africa/Accra';
+        $clientRecordedAt = $this->parseClientRecordedAt($request, $timezone);
         $today = Carbon::today($timezone);
         $routeAssignment = MerchandiserOutletAssignment::where('user_id', $user->id)
             ->where('outlet_id', $outlet->id)
@@ -1174,6 +1185,10 @@ class MerchandiserController extends Controller
             'ai_detection_notes' => $request->input('ai_detection_notes'),
             'ai_detection_review_required' => $skuEntryMode === 'ai' ? (bool) ($aiPredictions['review_required'] ?? true) : false,
             'ai_detection_completed_at' => $aiDetectionCompleted ? now() : null,
+            'client_recorded_at' => $clientRecordedAt,
+            'sync_token' => $syncToken,
+            'sync_source' => $request->input('sync_source', $clientRecordedAt ? 'offline_retry' : 'live'),
+            'synced_at' => $clientRecordedAt ? now() : null,
         ]);
 
         $skuModels = Sku::whereIn('id', array_keys($request->input('skus')))->get()->keyBy('id');
@@ -1393,6 +1408,24 @@ class MerchandiserController extends Controller
         $user = $request->user();
         $outlet = $this->nativeFormOutlet($request, $user);
         $this->authorizeNativeForm($user, $form, $outlet);
+
+        $syncToken = $this->normalizedSyncToken($request);
+        if ($syncToken && MerchandiserNativeFormSubmission::where('user_id', $user->id)->where('sync_token', $syncToken)->exists()) {
+            $message = 'Queued native Perfect Store audit was already synced.';
+
+            if ($outlet) {
+                return redirect()->route('merchandisers.visit', $outlet)->with('status', $message);
+            }
+
+            return redirect()->route('merchandisers.dashboard')->with('status', $message);
+        }
+
+        $request->validate([
+            'client_recorded_at' => ['nullable', 'date'],
+            'sync_token' => ['nullable', 'string', 'max:100'],
+            'sync_source' => ['nullable', 'string', 'in:live,queued,offline_retry'],
+        ]);
+
         $rawAnswers = $request->input('answers', []);
         $rawAnswers = is_array($rawAnswers) ? $rawAnswers : [];
         $request->merge([
@@ -1416,6 +1449,10 @@ class MerchandiserController extends Controller
                 'normalized_metrics' => $template->normalizedMetrics($answers),
                 'source_google_form_url' => $form->google_form_url,
                 'submitted_at' => now(),
+                'client_recorded_at' => $this->parseClientRecordedAt($request, $user->merchandiserRegion->timezone ?? 'Africa/Accra'),
+                'sync_token' => $syncToken,
+                'sync_source' => $request->input('sync_source', $syncToken ? 'offline_retry' : 'live'),
+                'synced_at' => $syncToken ? now() : null,
             ]
         );
 
@@ -1445,6 +1482,28 @@ class MerchandiserController extends Controller
         $decoded = json_decode($json, true);
 
         return is_array($decoded) ? $decoded : [];
+    }
+
+    private function normalizedSyncToken(Request $request): ?string
+    {
+        $token = trim((string) $request->input('sync_token', ''));
+
+        return $token !== '' && mb_strlen($token) <= 100 ? $token : null;
+    }
+
+    private function parseClientRecordedAt(Request $request, string $timezone): ?Carbon
+    {
+        $raw = trim((string) $request->input('client_recorded_at', ''));
+
+        if ($raw === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($raw, $timezone);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     private function googleFormsForUser(User $user, ?Outlet $outlet, Carbon $date)

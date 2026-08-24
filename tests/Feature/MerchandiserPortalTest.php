@@ -1337,10 +1337,16 @@ class MerchandiserPortalTest extends TestCase
         $answers[$regionKey] = 'Tampered Region';
         $answers[$outletNameKey] = 'Tampered Outlet';
 
-        $this->post(route('merchandisers.native-forms.submit', $form), [
+        $payload = [
             'outlet_id' => $outlet->id,
             'answers' => $answers,
-        ])->assertRedirect(route('merchandisers.visit', $outlet));
+            'client_recorded_at' => '2026-07-20T08:55:00+00:00',
+            'sync_token' => 'native-perfect-store-sync-token-1',
+            'sync_source' => 'offline_retry',
+        ];
+
+        $this->post(route('merchandisers.native-forms.submit', $form), $payload)
+            ->assertRedirect(route('merchandisers.visit', $outlet));
 
         $submission = MerchandiserNativeFormSubmission::where('form_assignment_id', $form->id)
             ->where('user_id', $user->id)
@@ -1354,6 +1360,11 @@ class MerchandiserPortalTest extends TestCase
         $this->assertSame(62.0, (float) $submission->normalized_metrics['facings_total']);
         $this->assertSame(34, $submission->normalized_metrics['planogram']['compliant']);
         $this->assertSame(100.0, (float) $submission->normalized_metrics['planogram']['compliance_rate']);
+
+        $this->post(route('merchandisers.native-forms.submit', $form), $payload)
+            ->assertRedirect(route('merchandisers.visit', $outlet));
+
+        $this->assertSame(1, MerchandiserNativeFormSubmission::where('sync_token', 'native-perfect-store-sync-token-1')->count());
     }
     #[Test]
     public function admin_can_assign_google_form_by_brand_category_and_campaign()
@@ -4197,5 +4208,208 @@ class MerchandiserPortalTest extends TestCase
         $response->assertStatus(200);
         $response->assertHeader('Content-Type', 'text/csv; charset=utf-8');
         $response->assertHeader('Content-Disposition', 'attachment; filename="merchandiser_merchandisers_' . now()->format('Y-m-d') . '.csv"');
+    }
+
+    #[Test]
+    public function queued_perfect_store_visit_uses_sync_token_once()
+    {
+        Carbon::setTestNow(Carbon::create(2026, 7, 20, 9, 15, 0, 'Africa/Accra'));
+
+        $region = Region::create(['name' => 'OFFLINE ACCRA', 'timezone' => 'Africa/Accra']);
+        $kd = KeyDistributor::create(['name' => 'Offline KD', 'region_id' => $region->id]);
+        $outlet = Outlet::create([
+            'name' => 'Offline Outlet',
+            'code' => 'OFF-001',
+            'kd_id' => $kd->id,
+            'channel_type' => 'SSM',
+        ]);
+        $user = User::create([
+            'name' => 'Offline Merchandiser',
+            'email' => 'offline-merch@cmih.africa',
+            'contact_email' => 'offline-merch@personal.com',
+            'phone' => '12345678',
+            'date_of_birth' => '1995-05-05',
+            'password' => Hash::make('Pass123'),
+            'access_role' => 'merchandiser',
+            'status' => 'active',
+            'kd_id' => $kd->id,
+            'region_id' => $region->id,
+        ]);
+        $sku = Sku::create([
+            'name' => 'Offline SKU',
+            'category' => 'Skin Care',
+            'facing_target' => 4,
+            'track_planogram' => true,
+        ]);
+        MerchandiserOutletAssignment::create([
+            'user_id' => $user->id,
+            'outlet_id' => $outlet->id,
+            'assigned_date' => now('Africa/Accra')->toDateString(),
+            'sequence' => 1,
+            'status' => 'planned',
+        ]);
+        $this->recordOutletClockIn($user, $outlet);
+
+        $payload = [
+            'branded_shelf_available' => 1,
+            'hangers_available' => 1,
+            'sku_entry_mode' => 'manual',
+            'client_recorded_at' => '2026-07-20T08:45:00+00:00',
+            'sync_token' => 'offline-perfect-store-token-1',
+            'sync_source' => 'offline_retry',
+            'skus' => [
+                $sku->id => [
+                    'osa_quantity' => 4,
+                    'npd_present' => 1,
+                    'facing' => 4,
+                    'share_of_shelf' => 50,
+                    'category_unilever_facings' => 12,
+                    'category_total_facings' => 20,
+                    'planogram_compliant' => 1,
+                ],
+            ],
+        ];
+
+        $this->actingAs($user)->post(route('merchandisers.visit.store', $outlet), $payload)
+            ->assertRedirect(route('merchandisers.dashboard'));
+
+        $this->assertDatabaseHas('merchandiser_visits', [
+            'user_id' => $user->id,
+            'outlet_id' => $outlet->id,
+            'sync_token' => 'offline-perfect-store-token-1',
+            'sync_source' => 'offline_retry',
+        ]);
+
+        $this->actingAs($user)->post(route('merchandisers.visit.store', $outlet), $payload)
+            ->assertRedirect(route('merchandisers.dashboard'));
+
+        $this->assertSame(1, MerchandiserVisit::where('sync_token', 'offline-perfect-store-token-1')->count());
+        $this->assertSame(1, MerchandiserVisitSku::whereHas('visit', fn ($query) => $query->where('sync_token', 'offline-perfect-store-token-1'))->count());
+
+        Carbon::setTestNow();
+    }
+
+    #[Test]
+    public function admin_can_update_perfect_store_kpi_settings()
+    {
+        $admin = User::findOrFail(1);
+
+        $this->actingAs($admin)
+            ->post(route('merchandisers.admin.kpi-settings.update'), [
+                'targets' => [
+                    'coverage' => 100,
+                    'osa' => 94,
+                    'npd' => 90,
+                    'mhs' => 91,
+                    'planogram' => 100,
+                    'facing' => 95,
+                    'sos' => 60,
+                ],
+                'weights' => [
+                    'coverage' => 20,
+                    'osa' => 20,
+                    'npd' => 12,
+                    'mhs' => 12,
+                    'planogram' => 12,
+                    'facing' => 12,
+                    'sos' => 12,
+                ],
+            ])
+            ->assertRedirect(route('merchandisers.admin.tab', ['adminTab' => 'category-kpi']).'#perfect-store-kpi-settings');
+
+        $this->assertSame(94.0, PerfectStoreKpiService::configuredTargets()['osa']);
+        $this->assertSame(20.0, PerfectStoreKpiService::configuredWeights()['coverage']);
+    }
+
+    #[Test]
+    public function merchandiser_admin_export_supports_pdf_format()
+    {
+        $admin = User::findOrFail(1);
+
+        $response = $this->actingAs($admin)
+            ->get(route('merchandisers.admin.export', ['type' => 'perfect-store', 'format' => 'pdf']));
+
+        $response->assertOk();
+        $response->assertHeader('Content-Type', 'application/pdf');
+        $response->assertHeader('Content-Disposition', 'attachment; filename="merchandiser_perfect-store_'.now()->format('Y-m-d').'.pdf"');
+        $this->assertStringStartsWith('%PDF-1.4', $response->getContent());
+    }
+
+    #[Test]
+    public function automated_merchandiser_reports_and_alerts_are_deduped()
+    {
+        Carbon::setTestNow(Carbon::create(2026, 7, 20, 17, 30, 0, 'Africa/Accra'));
+        $admin = User::findOrFail(1);
+        $admin->update(['access_role' => 'super_admin', 'status' => 'active']);
+        $region = Region::create(['name' => 'ALERT ACCRA', 'timezone' => 'Africa/Accra']);
+        $kd = KeyDistributor::create(['name' => 'Alert KD', 'region_id' => $region->id]);
+        $outlet = Outlet::create([
+            'name' => 'Missed Alert Outlet',
+            'code' => 'ALERT-001',
+            'kd_id' => $kd->id,
+            'channel_type' => 'GT',
+        ]);
+        $user = User::create([
+            'name' => 'Missed Visit Merchandiser',
+            'email' => 'missed-merch@cmih.africa',
+            'contact_email' => 'missed-merch@personal.com',
+            'phone' => '12345678',
+            'date_of_birth' => '1995-05-05',
+            'password' => Hash::make('Pass123'),
+            'access_role' => 'merchandiser',
+            'status' => 'active',
+            'kd_id' => $kd->id,
+            'region_id' => $region->id,
+        ]);
+        MerchandiserOutletAssignment::create([
+            'user_id' => $user->id,
+            'outlet_id' => $outlet->id,
+            'assigned_date' => '2026-07-20',
+            'sequence' => 1,
+            'status' => 'planned',
+        ]);
+
+        $this->artisan('merchandisers:reports', ['frequency' => 'daily', '--date' => '2026-07-20'])
+            ->assertExitCode(0);
+        $this->assertDatabaseHas('merchandiser_report_deliveries', [
+            'frequency' => 'daily',
+            'period_start' => '2026-07-20 00:00:00',
+            'period_end' => '2026-07-20 00:00:00',
+            'status' => 'sent',
+        ]);
+
+        $this->artisan('merchandisers:alerts', ['type' => 'missed-visits', '--date' => '2026-07-20'])
+            ->assertExitCode(0);
+        $this->artisan('merchandisers:alerts', ['type' => 'missed-visits', '--date' => '2026-07-20'])
+            ->assertExitCode(0);
+
+        $this->assertDatabaseCount('merchandiser_kpi_alert_events', 1);
+        $this->assertSame(1, \App\Models\Notification::where('title', 'Missed outlet visit')->count());
+
+        Carbon::setTestNow();
+    }
+
+    #[Test]
+    public function merchandiser_role_dashboards_render_without_fake_data()
+    {
+        $admin = User::findOrFail(1);
+
+        $this->actingAs($admin)
+            ->get(route('merchandisers.admin.tab', ['adminTab' => 'supervisor-dashboard']))
+            ->assertOk()
+            ->assertSee('Live GPS Tracking')
+            ->assertSee('No supervisor performance data for this range.');
+
+        $this->actingAs($admin)
+            ->get(route('merchandisers.admin.tab', ['adminTab' => 'regional-dashboard']))
+            ->assertOk()
+            ->assertSee('Zone Score Aggregation')
+            ->assertSee('No regional score data for this range.');
+
+        $this->actingAs($admin)
+            ->get(route('merchandisers.admin.tab', ['adminTab' => 'client-dashboard']))
+            ->assertOk()
+            ->assertSee('Client Score')
+            ->assertSee('No brand-scoped audits for this range.');
     }
 }
