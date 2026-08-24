@@ -45,6 +45,73 @@
         tbody tr:hover { background: rgba(255,255,255,0.04); }
         .modal-overlay { backdrop-filter: blur(6px); }
         main > [x-show] { width: 100%; min-width: 0; max-width: 100%; }
+        .shelfwatch-tab {
+            position: relative;
+            z-index: 1;
+            isolation: isolate;
+            display: flex;
+            min-width: 0;
+            width: 100%;
+            max-width: 100%;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        .shelfwatch-hero {
+            position: relative;
+            overflow: hidden;
+            border-radius: 1rem;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: linear-gradient(135deg, rgba(18,18,21,0.98), rgba(30,18,22,0.9), rgba(18,18,21,0.98));
+            padding: clamp(1rem, 2vw, 1.5rem);
+            box-shadow: 0 18px 44px rgba(0,0,0,0.32);
+        }
+        .shelfwatch-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: clamp(0.75rem, 1.4vw, 1rem);
+            align-items: stretch;
+            width: 100%;
+            min-width: 0;
+        }
+        .shelfwatch-kpi-card {
+            display: flex;
+            min-width: 0;
+            min-height: 128px;
+            flex-direction: column;
+            justify-content: center;
+            border-radius: 1rem;
+            padding: clamp(1rem, 1.5vw, 1.25rem);
+            overflow: hidden;
+        }
+        .shelfwatch-kpi-label {
+            margin-bottom: 0.55rem;
+            color: rgba(226,226,226,0.72);
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            line-height: 1.25;
+            text-transform: uppercase;
+        }
+        .shelfwatch-kpi-value {
+            font-size: clamp(2.1rem, 3.4vw, 3.4rem);
+            line-height: 0.95;
+            overflow-wrap: anywhere;
+        }
+        .shelfwatch-kpi-note {
+            margin-top: 0.65rem;
+            color: rgba(226,226,226,0.58);
+            font-size: 0.72rem;
+            line-height: 1.35;
+        }
+        .shelfwatch-chart-card,
+        .shelfwatch-table-card {
+            min-width: 0;
+            overflow: hidden;
+        }
+        @media (max-width: 640px) {
+            .shelfwatch-kpi-grid { grid-template-columns: 1fr; }
+            .shelfwatch-kpi-card { min-height: 112px; }
+        }
         /* Smooth, touch-friendly vertical scrolling for main content container */
         #merchandiser-admin-main {
             -webkit-overflow-scrolling: touch;
@@ -3596,7 +3663,8 @@
                 {{-- ═══════════════════════════════════════════════════
                      TAB: IMAGE GALLERY (ShelfWatch)
                 ════════════════════════════════════════════════════ --}}
-                <div x-show="activeTab === 'gallery'" x-transition class="space-y-6">
+                @if($activeAdminTab === 'gallery')
+                <div class="shelfwatch-tab">
                     {{-- Gallery Hero Banner --}}
                     <div class="relative overflow-hidden rounded-2xl border border-brand-white/10 bg-gradient-to-r from-[#121215] via-[#141b24] to-[#121215] p-6 shadow-2xl">
                         <div class="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-sky-500/10 blur-3xl"></div>
@@ -3713,13 +3781,15 @@
                         @if(method_exists($galleryImages, 'links'))<div>{{ $galleryImages->links() }}</div>@endif
                     @endif
                 </div>
+                @endif
 
                 {{-- ═══════════════════════════════════════════════════
                      TAB: EXECUTIVE SUMMARY (ShelfWatch)
                 ════════════════════════════════════════════════════ --}}
-                <div x-show="activeTab === 'executive'" x-transition class="space-y-6">
+                @if($activeAdminTab === 'executive')
+                <div class="shelfwatch-tab">
                     {{-- Executive Hero Banner --}}
-                    <div class="relative overflow-hidden rounded-2xl border border-brand-white/10 bg-gradient-to-r from-[#121215] via-[#1a1a20] to-[#121215] p-6 shadow-2xl">
+                    <div class="shelfwatch-hero">
                         <div class="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-blue-500/10 blur-3xl"></div>
                         <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div>
@@ -3733,53 +3803,53 @@
                     </div>
 
                     {{-- KPI Bar --}}
-                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7 gap-3 sm:gap-4">
-                        <div class="stat-card glass-panel min-w-0 rounded-2xl p-4 sm:p-5 border-t-2 border-t-blue-500 border border-brand-white/10 bg-[#121215] shadow-xl hover:-translate-y-1 transition-all">
-                            <p class="text-[10px] uppercase tracking-widest text-brand-ash/70 font-semibold mb-2 truncate">Scheduled Visits</p>
-                            <p class="text-2xl sm:text-3xl xl:text-4xl font-display text-blue-400 font-bold truncate">{{ number_format($execScheduled) }}</p>
+                    <div class="shelfwatch-kpi-grid">
+                        <div class="stat-card glass-panel shelfwatch-kpi-card border-t-2 border-t-blue-500 border border-brand-white/10 bg-[#121215] shadow-xl hover:-translate-y-1 transition-all">
+                            <p class="shelfwatch-kpi-label">Scheduled Visits</p>
+                            <p class="shelfwatch-kpi-value font-display text-blue-400 font-bold">{{ number_format($execScheduled) }}</p>
                         </div>
-                        <div class="stat-card glass-panel min-w-0 rounded-2xl p-4 sm:p-5 border-t-2 border-t-emerald-500 border border-brand-white/10 bg-[#121215] shadow-xl hover:-translate-y-1 transition-all">
-                            <p class="text-[10px] uppercase tracking-widest text-brand-ash/70 font-semibold mb-2 truncate">Completed Visits</p>
-                            <p class="text-2xl sm:text-3xl xl:text-4xl font-display text-emerald-400 font-bold truncate">{{ number_format($execActual) }}</p>
+                        <div class="stat-card glass-panel shelfwatch-kpi-card border-t-2 border-t-emerald-500 border border-brand-white/10 bg-[#121215] shadow-xl hover:-translate-y-1 transition-all">
+                            <p class="shelfwatch-kpi-label">Completed Visits</p>
+                            <p class="shelfwatch-kpi-value font-display text-emerald-400 font-bold">{{ number_format($execActual) }}</p>
                         </div>
-                        <div class="stat-card glass-panel min-w-0 rounded-2xl p-4 sm:p-5 border-t-2 border-t-amber-500 border border-brand-white/10 bg-[#121215] shadow-xl hover:-translate-y-1 transition-all">
-                            <p class="text-[10px] uppercase tracking-widest text-brand-ash/70 font-semibold mb-2 truncate">Audit Compliance</p>
-                            <p class="text-2xl sm:text-3xl xl:text-4xl font-display text-amber-400 font-bold truncate">{{ $execCompliance }}%</p>
-                            <p class="text-[10px] text-brand-ash/60 mt-1 font-medium truncate">Target: 100%</p>
+                        <div class="stat-card glass-panel shelfwatch-kpi-card border-t-2 border-t-amber-500 border border-brand-white/10 bg-[#121215] shadow-xl hover:-translate-y-1 transition-all">
+                            <p class="shelfwatch-kpi-label">Audit Compliance</p>
+                            <p class="shelfwatch-kpi-value font-display text-amber-400 font-bold">{{ $execCompliance }}%</p>
+                            <p class="shelfwatch-kpi-note">Target 100%</p>
                         </div>
-                        <div class="stat-card glass-panel min-w-0 rounded-2xl p-4 sm:p-5 border-t-2 border-t-green-500 border border-brand-white/10 bg-[#121215] shadow-xl hover:-translate-y-1 transition-all">
-                            <p class="text-[10px] uppercase tracking-widest text-brand-ash/70 font-semibold mb-2 truncate">% Active Users</p>
-                            <p class="text-2xl sm:text-3xl xl:text-4xl font-display text-green-300 font-bold truncate">{{ $execActiveRate }}%</p>
+                        <div class="stat-card glass-panel shelfwatch-kpi-card border-t-2 border-t-green-500 border border-brand-white/10 bg-[#121215] shadow-xl hover:-translate-y-1 transition-all">
+                            <p class="shelfwatch-kpi-label">% Active Users</p>
+                            <p class="shelfwatch-kpi-value font-display text-green-300 font-bold">{{ $execActiveRate }}%</p>
                         </div>
-                        <div class="stat-card glass-panel min-w-0 rounded-2xl p-4 sm:p-5 border-t-2 border-t-sky-500 border border-brand-white/10 bg-[#121215] shadow-xl hover:-translate-y-1 transition-all">
-                            <p class="text-[10px] uppercase tracking-widest text-brand-ash/70 font-semibold mb-2 truncate">Total Images</p>
-                            <p class="text-2xl sm:text-3xl xl:text-4xl font-display text-sky-400 font-bold truncate">{{ number_format($totalImagesCount) }}</p>
+                        <div class="stat-card glass-panel shelfwatch-kpi-card border-t-2 border-t-sky-500 border border-brand-white/10 bg-[#121215] shadow-xl hover:-translate-y-1 transition-all">
+                            <p class="shelfwatch-kpi-label">Total Images</p>
+                            <p class="shelfwatch-kpi-value font-display text-sky-400 font-bold">{{ number_format($totalImagesCount) }}</p>
                         </div>
-                        <div class="stat-card glass-panel min-w-0 rounded-2xl p-4 sm:p-5 border-t-2 border-t-purple-500 border border-brand-white/10 bg-[#121215] shadow-xl hover:-translate-y-1 transition-all">
-                            <p class="text-[10px] uppercase tracking-widest text-brand-ash/70 font-semibold mb-2 truncate">SKU Count</p>
-                            <p class="text-2xl sm:text-3xl xl:text-4xl font-display text-purple-400 font-bold truncate">{{ $execSkuCount }}</p>
+                        <div class="stat-card glass-panel shelfwatch-kpi-card border-t-2 border-t-purple-500 border border-brand-white/10 bg-[#121215] shadow-xl hover:-translate-y-1 transition-all">
+                            <p class="shelfwatch-kpi-label">SKU Count</p>
+                            <p class="shelfwatch-kpi-value font-display text-purple-400 font-bold">{{ $execSkuCount }}</p>
                         </div>
-                        <div class="stat-card glass-panel min-w-0 rounded-2xl p-4 sm:p-5 border-t-2 border-t-brand-red border border-brand-white/10 bg-[#121215] shadow-xl hover:-translate-y-1 transition-all">
-                            <p class="text-[10px] uppercase tracking-widest text-brand-ash/70 font-semibold mb-2 truncate">Active Merchandisers</p>
-                            <p class="text-2xl sm:text-3xl xl:text-4xl font-display text-white font-bold truncate">{{ $activeMerchandisers }}</p>
-                            <p class="text-[10px] text-brand-ash/60 mt-1 font-medium truncate">of {{ $totalMerchandisers }} active</p>
+                        <div class="stat-card glass-panel shelfwatch-kpi-card border-t-2 border-t-brand-red border border-brand-white/10 bg-[#121215] shadow-xl hover:-translate-y-1 transition-all">
+                            <p class="shelfwatch-kpi-label">Active Merchandisers</p>
+                            <p class="shelfwatch-kpi-value font-display text-white font-bold">{{ $activeMerchandisers }}</p>
+                            <p class="shelfwatch-kpi-note">of {{ $totalMerchandisers }} active</p>
                         </div>
                     </div>
 
                     {{-- Charts --}}
-                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-6">
-                        <div class="glass-panel rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
+                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
+                        <div class="glass-panel shelfwatch-chart-card rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
                             <p class="text-xs uppercase tracking-widest text-brand-ash mb-4">Scheduled vs Completed Visits (7-Day Trend)</p>
                             <div class="h-64"><canvas id="execVisitTrendChart"></canvas></div>
                         </div>
-                        <div class="glass-panel rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
+                        <div class="glass-panel shelfwatch-chart-card rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
                             <p class="text-xs uppercase tracking-widest text-brand-ash mb-4">Image Capture by Day</p>
                             <div class="h-64"><canvas id="execImageValidityChart"></canvas></div>
                         </div>
                     </div>
 
                     {{-- Merchandiser summary table --}}
-                    <div class="glass-panel rounded-2xl border border-brand-white/10 overflow-hidden">
+                    <div class="glass-panel shelfwatch-table-card rounded-2xl border border-brand-white/10 overflow-hidden">
                         <div class="border-b border-brand-white/10 px-5 py-4 flex items-center justify-between">
                             <p class="text-xs uppercase tracking-widest text-brand-ash">Field Team Summary</p>
                         </div>
@@ -3819,9 +3889,12 @@
                 {{-- ═══════════════════════════════════════════════════
                      TAB: CATEGORY LEVEL KPIs (ShelfWatch)
                 ════════════════════════════════════════════════════ --}}
-                <div x-show="activeTab === 'category-kpi'" x-transition class="space-y-6">
+                @endif
+
+                @if($activeAdminTab === 'category-kpi')
+                <div class="shelfwatch-tab">
                     {{-- Category Hero Banner --}}
-                    <div class="relative overflow-hidden rounded-2xl border border-brand-white/10 bg-gradient-to-r from-[#121215] via-[#1c1424] to-[#121215] p-6 shadow-2xl">
+                    <div class="shelfwatch-hero">
                         <div class="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-pink-500/10 blur-3xl"></div>
                         <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div>
@@ -3902,30 +3975,30 @@
                     @else
                         {{-- Charts --}}
                         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-5 mb-6">
-                            <div class="glass-panel rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
+                            <div class="glass-panel shelfwatch-chart-card rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
                                 <p class="text-xs uppercase tracking-widest text-brand-ash mb-4">OSA by Category</p>
                                 <div class="h-56"><canvas id="catOsaChart"></canvas></div>
                             </div>
-                            <div class="glass-panel rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
+                            <div class="glass-panel shelfwatch-chart-card rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
                                 <p class="text-xs uppercase tracking-widest text-brand-ash mb-4">NPD by Category</p>
                                 <div class="h-56"><canvas id="catNpdChart"></canvas></div>
                             </div>
-                            <div class="glass-panel rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
+                            <div class="glass-panel shelfwatch-chart-card rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
                                 <p class="text-xs uppercase tracking-widest text-brand-ash mb-4">MHS by Category</p>
                                 <div class="h-56"><canvas id="catMhsChart"></canvas></div>
                             </div>
-                            <div class="glass-panel rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
+                            <div class="glass-panel shelfwatch-chart-card rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
                                 <p class="text-xs uppercase tracking-widest text-brand-ash mb-4">Facings by Category</p>
                                 <div class="h-56"><canvas id="catFacingChart"></canvas></div>
                             </div>
-                            <div class="glass-panel rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
+                            <div class="glass-panel shelfwatch-chart-card rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
                                 <p class="text-xs uppercase tracking-widest text-brand-ash mb-4">SOS by Category</p>
                                 <div class="h-56"><canvas id="catSosChart"></canvas></div>
                             </div>
                         </div>
 
                         {{-- Table --}}
-                        <div class="glass-panel rounded-2xl border border-brand-white/10 overflow-hidden">
+                        <div class="glass-panel shelfwatch-table-card rounded-2xl border border-brand-white/10 overflow-hidden">
                             <div class="border-b border-brand-white/10 px-5 py-4">
                                 <p class="text-xs uppercase tracking-widest text-brand-ash">Category KPI Detail</p>
                             </div>
@@ -3994,9 +4067,12 @@
                 <!-- ═══════════════════════════════════════════════════════════
                      TAB: MERCHANDISER PERFORMANCE TRACKING (Daily, Weekly, Monthly, Yearly)
                 ════════════════════════════════════════════════════════════ -->
-                <div x-show="activeTab === 'user-performance'" x-transition class="space-y-6">
+                @endif
+
+                @if($activeAdminTab === 'user-performance')
+                <div class="shelfwatch-tab">
                     {{-- User Performance Hero Banner --}}
-                    <div class="relative overflow-hidden rounded-2xl border border-brand-white/10 bg-gradient-to-r from-[#121215] via-[#1a1418] to-[#121215] p-6 shadow-2xl">
+                    <div class="shelfwatch-hero">
                         <div class="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-emerald-500/10 blur-3xl"></div>
                         <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div>
@@ -4045,7 +4121,7 @@
                     </div>
 
                     <!-- Performance Trend Chart -->
-                    <div class="glass-panel rounded-2xl border border-brand-white/10 bg-brand-white/5 p-6 shadow-2xl">
+                    <div class="glass-panel shelfwatch-chart-card rounded-2xl border border-brand-white/10 bg-brand-white/5 p-6 shadow-2xl">
                         <h4 class="text-sm font-bold uppercase tracking-wider text-brand-white mb-1">Merchandiser Performance Trend ({{ ucfirst($perfPeriod) }})</h4>
                         <p class="text-xs text-brand-white/50 mb-4">Progression of Coverage %, Facing %, Planogram %, and Overall Score.</p>
                         <div class="h-72">
@@ -4054,7 +4130,7 @@
                     </div>
 
                     <!-- Merchandiser Detail Performance Table -->
-                    <div class="glass-panel rounded-2xl border border-brand-white/10 bg-brand-white/5 p-6 shadow-2xl">
+                    <div class="glass-panel shelfwatch-table-card rounded-2xl border border-brand-white/10 bg-brand-white/5 p-6 shadow-2xl">
                         <div class="flex items-center justify-between mb-4 border-b border-brand-white/10 pb-3">
                             <h4 class="text-sm font-bold uppercase tracking-wider text-brand-white">Merchandiser Performance Rankings ({{ ucfirst($perfPeriod) }})</h4>
                             <span class="text-xs text-brand-white/50">{{ count($userPerformance) }} Field Promoters</span>
@@ -4109,7 +4185,10 @@
                 {{-- ═══════════════════════════════════════════════════
                      TAB: PRICE & PROMO COMPLIANCE (ShelfWatch)
                 ════════════════════════════════════════════════════ --}}
-                <div x-show="activeTab === 'price-promo'" x-transition>
+                @endif
+
+                @if($activeAdminTab === 'price-promo')
+                <div class="shelfwatch-tab">
                     {{-- KPI cards --}}
                     <div class="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 mb-6">
                         <div class="stat-card kpi-glow-green glass-panel min-w-0 rounded-2xl p-4 sm:p-5 border border-brand-white/10">
@@ -4134,11 +4213,11 @@
 
                     {{-- POSM chart + table --}}
                     <div class="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-6">
-                        <div class="glass-panel rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
+                        <div class="glass-panel shelfwatch-chart-card rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
                             <p class="text-xs uppercase tracking-widest text-brand-ash mb-4">POSM Compliance by KD</p>
                             <div class="h-64"><canvas id="posmComplianceChart"></canvas></div>
                         </div>
-                        <div class="glass-panel rounded-2xl border border-brand-white/10 overflow-hidden">
+                        <div class="glass-panel shelfwatch-table-card rounded-2xl border border-brand-white/10 overflow-hidden">
                             <div class="border-b border-brand-white/10 px-5 py-4">
                                 <p class="text-xs uppercase tracking-widest text-brand-ash">KD Promo Performance</p>
                             </div>
@@ -4181,6 +4260,7 @@
                         </div>
                     </div>
                 </div>
+                @endif
 
             </main>
 
