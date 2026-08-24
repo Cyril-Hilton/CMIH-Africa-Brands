@@ -131,6 +131,10 @@
                         </div>
                     </div>
 
+                    <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+                        <p class="text-xs font-bold uppercase tracking-widest text-brand-white">Perfect Store performance charts</p>
+                        <span class="rounded-full border border-brand-white/10 bg-brand-white/5 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-brand-ash">{{ $perfectStoreRangeLabel }}</span>
+                    </div>
                     <div class="grid grid-cols-1 gap-5 mb-6 xl:grid-cols-3">
                         <script type="application/json" data-perfect-store-overview-charts>@json($perfectOverviewChartPayload)</script>
                         <div class="glass-panel rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">

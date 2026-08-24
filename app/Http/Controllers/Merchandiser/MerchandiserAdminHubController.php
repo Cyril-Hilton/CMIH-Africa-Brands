@@ -77,6 +77,12 @@ class MerchandiserAdminHubController extends Controller
         // Clock-in range for the dashboard KPI, chart, and PCM/PJP log review.
         $clockTimezone = 'Africa/Accra';
         [$clockFrom, $clockTo] = $this->clockInRange($request, $clockTimezone);
+        [$perfectStoreFrom, $perfectStoreTo, $perfectStoreRangeLabel] = $this->perfectStoreRange(
+            $request,
+            $clockFrom,
+            $clockTo,
+            $clockTimezone
+        );
         $today = Carbon::today($clockTimezone)->toDateString();
         $clockFromInput = $clockFrom->toDateString();
         $clockToInput = $clockTo->toDateString();
@@ -121,7 +127,7 @@ class MerchandiserAdminHubController extends Controller
         if ($activeTab === 'overview') {
             $currentMonthStart = now()->startOfMonth();
             $currentMonthEnd = now()->endOfMonth();
-            $perfectStoreSummary = app(PerfectStoreKpiService::class)->summary($clockFrom, $clockTo);
+            $perfectStoreSummary = app(PerfectStoreKpiService::class)->summary($perfectStoreFrom, $perfectStoreTo);
 
             $chartStart = $clockFrom->copy()->startOfDay();
             $chartEnd = $clockTo->copy()->startOfDay();
@@ -142,10 +148,10 @@ class MerchandiserAdminHubController extends Controller
                 ->take(10)
                 ->get();
         } elseif (in_array($activeTab, ['perfect-store', 'supervisor-dashboard', 'regional-dashboard', 'client-dashboard'], true)) {
-            $perfectStoreSummary = app(PerfectStoreKpiService::class)->summary($clockFrom, $clockTo);
+            $perfectStoreSummary = app(PerfectStoreKpiService::class)->summary($perfectStoreFrom, $perfectStoreTo);
             $allKds = KeyDistributor::orderBy('name')->get();
             $recentVisits = MerchandiserVisit::with(['outlet.keyDistributor', 'visitSkus.sku', 'user.supervisor', 'user.merchandiserKd'])
-                ->whereBetween('created_at', [$clockFrom->copy()->startOfDay(), $clockTo->copy()->endOfDay()])
+                ->whereBetween('created_at', [$perfectStoreFrom->copy()->startOfDay(), $perfectStoreTo->copy()->endOfDay()])
                 ->latest()
                 ->take(500)
                 ->get();
@@ -186,9 +192,9 @@ class MerchandiserAdminHubController extends Controller
                 ];
             })->values();
         } elseif ($activeTab === 'category-kpi') {
-            $categorySosData = app(PerfectStoreKpiService::class)->categoryKpis($clockFrom, $clockTo);
+            $categorySosData = app(PerfectStoreKpiService::class)->categoryKpis($perfectStoreFrom, $perfectStoreTo);
         } elseif (in_array($activeTab, ['executive', 'regional-dashboard', 'client-dashboard'], true)) {
-            $perfectStoreSummary = app(PerfectStoreKpiService::class)->summary($clockFrom, $clockTo);
+            $perfectStoreSummary = app(PerfectStoreKpiService::class)->summary($perfectStoreFrom, $perfectStoreTo);
         }
 
         [$outletCreatedFrom, $outletCreatedTo] = $this->outletCreatedRange($request);
@@ -1060,7 +1066,7 @@ class MerchandiserAdminHubController extends Controller
             'liveLocationCount',
             'attendanceChart', 'topPerformers',
             'clockFromInput', 'clockToInput', 'clockRangeLabel',
-            'perfectStoreSummary',
+            'perfectStoreSummary', 'perfectStoreRangeLabel',
             'perfectStoreTargets', 'perfectStoreWeights',
             'clockAttendanceCount', 'clockPcmCount', 'clockPjpCount',
             'kds', 'regions',
@@ -2775,6 +2781,42 @@ class MerchandiserAdminHubController extends Controller
         }
 
         return [$from, $to];
+    }
+
+    private function perfectStoreRange(
+        Request $request,
+        Carbon $clockFrom,
+        Carbon $clockTo,
+        string $timezone
+    ): array {
+        if ($request->filled('clock_from') || $request->filled('clock_to')) {
+            return [
+                $clockFrom->copy(),
+                $clockTo->copy(),
+                $this->clockRangeLabel($clockFrom, $clockTo),
+            ];
+        }
+
+        $firstRecordedDates = collect([
+            MerchandiserOutletAssignment::query()->min('assigned_date'),
+            MerchandiserVisit::query()->min('created_at'),
+        ])->filter();
+
+        $from = $firstRecordedDates->isEmpty()
+            ? Carbon::now($timezone)->startOfDay()
+            : $firstRecordedDates
+                ->map(fn ($date) => Carbon::parse($date, $timezone)->startOfDay())
+                ->sortBy(fn (Carbon $date) => $date->timestamp)
+                ->first();
+        $to = Carbon::now($timezone)->endOfDay();
+
+        return [
+            $from,
+            $to,
+            $firstRecordedDates->isEmpty()
+                ? 'No Perfect Store activity recorded yet'
+                : 'All recorded activity ('.$from->format('d M Y').' - '.$to->format('d M Y').')',
+        ];
     }
 
     private function parseClockDate(?string $value, Carbon $fallback, string $timezone): Carbon

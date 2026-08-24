@@ -4453,6 +4453,11 @@ class MerchandiserPortalTest extends TestCase
             'user_id' => $merchandiser->id,
             'outlet_id' => $outlet->id,
         ]);
+        $activityDate = now('Africa/Accra')->subDays(45);
+        $visit->forceFill([
+            'created_at' => $activityDate,
+            'updated_at' => $activityDate,
+        ])->saveQuietly();
         MerchandiserVisitSku::create([
             'visit_id' => $visit->id,
             'sku_id' => $sku->id,
@@ -4466,11 +4471,11 @@ class MerchandiserPortalTest extends TestCase
         MerchandiserOutletAssignment::create([
             'user_id' => $merchandiser->id,
             'outlet_id' => $outlet->id,
-            'assigned_date' => now('Africa/Accra')->toDateString(),
+            'assigned_date' => $activityDate->toDateString(),
             'sequence' => 1,
             'status' => 'completed',
             'visit_id' => $visit->id,
-            'completed_at' => now('Africa/Accra'),
+            'completed_at' => $activityDate,
         ]);
         MerchandiserLocation::create([
             'user_id' => $merchandiser->id,
@@ -4483,6 +4488,7 @@ class MerchandiserPortalTest extends TestCase
             ->get(route('merchandisers.admin.tab', ['adminTab' => 'overview']))
             ->assertOk()
             ->assertSee('data-perfect-store-overview-charts', false)
+            ->assertSee('All recorded activity')
             ->assertSee('KPI Chart Agent')
             ->assertSee('Chart KD');
 
