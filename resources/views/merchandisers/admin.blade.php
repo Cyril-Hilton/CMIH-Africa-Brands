@@ -20,10 +20,14 @@
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     @endif
     @if(in_array($activeAdminTab, ['tracking', 'supervisor-dashboard'], true))
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
         <script>
             function initGoogleMaps() { window._googleMapsReady = true; window.dispatchEvent(new Event('google-maps-ready')); }
         </script>
-        <script src="https://maps.googleapis.com/maps/api/js?key={{ env('GOOGLE_MAPS_API_KEY') }}&callback=initGoogleMaps" async defer></script>
+        @if(config('services.google.maps_api_key'))
+            <script src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google.maps_api_key') }}&callback=initGoogleMaps&loading=async" async defer></script>
+        @endif
     @endif
     <style>
         #admin-map { height: 540px; width: 100%; border-radius: 1rem; overflow: hidden; }
@@ -626,91 +630,108 @@ const merchKpiChartOptions = {
     }
 };
 
-const perfectMetricRadarCtx = document.getElementById('perfectStoreMetricRadarChart');
-if (perfectMetricRadarCtx && adminChartsAvailable) {
-    new Chart(perfectMetricRadarCtx, {
-        type: 'radar',
-        data: {
-            labels: @json($perfectMetricLabels ?? []),
-            datasets: [
-                {
-                    label: 'Actual',
-                    data: @json($perfectMetricValues ?? []),
-                    backgroundColor: 'rgba(239,68,68,0.16)',
-                    borderColor: 'rgba(239,68,68,0.9)',
-                    borderWidth: 2,
-                    pointBackgroundColor: '#ef4444',
-                },
-                {
-                    label: 'Target',
-                    data: @json($perfectTargetValues ?? []),
-                    backgroundColor: 'rgba(34,197,94,0.08)',
-                    borderColor: 'rgba(34,197,94,0.7)',
-                    borderDash: [4, 4],
-                    borderWidth: 1.5,
-                    pointBackgroundColor: '#22c55e',
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'bottom', labels: { color: 'rgba(255,255,255,0.7)', font: { size: 10 } } }
+function readPerfectStoreOverviewChartData() {
+    const source = document.querySelector('[data-perfect-store-overview-charts]');
+    if (!source) return null;
+
+    try {
+        return JSON.parse(source.textContent || '{}');
+    } catch (error) {
+        console.warn('Unable to read Perfect Store chart data.', error);
+        return null;
+    }
+}
+
+function initPerfectStoreOverviewCharts() {
+    if (!adminChartsAvailable) return;
+
+    const payload = readPerfectStoreOverviewChartData();
+    if (!payload) return;
+
+    const perfectMetricRadarCtx = document.getElementById('perfectStoreMetricRadarChart');
+    if (perfectMetricRadarCtx) {
+        Chart.getChart(perfectMetricRadarCtx)?.destroy();
+        new Chart(perfectMetricRadarCtx, {
+            type: 'radar',
+            data: {
+                labels: payload.metrics?.labels || [],
+                datasets: [
+                    {
+                        label: 'Actual',
+                        data: payload.metrics?.actual || [],
+                        backgroundColor: 'rgba(239,68,68,0.16)',
+                        borderColor: 'rgba(239,68,68,0.9)',
+                        borderWidth: 2,
+                        pointBackgroundColor: '#ef4444',
+                    },
+                    {
+                        label: 'Target',
+                        data: payload.metrics?.targets || [],
+                        backgroundColor: 'rgba(34,197,94,0.08)',
+                        borderColor: 'rgba(34,197,94,0.7)',
+                        borderDash: [4, 4],
+                        borderWidth: 1.5,
+                        pointBackgroundColor: '#22c55e',
+                    }
+                ]
             },
-            scales: {
-                r: {
-                    beginAtZero: true,
-                    max: 100,
-                    grid: { color: 'rgba(255,255,255,0.08)' },
-                    angleLines: { color: 'rgba(255,255,255,0.08)' },
-                    pointLabels: { color: 'rgba(255,255,255,0.7)', font: { size: 10 } },
-                    ticks: { display: false }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: 'rgba(255,255,255,0.7)', font: { size: 10 } } }
+                },
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: { color: 'rgba(255,255,255,0.08)' },
+                        angleLines: { color: 'rgba(255,255,255,0.08)' },
+                        pointLabels: { color: 'rgba(255,255,255,0.7)', font: { size: 10 } },
+                        ticks: { display: false }
+                    }
                 }
             }
-        }
-    });
-}
+        });
+    }
 
-const perfectMerchCtx = document.getElementById('perfectStoreMerchChart');
-if (perfectMerchCtx && adminChartsAvailable) {
-    const labels = @json($perfectMerchChartLabels ?? []);
-    const scores = @json($perfectMerchChartScores ?? []);
-    new Chart(perfectMerchCtx, {
-        type: 'bar',
-        data: {
-            labels: labels.length ? labels : ['No data'],
-            datasets: [{
-                label: 'Score',
-                data: scores.length ? scores : [0],
-                backgroundColor: 'rgba(14,165,233,0.55)',
-                borderColor: 'rgba(14,165,233,0.95)',
-                borderWidth: 1.5,
-                borderRadius: 6,
-            }]
+    const barCharts = [
+        {
+            id: 'perfectStoreMerchChart',
+            data: payload.merchandisers || {},
+            backgroundColor: 'rgba(14,165,233,0.55)',
+            borderColor: 'rgba(14,165,233,0.95)',
         },
-        options: { ...merchKpiChartOptions, indexAxis: 'y' }
-    });
-}
+        {
+            id: 'perfectStoreKdChart',
+            data: payload.kds || {},
+            backgroundColor: 'rgba(167,139,250,0.55)',
+            borderColor: 'rgba(167,139,250,0.95)',
+        },
+    ];
 
-const perfectKdCtx = document.getElementById('perfectStoreKdChart');
-if (perfectKdCtx && adminChartsAvailable) {
-    const labels = @json($perfectKdChartLabels ?? []);
-    const scores = @json($perfectKdChartScores ?? []);
-    new Chart(perfectKdCtx, {
-        type: 'bar',
-        data: {
-            labels: labels.length ? labels : ['No data'],
-            datasets: [{
-                label: 'Score',
-                data: scores.length ? scores : [0],
-                backgroundColor: 'rgba(167,139,250,0.55)',
-                borderColor: 'rgba(167,139,250,0.95)',
-                borderWidth: 1.5,
-                borderRadius: 6,
-            }]
-        },
-        options: { ...merchKpiChartOptions, indexAxis: 'y' }
+    barCharts.forEach((definition) => {
+        const canvas = document.getElementById(definition.id);
+        if (!canvas) return;
+
+        const labels = definition.data.labels || [];
+        const scores = definition.data.scores || [];
+        Chart.getChart(canvas)?.destroy();
+        new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: labels.length ? labels : ['No activity in selected range'],
+                datasets: [{
+                    label: 'Score',
+                    data: scores.length ? scores : [0],
+                    backgroundColor: definition.backgroundColor,
+                    borderColor: definition.borderColor,
+                    borderWidth: 1.5,
+                    borderRadius: 6,
+                }]
+            },
+            options: { ...merchKpiChartOptions, indexAxis: 'y' }
+        });
     });
 }
 
@@ -1015,6 +1036,7 @@ if (clockCoverageCtx && adminChartsAvailable) {
 
 let googleMap = null;
 let mapInitialized = false;
+let adminMapProvider = null;
 let merchandiserMapMarkers = {};
 let merchandiserInfoWindow = null;
 
@@ -1058,6 +1080,16 @@ function focusMerchandiserOnMap(merchandiserId) {
     if (!googleMap || !markerRecord) return;
 
     const { marker, data, color } = markerRecord;
+
+    if (adminMapProvider === 'leaflet') {
+        googleMap.setView(marker.getLatLng(), 19, { animate: true });
+        marker.openPopup();
+
+        const mapEl = document.getElementById('admin-map');
+        if (mapEl) mapEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+    }
+
     googleMap.panTo(marker.getPosition());
     googleMap.setZoom(Math.max(googleMap.getZoom() || 0, 19));
 
@@ -1081,8 +1113,12 @@ function focusMerchandiserOnMap(merchandiserId) {
 function initAdminMap() {
     const mapEl = document.getElementById('admin-map');
     if (!mapEl || mapInitialized) return;
-    if (typeof google === 'undefined' || !google.maps) return;
+    if (typeof google === 'undefined' || !google.maps) {
+        initLeafletAdminMap(mapEl);
+        return;
+    }
     mapInitialized = true;
+    adminMapProvider = 'google';
     const locations = readMerchandiserMapLocations();
 
     googleMap = new google.maps.Map(mapEl, {
@@ -1163,6 +1199,47 @@ function initAdminMap() {
     }
 }
 
+function initLeafletAdminMap(mapEl) {
+    if (typeof L === 'undefined' || mapInitialized) return;
+
+    mapInitialized = true;
+    adminMapProvider = 'leaflet';
+    const locations = readMerchandiserMapLocations();
+    googleMap = L.map(mapEl, { zoomControl: true }).setView([5.6037, -0.1870], 11);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        maxZoom: 20,
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+    }).addTo(googleMap);
+
+    const bounds = [];
+    locations.forEach((m) => {
+        const latitude = Number(m.latitude);
+        const longitude = Number(m.longitude);
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
+
+        const color = m.clocked_in ? '#22c55e' : '#f59e0b';
+        const icon = L.divIcon({
+            className: '',
+            html: `<span style="display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:${color};border:3px solid #fff;color:#fff;font:700 11px Sora,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.35)">${String(m.name || '?').charAt(0).toUpperCase()}</span>`,
+            iconSize: [30, 30],
+            iconAnchor: [15, 15],
+        });
+        const marker = L.marker([latitude, longitude], { icon })
+            .addTo(googleMap)
+            .bindPopup(merchandiserInfoHtml(m, color), { className: 'merchandiser-map-popup' });
+
+        merchandiserMapMarkers[String(m.id)] = { marker, data: m, color };
+        bounds.push([latitude, longitude]);
+    });
+
+    if (bounds.length) {
+        googleMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+    }
+
+    setTimeout(() => googleMap?.invalidateSize(), 120);
+}
+
 // Init map when Google Maps API is ready and tracking tab is shown
 function tryInitMap() {
     if (window._googleMapsReady) {
@@ -1173,8 +1250,12 @@ function tryInitMap() {
 }
 
 function refreshAdminMap() {
+    if (adminMapProvider === 'leaflet' && googleMap && typeof googleMap.remove === 'function') {
+        googleMap.remove();
+    }
     googleMap = null;
     mapInitialized = false;
+    adminMapProvider = null;
     merchandiserMapMarkers = {};
     merchandiserInfoWindow = null;
 
@@ -1193,20 +1274,31 @@ document.addEventListener('cmih:silent-content-updated', (event) => {
     if (region.matches?.('[data-silent-region="merch-live-tracking"]') || region.querySelector?.('#admin-map')) {
         refreshAdminMap();
     }
+
+    if (region.matches?.('[data-silent-region="merch-clock-overview"]') || region.querySelector?.('[data-perfect-store-overview-charts]')) {
+        setTimeout(initPerfectStoreOverviewCharts, 80);
+    }
 });
 
 // Alpine.js tab watcher
 document.addEventListener('alpine:initialized', () => {
     Alpine.effect(() => {
         const comp = Alpine.$data(document.querySelector('[x-data]'));
-        if (comp && comp.activeTab === 'tracking') {
+        if (comp && ['tracking', 'supervisor-dashboard'].includes(comp.activeTab)) {
             setTimeout(tryInitMap, 80);
+        }
+        if (comp && comp.activeTab === 'overview') {
+            setTimeout(initPerfectStoreOverviewCharts, 80);
         }
     });
 });
 window.addEventListener('load', () => {
     const comp = document.querySelector('[x-data]');
-    if (comp && Alpine.$data(comp).activeTab === 'tracking') tryInitMap();
+    if (!comp) return;
+
+    const activeTab = Alpine.$data(comp).activeTab;
+    if (['tracking', 'supervisor-dashboard'].includes(activeTab)) tryInitMap();
+    if (activeTab === 'overview') initPerfectStoreOverviewCharts();
 });
 
 document.addEventListener('DOMContentLoaded', () => {

@@ -72,6 +72,21 @@
                         $perfectMerchChartScores = $perfectMerchChart->pluck('perfect_store_score')->map(fn ($value) => (float) $value)->values();
                         $perfectKdChartLabels = $perfectKdChart->pluck('name')->values();
                         $perfectKdChartScores = $perfectKdChart->pluck('perfect_store_score')->map(fn ($value) => (float) $value)->values();
+                        $perfectOverviewChartPayload = [
+                            'metrics' => [
+                                'labels' => $perfectMetricLabels,
+                                'actual' => $perfectMetricValues,
+                                'targets' => $perfectTargetValues,
+                            ],
+                            'merchandisers' => [
+                                'labels' => $perfectMerchChartLabels,
+                                'scores' => $perfectMerchChartScores,
+                            ],
+                            'kds' => [
+                                'labels' => $perfectKdChartLabels,
+                                'scores' => $perfectKdChartScores,
+                            ],
+                        ];
                     @endphp
                     <div class="grid grid-cols-2 gap-4 mb-6 xl:grid-cols-5">
                         <div class="glass-panel rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-5">
@@ -117,6 +132,7 @@
                     </div>
 
                     <div class="grid grid-cols-1 gap-5 mb-6 xl:grid-cols-3">
+                        <script type="application/json" data-perfect-store-overview-charts>@json($perfectOverviewChartPayload)</script>
                         <div class="glass-panel rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
                             <p class="text-xs uppercase tracking-widest text-brand-ash mb-4">Perfect Store KPI Radar</p>
                             <div class="h-72">

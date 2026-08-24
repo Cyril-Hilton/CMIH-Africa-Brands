@@ -141,7 +141,7 @@ class MerchandiserAdminHubController extends Controller
                 ->orderByDesc('merchandiser_visits_count')
                 ->take(10)
                 ->get();
-        } elseif (in_array($activeTab, ['perfect-store', 'regional-dashboard', 'client-dashboard'], true)) {
+        } elseif (in_array($activeTab, ['perfect-store', 'supervisor-dashboard', 'regional-dashboard', 'client-dashboard'], true)) {
             $perfectStoreSummary = app(PerfectStoreKpiService::class)->summary($clockFrom, $clockTo);
             $allKds = KeyDistributor::orderBy('name')->get();
             $recentVisits = MerchandiserVisit::with(['outlet.keyDistributor', 'visitSkus.sku', 'user.supervisor', 'user.merchandiserKd'])

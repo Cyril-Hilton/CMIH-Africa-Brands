@@ -4412,4 +4412,88 @@ class MerchandiserPortalTest extends TestCase
             ->assertSee('Client Score')
             ->assertSee('No brand-scoped audits for this range.');
     }
+
+    #[Test]
+    public function overview_charts_and_supervisor_live_map_receive_real_page_data()
+    {
+        Carbon::setTestNow(Carbon::create(2026, 8, 24, 10, 0, 0, 'Africa/Accra'));
+
+        $admin = User::findOrFail(1);
+        $region = Region::create(['name' => 'Chart Region', 'timezone' => 'Africa/Accra']);
+        $kd = KeyDistributor::create(['name' => 'Chart KD', 'region_id' => $region->id]);
+        $outlet = Outlet::create([
+            'name' => 'Chart Outlet',
+            'code' => 'CHART-001',
+            'kd_id' => $kd->id,
+            'channel_type' => 'SSM',
+            'latitude' => 5.6101,
+            'longitude' => -0.1902,
+        ]);
+        $merchandiser = User::create([
+            'name' => 'KPI Chart Agent',
+            'email' => 'kpi-chart-agent@cmih.africa',
+            'contact_email' => 'kpi-chart-agent@cmih.africa',
+            'phone' => '0240000000',
+            'date_of_birth' => '1995-05-05',
+            'password' => Hash::make('Pass123'),
+            'access_role' => User::MERCHANDISER_ROLE,
+            'status' => 'active',
+            'kd_id' => $kd->id,
+            'region_id' => $region->id,
+        ]);
+        $sku = Sku::create([
+            'name' => 'Chart SKU',
+            'category' => 'Chart Category',
+            'track_osa' => true,
+            'osa_drop_size' => 1,
+            'track_planogram' => true,
+            'facing_target' => 2,
+        ]);
+        $visit = MerchandiserVisit::create([
+            'user_id' => $merchandiser->id,
+            'outlet_id' => $outlet->id,
+        ]);
+        MerchandiserVisitSku::create([
+            'visit_id' => $visit->id,
+            'sku_id' => $sku->id,
+            'osa_quantity' => 1,
+            'npd_present' => false,
+            'facing' => 2,
+            'facing_target_snapshot' => 2,
+            'share_of_shelf' => 50,
+            'planogram_compliant' => true,
+        ]);
+        MerchandiserOutletAssignment::create([
+            'user_id' => $merchandiser->id,
+            'outlet_id' => $outlet->id,
+            'assigned_date' => now('Africa/Accra')->toDateString(),
+            'sequence' => 1,
+            'status' => 'completed',
+            'visit_id' => $visit->id,
+            'completed_at' => now('Africa/Accra'),
+        ]);
+        MerchandiserLocation::create([
+            'user_id' => $merchandiser->id,
+            'latitude' => 5.6101,
+            'longitude' => -0.1902,
+            'recorded_at' => now('Africa/Accra'),
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('merchandisers.admin.tab', ['adminTab' => 'overview']))
+            ->assertOk()
+            ->assertSee('data-perfect-store-overview-charts', false)
+            ->assertSee('KPI Chart Agent')
+            ->assertSee('Chart KD');
+
+        $this->actingAs($admin)
+            ->get(route('merchandisers.admin.tab', ['adminTab' => 'supervisor-dashboard']))
+            ->assertOk()
+            ->assertSee('data-merchandiser-map-locations', false)
+            ->assertSee('KPI Chart Agent')
+            ->assertSee('leaflet.min.js', false)
+            ->assertSee("['tracking', 'supervisor-dashboard']", false);
+
+        Carbon::setTestNow();
+    }
 }
