@@ -282,7 +282,7 @@
                                     <div class="glass-panel rounded-2xl border border-lime-500/20 bg-lime-500/5 p-4 flex items-center justify-between shadow-lg">
                                         <div>
                                             <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-lime-300">My Facing Score</p>
-                                            <p class="text-2xl font-display text-brand-white mt-1">{{ number_format($merchMetrics['facing_pct'] ?? 95, 1) }}%</p>
+                                            <p class="text-2xl font-display text-brand-white mt-1">{{ number_format($merchMetrics['facing_pct'] ?? 0, 1) }}%</p>
                                             <p class="text-[10px] text-brand-white/50 mt-0.5">Target: 95% Overall</p>
                                         </div>
                                         <div class="w-10 h-10 rounded-full bg-lime-500/20 border border-lime-500/40 flex items-center justify-center text-lime-300 text-sm font-bold">
@@ -293,7 +293,7 @@
                                     <div class="glass-panel rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-4 flex items-center justify-between shadow-lg">
                                         <div>
                                             <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-300">Planogram Alignment</p>
-                                            <p class="text-2xl font-display text-brand-white mt-1">{{ number_format($merchMetrics['planogram_pct'] ?? 100, 1) }}%</p>
+                                            <p class="text-2xl font-display text-brand-white mt-1">{{ number_format($merchMetrics['planogram_pct'] ?? 0, 1) }}%</p>
                                             <p class="text-[10px] text-brand-white/50 mt-0.5">Target: 100% Alignment</p>
                                         </div>
                                         <div class="w-10 h-10 rounded-full bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-300 text-sm font-bold">

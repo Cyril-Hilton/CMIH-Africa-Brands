@@ -250,6 +250,35 @@ class MerchandiserPortalTest extends TestCase
         $response->assertRedirect(route('merchandisers.dashboard'));
         $this->assertTrue(auth()->check());
     }
+
+    #[Test]
+    public function merchandiser_dashboard_does_not_show_fake_perfect_store_scores_without_visits()
+    {
+        $region = Region::create(['name' => 'Accra']);
+        $kd = KeyDistributor::create(['name' => 'No Visit KD', 'region_id' => $region->id]);
+
+        $user = User::create([
+            'name' => 'No Visit Agent',
+            'email' => 'no-visit-agent@cmih.africa',
+            'contact_email' => 'no-visit-agent@personal.com',
+            'phone' => '12345678',
+            'date_of_birth' => '1995-05-05',
+            'password' => Hash::make('Pass123'),
+            'access_role' => 'merchandiser',
+            'status' => 'active',
+            'kd_id' => $kd->id,
+            'region_id' => $region->id,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('merchandisers.dashboard'))
+            ->assertOk()
+            ->assertSeeInOrder(['My Facing Score', '0.0%', 'Target: 95% Overall'], false)
+            ->assertSeeInOrder(['Planogram Alignment', '0.0%', 'Target: 100% Alignment'], false)
+            ->assertSeeInOrder(['Share of Shelf (SOS)', '0.0%', 'Category Unilever Share'], false)
+            ->assertDontSee('85.0%', false);
+    }
+
     #[Test]
     public function brands_team_member_can_use_existing_cmih_credentials_for_merchandiser_admin()
     {

@@ -993,9 +993,9 @@ class MerchandiserAdminHubController extends Controller
                     }
                 }
 
-                $avgF = count($facingArr) ? round(array_sum($facingArr) / count($facingArr), 1) : 95.0;
-                $avgP = count($planoArr) ? round(array_sum($planoArr) / count($planoArr), 1) : 100.0;
-                $avgO = count($overallArr) ? round(array_sum($overallArr) / count($overallArr), 1) : 85.0;
+                $avgF = count($facingArr) ? round(array_sum($facingArr) / count($facingArr), 1) : 0.0;
+                $avgP = count($planoArr) ? round(array_sum($planoArr) / count($planoArr), 1) : 0.0;
+                $avgO = count($overallArr) ? round(array_sum($overallArr) / count($overallArr), 1) : 0.0;
 
                 $perfTrendChart['labels'][]   = $label;
                 $perfTrendChart['coverage'][] = $cov;

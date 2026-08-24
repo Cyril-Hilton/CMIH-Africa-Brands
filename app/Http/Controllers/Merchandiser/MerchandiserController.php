@@ -402,10 +402,10 @@ class MerchandiserController extends Controller
             'on_time_rate' => $this->boundedPercent($onTimeClockIns, $monthClockIns),
             'outlets_covered_month' => $monthlyCoveredOutlets,
             'monthly_coverage_rate' => $this->boundedPercent($monthlyCoveredOutlets, $allOutlets->count()),
-            'facing_pct' => $myPerfMetrics['facing_pct'] ?: 95.0,
-            'planogram_pct' => $myPerfMetrics['planogram_pct'] ?: 100.0,
-            'sos_pct' => $myPerfMetrics['sos_pct'] ?: 60.0,
-            'perfect_store_score' => $myPerfMetrics['overall_score'] ?: 85.0,
+            'facing_pct' => $myPerfMetrics['facing_pct'] ?? 0.0,
+            'planogram_pct' => $myPerfMetrics['planogram_pct'] ?? 0.0,
+            'sos_pct' => $myPerfMetrics['sos_pct'] ?? 0.0,
+            'perfect_store_score' => $myPerfMetrics['overall_score'] ?? 0.0,
         ];
 
         $dailyPerformanceChart = [
