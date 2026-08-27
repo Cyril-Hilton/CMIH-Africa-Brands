@@ -89,17 +89,7 @@
             </x-primary-button>
         </form>
 
-        <!-- Quick Demo Credentials helper box -->
-        <div class="rounded-xl border border-sky-500/30 bg-sky-500/10 p-3.5 text-xs text-sky-200 space-y-1.5 shadow-sm">
-            <div class="flex items-center justify-between font-bold text-sky-300 border-b border-sky-500/20 pb-1">
-                <span>🔑 Active Test Credentials:</span>
-                <span class="uppercase tracking-wider text-[10px] text-amber-300 font-extrabold" x-text="roles[activeRole]?.label || activeRole"></span>
-            </div>
-            <div class="flex items-center justify-between text-[11px] font-mono">
-                <span>Email: <strong class="text-white font-bold" x-text="{ field: 'merchandiser@cmih.africa', supervisor: 'supervisor@cmih.africa', client: 'client@cmih.africa', admin: 'admin@cmih.africa' }[activeRole] || 'merchandiser@cmih.africa'"></strong></span>
-                <span>Pass: <strong class="text-white font-bold">Password@123</strong></span>
-            </div>
-        </div>
+
 
         <!-- Registration link (Allowed for Field, Supervisor, Client) -->
         <div class="rounded-xl border border-brand-white/10 bg-white/5 p-4 text-center text-xs text-brand-white/70"

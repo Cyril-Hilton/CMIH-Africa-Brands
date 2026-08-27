@@ -34,6 +34,7 @@ use App\Models\Notification;
 use App\Services\NotificationService;
 use App\Services\MerchandiserRoutePlanner;
 use App\Services\PerfectStoreFormTemplate;
+use App\Services\PerfectStoreKpiService;
 use App\Support\MerchandiserClockWindows;
 use App\Support\MerchandiserPortalRole;
 use App\Support\MerchandiserTenant;
@@ -57,6 +58,12 @@ class MerchandiserController extends Controller
         if (Auth::check()) {
             if (Auth::user()->access_role === 'merchandiser') {
                 return redirect()->route('merchandisers.dashboard');
+            }
+            if (Auth::user()->isMerchandiserSupervisor()) {
+                return redirect()->route('merchandisers.supervisor.dashboard');
+            }
+            if (Auth::user()->isMerchandiserClient()) {
+                return redirect()->route('merchandisers.client.dashboard');
             }
             if (Auth::user()->isMerchandiserPortalAdmin()) {
                 return redirect()->route('merchandisers.admin.dashboard');
@@ -527,6 +534,10 @@ class MerchandiserController extends Controller
                 ->where('sync_source', '!=', 'live')
                 ->whereNull('synced_at')
                 ->count(),
+            'working_window_minutes' => max(0, $clockWindow['start_at']->diffInMinutes($clockWindow['end_at'])),
+            'status' => $scheduledCount === 0
+                ? 'No visits scheduled'
+                : ($notCoveredCount === 0 ? 'On track' : 'Needs attention'),
         ];
 
         $dailyPerformanceChart = [
@@ -628,6 +639,17 @@ class MerchandiserController extends Controller
             (float) ($merchMetrics['sos_pct'] ?? 0),
             (float) ($merchMetrics['posm_pct'] ?? 0),
         ];
+        $configuredKpiTargets = PerfectStoreKpiService::configuredTargets();
+        $merchKpiRadarTargets = [
+            $configuredKpiTargets['coverage'] ?? null,
+            $configuredKpiTargets['osa'] ?? null,
+            $configuredKpiTargets['npd'] ?? null,
+            $configuredKpiTargets['mhs'] ?? null,
+            $configuredKpiTargets['planogram'] ?? null,
+            $configuredKpiTargets['facing'] ?? null,
+            $configuredKpiTargets['sos'] ?? null,
+            null,
+        ];
 
         return view('merchandisers.dashboard', compact(
             'outlets', 'attendances', 'leaves', 'claims', 'loans',
@@ -636,7 +658,7 @@ class MerchandiserController extends Controller
             'pendingOutletsToday', 'pcmClockinToday', 'todaysAssignments',
             'googleForms', 'googleFormCompletionIds', 'nativeFormCompletionIds',
             'selectedDay', 'dayLabels', 'dayOutletCounts', 'currentIsoDay', 'dailyPerformanceChart', 'scheduleLabel',
-            'merchTenant', 'merchKpiRadarValues', 'carriedOverCount', 'carriedOverAssignments'
+            'merchTenant', 'merchKpiRadarValues', 'merchKpiRadarTargets', 'configuredKpiTargets', 'carriedOverCount', 'carriedOverAssignments'
         ));
     }
 
@@ -920,6 +942,21 @@ class MerchandiserController extends Controller
                 : 'You are already clocked in at this outlet. Complete the visit, then clock out.';
 
             return back()->withErrors(['outlet_id' => $message])->withInput();
+        }
+
+        // Enforce Strict Sequential Outlet Visit Flow:
+        // Field Agent MUST clock out of any open active outlet visit before clocking into a new outlet.
+        $openActiveAttendance = MerchandiserAttendance::where('user_id', $user->id)
+            ->whereNull('clock_out_time')
+            ->where('outlet_id', '!=', $outlet->id)
+            ->latest('clock_in_time')
+            ->first();
+
+        if ($openActiveAttendance) {
+            $activeOutletName = $openActiveAttendance->outlet->name ?? 'another outlet';
+            return back()->withErrors([
+                'outlet_id' => "Sequential Visit Flow Enforced: You are currently clocked in at {$activeOutletName}. You must complete your visit and clock out of {$activeOutletName} before clocking into {$outlet->name}!"
+            ])->withInput();
         }
 
         // 2. Geofence Distance check
@@ -1928,7 +1965,7 @@ class MerchandiserController extends Controller
 
         $user->save();
 
-        return redirect()->route('merchandisers.dashboard')->with('status', 'Profile and banking credentials updated successfully.');
+        return redirect()->back()->with('status', 'Profile and banking credentials updated successfully.');
     }
 
     /**
@@ -1943,6 +1980,15 @@ class MerchandiserController extends Controller
         $user = $request->user();
         if ($request->hasFile('profile_photo')) {
             $path = $request->file('profile_photo')->store('profiles', 'public');
+
+            // Instantly mirror uploaded file to public/storage for web server accessibility
+            $targetPath = public_path('storage/' . $path);
+            $targetDir = dirname($targetPath);
+            if (!is_dir($targetDir)) {
+                @mkdir($targetDir, 0777, true);
+            }
+            @copy(storage_path('app/public/' . $path), $targetPath);
+
             if ($user->profile_photo_path && \Illuminate\Support\Facades\Storage::disk('public')->exists($user->profile_photo_path)) {
                 \Illuminate\Support\Facades\Storage::disk('public')->delete($user->profile_photo_path);
             }
@@ -1950,7 +1996,7 @@ class MerchandiserController extends Controller
             $user->save();
         }
 
-        return redirect()->route('merchandisers.dashboard', ['tab' => 'profile'])->with('status', 'Profile photo updated successfully.');
+        return redirect()->back()->with('status', 'Profile photo updated successfully.');
     }
 
     /**

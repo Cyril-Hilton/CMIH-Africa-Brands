@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="dark">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark" data-theme="dark">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -148,11 +148,27 @@
             @endif
             @endif
 
-            <!-- Attendance Chart -->
+            <!-- Attendance Chart Card with Sleek Compact Height & Daily/Weekly/Monthly/Yearly Filters -->
             @if($report->section('show_attendance_chart'))
-            <div class="glass-panel rounded-2xl p-5 border border-brand-white/10">
-                <p class="text-xs uppercase tracking-widest text-brand-ash mb-4">📅 Daily Attendance — Last 7 Days</p>
-                <canvas id="attendanceChart" height="100"></canvas>
+            <div x-data="{ attPeriod: 'weekly' }" class="glass-panel rounded-2xl p-5 border border-brand-white/10 space-y-3">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <p class="text-xs uppercase tracking-widest text-brand-ash font-extrabold flex items-center gap-2">
+                            📅 Attendance Execution Trend
+                        </p>
+                        <p class="text-[10px] text-brand-ash font-medium mt-0.5">Track field agent clock-in compliance over custom timeframes</p>
+                    </div>
+                    <!-- Daily / Weekly / Monthly / Yearly Filter Pills -->
+                    <div class="inline-flex shrink-0 rounded-xl border border-brand-white/20 bg-brand-black/60 p-1">
+                        <button type="button" @click="attPeriod = 'daily'; switchAttendancePeriod('daily')" :class="attPeriod === 'daily' ? 'bg-brand-red text-white shadow-xs font-black' : 'text-brand-ash font-bold hover:text-white'" class="rounded-lg px-2.5 py-1 text-[10px] uppercase transition">Daily</button>
+                        <button type="button" @click="attPeriod = 'weekly'; switchAttendancePeriod('weekly')" :class="attPeriod === 'weekly' ? 'bg-brand-red text-white shadow-xs font-black' : 'text-brand-ash font-bold hover:text-white'" class="rounded-lg px-2.5 py-1 text-[10px] uppercase transition">Weekly</button>
+                        <button type="button" @click="attPeriod = 'monthly'; switchAttendancePeriod('monthly')" :class="attPeriod === 'monthly' ? 'bg-brand-red text-white shadow-xs font-black' : 'text-brand-ash font-bold hover:text-white'" class="rounded-lg px-2.5 py-1 text-[10px] uppercase transition">Monthly</button>
+                        <button type="button" @click="attPeriod = 'yearly'; switchAttendancePeriod('yearly')" :class="attPeriod === 'yearly' ? 'bg-brand-red text-white shadow-xs font-black' : 'text-brand-ash font-bold hover:text-white'" class="rounded-lg px-2.5 py-1 text-[10px] uppercase transition">Yearly</button>
+                    </div>
+                </div>
+                <div class="relative h-44 sm:h-52 w-full pt-1">
+                    <canvas id="attendanceChart"></canvas>
+                </div>
             </div>
             @endif
 
@@ -168,13 +184,22 @@
                     $topKds = collect($perfectStore['kds'] ?? collect())->take(8);
                     $topMerchandisers = collect($perfectStore['merchandisers'] ?? collect())->take(8);
                 @endphp
-                <div class="glass-panel rounded-2xl border border-brand-white/10 p-5">
-                    <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                <div x-data="{ clientPeriod: 'weekly' }" class="glass-panel rounded-2xl border border-brand-white/10 p-5">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                            <p class="text-xs uppercase tracking-widest text-brand-ash">Perfect Store KPI Summary</p>
-                            <p class="mt-1 text-xs text-brand-ash">Coverage, OSA, NPD, MHS, planogram, facing and share-of-shelf for the last 7 days.</p>
+                            <p class="text-xs uppercase tracking-widest text-brand-ash font-extrabold">Perfect Store KPI Performance</p>
+                            <p class="mt-1 text-xs text-brand-ash">Coverage, OSA, NPD, MHS, planogram, facing and share-of-shelf score execution.</p>
                         </div>
-                        <p class="text-3xl font-display text-brand-white">{{ number_format((float) ($perfectOverview['perfect_store_score'] ?? 0), 1) }}%</p>
+                        <div class="flex items-center gap-3">
+                            <!-- Daily / Weekly / Monthly / Yearly Filter Pills -->
+                            <div class="inline-flex shrink-0 rounded-xl border border-brand-white/20 bg-brand-black/60 p-1">
+                                <button type="button" @click="clientPeriod = 'daily'" :class="clientPeriod === 'daily' ? 'bg-brand-red text-white shadow-xs font-black' : 'text-brand-ash font-bold hover:text-white'" class="rounded-lg px-2.5 py-1 text-[10px] uppercase transition">Daily</button>
+                                <button type="button" @click="clientPeriod = 'weekly'" :class="clientPeriod === 'weekly' ? 'bg-brand-red text-white shadow-xs font-black' : 'text-brand-ash font-bold hover:text-white'" class="rounded-lg px-2.5 py-1 text-[10px] uppercase transition">Weekly</button>
+                                <button type="button" @click="clientPeriod = 'monthly'" :class="clientPeriod === 'monthly' ? 'bg-brand-red text-white shadow-xs font-black' : 'text-brand-ash font-bold hover:text-white'" class="rounded-lg px-2.5 py-1 text-[10px] uppercase transition">Monthly</button>
+                                <button type="button" @click="clientPeriod = 'yearly'" :class="clientPeriod === 'yearly' ? 'bg-brand-red text-white shadow-xs font-black' : 'text-brand-ash font-bold hover:text-white'" class="rounded-lg px-2.5 py-1 text-[10px] uppercase transition">Yearly</button>
+                            </div>
+                            <p class="text-3xl font-display text-brand-white">{{ number_format((float) ($perfectOverview['perfect_store_score'] ?? 0), 1) }}%</p>
+                        </div>
                     </div>
                     <div class="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
                         @foreach($perfectMetrics as $key => $label)

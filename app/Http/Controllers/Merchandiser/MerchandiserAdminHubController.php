@@ -49,7 +49,7 @@ use Illuminate\Support\Str;
 class MerchandiserAdminHubController extends Controller
 {
     /**
-     * Guard: Only admin/super_admin can access these routes.
+     * Guard: Only admin/super_admin can access sensitive admin actions.
      */
     private function guardAdmin()
     {
@@ -59,12 +59,46 @@ class MerchandiserAdminHubController extends Controller
         }
     }
 
+    private function guardAdminOrSupervisor()
+    {
+        $user = auth()->user();
+        if (! $user || (! $user->isMerchandiserPortalAdmin() && ! $user->isMerchandiserSupervisor())) {
+            abort(403, 'Unauthorized');
+        }
+    }
+
+    /**
+     * Guard for viewing Merchandiser Hub tabs (allows admins, supervisors, and clients).
+     */
+    private function guardHubView(): void
+    {
+        $user = auth()->user();
+        if (! $user || (! $user->isMerchandiserPortalAdmin() && ! $user->isMerchandiserSupervisor() && ! $user->isMerchandiserClient())) {
+            abort(403, 'Unauthorized');
+        }
+    }
+
+    /**
+     * Guard a role-specific dashboard while still allowing admins to inspect it.
+     */
+    private function guardRoleDashboard(string $role): void
+    {
+        $user = auth()->user();
+        $allowed = $user && ($user->isMerchandiserPortalAdmin()
+            || ($role === 'supervisor' && $user->isMerchandiserSupervisor())
+            || ($role === 'client' && $user->isMerchandiserClient()));
+
+        if (! $allowed) {
+            abort(403, 'Unauthorized');
+        }
+    }
+
     /**
      * Main Admin Hub Dashboard
      */
-    public function dashboard(Request $request, ?string $adminTab = null)
+    public function dashboard(Request $request, ?string $adminTab = null, bool $roleDashboard = false)
     {
-        $this->guardAdmin();
+        $this->guardHubView();
         $activeTab = $this->resolveAdminTab($request, $adminTab);
 
         // ── KPI Counts ─────────────────────────────────────────────────────────
@@ -112,6 +146,7 @@ class MerchandiserAdminHubController extends Controller
         $pendingLeaves  = LeaveApplication::where('status', 'pending')->whereHas('user', fn($q) => $q->merchandisers())->count();
         $pendingClaims  = PettyCashClaim::where('status', 'pending')->whereHas('user', fn($q) => $q->merchandisers())->count();
         $pendingLoans   = SalaryAdvance::where('status', 'pending')->whereHas('user', fn($q) => $q->merchandisers())->count();
+        $totalPending = $pendingLeaves + $pendingClaims + $pendingLoans;
         $liveLocationCount = MerchandiserLocation::query()->distinct()->count('user_id');
 
         $attendanceChart = [];
@@ -1101,8 +1136,23 @@ class MerchandiserAdminHubController extends Controller
             'categoryKpis', 'categoryTargets',
             'userPerformance', 'supervisorPerformance', 'perfPeriod', 'perfRole', 'perfTrendChart',
             'pricePromoData', 'posmCompliance', 'pricingCompliance',
-            'perfectStoreKdData', 'perfectStoreMerchandiserData', 'perfectStoreMilestones', 'categorySosData'
+            'perfectStoreKdData', 'perfectStoreMerchandiserData', 'perfectStoreMilestones', 'categorySosData',
+            'roleDashboard', 'totalPending'
         ));
+    }
+
+    public function supervisorDashboard(Request $request)
+    {
+        $this->guardRoleDashboard('supervisor');
+
+        return $this->dashboard($request, 'supervisor-dashboard', true);
+    }
+
+    public function clientDashboard(Request $request)
+    {
+        $this->guardRoleDashboard('client');
+
+        return $this->dashboard($request, 'client-dashboard', true);
     }
 
     private function resolveAdminTab(Request $request, ?string $adminTab): string
@@ -1111,7 +1161,7 @@ class MerchandiserAdminHubController extends Controller
             'overview', 'perfect-store', 'tracking', 'kds', 'routes', 'skus', 'forms',
             'merchandisers', 'supervisors', 'assets', 'notifications', 'settings',
             'gallery', 'executive', 'category-kpi', 'user-performance', 'price-promo',
-            'supervisor-dashboard', 'regional-dashboard', 'client-dashboard',
+            'supervisor-dashboard', 'regional-dashboard', 'client-dashboard', 'profile',
         ];
 
         $candidate = $adminTab ?: (string) $request->query('tab', 'overview');
@@ -2380,7 +2430,7 @@ class MerchandiserAdminHubController extends Controller
 
     public function storePjp(Request $request)
     {
-        $this->guardAdmin();
+        $this->guardAdminOrSupervisor();
 
         if (! $request->user()->isMerchandiserSupervisor()) {
             abort(403, 'Only promoted merchandiser supervisors can upload weekly PJPs.');
@@ -2459,7 +2509,7 @@ class MerchandiserAdminHubController extends Controller
 
     public function clockInPjp(Request $request)
     {
-        $this->guardAdmin();
+        $this->guardAdminOrSupervisor();
 
         $validated = $request->validate([
             'pjp_id' => ['required', 'exists:merchandiser_pjps,id'],

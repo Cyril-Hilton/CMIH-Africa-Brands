@@ -338,9 +338,9 @@ class MerchandiserPortalTest extends TestCase
         $this->actingAs($user)
             ->get(route('merchandisers.dashboard'))
             ->assertOk()
-            ->assertSeeInOrder(['My Facing Score', '0.0%', 'Target: 95% Overall'], false)
+            ->assertSeeInOrder(['My Facing Score', '0.0%', 'Target: 95%'], false)
             ->assertSeeInOrder(['Planogram Alignment', '0.0%', 'Target: 100% Alignment'], false)
-            ->assertSeeInOrder(['Share of Shelf (SOS)', '0.0%', 'Category Unilever Share'], false)
+            ->assertSeeInOrder(['Share of Shelf (SOS)', '0.0%', 'Category target'], false)
             ->assertDontSee('85.0%', false);
     }
 
@@ -422,8 +422,55 @@ class MerchandiserPortalTest extends TestCase
 
         $this->assertDatabaseHas('notifications', [
             'user_id' => $brandUser->id,
-            'title' => 'New merchandiser registration needs approval',
+            'title' => 'New merchandiser portal registration needs approval',
         ]);
+    }
+
+    #[Test]
+    public function supervisor_and_client_dashboards_use_role_specific_routes_and_guards()
+    {
+        $supervisor = User::create([
+            'name' => 'Portal Supervisor',
+            'email' => 'portal-supervisor@cmih.africa',
+            'contact_email' => 'portal-supervisor@personal.com',
+            'phone' => '12345678',
+            'password' => Hash::make('Pass123'),
+            'access_role' => User::MERCHANDISER_SUPERVISOR_ROLE,
+            'status' => 'active',
+        ]);
+        $client = User::create([
+            'name' => 'Portal Client',
+            'email' => 'portal-client@cmih.africa',
+            'contact_email' => 'portal-client@personal.com',
+            'phone' => '12345678',
+            'password' => Hash::make('Pass123'),
+            'access_role' => User::MERCHANDISER_CLIENT_ROLE,
+            'status' => 'active',
+        ]);
+        $admin = User::findOrFail(1);
+
+        $this->actingAs($supervisor)
+            ->get(route('merchandisers.supervisor.dashboard'))
+            ->assertOk()
+            ->assertSee('Supervisor Leaderboard');
+        $this->actingAs($supervisor)
+            ->get(route('merchandisers.client.dashboard'))
+            ->assertForbidden();
+
+        $this->actingAs($client)
+            ->get(route('merchandisers.client.dashboard'))
+            ->assertOk()
+            ->assertSee('Client Score');
+        $this->actingAs($client)
+            ->get(route('merchandisers.supervisor.dashboard'))
+            ->assertForbidden();
+
+        $this->actingAs($admin)
+            ->get(route('merchandisers.supervisor.dashboard'))
+            ->assertOk();
+        $this->actingAs($admin)
+            ->get(route('merchandisers.client.dashboard'))
+            ->assertOk();
     }
     #[Test]
     public function clock_in_window_boundaries_enforced()
@@ -543,6 +590,19 @@ class MerchandiserPortalTest extends TestCase
             $this->post(route('merchandisers.clock-in'), [
                 'outlet_id' => $outlet->id,
                 'clock_in_type' => 'outlet',
+                'latitude' => $outlet->latitude,
+                'longitude' => $outlet->longitude,
+            ])->assertRedirect(route('merchandisers.dashboard'));
+
+            MerchandiserVisit::create([
+                'user_id' => $user->id,
+                'outlet_id' => $outlet->id,
+                'branded_shelf_available' => true,
+                'hangers_available' => true,
+            ]);
+
+            $this->post(route('merchandisers.clock-out'), [
+                'outlet_id' => $outlet->id,
                 'latitude' => $outlet->latitude,
                 'longitude' => $outlet->longitude,
             ])->assertRedirect(route('merchandisers.dashboard'));
@@ -957,7 +1017,7 @@ class MerchandiserPortalTest extends TestCase
         $response = $this->actingAs($user)->get(route('merchandisers.dashboard'));
 
         $response->assertOk();
-        $response->assertSeeText('12 not covered of 12');
+        $response->assertSeeText('12 planned for this view, 0 clocked in, 0 scored, 12 not covered.');
         $response->assertSeeInOrder([
             'Zebra First Outlet',
             'Alpha Second Outlet',
@@ -1711,10 +1771,14 @@ class MerchandiserPortalTest extends TestCase
         $searchResponse->assertSeeText('Promo Merch 10');
         $searchResponse->assertSeeText('Showing 1–1');
 
-        $supervisorResponse = $this->actingAs($supervisor)->get(route('merchandisers.admin.dashboard', ['tab' => 'supervisors']));
+        $supervisorResponse = $this->actingAs($supervisor)->get(route('merchandisers.supervisor.dashboard'));
 
         $supervisorResponse->assertOk();
-        $supervisorResponse->assertSee('PJP title / market route', false);
+        $supervisorResponse->assertSeeText('Supervisor Dashboard');
+        $supervisorResponse->assertSeeText('Team Coverage');
+        $this->actingAs($supervisor)
+            ->get(route('merchandisers.admin.dashboard', ['tab' => 'supervisors']))
+            ->assertForbidden();
     }
     #[Test]
     public function brands_admin_can_demote_a_supervisor_back_to_regular_merchandiser()

@@ -38,12 +38,18 @@ const initLoader = () => {
         }, 300);
     };
 
-    // If we showed the loader on load, hide it once everything (CSS, images, JS) is fully loaded
+    const hideAfterRender = () => {
+        setTimeout(hideLoader, 150);
+    };
+
+    // If we showed the loader on load, hide it once the DOM is usable. Waiting
+    // for every image/CDN request can make ready pages feel frozen.
     if (shouldShowOnLoad) {
-        window.addEventListener('load', () => {
-            // Add a small delay for ultra-smooth rendering transition
-            setTimeout(hideLoader, 150);
-        });
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', hideAfterRender, { once: true });
+        } else {
+            hideAfterRender();
+        }
         
         // Safety timeout to prevent loader from hanging if window.load takes too long (e.g. slow third-party resource)
         setTimeout(hideLoader, 3000);

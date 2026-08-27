@@ -9,20 +9,30 @@
             <p class="mt-1 text-sm text-slate-600 dark:text-slate-400 font-medium">Coverage first, followed by Perfect Store execution.</p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
-            <!-- WTD / MTD Toggle (Guaranteed Vibrant Blue #155EEF + White Text) -->
+            <!-- Daily / Weekly / Monthly / Yearly Filter Pills (Guaranteed Vibrant Blue #0F0E9A + White Text) -->
             <div class="inline-flex rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 p-1">
                 <button type="button"
-                        @click="period = 'wtd'"
-                        :style="period === 'wtd' ? 'background-color: #155EEF !important; color: #ffffff !important;' : 'background-color: transparent; color: #0F172A;'"
-                        :class="period === 'wtd' ? 'shadow-md font-black' : 'hover:bg-slate-200 font-bold'"
-                        class="rounded-lg px-4 py-2 text-xs transition">WTD</button>
+                        @click="period = 'daily'"
+                        :style="period === 'daily' ? 'background-color: #0F0E9A !important; color: #ffffff !important;' : 'background-color: transparent; color: #0F172A;'"
+                        :class="period === 'daily' ? 'shadow-md font-black' : 'hover:bg-slate-200 font-bold'"
+                        class="rounded-lg px-3 py-1.5 text-xs transition uppercase">Daily</button>
                 <button type="button"
-                        @click="period = 'mtd'"
-                        :style="period === 'mtd' ? 'background-color: #155EEF !important; color: #ffffff !important;' : 'background-color: transparent; color: #0F172A;'"
-                        :class="period === 'mtd' ? 'shadow-md font-black' : 'hover:bg-slate-200 font-bold'"
-                        class="rounded-lg px-4 py-2 text-xs transition">MTD</button>
+                        @click="period = 'weekly'"
+                        :style="period === 'weekly' ? 'background-color: #0F0E9A !important; color: #ffffff !important;' : 'background-color: transparent; color: #0F172A;'"
+                        :class="period === 'weekly' ? 'shadow-md font-black' : 'hover:bg-slate-200 font-bold'"
+                        class="rounded-lg px-3 py-1.5 text-xs transition uppercase">Weekly</button>
+                <button type="button"
+                        @click="period = 'monthly'"
+                        :style="period === 'monthly' ? 'background-color: #0F0E9A !important; color: #ffffff !important;' : 'background-color: transparent; color: #0F172A;'"
+                        :class="period === 'monthly' ? 'shadow-md font-black' : 'hover:bg-slate-200 font-bold'"
+                        class="rounded-lg px-3 py-1.5 text-xs transition uppercase">Monthly</button>
+                <button type="button"
+                        @click="period = 'yearly'"
+                        :style="period === 'yearly' ? 'background-color: #0F0E9A !important; color: #ffffff !important;' : 'background-color: transparent; color: #0F172A;'"
+                        :class="period === 'yearly' ? 'shadow-md font-black' : 'hover:bg-slate-200 font-bold'"
+                        class="rounded-lg px-3 py-1.5 text-xs transition uppercase">Yearly</button>
             </div>
-            <!-- View Tabs (Guaranteed Vibrant Blue #155EEF + White Text) -->
+            <!-- View Tabs (Guaranteed Vibrant Blue #0F0E9A + White Text) -->
             <div class="flex gap-1 overflow-x-auto rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 p-1">
                 @foreach([
                     ['key' => 'performance', 'label' => 'Performance'],
@@ -30,7 +40,7 @@
                     ['key' => 'outlets',     'label' => 'Outlet list'],
                 ] as $tab)
                     <button type="button" @click="view = '{{ $tab['key'] }}'"
-                            :style="view === '{{ $tab['key'] }}' ? 'background-color: #155EEF !important; color: #ffffff !important;' : 'background-color: transparent; color: #0F172A;'"
+                            :style="view === '{{ $tab['key'] }}' ? 'background-color: #0F0E9A !important; color: #ffffff !important;' : 'background-color: transparent; color: #0F172A;'"
                             :class="view === '{{ $tab['key'] }}' ? 'shadow-md font-black' : 'hover:bg-slate-200 font-bold'"
                             class="shrink-0 rounded-lg px-3.5 py-2 text-xs transition">{{ $tab['label'] }}</button>
                 @endforeach
@@ -42,35 +52,103 @@
     <div class="flex items-center gap-2">
         <span class="inline-flex items-center gap-2 rounded-full bg-slate-100 border border-slate-300 px-3.5 py-1 text-xs font-bold text-slate-800 dark:bg-slate-800 dark:text-white">
             <span class="w-2 h-2 rounded-full bg-blue-600"></span>
-            Showing: <span class="text-slate-900 dark:text-white font-extrabold" x-text="period === 'mtd' ? 'Month to Date' : 'Week to Date'"></span>
+            Showing Performance for: <span class="text-slate-900 dark:text-white font-extrabold capitalize" x-text="period"></span>
         </span>
     </div>
 
     <div x-show="view === 'performance'" class="space-y-5">
         @php
             $detailKpis = [
-                ['label' => 'Coverage', 'value' => $merchMetrics['coverage_today'] ?? 0, 'target' => 100, 'description' => 'Scored outlets divided by scheduled outlets'],
-                ['label' => 'OSA', 'value' => $merchMetrics['osa_pct'] ?? 0, 'target' => 95, 'description' => 'On-shelf availability against SKU drop-size rules'],
-                ['label' => 'NPD', 'value' => $merchMetrics['npd_pct'] ?? 0, 'target' => 100, 'description' => 'New product distribution compliance'],
-                ['label' => 'MHS', 'value' => $merchMetrics['mhs_pct'] ?? 0, 'target' => 100, 'description' => 'Must-have SKU compliance'],
-                ['label' => 'Planogram', 'value' => $merchMetrics['planogram_pct'] ?? 0, 'target' => 100, 'description' => 'Correctly positioned tracked SKUs'],
-                ['label' => 'Facings', 'value' => $merchMetrics['facing_pct'] ?? 0, 'target' => 95, 'description' => 'Actual facings against configured targets'],
-                ['label' => 'SOS', 'value' => $merchMetrics['sos_pct'] ?? 0, 'target' => 100, 'description' => 'Share of shelf across tracked categories'],
-                ['label' => 'POSM', 'value' => $merchMetrics['posm_pct'] ?? 0, 'target' => 100, 'description' => 'Submitted visits with required visual evidence'],
+                [
+                    'label'       => 'Coverage',
+                    'value'       => $merchMetrics['coverage_today'] ?? 0,
+                    'target'      => $configuredKpiTargets['coverage'] ?? null,
+                    'description' => 'Scored outlets divided by scheduled outlets',
+                    'color'       => '#155EEF',
+                    'bg'          => '#F0F9FF',
+                    'text'        => '#0369A1',
+                ],
+                [
+                    'label'       => 'OSA',
+                    'value'       => $merchMetrics['osa_pct'] ?? 0,
+                    'target'      => $configuredKpiTargets['osa'] ?? null,
+                    'description' => 'On-shelf availability against SKU drop-size rules',
+                    'color'       => '#10B981',
+                    'bg'          => '#ECFDF5',
+                    'text'        => '#047857',
+                ],
+                [
+                    'label'       => 'NPD',
+                    'value'       => $merchMetrics['npd_pct'] ?? 0,
+                    'target'      => $configuredKpiTargets['npd'] ?? null,
+                    'description' => 'New product distribution compliance',
+                    'color'       => '#2563EB',
+                    'bg'          => '#EFF6FF',
+                    'text'        => '#1D4ED8',
+                ],
+                [
+                    'label'       => 'MHS',
+                    'value'       => $merchMetrics['mhs_pct'] ?? 0,
+                    'target'      => $configuredKpiTargets['mhs'] ?? null,
+                    'description' => 'Must-have SKU compliance',
+                    'color'       => '#7C3AED',
+                    'bg'          => '#F5F3FF',
+                    'text'        => '#6D28D9',
+                ],
+                [
+                    'label'       => 'Planogram',
+                    'value'       => $merchMetrics['planogram_pct'] ?? 0,
+                    'target'      => $configuredKpiTargets['planogram'] ?? null,
+                    'description' => 'Correctly positioned tracked SKUs',
+                    'color'       => '#F59E0B',
+                    'bg'          => '#FFFBEB',
+                    'text'        => '#B45309',
+                ],
+                [
+                    'label'       => 'Facings',
+                    'value'       => $merchMetrics['facing_pct'] ?? 0,
+                    'target'      => $configuredKpiTargets['facing'] ?? null,
+                    'description' => 'Actual facings against configured targets',
+                    'color'       => '#06B6D4',
+                    'bg'          => '#ECFEFF',
+                    'text'        => '#0E7490',
+                ],
+                [
+                    'label'       => 'SOS',
+                    'value'       => $merchMetrics['sos_pct'] ?? 0,
+                    'target'      => $configuredKpiTargets['sos'] ?? null,
+                    'description' => 'Share of shelf across tracked categories',
+                    'color'       => '#E11D48',
+                    'bg'          => '#FFF1F2',
+                    'text'        => '#BE123C',
+                ],
+                [
+                    'label'       => 'POSM',
+                    'value'       => $merchMetrics['posm_pct'] ?? 0,
+                    'target'      => $configuredKpiTargets['posm'] ?? null,
+                    'description' => 'Submitted visits with required visual evidence',
+                    'color'       => '#8B5CF6',
+                    'bg'          => '#F3E8FF',
+                    'text'        => '#6B21A8',
+                ],
             ];
         @endphp
         <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             @foreach($detailKpis as $kpi)
+                @php
+                    $target = $kpi['target'];
+                    $targetLabel = $target !== null ? 'Target '.number_format($target, 0).'%' : ($kpi['label'] === 'SOS' ? 'Category target' : 'Not configured');
+                @endphp
                 <article class="rounded-2xl p-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
                     <div class="flex items-start justify-between gap-3">
                         <div>
-                            <p class="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">{{ $kpi['label'] }}</p>
-                            <p class="mt-2 text-2xl font-black tabular-nums {{ $kpi['value'] >= $kpi['target'] ? 'text-emerald-600' : 'text-amber-600' }}">{{ number_format($kpi['value'], 1) }}%</p>
+                            <p class="text-xs font-black uppercase tracking-wider" style="color: {{ $kpi['text'] }} !important;">{{ $kpi['label'] }}</p>
+                            <p class="mt-2 text-2xl font-black tabular-nums" style="color: {{ $kpi['color'] }} !important;">{{ number_format($kpi['value'], 1) }}%</p>
                         </div>
-                        <span class="rounded-full px-2.5 py-1 text-[10px] font-extrabold {{ $kpi['value'] >= $kpi['target'] ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900' }}">Target {{ $kpi['target'] }}%</span>
+                        <span class="rounded-full px-2.5 py-1 text-[10px] font-black" style="background-color: {{ $kpi['bg'] }} !important; color: {{ $kpi['text'] }} !important;">{{ $targetLabel }}</span>
                     </div>
                     <div class="mt-3 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                        <div class="h-full rounded-full bg-[#155EEF]" style="width: {{ min(100, max(0, $kpi['value'])) }}%"></div>
+                        <div class="h-full rounded-full" style="background-color: {{ $kpi['color'] }} !important; width: {{ min(100, max(0, $kpi['value'])) }}%"></div>
                     </div>
                     <p class="mt-3 text-xs leading-relaxed text-slate-600 dark:text-slate-400 font-medium">{{ $kpi['description'] }}</p>
                 </article>
@@ -125,7 +203,7 @@
         <aside class="rounded-2xl p-6 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm h-fit">
             <h3 class="text-sm font-bold text-slate-900 dark:text-white">Ready for the Next Outlet?</h3>
             <p class="mt-2 text-xs leading-relaxed text-slate-600 font-medium">Open your assigned outlet, verify GPS, and start the visit. Offline submissions remain visible as pending sync.</p>
-            <button type="button" @click="activeTab = 'outlets'" class="mt-5 w-full py-3 px-4 rounded-xl bg-[#155EEF] hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider shadow-md transition">Open Outlet Visits</button>
+            <button type="button" @click="activeTab = 'outlets'" class="mt-5 w-full py-3 px-4 rounded-xl bg-[#0F0E9A] hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider shadow-md transition">Open Outlet Visits</button>
             <div class="mt-4 flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
                 <span class="text-slate-700 font-medium">Sync State</span>
                 <span class="font-extrabold {{ ($merchMetrics['pending_sync'] ?? 0) > 0 ? 'text-amber-600' : 'text-emerald-600' }}">{{ ($merchMetrics['pending_sync'] ?? 0) > 0 ? ($merchMetrics['pending_sync'].' pending') : 'Up to date' }}</span>
@@ -141,12 +219,12 @@
             <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
                 <label>
                     <span class="sr-only">Search outlets</span>
-                    <input type="search" x-model.debounce.200ms="outletSearch" placeholder="Search outlet name, code or location" class="h-11 w-full rounded-xl border border-slate-300 bg-slate-50 px-4 text-sm text-slate-900 focus:border-[#155EEF]">
+                    <input type="search" x-model.debounce.200ms="outletSearch" placeholder="Search outlet name, code or location" class="h-11 w-full rounded-xl border border-slate-300 bg-slate-50 px-4 text-sm text-slate-900 focus:border-[#0F0E9A]">
                 </label>
                 <div class="flex gap-1 overflow-x-auto rounded-xl border border-slate-300 bg-slate-100 p-1">
                     @foreach(['all' => 'All', 'visited' => 'Visited', 'pending' => 'Pending', 'skipped' => 'Skipped'] as $value => $label)
                         <button type="button" @click="outletFilter = '{{ $value }}'"
-                                :style="outletFilter === '{{ $value }}' ? 'background-color: #155EEF !important; color: #ffffff !important;' : 'background-color: transparent; color: #0F172A;'"
+                                :style="outletFilter === '{{ $value }}' ? 'background-color: #0F0E9A !important; color: #ffffff !important;' : 'background-color: transparent; color: #0F172A;'"
                                 :class="outletFilter === '{{ $value }}' ? 'shadow-md font-bold' : 'hover:bg-slate-200 font-semibold'"
                                 class="shrink-0 rounded-lg px-3.5 py-2 text-xs transition">{{ $label }}</button>
                     @endforeach

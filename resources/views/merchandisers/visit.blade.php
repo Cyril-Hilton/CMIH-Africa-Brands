@@ -1,5 +1,10 @@
+@php
+    $merchTenant = \App\Support\MerchandiserTenant::theme(
+        \App\Support\MerchandiserTenant::forUser(auth()->user(), request())
+    );
+@endphp
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en" class="{{ $merchTenant['code'] === 'unilever' ? '' : 'dark' }}" data-theme="{{ $merchTenant['code'] === 'unilever' ? 'light' : 'dark' }}" data-merch-tenant="{{ $merchTenant['code'] }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -11,10 +16,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @include('merchandisers.partials.tenant-theme')
 </head>
-<body class="bg-[#0b0c10] text-[#c5c6c7] font-sans min-h-screen antialiased selection:bg-amber-500 selection:text-black">
+<body class="merch-tenant-shell font-sans min-h-screen antialiased selection:bg-[#0F0E9A] selection:text-white" data-merch-tenant="{{ $merchTenant['code'] }}">
 
-    <header class="border-b border-brand-white/10 bg-brand-black/60 backdrop-blur-xl sticky top-0 z-40">
+    <header class="merch-workspace-header border-b backdrop-blur-xl sticky top-0 z-40">
         <!-- Step progress bar -->
         <div class="w-full h-1 bg-brand-white/10">
             <div class="h-full bg-brand-red transition-all duration-500" style="width: 57%"></div><!-- Step 4 of 7 ≈ 57% -->

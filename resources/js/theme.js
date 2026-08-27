@@ -1,5 +1,9 @@
 const storageKey = 'cmih-theme';
 
+const isBrandLockedPage = () => {
+    return Boolean(document.documentElement.dataset.merchTenant || document.body?.dataset?.merchTenant);
+};
+
 const getStoredTheme = () => {
     const stored = window.localStorage.getItem(storageKey);
     return stored === 'light' || stored === 'dark' ? stored : null;
@@ -39,6 +43,11 @@ const applyTheme = (theme, persist = true) => {
 };
 
 const initTheme = () => {
+    if (isBrandLockedPage()) {
+        updateThemeImages(document.documentElement.dataset.theme || 'light');
+        return;
+    }
+
     const stored = getStoredTheme();
     const media = window.matchMedia('(prefers-color-scheme: dark)');
     const initial = stored ?? (media.matches ? 'dark' : 'light');

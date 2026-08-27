@@ -89,24 +89,35 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Ama Field Agent',
                 'access_role' => 'merchandiser',
                 'merchandiser_tenant' => 'unilever',
+                'profile_photo_path' => 'profiles/1A6WjGB08gzayh8726UG4l7I86i8IZXFAcDuDGwE.png',
             ],
             [
                 'email' => 'supervisor@cmih.africa',
                 'name' => 'Kofi Supervisor',
                 'access_role' => 'merchandiser_supervisor',
                 'merchandiser_tenant' => 'unilever',
+                'profile_photo_path' => 'profiles/61sfYkZSad46nxewkPLPf2BwTdeexMqD548qHxYN.png',
             ],
             [
                 'email' => 'client@cmih.africa',
                 'name' => 'Unilever Client Lead',
                 'access_role' => 'merchandiser_client',
                 'merchandiser_tenant' => 'unilever',
+                'profile_photo_path' => 'profiles/Obxwwpt7iVhT7i8OsEkVLnYUHoiuuR3Hh8S5hvWP.jpg',
             ],
             [
                 'email' => 'admin@cmih.africa',
                 'name' => 'Stephanie Brands Admin',
                 'access_role' => 'super_admin',
                 'merchandiser_tenant' => 'unilever',
+                'profile_photo_path' => 'profiles/yJp80PvhU6LSdqN9jnWAWv1LWX7gaAKCzvzupuBb.png',
+            ],
+            [
+                'email' => 'superadmin@cmih.africa',
+                'name' => 'Super Admin',
+                'access_role' => 'super_admin',
+                'merchandiser_tenant' => 'unilever',
+                'profile_photo_path' => 'profiles/uxYF97SdJ2Q5r7GuFPdnVOxjp1vDyeRTAxJmPgt1.png',
             ],
         ];
 
@@ -120,6 +131,7 @@ class DatabaseSeeder extends Seeder
                     'access_role' => $demo['access_role'],
                     'status' => 'active',
                     'merchandiser_tenant' => $demo['merchandiser_tenant'],
+                    'profile_photo_path' => $demo['profile_photo_path'],
                     'email_verified_at' => now(),
                     'must_reset_password' => false,
                 ]

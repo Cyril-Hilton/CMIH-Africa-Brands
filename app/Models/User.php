@@ -998,13 +998,33 @@ class User extends Authenticatable
                 return $photo;
             }
 
-            $cleanPath = ltrim(preg_replace('/^\/?storage\//', '', $photo), '/');
+            $cleanPath = ltrim(str_replace(['public/', 'storage/'], '', $photo), '/');
 
-            return '/storage/' . $cleanPath;
+            // Mirror file from storage/app/public to public/storage if missing from public/storage
+            if (file_exists(storage_path('app/public/' . $cleanPath))) {
+                $targetPath = public_path('storage/' . $cleanPath);
+                if (!file_exists($targetPath)) {
+                    $targetDir = dirname($targetPath);
+                    if (!is_dir($targetDir)) {
+                        @mkdir($targetDir, 0777, true);
+                    }
+                    @copy(storage_path('app/public/' . $cleanPath), $targetPath);
+                }
+                return asset('storage/' . $cleanPath);
+            }
+
+            if (file_exists(public_path('storage/' . $cleanPath))) {
+                return asset('storage/' . $cleanPath);
+            }
+
+            if (file_exists(public_path($cleanPath))) {
+                return asset($cleanPath);
+            }
+
+            return asset('storage/' . $cleanPath);
         }
 
-        $name = urlencode($this->name ?: 'User');
-        return "https://ui-avatars.com/api/?name={$name}&color=38BDF8&background=0F172A&bold=true";
+        return 'https://ui-avatars.com/api/?name=' . urlencode($this->name ?: 'User') . '&color=38BDF8&background=0F172A&bold=true';
     }
 
     public function idCardReady(): bool

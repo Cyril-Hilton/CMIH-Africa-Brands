@@ -497,16 +497,22 @@ Route::prefix('merchandisers')->name('merchandisers.')->group(function () {
 
         // ── Merchandiser Supervisor Portal ─────────────────────
         Route::prefix('supervisor')->name('supervisor.')->group(function () {
-            Route::get('/dashboard', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'dashboard'])->defaults('adminTab', 'supervisor-dashboard')->name('dashboard');
+            Route::get('/dashboard', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'supervisorDashboard'])->name('dashboard');
         });
 
         // ── Merchandiser Client / TM Portal ─────────────────────
         Route::prefix('client')->name('client.')->group(function () {
-            Route::get('/dashboard', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'dashboard'])->defaults('adminTab', 'client-dashboard')->name('dashboard');
+            Route::get('/dashboard', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'clientDashboard'])->name('dashboard');
         });
 
-        // ── Merchandiser Admin Hub (admin/super_admin only) ─────────────────────
-        Route::middleware(['role:admin,super_admin'])->prefix('admin')->name('admin.')->group(function () {
+        // Supervisors can submit and start only the PJP workflow they own.
+        Route::middleware(['role:admin,super_admin,merchandiser_supervisor'])->prefix('admin')->name('admin.')->group(function () {
+            Route::post('/supervisors/pjp-clock-in', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'clockInPjp'])->name('supervisors.pjp-clock-in');
+            Route::post('/pjps', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'storePjp'])->name('pjps.store');
+        });
+
+        // ── Merchandiser Admin Hub (admin, super_admin, supervisor, client) ─────────────────────
+        Route::middleware(['role:admin,super_admin,merchandiser_supervisor,merchandiser_client'])->prefix('admin')->name('admin.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'dashboard'])->name('dashboard');
             Route::get('/hub/{adminTab}', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'dashboard'])
                 ->whereIn('adminTab', ['overview', 'tracking', 'kds', 'routes', 'skus', 'forms', 'merchandisers', 'supervisors', 'assets', 'notifications', 'settings', 'gallery', 'executive', 'perfect-store', 'category-kpi', 'user-performance', 'price-promo', 'supervisor-dashboard', 'regional-dashboard', 'client-dashboard'])
@@ -518,8 +524,6 @@ Route::prefix('merchandisers')->name('merchandisers.')->group(function () {
             Route::post('/merchandisers/{user}/promote-supervisor', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'promoteSupervisor'])->name('merchandisers.promote-supervisor');
             Route::post('/supervisors/{user}/demote', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'demoteSupervisor'])->name('supervisors.demote');
             Route::post('/supervisors/assign', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'assignSupervisor'])->name('supervisors.assign');
-            Route::post('/supervisors/pjp-clock-in', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'clockInPjp'])->name('supervisors.pjp-clock-in');
-            Route::post('/pjps', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'storePjp'])->name('pjps.store');
             Route::post('/pjps/{pjp}/forward', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'forwardPjp'])->name('pjps.forward');
             Route::post('/pjps/{pjp}/activate', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'activatePjp'])->name('pjps.activate');
             Route::post('/compliance-queries', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'sendComplianceQuery'])->name('compliance-queries.store');

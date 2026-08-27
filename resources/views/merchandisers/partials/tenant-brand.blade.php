@@ -8,9 +8,10 @@
     <img src="{{ asset($merchTenant['logo']) }}"
          alt="{{ $merchTenant['name'] }}"
          class="h-10 w-auto max-w-[3.5rem] object-contain shrink-0 rounded-lg p-1 bg-white/10"
+         style="filter: {{ $merchTenant['code'] === 'unilever' ? 'invert(1)' : 'none' }};"
          loading="eager">
     <div class="min-w-0">
-        <p class="truncate text-sm font-bold text-brand-white">{{ $merchTenant['portal_name'] }}</p>
-        <p class="truncate text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-ash">Powered by CMIH Africa</p>
+        <p class="text-xs font-extrabold text-white leading-snug">{{ $merchTenant['portal_name'] }}</p>
+        <p class="mt-0.5 text-[9px] font-bold uppercase tracking-[0.2em] text-white/60">Powered by CMIH Africa</p>
     </div>
 </div>

@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 use Illuminate\Support\Facades\Cache;
 
@@ -79,15 +79,13 @@ class SiteContent extends Model
         $value = $values[$key] ?? null;
 
         if ($value) {
-            try {
-                // We use the public disk explicitly to bypass slow visibility checks
-                // on the default local disk when running on Windows.
-                return Storage::disk('public')->url($value);
-            } catch (\Throwable $e) {
-                // Fallback if Storage::url fails (e.g., missing finfo extension)
-                // We return the default or empty string so the site doesn't 500
-                return $default ?? '';
+            $value = ltrim((string) $value);
+
+            if (Str::startsWith($value, ['http://', 'https://', '/'])) {
+                return $value;
             }
+
+            return '/storage/'.ltrim($value, '/');
         }
 
         return $default ?? '';

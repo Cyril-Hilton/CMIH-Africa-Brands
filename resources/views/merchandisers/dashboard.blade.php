@@ -152,6 +152,20 @@
              profileSubTab: @js(request('subtab', 'personal')),
              visitOutletId: null
          }"
+         x-init="
+             $watch('activeTab', value => {
+                 const url = new URL(window.location.href);
+                 url.searchParams.set('tab', value);
+                 window.history.replaceState({}, '', url.toString());
+             });
+             $watch('profileSubTab', value => {
+                 if (activeTab === 'profile') {
+                     const url = new URL(window.location.href);
+                     url.searchParams.set('subtab', value);
+                     window.history.replaceState({}, '', url.toString());
+                 }
+             });
+         "
          @keydown.escape.window="sidebarOpen = false"
          x-effect="document.body.classList.toggle('overflow-hidden', sidebarOpen && window.innerWidth < 1024)">
 
@@ -191,74 +205,78 @@
                     @include('merchandisers.partials.tenant-brand')
                 </div>
 
-                <!-- Prominent Centered User Profile Block (UI/UX Blueprint Design) -->
-                <div class="mt-5 mb-4 flex flex-col items-center text-center pb-5 border-b border-white/10">
-                    <form method="POST" action="{{ route('merchandisers.profile.photo.update') }}" enctype="multipart/form-data" class="relative group">
+                <!-- Prominent Centered User Profile Block -->
+                <div class="my-5 p-5 rounded-2xl bg-white/5 border border-white/10 flex flex-col items-center text-center shadow-xl relative">
+                    <form method="POST" action="{{ route('merchandisers.profile.photo.update') }}" enctype="multipart/form-data" class="relative group my-2">
                         @csrf
-                        <div class="relative mx-auto h-20 w-20 shrink-0 overflow-hidden rounded-full bg-white ring-4 ring-white/40 shadow-2xl">
+                        <div class="relative mx-auto h-24 w-24 shrink-0 overflow-hidden rounded-full border-2 border-white/50 shadow-xl transition-transform hover:scale-105">
                             <img src="{{ auth()->user()->profilePhotoUrl() }}"
                                  alt="{{ auth()->user()->name }}"
                                  onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ urlencode(auth()->user()->name ?: 'User') }}&color=FFFFFF&background={{ ltrim($merchTenant['primary'] ?? '0F0E9A', '#') }}&bold=true';"
-                                 class="absolute inset-0 h-full w-full rounded-full object-cover object-center"
-                                 style="width: 100% !important; height: 100% !important; object-fit: cover !important; object-position: center center !important;"
+                                 class="h-full w-full rounded-full object-cover object-center"
                                  @click="$dispatch('open-avatar-modal'); activeTab = 'profile'">
                         </div>
-                        <label class="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-[#0F0E9A] text-white flex items-center justify-center text-xs shadow-lg hover:scale-110 transition cursor-pointer z-10" title="Upload Staff Photo">
+                        <label class="absolute bottom-0 right-0 h-7 w-7 rounded-full bg-brand-red text-white flex items-center justify-center text-xs shadow-lg hover:scale-110 transition cursor-pointer z-10" title="Upload Staff Photo">
                             📷
                             <input type="file" name="profile_photo" accept="image/*" class="hidden" onchange="this.form.submit()">
                         </label>
                     </form>
-                    <h3 class="mt-3 text-base font-bold text-white truncate max-w-[200px] leading-tight">{{ auth()->user()->name }}</h3>
-                    <p class="mt-0.5 text-xs font-semibold uppercase tracking-wider text-sky-400">{{ auth()->user()->access_role === 'super_admin' ? 'Super Admin' : 'Merchandiser' }}</p>
+                    <h3 class="mt-3 text-sm font-extrabold text-white truncate max-w-[200px] leading-tight">{{ auth()->user()->name }}</h3>
+                    <p class="mt-1 text-[10px] font-extrabold uppercase tracking-widest text-sky-300">{{ auth()->user()->access_role === 'super_admin' ? 'Super Admin' : 'Merchandiser' }}</p>
                 </div>
 
-                <nav class="mt-6 space-y-1.5 text-sm">
-                    <p class="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-brand-ash">Main Menu</p>
+                <nav class="mt-6 space-y-1 text-sm">
+                    <div class="px-3 pb-2 pt-1">
+                        <p class="text-[9px] font-extrabold uppercase tracking-[0.25em] text-white/50">Main Menu</p>
+                    </div>
 
                     <button type="button" @click="activeTab = 'home'; sidebarOpen = false"
-                            :class="activeTab === 'home' ? 'is-active' : ''"
-                            class="merch-nav-item flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition">
-                        <span class="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-white/10 text-xs">🏠</span>
-                        <span class="font-semibold">Dashboard</span>
+                            :class="activeTab === 'home' ? 'is-active bg-white/15 text-white font-extrabold border-l-4 border-sky-400 shadow-md backdrop-blur-md' : 'text-slate-300 hover:bg-white/10 hover:text-white font-semibold'"
+                            class="merch-nav-item flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-left transition-all duration-200">
+                        <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                        <span class="font-extrabold truncate">Dashboard</span>
                     </button>
 
                     <button type="button" @click="activeTab = 'schedule'; sidebarOpen = false"
-                            :class="activeTab === 'schedule' ? 'is-active' : ''"
-                            class="merch-nav-item flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition">
-                        <span class="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-brand-red/10 text-xs">📅</span>
-                        <span class="font-semibold">My Schedule</span>
+                            :class="activeTab === 'schedule' ? 'is-active bg-white/15 text-white font-extrabold border-l-4 border-sky-400 shadow-md backdrop-blur-md' : 'text-slate-300 hover:bg-white/10 hover:text-white font-semibold'"
+                            class="merch-nav-item flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-left transition-all duration-200">
+                        <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        <span class="font-extrabold truncate">My Schedule</span>
                     </button>
 
                     <button type="button" @click="activeTab = 'outlets'; sidebarOpen = false"
-                            :class="activeTab === 'outlets' ? 'is-active' : ''"
-                            class="merch-nav-item flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition">
-                        <span class="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-brand-red/10 text-xs">📍</span>
-                        <span class="font-semibold">Outlet Visits</span>
+                            :class="activeTab === 'outlets' ? 'is-active bg-white/15 text-white font-extrabold border-l-4 border-sky-400 shadow-md backdrop-blur-md' : 'text-slate-300 hover:bg-white/10 hover:text-white font-semibold'"
+                            class="merch-nav-item flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-left transition-all duration-200">
+                        <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        <span class="font-extrabold truncate">Outlet Visits</span>
                     </button>
 
                     <button type="button" @click="activeTab = 'kpis'; sidebarOpen = false"
-                            :class="activeTab === 'kpis' ? 'is-active' : ''"
-                            class="merch-nav-item flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition">
-                        <span class="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-brand-red/10 text-xs">🎯</span>
-                        <span class="font-semibold">KPI Performance</span>
+                            :class="activeTab === 'kpis' ? 'is-active bg-white/15 text-white font-extrabold border-l-4 border-sky-400 shadow-md backdrop-blur-md' : 'text-slate-300 hover:bg-white/10 hover:text-white font-semibold'"
+                            class="merch-nav-item flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-left transition-all duration-200">
+                        <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                        <span class="font-extrabold truncate">KPI Performance</span>
                     </button>
 
                     <button type="button" @click="activeTab = 'reports'; sidebarOpen = false"
-                            :class="activeTab === 'reports' ? 'is-active' : ''"
-                            class="merch-nav-item flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition">
-                        <span class="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-brand-red/10 text-xs">📄</span>
-                        <span class="font-semibold">Reports</span>
+                            :class="activeTab === 'reports' ? 'is-active bg-white/15 text-white font-extrabold border-l-4 border-sky-400 shadow-md backdrop-blur-md' : 'text-slate-300 hover:bg-white/10 hover:text-white font-semibold'"
+                            class="merch-nav-item flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-left transition-all duration-200">
+                        <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        <span class="font-extrabold truncate">Reports</span>
                     </button>
 
+                    <!-- Section Divider Line -->
+                    <div class="my-2 border-t border-white/10"></div>
+
                     <!-- Profile & Banking Group -->
-                    <div class="pt-3">
+                    <div>
                         <button type="button" @click="activeTab = 'profile'; sidebarOpen = false"
-                                :class="activeTab === 'profile' ? 'is-active' : ''"
-                                class="merch-nav-item flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition">
-                            <span class="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-white/10 text-xs">P</span>
-                            <span class="font-semibold">Profile &amp; Banking</span>
+                                :class="activeTab === 'profile' ? 'is-active bg-white/15 text-white font-extrabold border-l-4 border-sky-400 shadow-md backdrop-blur-md' : 'text-slate-300 hover:bg-white/10 hover:text-white font-semibold'"
+                                class="merch-nav-item flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-left transition-all duration-200">
+                            <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                            <span class="font-extrabold truncate">Profile &amp; Banking</span>
                         </button>
-                        <div class="mt-1 space-y-1 pl-9">
+                        <div class="mt-2 space-y-1.5 pl-11">
                             <button type="button" @click="activeTab = 'profile'; profileSubTab = 'personal'; sidebarOpen = false"
                                     :class="activeTab === 'profile' && profileSubTab === 'personal' ? 'text-sky-400 font-bold' : 'text-brand-ash hover:text-brand-white'"
                                     class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition cursor-pointer">
@@ -396,7 +414,7 @@
 
                     <x-auth-session-status class="mb-4" :status="session('status')" />
 
-                    @if ($errors->any())
+                    @if (($errors ?? null) && $errors->any())
                         <div class="rounded-xl border border-brand-red/30 bg-brand-red/10 px-4 py-3 text-sm text-red-200">
                             <ul class="list-disc pl-5">
                                 @foreach ($errors->all() as $error)
@@ -520,24 +538,29 @@
 
                                         <!-- Outlet Visit Window Box (Light Blue Theme) -->
                                         <div class="rounded-2xl p-5 border border-sky-200 bg-[#F0F9FF] dark:bg-slate-900 space-y-4 shadow-sm">
-                                            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                                                 <div>
                                                     <p class="text-xs font-extrabold uppercase tracking-widest text-[#0F0E9A]">Outlet Visit Window</p>
                                                     <h3 class="mt-1 text-xl font-black text-slate-900 dark:text-white">{{ $clockWindow['start_at']->format('g:i A') }} - {{ $clockWindow['end_at']->format('g:i A') }}</h3>
                                                     <p class="mt-1 text-xs text-slate-600 dark:text-slate-400 font-medium">Clock in and clock out at every assigned outlet during this window. Perfect Store entry becomes available after the outlet clock-in.</p>
                                                 </div>
-                                                <div class="grid w-full grid-cols-3 gap-2 sm:w-auto sm:min-w-[22rem]">
-                                                    <div class="rounded-xl border border-sky-200 bg-white dark:bg-slate-800 px-3 py-2.5 text-center shadow-xs">
-                                                        <p class="text-[10px] font-extrabold uppercase tracking-wider text-sky-700 dark:text-sky-300">Scheduled</p>
-                                                        <p class="mt-1 text-xl font-black text-slate-900 dark:text-white">{{ $merchMetrics['total_outlets'] }}</p>
+                                                <div class="grid grid-cols-3 gap-3 w-full lg:w-auto shrink-0 sm:min-w-[26rem]">
+                                                    <!-- Scheduled Metric Card (Light Blue Tint) -->
+                                                    <div style="background-color: #EFF6FF !important; border: 1.5px solid #BFDBFE !important;" class="rounded-2xl px-4 py-3.5 text-center shadow-xs flex flex-col justify-center items-center">
+                                                        <p style="color: #1D4ED8 !important;" class="text-[11px] font-black uppercase tracking-wider whitespace-nowrap">Scheduled</p>
+                                                        <p style="color: #1E40AF !important;" class="mt-1 text-2xl sm:text-3xl font-black leading-none">{{ $merchMetrics['total_outlets'] }}</p>
                                                     </div>
-                                                    <div class="rounded-xl border border-sky-200 bg-white dark:bg-slate-800 px-3 py-2.5 text-center shadow-xs">
-                                                        <p class="text-[10px] font-extrabold uppercase tracking-wider text-sky-700 dark:text-sky-300">Clocked In</p>
-                                                        <p class="mt-1 text-xl font-black text-blue-600 dark:text-blue-400">{{ $merchMetrics['clockins_today'] }}</p>
+
+                                                    <!-- Clocked In Metric Card (Light Sky Tint) -->
+                                                    <div style="background-color: #F0F9FF !important; border: 1.5px solid #BAE6FD !important;" class="rounded-2xl px-4 py-3.5 text-center shadow-xs flex flex-col justify-center items-center">
+                                                        <p style="color: #0369A1 !important;" class="text-[11px] font-black uppercase tracking-wider whitespace-nowrap">Clocked In</p>
+                                                        <p style="color: #0284C7 !important;" class="mt-1 text-2xl sm:text-3xl font-black leading-none">{{ $merchMetrics['clockins_today'] }}</p>
                                                     </div>
-                                                    <div class="rounded-xl border border-sky-200 bg-white dark:bg-slate-800 px-3 py-2.5 text-center shadow-xs">
-                                                        <p class="text-[10px] font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Scored</p>
-                                                        <p class="mt-1 text-xl font-black text-emerald-600 dark:text-emerald-400">{{ $merchMetrics['outlets_scored_today'] }}</p>
+
+                                                    <!-- Scored Metric Card (Light Emerald Tint) -->
+                                                    <div style="background-color: #ECFDF5 !important; border: 1.5px solid #A7F3D0 !important;" class="rounded-2xl px-4 py-3.5 text-center shadow-xs flex flex-col justify-center items-center">
+                                                        <p style="color: #047857 !important;" class="text-[11px] font-black uppercase tracking-wider whitespace-nowrap">Scored</p>
+                                                        <p style="color: #059669 !important;" class="mt-1 text-2xl sm:text-3xl font-black leading-none">{{ $merchMetrics['outlets_scored_today'] }}</p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -600,69 +623,125 @@
                                                     </div>
 
                                                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-sky-100 dark:border-slate-800">
-                                                        <div class="rounded-xl border border-sky-100 bg-[#F0F9FF] dark:bg-slate-800 p-3">
-                                                            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Clock-in</p>
-                                                            <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
-                                                                {{ $attendance?->clock_in_time ? $attendance->clock_in_time->timezone($timezone)->format('H:i') : 'Not started' }}
+                                                        <!-- Clock-In Timestamp -->
+                                                        <div class="rounded-xl border border-sky-200 bg-[#F0F9FF] dark:bg-slate-800 p-3.5 flex flex-col justify-between">
+                                                            <div class="flex items-center justify-between">
+                                                                <p class="text-[10px] font-black uppercase tracking-wider text-[#0369A1]">Clock-In Time</p>
+                                                                <span class="text-xs">📥</span>
+                                                            </div>
+                                                            <p class="mt-2 text-sm font-black text-slate-900 dark:text-white">
+                                                                {{ $attendance?->clock_in_time ? $attendance->clock_in_time->timezone($timezone)->format('d M Y, h:i A') : 'Not Clocked In' }}
+                                                            </p>
+                                                            <p class="mt-0.5 text-[10px] font-medium text-slate-500">
+                                                                {{ $attendance?->clock_in_time ? 'Recorded on ' . $attendance->clock_in_time->timezone($timezone)->format('D, d M Y') : 'Awaiting Clock In' }}
                                                             </p>
                                                         </div>
-                                                        <div class="rounded-xl border border-sky-100 bg-[#F0F9FF] dark:bg-slate-800 p-3">
-                                                            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Clock-out</p>
-                                                            <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
-                                                                {{ $attendance?->clock_out_time ? $attendance->clock_out_time->timezone($timezone)->format('H:i') : 'Pending' }}
+
+                                                        <!-- Clock-Out Timestamp -->
+                                                        <div class="rounded-xl border border-sky-200 bg-[#F0F9FF] dark:bg-slate-800 p-3.5 flex flex-col justify-between">
+                                                            <div class="flex items-center justify-between">
+                                                                <p class="text-[10px] font-black uppercase tracking-wider text-[#0369A1]">Clock-Out Time</p>
+                                                                <span class="text-xs">📤</span>
+                                                            </div>
+                                                            <p class="mt-2 text-sm font-black text-slate-900 dark:text-white">
+                                                                {{ $attendance?->clock_out_time ? $attendance->clock_out_time->timezone($timezone)->format('d M Y, h:i A') : ($hasClockedIn ? 'Visit in Progress...' : 'Pending') }}
+                                                            </p>
+                                                            <p class="mt-0.5 text-[10px] font-medium text-slate-500">
+                                                                {{ $attendance?->clock_out_time ? 'Recorded on ' . $attendance->clock_out_time->timezone($timezone)->format('D, d M Y') : ($hasClockedIn ? 'Perform Entries & Clock Out' : 'Pending Clock In') }}
                                                             </p>
                                                         </div>
-                                                        <div class="rounded-xl border border-sky-100 bg-[#F0F9FF] dark:bg-slate-800 p-3">
-                                                            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Visit Time</p>
-                                                            <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
-                                                                {{ $attendance?->visit_duration_minutes !== null ? $attendance->visit_duration_minutes.' min' : 'Calculates at clock-out' }}
+
+                                                        <!-- Visit Duration & Audit Status -->
+                                                        <div class="rounded-xl border border-sky-200 bg-[#F0F9FF] dark:bg-slate-800 p-3.5 flex flex-col justify-between">
+                                                            <div class="flex items-center justify-between">
+                                                                <p class="text-[10px] font-black uppercase tracking-wider text-[#0369A1]">Total Duration</p>
+                                                                <span class="text-xs">⏱️</span>
+                                                            </div>
+                                                            <p class="mt-2 text-sm font-black text-slate-900 dark:text-white">
+                                                                {{ $attendance?->visit_duration_minutes !== null ? $attendance->visit_duration_minutes . ' mins' : ($hasClockedIn ? 'Timing Visit...' : '--') }}
+                                                            </p>
+                                                            <p class="mt-0.5 text-[10px] font-medium text-slate-500">
+                                                                {{ $hasScored ? 'Audit Entries Completed' : ($hasClockedIn ? 'Audit Entries Pending' : 'Not Started') }}
                                                             </p>
                                                         </div>
                                                     </div>
 
-                                                    <div class="flex flex-col gap-2 border-t border-sky-100 dark:border-slate-800 pt-3 sm:flex-row sm:items-center">
-                                                        @if(! $hasClockedIn)
-                                                            @if($visitOpen)
-                                                                <form method="POST" action="{{ route('merchandisers.clock-in') }}" class="sm:w-48" data-clock-form data-clock-verb="Clocking in">
-                                                                    @csrf
-                                                                    <input type="hidden" name="outlet_id" value="{{ $outlet->id }}">
-                                                                    <input type="hidden" name="clock_in_type" value="outlet">
-                                                                    <input type="hidden" name="latitude" class="user-lat-input">
-                                                                    <input type="hidden" name="longitude" class="user-lng-input">
-                                                                    <button type="submit" data-clock-submit class="w-full py-2.5 bg-[#0F0E9A] hover:bg-blue-700 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-md">
-                                                                        Clock In
-                                                                    </button>
-                                                                </form>
+                                                    <div class="mt-5 pt-5 border-t border-sky-200 dark:border-slate-800 space-y-4">
+                                                        <!-- Primary Action Buttons Bar -->
+                                                        <div class="flex flex-wrap items-center gap-3">
+                                                            @if(! $hasClockedIn)
+                                                                @if($visitOpen)
+                                                                    <form method="POST" action="{{ route('merchandisers.clock-in') }}" class="w-full sm:w-auto" data-clock-form data-clock-verb="Clocking in">
+                                                                        @csrf
+                                                                        <input type="hidden" name="outlet_id" value="{{ $outlet->id }}">
+                                                                        <input type="hidden" name="clock_in_type" value="outlet">
+                                                                        <input type="hidden" name="latitude" class="user-lat-input">
+                                                                        <input type="hidden" name="longitude" class="user-lng-input">
+                                                                        <button type="submit"
+                                                                                data-clock-submit
+                                                                                style="background: linear-gradient(135deg, #155EEF 0%, #004EEB 100%) !important; color: #ffffff !important;"
+                                                                                class="w-full sm:w-auto px-6 py-3.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all duration-200 shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2.5 cursor-pointer">
+                                                                            <span class="text-sm">📍</span>
+                                                                            <span style="color: #ffffff !important;">Clock In Now</span>
+                                                                        </button>
+                                                                    </form>
+                                                                @else
+                                                                    <div class="w-full sm:w-auto rounded-xl border border-slate-200 bg-slate-100 dark:bg-slate-800 px-5 py-3.5 text-center text-xs font-bold uppercase tracking-wider text-slate-400">
+                                                                        Window Closed
+                                                                    </div>
+                                                                @endif
                                                             @else
-                                                                <div class="rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-center text-xs font-bold uppercase tracking-wider text-slate-400 sm:w-48">
-                                                                    Window Closed
-                                                                </div>
+                                                                <!-- Perform Audit & Store Entries Button -->
+                                                                <a href="{{ route('merchandisers.visit', $outlet) }}"
+                                                                   style="background: linear-gradient(135deg, #155EEF 0%, #004EEB 100%) !important; color: #ffffff !important;"
+                                                                   class="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 rounded-xl px-6 py-3.5 text-xs font-black uppercase tracking-wider transition-all duration-200 shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]">
+                                                                    <span class="text-sm">📋</span>
+                                                                    <span style="color: #ffffff !important;">{{ $hasScored ? 'View / Edit Store Entries' : 'Perform Store Audit & Entries' }}</span>
+                                                                </a>
                                                             @endif
-                                                        @else
-                                                            <a href="{{ route('merchandisers.visit', $outlet) }}" class="inline-flex justify-center rounded-xl bg-[#0F0E9A] px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-blue-700 sm:w-56 shadow-md">
-                                                                Perfect Store Entry
-                                                            </a>
-                                                        @endif
 
-                                                        @if($hasClockedIn && ! $hasClockedOut)
-                                                            @if($hasScored)
-                                                                <form method="POST" action="{{ route('merchandisers.clock-out') }}" class="sm:w-48" data-clock-form data-clock-verb="Clocking out">
-                                                                    @csrf
-                                                                    <input type="hidden" name="outlet_id" value="{{ $outlet->id }}">
-                                                                    <input type="hidden" name="latitude" class="user-lat-input">
-                                                                    <input type="hidden" name="longitude" class="user-lng-input">
-                                                                    <button type="submit" data-clock-submit class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition shadow-md">
-                                                                        Clock Out
-                                                                    </button>
-                                                                </form>
-                                                            @else
-                                                                <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs font-semibold text-amber-800">
-                                                                    Complete the Perfect Store entry before clock-out.
-                                                                </div>
+                                                            @if($hasClockedIn && ! $hasClockedOut)
+                                                                @if($hasScored)
+                                                                    <form method="POST" action="{{ route('merchandisers.clock-out') }}" class="w-full sm:w-auto" data-clock-form data-clock-verb="Clocking out">
+                                                                        @csrf
+                                                                        <input type="hidden" name="outlet_id" value="{{ $outlet->id }}">
+                                                                        <input type="hidden" name="latitude" class="user-lat-input">
+                                                                        <input type="hidden" name="longitude" class="user-lng-input">
+                                                                        <button type="submit"
+                                                                                data-clock-submit
+                                                                                style="background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important; color: #ffffff !important;"
+                                                                                class="w-full sm:w-auto px-6 py-3.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all duration-200 shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2.5 cursor-pointer">
+                                                                            <span class="text-sm">🏁</span>
+                                                                            <span style="color: #ffffff !important;">Clock Out</span>
+                                                                        </button>
+                                                                    </form>
+                                                                @else
+                                                                    <div class="w-full sm:w-auto rounded-xl border border-amber-300/80 bg-amber-50 dark:bg-amber-950/40 px-4 py-3 text-xs font-bold text-amber-900 dark:text-amber-200 flex items-center justify-center gap-2 shadow-2xs">
+                                                                        <span>⚠️ Complete Store Audit Entries before clocking out</span>
+                                                                    </div>
+                                                                @endif
                                                             @endif
-                                                        @elseif($hasClockedOut)
-                                                            <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-emerald-700 sm:w-48 text-center">
-                                                                Clocked Out
+                                                        </div>
+
+                                                        <!-- Completed Visit System Log Alert Box (Positioned BELOW Action Buttons) -->
+                                                        @if($hasClockedOut)
+                                                            <div class="w-full rounded-2xl border border-emerald-300/80 bg-emerald-50/90 dark:bg-emerald-950/50 p-4 sm:p-4.5 shadow-xs flex items-center gap-4 sm:gap-5">
+                                                                <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-base font-black shrink-0 shadow-sm mr-1 sm:mr-2">
+                                                                    ✓
+                                                                </div>
+                                                                <div class="flex-1 min-w-0 pl-1">
+                                                                    <div class="flex flex-wrap items-center justify-between gap-2">
+                                                                        <span class="text-xs font-black uppercase tracking-wider text-emerald-950 dark:text-emerald-100">
+                                                                            Visit Completed & Clocked Out
+                                                                        </span>
+                                                                        <span class="px-2.5 py-1 rounded-lg text-[11px] font-black bg-emerald-200 text-emerald-950 dark:bg-emerald-800 dark:text-emerald-100 shadow-2xs">
+                                                                            ⏱️ {{ $attendance->visit_duration_minutes }} min visit
+                                                                        </span>
+                                                                    </div>
+                                                                    <p class="text-xs font-semibold text-emerald-800 dark:text-emerald-300 mt-1">
+                                                                        Recorded on {{ $attendance->clock_out_time->timezone($timezone)->format('D, d M Y') }} at {{ $attendance->clock_out_time->timezone($timezone)->format('h:i A') }}
+                                                                    </p>
+                                                                </div>
                                                             </div>
                                                         @endif
                                                     </div>

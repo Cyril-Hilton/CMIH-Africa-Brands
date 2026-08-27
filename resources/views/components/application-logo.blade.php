@@ -1,10 +1,8 @@
 @php
     $logoLightFallback = asset('images/logo/logo-light.png');
     $logoDarkFallback = asset('images/logo/logo-dark.png');
-    $logoLightValue = \App\Models\SiteContent::where('key', 'logo_light')->value('value');
-    $logoDarkValue = \App\Models\SiteContent::where('key', 'logo_dark')->value('value');
-    $logoLight = $logoLightValue ? \Illuminate\Support\Facades\Storage::disk('public')->url($logoLightValue) : $logoLightFallback;
-    $logoDark = $logoDarkValue ? \Illuminate\Support\Facades\Storage::disk('public')->url($logoDarkValue) : $logoDarkFallback;
+    $logoLight = \App\Models\SiteContent::getImageUrl('logo_light', $logoLightFallback);
+    $logoDark = \App\Models\SiteContent::getImageUrl('logo_dark', $logoDarkFallback);
 @endphp
 <div {{ $attributes }}>
     <img

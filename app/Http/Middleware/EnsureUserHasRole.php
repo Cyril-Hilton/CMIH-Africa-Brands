@@ -40,7 +40,7 @@ class EnsureUserHasRole
         if (
             $user->hasRole($rolesList)
             || ($user->hasFullHrAccess() && $isUserRoute && ! $isDeveloperBypass)
-            || ($isMerchandiserAdminRoute && $user->isMerchandiserPortalAdmin())
+            || ($isMerchandiserAdminRoute && ($user->isMerchandiserPortalAdmin() || $user->isMerchandiserSupervisor() || $user->isMerchandiserClient()))
         ) {
             return $next($request);
         }
