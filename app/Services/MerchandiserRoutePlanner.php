@@ -120,9 +120,64 @@ class MerchandiserRoutePlanner
         return $created;
     }
 
+    /**
+     * Carry over incomplete past outlet assignments to today's route.
+     */
+    public function processOutstandingCarryOver(User $user, ?Carbon $asOfDate = null): Collection
+    {
+        $timezone = $user->merchandiserRegion->timezone ?? 'Africa/Accra';
+        $today = ($asOfDate ?: Carbon::today($timezone))->copy()->timezone($timezone)->startOfDay();
+
+        $pastIncomplete = MerchandiserOutletAssignment::with('outlet')
+            ->where('user_id', $user->id)
+            ->where('assigned_date', '<', $today->toDateString())
+            ->whereNotIn('status', ['completed', 'visited'])
+            ->get();
+
+        $carriedOver = collect();
+
+        foreach ($pastIncomplete as $past) {
+            $alreadyToday = MerchandiserOutletAssignment::where('user_id', $user->id)
+                ->where('outlet_id', $past->outlet_id)
+                ->whereDate('assigned_date', $today->toDateString())
+                ->exists();
+
+            if (! $alreadyToday) {
+                $newAssignment = MerchandiserOutletAssignment::create([
+                    'user_id' => $user->id,
+                    'outlet_id' => $past->outlet_id,
+                    'assigned_date' => $today->toDateString(),
+                    'sequence' => 999,
+                    'status' => 'carried_over',
+                    'source' => 'carry_over',
+                    'notes' => 'Carried over from incomplete visit on ' . ($past->assigned_date ? $past->assigned_date->format('Y-m-d') : 'previous day'),
+                ]);
+                $carriedOver->push($newAssignment);
+            }
+        }
+
+        return $carriedOver;
+    }
+
     public function assignmentsForDate(User $user, Carbon $date): EloquentCollection
     {
-        $this->ensureWeek($user, $date->copy()->startOfWeek());
+        $assignments = $this->assignmentsForPeriod(
+            $user,
+            $date->copy()->startOfWeek(),
+            $date->copy()->endOfWeek()
+        );
+
+        return new EloquentCollection(
+            $assignments
+                ->filter(fn (MerchandiserOutletAssignment $assignment) => $assignment->assigned_date?->isSameDay($date))
+                ->values()
+                ->all()
+        );
+    }
+
+    public function assignmentsForPeriod(User $user, Carbon $start, Carbon $end): EloquentCollection
+    {
+        $this->ensurePeriod($user, $start, $end);
         $routeableOutletIds = $this->routeableOutletsFor($user)->pluck('id');
 
         if ($routeableOutletIds->isEmpty()) {
@@ -132,7 +187,11 @@ class MerchandiserRoutePlanner
         return MerchandiserOutletAssignment::with(['outlet.registeredBy'])
             ->where('user_id', $user->id)
             ->whereIn('outlet_id', $routeableOutletIds)
-            ->whereDate('assigned_date', $date->toDateString())
+            ->whereBetween('assigned_date', [
+                $start->copy()->startOfDay()->toDateString(),
+                $end->copy()->endOfDay()->toDateString(),
+            ])
+            ->orderBy('assigned_date')
             ->orderBy('sequence')
             ->orderBy('id')
             ->get();

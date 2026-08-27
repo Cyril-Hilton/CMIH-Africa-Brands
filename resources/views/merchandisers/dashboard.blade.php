@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="dark">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="{{ $merchTenant['code'] === 'unilever' ? 'light' : 'dark' }}" data-merch-tenant="{{ $merchTenant['code'] }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -12,47 +12,48 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @include('merchandisers.partials.tenant-theme')
     <style>
         .leaflet-container {
             background-color: #0b0a0a !important;
         }
-        /* Dark mode theme overrides for CKEditor 5 */
+        /* Tenant-aware CKEditor 5 overrides */
         :root {
-            --ck-color-rect-border: rgba(255, 255, 255, 0.1) !important;
-            --ck-color-base-border: rgba(255, 255, 255, 0.1) !important;
-            --ck-color-toolbar-background: rgba(20, 20, 20, 0.95) !important;
-            --ck-color-base-background: rgba(0, 0, 0, 0.5) !important;
-            --ck-color-button-default-hover-background: rgba(255, 255, 255, 0.1) !important;
-            --ck-color-button-on-background: rgba(255, 255, 255, 0.15) !important;
-            --ck-color-button-on-hover-background: rgba(255, 255, 255, 0.2) !important;
-            --ck-color-list-background: rgba(20, 20, 20, 0.95) !important;
-            --ck-color-panel-background: rgba(20, 20, 20, 0.95) !important;
-            --ck-color-panel-border: rgba(255, 255, 255, 0.1) !important;
-            --ck-color-dropdown-panel-background: rgba(20, 20, 20, 0.95) !important;
-            --ck-color-dropdown-panel-border: rgba(255, 255, 255, 0.1) !important;
+            --ck-color-rect-border: color-mix(in srgb, var(--merch-ink) 12%, transparent) !important;
+            --ck-color-base-border: color-mix(in srgb, var(--merch-ink) 12%, transparent) !important;
+            --ck-color-toolbar-background: color-mix(in srgb, var(--merch-surface) 96%, transparent) !important;
+            --ck-color-base-background: color-mix(in srgb, var(--merch-surface) 96%, transparent) !important;
+            --ck-color-button-default-hover-background: color-mix(in srgb, var(--merch-primary) 8%, transparent) !important;
+            --ck-color-button-on-background: color-mix(in srgb, var(--merch-primary) 12%, transparent) !important;
+            --ck-color-button-on-hover-background: color-mix(in srgb, var(--merch-primary) 18%, transparent) !important;
+            --ck-color-list-background: color-mix(in srgb, var(--merch-surface) 98%, transparent) !important;
+            --ck-color-panel-background: color-mix(in srgb, var(--merch-surface) 98%, transparent) !important;
+            --ck-color-panel-border: color-mix(in srgb, var(--merch-ink) 12%, transparent) !important;
+            --ck-color-dropdown-panel-background: color-mix(in srgb, var(--merch-surface) 98%, transparent) !important;
+            --ck-color-dropdown-panel-border: color-mix(in srgb, var(--merch-ink) 12%, transparent) !important;
         }
         .ck-editor__editable_inline {
-            background-color: rgba(0, 0, 0, 0.4) !important;
-            color: #fff !important;
-            border-color: rgba(255, 255, 255, 0.1) !important;
+            background-color: color-mix(in srgb, var(--merch-surface) 96%, transparent) !important;
+            color: var(--merch-ink) !important;
+            border-color: color-mix(in srgb, var(--merch-ink) 12%, transparent) !important;
             min-height: 120px !important;
             transition: min-height 0.2s ease;
             line-height: 1.7 !important;
             font-size: 0.9rem !important;
         }
         .ck-editor__editable_inline:focus {
-            border-color: rgba(239, 68, 68, 0.5) !important;
+            border-color: var(--merch-primary) !important;
             outline: none !important;
         }
         .ck.ck-editor__main>.ck-editor__editable {
-            background: rgba(0, 0, 0, 0.4) !important;
+            background: color-mix(in srgb, var(--merch-surface) 96%, transparent) !important;
         }
         .ck-toolbar {
-            background-color: rgba(20, 20, 20, 0.8) !important;
-            border-color: rgba(255, 255, 255, 0.1) !important;
+            background-color: color-mix(in srgb, var(--merch-surface) 96%, transparent) !important;
+            border-color: color-mix(in srgb, var(--merch-ink) 12%, transparent) !important;
         }
         .ck-toolbar * {
-            color: #fff !important;
+            color: var(--merch-ink) !important;
         }
         .ck.ck-button:not(.ck-disabled):hover, a.ck.ck-button:not(.ck-disabled):hover {
             background: rgba(255, 255, 255, 0.1) !important;
@@ -86,6 +87,25 @@
             max-width: 100%;
             -webkit-overflow-scrolling: touch;
         }
+        .merch-shell .field-section-title {
+            color: var(--merch-ink);
+            letter-spacing: 0.08em;
+        }
+        .merch-shell .field-panel {
+            border-color: color-mix(in srgb, var(--merch-ink) 10%, transparent) !important;
+            background: color-mix(in srgb, var(--merch-surface) 96%, transparent) !important;
+        }
+        .merch-shell .field-muted-card {
+            border-color: color-mix(in srgb, var(--merch-ink) 8%, transparent) !important;
+            background: color-mix(in srgb, var(--merch-surface) 88%, var(--merch-primary) 4%) !important;
+        }
+        .merch-shell .field-table {
+            min-width: 42rem;
+        }
+        .merch-shell .field-word-safe {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
         @media (max-width: 640px) {
             html,
             body {
@@ -114,10 +134,24 @@
         }
     </style>
 </head>
-<body class="h-screen overflow-hidden bg-brand-black font-sans antialiased text-brand-white">
+<body class="h-screen overflow-hidden bg-brand-black font-sans antialiased text-brand-white" data-merch-tenant="{{ $merchTenant['code'] }}">
 
-    <div class="merch-shell h-screen overflow-hidden bg-inked"
-         x-data="{ sidebarOpen: false, activeTab: 'outlets' }"
+    <div class="merch-shell merch-tenant-shell h-screen overflow-hidden"
+         x-data="{
+             sidebarOpen: false,
+             sidebarCollapsed: localStorage.getItem('cmih_dashboard_sidebar_collapsed') === 'true',
+             toggleSidebar() {
+                 if (window.innerWidth < 1024) {
+                     this.sidebarOpen = !this.sidebarOpen;
+                 } else {
+                     this.sidebarCollapsed = !this.sidebarCollapsed;
+                     localStorage.setItem('cmih_dashboard_sidebar_collapsed', this.sidebarCollapsed);
+                 }
+             },
+             activeTab: @js(request('tab', 'home')),
+             profileSubTab: @js(request('subtab', 'personal')),
+             visitOutletId: null
+         }"
          @keydown.escape.window="sidebarOpen = false"
          x-effect="document.body.classList.toggle('overflow-hidden', sidebarOpen && window.innerWidth < 1024)">
 
@@ -146,48 +180,151 @@
             <!-- Collapsible Sidebar (Portal Style) -->
             <aside id="merchandiser-sidebar"
                    aria-label="Merchandiser navigation"
-                   :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
-                   class="fixed inset-y-0 left-0 z-50 flex h-full max-h-screen min-h-0 w-[min(18rem,calc(100vw-2rem))] shrink-0 flex-col overflow-y-auto overscroll-contain scrollbar-none border-r border-brand-white/10 bg-brand-black/95 px-4 py-6 shadow-2xl backdrop-blur-xl transition-transform duration-300 ease-out lg:static lg:h-screen lg:w-72 lg:translate-x-0 lg:bg-brand-black/80 lg:shadow-none lg:backdrop-blur-none sm:px-6 sm:py-8">
-                <div class="flex items-center justify-between gap-3">
-                    <x-application-logo class="h-8 w-auto" />
-                    <button type="button" @click="sidebarOpen = false" class="lg:hidden text-brand-white/60 hover:text-brand-white text-lg transition-colors p-1" aria-label="Close menu">
-                        ✕
-                    </button>
+                   :class="{
+                       'translate-x-0': sidebarOpen,
+                       '-translate-x-full': !sidebarOpen,
+                       'hidden lg:hidden': sidebarCollapsed,
+                       'lg:static lg:flex lg:w-72 lg:translate-x-0 lg:opacity-100': !sidebarCollapsed
+                   }"
+                   class="merch-sidebar fixed inset-y-0 left-0 z-50 flex h-full max-h-screen min-h-0 w-[min(18rem,calc(100vw-2rem))] shrink-0 flex-col overflow-y-auto overscroll-contain scrollbar-none px-4 py-6 transition-all duration-300 ease-in-out sm:px-6 sm:py-8">
+                <div class="pb-3 border-b border-brand-white/10">
+                    @include('merchandisers.partials.tenant-brand')
                 </div>
 
-                <nav class="mt-8 space-y-2 text-xs uppercase tracking-[0.3em]">
-                    <p class="text-[10px] uppercase font-bold tracking-[0.2em] text-brand-ash px-4 mb-2">Navigation</p>
-                    
-                    <button @click="activeTab = 'outlets'; sidebarOpen = false" :class="activeTab === 'outlets' ? 'bg-brand-white/10 text-brand-white font-semibold shadow-inner' : 'text-brand-white/60 hover:text-brand-white'" class="w-full text-left px-4 py-3 rounded-xl transition flex items-center gap-2 whitespace-nowrap">
-                        🏬 Visits & Clock-In
+                <!-- Prominent Centered User Profile Block (UI/UX Blueprint Design) -->
+                <div class="mt-5 mb-4 flex flex-col items-center text-center pb-5 border-b border-white/10">
+                    <form method="POST" action="{{ route('merchandisers.profile.photo.update') }}" enctype="multipart/form-data" class="relative group">
+                        @csrf
+                        <div class="h-20 w-20 rounded-full overflow-hidden ring-4 ring-sky-500/30 shadow-2xl mx-auto relative aspect-square shrink-0 bg-[#E21C1E] flex items-center justify-center">
+                            <img src="{{ auth()->user()->profilePhotoUrl() }}"
+                                 alt="{{ auth()->user()->name }}"
+                                 onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ urlencode(auth()->user()->name ?: 'User') }}&color=38BDF8&background=0F172A&bold=true';"
+                                 class="w-full h-full object-cover rounded-full block scale-[1.45] transform-gpu origin-center transition-transform duration-300"
+                                 style="width: 100% !important; height: 100% !important; object-fit: cover !important;"
+                                 @click="$dispatch('open-avatar-modal'); activeTab = 'profile'">
+                        </div>
+                        <label class="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-[#155EEF] text-white flex items-center justify-center text-xs shadow-lg hover:scale-110 transition cursor-pointer z-10" title="Upload Staff Photo">
+                            📷
+                            <input type="file" name="profile_photo" accept="image/*" class="hidden" onchange="this.form.submit()">
+                        </label>
+                    </form>
+                    <h3 class="mt-3 text-base font-bold text-white truncate max-w-[200px] leading-tight">{{ auth()->user()->name }}</h3>
+                    <p class="mt-0.5 text-xs font-semibold uppercase tracking-wider text-sky-400">{{ auth()->user()->access_role === 'super_admin' ? 'Super Admin' : 'Merchandiser' }}</p>
+                </div>
+
+                <nav class="mt-6 space-y-1.5 text-sm">
+                    <p class="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-brand-ash">Main Menu</p>
+
+                    <button type="button" @click="activeTab = 'home'; sidebarOpen = false"
+                            :class="activeTab === 'home' ? 'is-active' : ''"
+                            class="merch-nav-item flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition">
+                        <span class="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-white/10 text-xs">🏠</span>
+                        <span class="font-semibold">Dashboard</span>
                     </button>
-                    <button @click="activeTab = 'profile'; sidebarOpen = false" :class="activeTab === 'profile' ? 'bg-brand-white/10 text-brand-white font-semibold shadow-inner' : 'text-brand-white/60 hover:text-brand-white'" class="w-full text-left px-4 py-3 rounded-xl transition flex items-center gap-2 whitespace-nowrap">
-                        👤 Profile & Banking
+
+                    <button type="button" @click="activeTab = 'schedule'; sidebarOpen = false"
+                            :class="activeTab === 'schedule' ? 'is-active' : ''"
+                            class="merch-nav-item flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition">
+                        <span class="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-brand-red/10 text-xs">📅</span>
+                        <span class="font-semibold">My Schedule</span>
                     </button>
-                    <button @click="activeTab = 'payroll'; sidebarOpen = false" :class="activeTab === 'payroll' ? 'bg-brand-white/10 text-brand-white font-semibold shadow-inner' : 'text-brand-white/60 hover:text-brand-white'" class="w-full text-left px-4 py-3 rounded-xl transition flex items-center gap-2 whitespace-nowrap">
-                        📊 Payroll & Deductions
+
+                    <button type="button" @click="activeTab = 'outlets'; sidebarOpen = false"
+                            :class="activeTab === 'outlets' ? 'is-active' : ''"
+                            class="merch-nav-item flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition">
+                        <span class="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-brand-red/10 text-xs">📍</span>
+                        <span class="font-semibold">Outlet Visits</span>
                     </button>
-                    <button @click="activeTab = 'leaves'; sidebarOpen = false" :class="activeTab === 'leaves' ? 'bg-brand-white/10 text-brand-white font-semibold shadow-inner' : 'text-brand-white/60 hover:text-brand-white'" class="w-full text-left px-4 py-3 rounded-xl transition flex items-center gap-2 whitespace-nowrap">
-                        📅 Leaves & Absences
+
+                    <button type="button" @click="activeTab = 'kpis'; sidebarOpen = false"
+                            :class="activeTab === 'kpis' ? 'is-active' : ''"
+                            class="merch-nav-item flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition">
+                        <span class="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-brand-red/10 text-xs">🎯</span>
+                        <span class="font-semibold">KPI Performance</span>
                     </button>
-                    <button @click="activeTab = 'claims'; sidebarOpen = false" :class="activeTab === 'claims' ? 'bg-brand-white/10 text-brand-white font-semibold shadow-inner' : 'text-brand-white/60 hover:text-brand-white'" class="w-full text-left px-4 py-3 rounded-xl transition flex items-center gap-2 whitespace-nowrap">
-                        💰 Petty Cash Claims
+
+                    <button type="button" @click="activeTab = 'reports'; sidebarOpen = false"
+                            :class="activeTab === 'reports' ? 'is-active' : ''"
+                            class="merch-nav-item flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition">
+                        <span class="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-brand-red/10 text-xs">📄</span>
+                        <span class="font-semibold">Reports</span>
                     </button>
-                    <button @click="activeTab = 'loans'; sidebarOpen = false" :class="activeTab === 'loans' ? 'bg-brand-white/10 text-brand-white font-semibold shadow-inner' : 'text-brand-white/60 hover:text-brand-white'" class="w-full text-left px-4 py-3 rounded-xl transition flex items-center gap-2 whitespace-nowrap">
-                        💵 Salary Advances
-                    </button>
-                    <button @click="activeTab = 'appraisals'; sidebarOpen = false" :class="activeTab === 'appraisals' ? 'bg-brand-white/10 text-brand-white font-semibold shadow-inner' : 'text-brand-white/60 hover:text-brand-white'" class="w-full text-left px-4 py-3 rounded-xl transition flex items-center gap-2 whitespace-nowrap">
-                        📝 Self-Appraisals
-                    </button>
-                    <button @click="activeTab = 'inventory'; sidebarOpen = false" :class="activeTab === 'inventory' ? 'bg-brand-white/10 text-brand-white font-semibold shadow-inner' : 'text-brand-white/60 hover:text-brand-white'" class="w-full text-left px-4 py-3 rounded-xl transition flex items-center gap-2 whitespace-nowrap">
-                        📁 Field Gear Check-out
-                    </button>
-                    <button @click="activeTab = 'surveys'; sidebarOpen = false" :class="activeTab === 'surveys' ? 'bg-brand-white/10 text-brand-white font-semibold shadow-inner' : 'text-brand-white/60 hover:text-brand-white'" class="w-full text-left px-4 py-3 rounded-xl transition flex items-center gap-2 whitespace-nowrap">
-                        📋 Active Surveys
-                    </button>
-                    <button @click="activeTab = 'notifications'; sidebarOpen = false" :class="activeTab === 'notifications' ? 'bg-brand-white/10 text-brand-white font-semibold shadow-inner' : 'text-brand-white/60 hover:text-brand-white'" class="w-full text-left px-4 py-3 rounded-xl transition flex items-center gap-2 whitespace-nowrap">
-                        🔔 Notifications
-                    </button>
+
+                    <!-- Profile & Banking Group -->
+                    <div class="pt-3">
+                        <button type="button" @click="activeTab = 'profile'; sidebarOpen = false"
+                                :class="activeTab === 'profile' ? 'is-active' : ''"
+                                class="merch-nav-item flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition">
+                            <span class="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-white/10 text-xs">P</span>
+                            <span class="font-semibold">Profile &amp; Banking</span>
+                        </button>
+                        <div class="mt-1 space-y-1 pl-9">
+                            <button type="button" @click="activeTab = 'profile'; profileSubTab = 'personal'; sidebarOpen = false"
+                                    :class="activeTab === 'profile' && profileSubTab === 'personal' ? 'text-sky-400 font-bold' : 'text-brand-ash hover:text-brand-white'"
+                                    class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition cursor-pointer">
+                                <span>My Staff Profile</span>
+                            </button>
+                            <button type="button" @click="activeTab = 'profile'; profileSubTab = 'banking'; sidebarOpen = false"
+                                    :class="activeTab === 'profile' && profileSubTab === 'banking' ? 'text-sky-400 font-bold' : 'text-brand-ash hover:text-brand-white'"
+                                    class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition cursor-pointer">
+                                <span>Banking &amp; MoMo Details</span>
+                            </button>
+                            <button type="button" @click="activeTab = 'payroll'; sidebarOpen = false"
+                                    :class="activeTab === 'payroll' ? 'text-sky-400 font-bold' : 'text-brand-ash hover:text-brand-white'"
+                                    class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition cursor-pointer">
+                                <span>Payroll &amp; Deductions</span>
+                            </button>
+                            <button type="button" @click="activeTab = 'leaves'; sidebarOpen = false"
+                                    :class="activeTab === 'leaves' ? 'text-sky-400 font-bold' : 'text-brand-ash hover:text-brand-white'"
+                                    class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition cursor-pointer">
+                                <span>Leaves &amp; Absences</span>
+                            </button>
+                            <button type="button" @click="activeTab = 'claims'; sidebarOpen = false"
+                                    :class="activeTab === 'claims' ? 'text-sky-400 font-bold' : 'text-brand-ash hover:text-brand-white'"
+                                    class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition cursor-pointer">
+                                <span>Petty Cash Claims</span>
+                            </button>
+                            <button type="button" @click="activeTab = 'loans'; sidebarOpen = false"
+                                    :class="activeTab === 'loans' ? 'text-sky-400 font-bold' : 'text-brand-ash hover:text-brand-white'"
+                                    class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition cursor-pointer">
+                                <span>Salary Advances</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="pt-3 space-y-1">
+                        <button type="button" @click="activeTab = 'inventory'; sidebarOpen = false"
+                                :class="activeTab === 'inventory' ? 'is-active' : ''"
+                                class="merch-nav-item flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition">
+                            <span class="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-brand-red/10 text-xs">📁</span>
+                            <span class="font-semibold">Field Gear Check-out</span>
+                        </button>
+
+                        <button type="button" @click="activeTab = 'surveys'; sidebarOpen = false"
+                                :class="activeTab === 'surveys' ? 'is-active' : ''"
+                                class="merch-nav-item flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition">
+                            <span class="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-brand-red/10 text-xs">📋</span>
+                            <span class="font-semibold">Active Surveys</span>
+                        </button>
+
+                        <button type="button" @click="activeTab = 'notifications'; sidebarOpen = false"
+                                :class="activeTab === 'notifications' ? 'is-active' : ''"
+                                class="merch-nav-item flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition">
+                            <span class="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-brand-red/10 text-xs">🔔</span>
+                            <span class="font-semibold">Messages &amp; Announcements</span>
+                        </button>
+                    </div>
+
+                    <!-- Logout in sidebar -->
+                    <div class="mt-6 pt-4 border-t border-brand-white/10">
+                        <form method="POST" action="{{ route('merchandisers.logout') }}">
+                            @csrf
+                            <button type="submit" class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-brand-white/50 hover:text-brand-red hover:bg-brand-red/5 transition">
+                                <span class="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-brand-red/5 text-xs">↩</span>
+                                Log Out
+                            </button>
+                        </form>
+                    </div>
                 </nav>
             </aside>
 
@@ -195,40 +332,37 @@
             <div class="flex min-h-0 flex-1 flex-col min-w-0">
 
                 <!-- Header / Navigation -->
-                <header class="border-b border-brand-white/10 bg-brand-black/60 px-4 py-3 sm:px-6 sm:py-4 lg:px-10 sticky top-0 z-40">
+                <header class="merch-workspace-header sticky top-0 z-40 border-b px-4 py-3 sm:px-6 sm:py-4 lg:px-10">
                     <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-3 sm:gap-4">
                         <div class="flex items-center gap-3">
-                            <!-- Mobile Menu Toggle Button -->
+                            <!-- Sidebar Toggle Button -->
                             <button type="button"
-                                    @click.stop="sidebarOpen = true"
-                                    :aria-expanded="sidebarOpen.toString()"
+                                    @click="toggleSidebar()"
                                     aria-controls="merchandiser-sidebar"
-                                    aria-label="Open navigation menu"
-                                    class="lg:hidden inline-flex items-center rounded-full border border-brand-white/20 px-3 py-2 text-[10px] uppercase tracking-[0.2em] text-brand-white/70 sm:px-4 sm:text-xs sm:tracking-[0.3em]">
-                                Menu
+                                    aria-label="Toggle navigation menu"
+                                    class="inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 text-xs font-extrabold text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition shadow-sm"
+                                    :title="sidebarCollapsed ? 'Expand / Show Sidebar' : 'Collapse / Hide Sidebar'">
+                                <svg class="w-4 h-4 text-brand-red" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                                </svg>
+                                <span class="font-extrabold" x-text="sidebarCollapsed ? 'Show Sidebar ☰' : 'Hide Sidebar ◀'">Hide Sidebar ◀</span>
                             </button>
-                            <span class="text-xs uppercase tracking-[0.2em] font-semibold text-brand-ash hidden sm:inline-block">Field Portal</span>
+                            <span class="text-xs uppercase tracking-[0.2em] font-bold text-slate-900 dark:text-slate-100 hidden sm:inline-block">Field Portal</span>
                         </div>
                         <div class="flex flex-wrap items-center justify-end gap-2 sm:gap-4">
-                            <!-- GPS Status Badge -->
-                            <div id="gps-status-pill" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-brand-white/5 text-brand-white/45 border border-brand-white/10">
-                                <span class="w-2 h-2 rounded-full bg-brand-white/20"></span> Connecting GPS
+                            <!-- Date Badge Pill -->
+                            <div class="hidden md:inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 shadow-sm">
+                                <span class="text-xs">📅</span>
+                                <span>{{ now()->format('D, d M Y') }}</span>
                             </div>
-                            <!-- Theme Toggle Button -->
-                            <button type="button" data-theme-toggle class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-brand-white/20 text-brand-white/70 transition hover:text-brand-white" aria-pressed="false">
-                                <span class="sr-only">Toggle theme</span>
-                                <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                    <circle cx="12" cy="12" r="4.5"></circle>
-                                    <path d="M12 2.5v2.5M12 19v2.5M4.5 12H2M22 12h-2.5M5.8 5.8l1.8 1.8M16.4 16.4l1.8 1.8M18.2 5.8l-1.8 1.8M7.6 16.4l-1.8 1.8"></path>
-                                </svg>
-                                <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                    <path d="M21 14.5A8.5 8.5 0 1 1 9.5 3a7 7 0 0 0 11.5 11.5z"></path>
-                                </svg>
-                            </button>
+                            <!-- GPS Status Badge -->
+                            <div id="gps-status-pill" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> GPS Connected
+                            </div>
                             <!-- Logout Form -->
                             <form method="POST" action="{{ route('merchandisers.logout') }}">
                                 @csrf
-                                <button type="submit" class="p-2 rounded-xl text-brand-white/50 hover:text-brand-red hover:bg-brand-red/10 transition-colors" title="Log Out">
+                                <button type="submit" class="p-2 rounded-xl text-slate-600 dark:text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors" title="Log Out">
                                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                                     </svg>
@@ -240,16 +374,16 @@
 
                 <main id="merchandiser-dashboard-main"
                       data-silent-root
-                      class="main-scrollbar-none min-h-0 flex-1 max-w-6xl w-full mx-auto overflow-y-auto overflow-x-hidden overscroll-contain px-4 py-5 sm:px-6 sm:py-8 lg:px-10 min-w-0 space-y-6">
+                      class="merch-main-content main-scrollbar-none min-h-0 flex-1 max-w-7xl w-full mx-auto overflow-y-auto overflow-x-hidden overscroll-contain px-4 py-5 pb-28 sm:px-6 sm:py-8 sm:pb-28 lg:px-10 lg:pb-8 min-w-0 space-y-6">
 
                     <!-- Welcome Banner -->
-                    <div class="glass-panel rounded-2xl p-6 border border-brand-white/10 bg-brand-black/40 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between hover:border-brand-red/20 transition-all duration-300">
+                    <div x-show="activeTab === 'home'" class="rounded-2xl p-6 border border-sky-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                            <p class="text-xs uppercase tracking-[0.2em] text-brand-ash">Welcome back,</p>
-                            <h1 class="text-3xl font-display text-brand-white mt-1">{{ auth()->user()->name }}</h1>
-                            <p class="text-xs text-brand-white/60 mt-1">
-                                📍 Region: <span class="text-brand-white font-medium">{{ auth()->user()->merchandiserRegion->name ?? 'N/A' }}</span>
-                                | 🏬 KD: <span class="text-brand-white font-medium">{{ auth()->user()->merchandiserKd->name ?? 'N/A' }}</span>
+                            <p class="text-xs uppercase tracking-[0.2em] font-extrabold text-[#0284C7]">Welcome back,</p>
+                            <h1 class="text-3xl font-black text-slate-900 dark:text-white mt-1">{{ auth()->user()->name }}</h1>
+                            <p class="text-xs text-slate-600 dark:text-slate-400 font-medium mt-1">
+                                📍 Region: <span class="text-slate-900 dark:text-white font-bold">{{ auth()->user()->merchandiserRegion->name ?? 'N/A' }}</span>
+                                | 🏬 KD: <span class="text-slate-900 dark:text-white font-bold">{{ auth()->user()->merchandiserKd->name ?? 'N/A' }}</span>
                             </p>
                         </div>
                         @if(isset($error))
@@ -271,12 +405,17 @@
                         </div>
                     @endif
 
-                    @if(auth()->user()->kd_id && auth()->user()->region_id)
                         <!-- Main Content Tab Panel -->
                         <div class="space-y-6">
 
+                            @include('merchandisers.partials.home')
+                            @include('merchandisers.partials.schedule')
+                            @include('merchandisers.partials.kpis')
+                            @include('merchandisers.partials.reports')
+                            @include('merchandisers.partials.messages')
+
                             <!-- TAB 1: OUTLETS & VISITS -->
-                            <div x-show="activeTab === 'outlets'" x-data="{ outletSearch: '' }" style="display: none;">
+                            <div x-show="activeTab === 'outlets'" x-data="{ outletSearch: '' }" x-cloak class="space-y-6">
                                 <!-- Perfect Store Personal Scorecard -->
                                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-3 mb-6">
                                     <div class="glass-panel rounded-2xl border border-lime-500/20 bg-lime-500/5 p-4 flex items-center justify-between shadow-lg">
@@ -313,21 +452,47 @@
                                     </div>
                                 </div>
 
-                                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                    <div class="lg:col-span-2 space-y-4">
+                                <div x-data="{ outletSubTab: 'list' }" class="space-y-6">
+                                    <!-- Sub-Tab Header Navigation Bar -->
+                                    <div class="flex items-center gap-2 border-b border-sky-200 dark:border-slate-800 pb-3 overflow-x-auto scrollbar-none">
+                                        <button type="button" @click="outletSubTab = 'list'"
+                                                :style="outletSubTab === 'list' ? 'background-color: #155EEF !important; color: #ffffff !important;' : 'background-color: #E0F2FE; color: #0C4A6E;'"
+                                                :class="outletSubTab === 'list' ? 'shadow-md font-black' : 'hover:bg-sky-200 font-bold'"
+                                                class="px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition flex items-center gap-2 whitespace-nowrap">
+                                            <span>Assigned Outlets List</span>
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] bg-white/20 text-white font-extrabold">{{ $merchMetrics['assigned_outlets_today'] }}</span>
+                                        </button>
+
+                                        <button type="button" @click="outletSubTab = 'stats'"
+                                                :style="outletSubTab === 'stats' ? 'background-color: #155EEF !important; color: #ffffff !important;' : 'background-color: #E0F2FE; color: #0C4A6E;'"
+                                                :class="outletSubTab === 'stats' ? 'shadow-md font-black' : 'hover:bg-sky-200 font-bold'"
+                                                class="px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition flex items-center gap-2 whitespace-nowrap">
+                                            <span>Field Stats Summary</span>
+                                        </button>
+
+                                        <button type="button" @click="outletSubTab = 'register'"
+                                                :style="outletSubTab === 'register' ? 'background-color: #155EEF !important; color: #ffffff !important;' : 'background-color: #E0F2FE; color: #0C4A6E;'"
+                                                :class="outletSubTab === 'register' ? 'shadow-md font-black' : 'hover:bg-sky-200 font-bold'"
+                                                class="px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition flex items-center gap-2 whitespace-nowrap">
+                                            <span>Register New Outlet</span>
+                                        </button>
+                                    </div>
+
+                                    <!-- SUB-TAB 1: ASSIGNED OUTLETS LIST -->
+                                    <div x-show="outletSubTab === 'list'" class="space-y-5" x-cloak>
                                         <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                                             <div>
-                                                <h2 class="text-xl font-display text-brand-white tracking-wider">🏬 Assigned Outlets ({{ $scheduleLabel ?? ($dayLabels[$selectedDay] ?? 'Selected Day') }})</h2>
-                                                <p class="mt-1 text-xs text-brand-white/45">{{ $merchMetrics['assigned_outlets_today'] }} planned for this view, {{ $merchMetrics['clockins_today'] }} clocked in, {{ $merchMetrics['outlets_scored_today'] }} scored, {{ $merchMetrics['not_covered_today'] }} not covered.</p>
+                                                <h2 class="text-xl font-bold text-slate-900 dark:text-white tracking-tight">🏬 Assigned Outlets ({{ $scheduleLabel ?? ($dayLabels[$selectedDay] ?? 'Selected Day') }})</h2>
+                                                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400 font-medium">{{ $merchMetrics['assigned_outlets_today'] }} planned for this view, {{ $merchMetrics['clockins_today'] }} clocked in, {{ $merchMetrics['outlets_scored_today'] }} scored, {{ $merchMetrics['not_covered_today'] }} not covered.</p>
                                             </div>
                                             <div class="w-full sm:w-80">
-                                                <label class="block text-[10px] uppercase tracking-wider text-brand-ash mb-1">Search outlets</label>
-                                                <input x-model.debounce.150ms="outletSearch" type="search" placeholder="Search outlet name, code, address..." class="w-full rounded-xl border border-brand-white/10 bg-brand-black/40 px-3 py-2 text-sm text-brand-white placeholder:text-brand-white/30 focus:border-brand-red focus:ring-0">
+                                                <label class="block text-[10px] font-extrabold uppercase tracking-wider text-[#0284C7] dark:text-sky-300 mb-1">Search Outlets</label>
+                                                <input x-model.debounce.150ms="outletSearch" type="search" placeholder="Search outlet name, code, address..." class="w-full rounded-xl border border-sky-200 bg-[#F0F9FF] dark:bg-slate-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-sky-400 focus:border-[#155EEF] focus:ring-2 focus:ring-sky-200">
                                             </div>
                                         </div>
 
-                                        <!-- Day Schedule Filter Navigation -->
-                                        <div class="flex flex-wrap items-center gap-1.5 p-1.5 rounded-2xl bg-brand-black/50 border border-brand-white/10 overflow-x-auto scrollbar-none">
+                                        <!-- Day Schedule Filter Bar (Light Blue Theme) -->
+                                        <div class="flex flex-wrap items-center gap-1.5 p-2 rounded-2xl bg-[#E0F2FE] dark:bg-slate-800 border border-sky-200 dark:border-slate-700 overflow-x-auto scrollbar-none">
                                             @foreach(['today' => $dayLabels['today'], '1' => 'Mon', '2' => 'Tue', '3' => 'Wed', '4' => 'Thu', '5' => 'Fri', '6' => 'Sat', '7' => 'Sun', 'all' => 'All Outlets'] as $dayKey => $dayName)
                                                 @php
                                                     $isCurrentDayTab = ($dayKey === 'today' && $selectedDay === 'today') || ($selectedDay === $dayKey);
@@ -335,530 +500,356 @@
                                                     $isTodayPill = ($dayKey === 'today') || ($dayKey === $currentIsoDay);
                                                 @endphp
                                                 <a href="{{ route('merchandisers.dashboard', ['day' => $dayKey]) }}"
-                                                   class="px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap {{ $isCurrentDayTab ? 'bg-brand-red text-white shadow-lg shadow-brand-red/20 font-bold' : 'bg-brand-white/5 text-brand-white/70 hover:bg-brand-white/10 hover:text-white' }}">
+                                                   class="px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap {{ $isCurrentDayTab ? 'bg-[#155EEF] text-white shadow-md' : 'bg-white text-[#0C4A6E] hover:bg-sky-100 dark:bg-slate-700 dark:text-white' }}">
                                                     <span>{{ $dayName }}</span>
                                                     @if($isTodayPill && $dayKey !== 'today')
                                                         <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
                                                     @endif
-                                                    <span class="px-1.5 py-0.5 rounded-md text-[10px] {{ $isCurrentDayTab ? 'bg-black/30 text-white' : 'bg-brand-white/10 text-brand-white/60' }}">
+                                                    <span class="px-1.5 py-0.5 rounded-md text-[10px] {{ $isCurrentDayTab ? 'bg-white/20 text-white' : 'bg-sky-100 text-[#0C4A6E] dark:bg-slate-600 dark:text-slate-200' }}">
                                                         {{ $count }}
                                                     </span>
                                                 </a>
                                             @endforeach
                                         </div>
 
-                                        <div class="glass-panel rounded-2xl p-5 border border-emerald-500/20 bg-emerald-500/5 space-y-4">
+                                        <!-- Outlet Visit Window Box (Light Blue Theme) -->
+                                        <div class="rounded-2xl p-5 border border-sky-200 bg-[#F0F9FF] dark:bg-slate-900 space-y-4 shadow-sm">
                                             <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                                 <div>
-                                                    <p class="text-xs uppercase tracking-[0.2em] text-emerald-300">Outlet Visit Window</p>
-                                                    <h3 class="mt-1 text-lg font-bold text-brand-white">{{ $clockWindow['start_at']->format('g:i A') }} - {{ $clockWindow['end_at']->format('g:i A') }}</h3>
-                                                    <p class="mt-1 text-xs text-brand-white/55">Clock in and clock out at every assigned outlet during this window. Perfect Store entry becomes available after the outlet clock-in.</p>
+                                                    <p class="text-xs font-extrabold uppercase tracking-widest text-[#0284C7]">Outlet Visit Window</p>
+                                                    <h3 class="mt-1 text-xl font-black text-slate-900 dark:text-white">{{ $clockWindow['start_at']->format('g:i A') }} - {{ $clockWindow['end_at']->format('g:i A') }}</h3>
+                                                    <p class="mt-1 text-xs text-slate-600 dark:text-slate-400 font-medium">Clock in and clock out at every assigned outlet during this window. Perfect Store entry becomes available after the outlet clock-in.</p>
                                                 </div>
                                                 <div class="grid w-full grid-cols-3 gap-2 sm:w-auto sm:min-w-[22rem]">
-                                                    <div class="rounded-xl border border-brand-white/10 bg-brand-black/30 px-3 py-2 text-center">
-                                                        <p class="text-[10px] uppercase tracking-wider text-brand-white/40">Scheduled</p>
-                                                        <p class="mt-1 text-lg font-black text-brand-white">{{ $merchMetrics['total_outlets'] }}</p>
+                                                    <div class="rounded-xl border border-sky-200 bg-white dark:bg-slate-800 px-3 py-2.5 text-center shadow-xs">
+                                                        <p class="text-[10px] font-extrabold uppercase tracking-wider text-sky-700 dark:text-sky-300">Scheduled</p>
+                                                        <p class="mt-1 text-xl font-black text-slate-900 dark:text-white">{{ $merchMetrics['total_outlets'] }}</p>
                                                     </div>
-                                                    <div class="rounded-xl border border-brand-white/10 bg-brand-black/30 px-3 py-2 text-center">
-                                                        <p class="text-[10px] uppercase tracking-wider text-brand-white/40">Clocked In</p>
-                                                        <p class="mt-1 text-lg font-black text-sky-300">{{ $merchMetrics['clockins_today'] }}</p>
+                                                    <div class="rounded-xl border border-sky-200 bg-white dark:bg-slate-800 px-3 py-2.5 text-center shadow-xs">
+                                                        <p class="text-[10px] font-extrabold uppercase tracking-wider text-sky-700 dark:text-sky-300">Clocked In</p>
+                                                        <p class="mt-1 text-xl font-black text-blue-600 dark:text-blue-400">{{ $merchMetrics['clockins_today'] }}</p>
                                                     </div>
-                                                    <div class="rounded-xl border border-brand-white/10 bg-brand-black/30 px-3 py-2 text-center">
-                                                        <p class="text-[10px] uppercase tracking-wider text-brand-white/40">Scored</p>
-                                                        <p class="mt-1 text-lg font-black text-emerald-300">{{ $merchMetrics['outlets_scored_today'] }}</p>
+                                                    <div class="rounded-xl border border-sky-200 bg-white dark:bg-slate-800 px-3 py-2.5 text-center shadow-xs">
+                                                        <p class="text-[10px] font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Scored</p>
+                                                        <p class="mt-1 text-xl font-black text-emerald-600 dark:text-emerald-400">{{ $merchMetrics['outlets_scored_today'] }}</p>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
-                                        
-                                        <div class="glass-panel rounded-2xl p-5 border border-brand-white/10 bg-brand-black/40 space-y-4">
-                                            <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                                                <div>
-                                                    <p class="text-xs uppercase tracking-[0.2em] text-brand-ash">Add outlet for {{ auth()->user()->merchandiserKd->name ?? 'your KD' }}</p>
-                                                    <h3 class="text-lg font-bold text-brand-white mt-1">Register an Outlet</h3>
-                                                    <p class="text-xs text-brand-white/50 mt-1">Stand at the outlet before saving. The system captures and locks your GPS automatically for future clock-ins.</p>
+
+                                        <!-- Outlet List Cards -->
+                                        @php
+                                            $assignmentsByOutlet = $todaysAssignments->keyBy('outlet_id');
+                                        @endphp
+
+                                        <div class="space-y-4">
+                                            @forelse($outlets as $outlet)
+                                                @php
+                                                    $timezone = auth()->user()->merchandiserRegion->timezone ?? 'Africa/Accra';
+                                                    $localNow = \Carbon\Carbon::now($timezone);
+                                                    $routeAssignment = $assignmentsByOutlet->get($outlet->id);
+                                                    $attendance = $outletAttendanceByOutlet->get($outlet->id);
+                                                    $hasClockedIn = (bool) $attendance;
+                                                    $hasClockedOut = (bool) ($attendance?->clock_out_time);
+                                                    $hasScored = $routeAssignment?->status === 'completed'
+                                                        || (bool) ($routeAssignment?->visit_id)
+                                                        || $scoredOutletIdsToday->contains($outlet->id);
+                                                    $visitOpen = $localNow->betweenIncluded($clockWindow['start_at'], $clockWindow['end_at']);
+                                                    $searchText = strtolower($outlet->name . ' ' . $outlet->code . ' ' . $outlet->address);
+                                                    $statusLabel = $hasScored ? 'Scored' : ($hasClockedOut ? 'Visited' : ($hasClockedIn ? 'Clocked In' : 'Not Covered'));
+                                                    $statusClass = $hasScored
+                                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
+                                                        : ($hasClockedOut
+                                                            ? 'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300'
+                                                            : ($hasClockedIn
+                                                                ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300'
+                                                                : 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300'));
+                                                @endphp
+
+                                                <div id="outlet-card-{{ $outlet->id }}" x-show="outletSearch === '' || @js($searchText).includes(outletSearch.toLowerCase())" class="rounded-2xl p-5 border border-sky-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm hover:shadow-md transition-all space-y-4">
+                                                    <div class="flex items-start justify-between gap-3 flex-wrap">
+                                                        <div>
+                                                            <span class="inline-flex px-2.5 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wider bg-blue-100 text-blue-700 mb-2">
+                                                                {{ $outlet->channel_type }}
+                                                            </span>
+                                                            @if($routeAssignment)
+                                                                <span class="ml-2 inline-flex px-2.5 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wider bg-amber-100 text-amber-800">
+                                                                    Stop {{ $routeAssignment->sequence }} / {{ $routeAssignment->status }}
+                                                                </span>
+                                                            @endif
+                                                            <span class="ml-2 inline-flex px-2.5 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wider {{ $statusClass }}">
+                                                                {{ $statusLabel }}
+                                                            </span>
+                                                            <h3 class="text-lg font-bold text-slate-900 dark:text-white">{{ $outlet->name }}</h3>
+                                                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
+                                                                Code: {{ $outlet->code }}
+                                                                @if($outlet->address)
+                                                                    | {{ $outlet->address }}
+                                                                @endif
+                                                            </p>
+                                                        </div>
+                                                        <div class="rounded-xl border border-sky-200 bg-[#F0F9FF] dark:bg-slate-800 px-4 py-2 text-xs font-bold text-[#0284C7]">
+                                                            PJP Outlet Visit
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-sky-100 dark:border-slate-800">
+                                                        <div class="rounded-xl border border-sky-100 bg-[#F0F9FF] dark:bg-slate-800 p-3">
+                                                            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Clock-in</p>
+                                                            <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
+                                                                {{ $attendance?->clock_in_time ? $attendance->clock_in_time->timezone($timezone)->format('H:i') : 'Not started' }}
+                                                            </p>
+                                                        </div>
+                                                        <div class="rounded-xl border border-sky-100 bg-[#F0F9FF] dark:bg-slate-800 p-3">
+                                                            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Clock-out</p>
+                                                            <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
+                                                                {{ $attendance?->clock_out_time ? $attendance->clock_out_time->timezone($timezone)->format('H:i') : 'Pending' }}
+                                                            </p>
+                                                        </div>
+                                                        <div class="rounded-xl border border-sky-100 bg-[#F0F9FF] dark:bg-slate-800 p-3">
+                                                            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Visit Time</p>
+                                                            <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">
+                                                                {{ $attendance?->visit_duration_minutes !== null ? $attendance->visit_duration_minutes.' min' : 'Calculates at clock-out' }}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="flex flex-col gap-2 border-t border-sky-100 dark:border-slate-800 pt-3 sm:flex-row sm:items-center">
+                                                        @if(! $hasClockedIn)
+                                                            @if($visitOpen)
+                                                                <form method="POST" action="{{ route('merchandisers.clock-in') }}" class="sm:w-48" data-clock-form data-clock-verb="Clocking in">
+                                                                    @csrf
+                                                                    <input type="hidden" name="outlet_id" value="{{ $outlet->id }}">
+                                                                    <input type="hidden" name="clock_in_type" value="outlet">
+                                                                    <input type="hidden" name="latitude" class="user-lat-input">
+                                                                    <input type="hidden" name="longitude" class="user-lng-input">
+                                                                    <button type="submit" data-clock-submit class="w-full py-2.5 bg-[#155EEF] hover:bg-blue-700 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-md">
+                                                                        Clock In
+                                                                    </button>
+                                                                </form>
+                                                            @else
+                                                                <div class="rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-center text-xs font-bold uppercase tracking-wider text-slate-400 sm:w-48">
+                                                                    Window Closed
+                                                                </div>
+                                                            @endif
+                                                        @else
+                                                            <a href="{{ route('merchandisers.visit', $outlet) }}" class="inline-flex justify-center rounded-xl bg-[#155EEF] px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-blue-700 sm:w-56 shadow-md">
+                                                                Perfect Store Entry
+                                                            </a>
+                                                        @endif
+
+                                                        @if($hasClockedIn && ! $hasClockedOut)
+                                                            @if($hasScored)
+                                                                <form method="POST" action="{{ route('merchandisers.clock-out') }}" class="sm:w-48" data-clock-form data-clock-verb="Clocking out">
+                                                                    @csrf
+                                                                    <input type="hidden" name="outlet_id" value="{{ $outlet->id }}">
+                                                                    <input type="hidden" name="latitude" class="user-lat-input">
+                                                                    <input type="hidden" name="longitude" class="user-lng-input">
+                                                                    <button type="submit" data-clock-submit class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition shadow-md">
+                                                                        Clock Out
+                                                                    </button>
+                                                                </form>
+                                                            @else
+                                                                <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs font-semibold text-amber-800">
+                                                                    Complete the Perfect Store entry before clock-out.
+                                                                </div>
+                                                            @endif
+                                                        @elseif($hasClockedOut)
+                                                            <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-emerald-700 sm:w-48 text-center">
+                                                                Clocked Out
+                                                            </div>
+                                                        @endif
+                                                    </div>
                                                 </div>
-                                                <span class="inline-flex w-fit rounded-full border border-green-500/20 bg-green-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-green-400">
+                                            @empty
+                                                <div class="rounded-2xl p-8 border border-sky-100 bg-white text-center space-y-4 shadow-sm">
+                                                    <div class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-blue-600 text-xl">
+                                                        🏬
+                                                    </div>
+                                                    <div>
+                                                        <h3 class="text-base font-bold text-slate-900 dark:text-white">No outlets registered for your Key Distributor yet.</h3>
+                                                        <p class="mt-1 text-xs text-slate-500 max-w-md mx-auto">
+                                                            No route stops found for {{ $dayLabels[$selectedDay] ?? 'this day' }}. Use the registration sub-tab above to add outlets.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            @endforelse
+                                        </div>
+                                    </div>
+
+                                    <!-- SUB-TAB 2: FIELD STATS SUMMARY (Standalone Expanded Full-Width Section) -->
+                                    <div x-show="outletSubTab === 'stats'" class="space-y-6" x-cloak>
+                                        <div class="rounded-2xl p-6 border border-sky-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-md">
+                                            <div class="flex items-center justify-between border-b border-sky-100 dark:border-slate-800 pb-4 mb-6">
+                                                <div>
+                                                    <h2 class="text-xl font-black text-slate-900 dark:text-white">📊 Field Execution Stats Summary</h2>
+                                                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400 font-medium">Comprehensive daily performance breakdown across your assigned route</p>
+                                                </div>
+                                                <span class="px-3 py-1 rounded-xl bg-blue-100 text-blue-700 font-bold text-xs">{{ now()->format('d M Y') }}</span>
+                                            </div>
+
+                                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                                <div class="p-5 rounded-2xl bg-[#F0F9FF] border border-sky-200 dark:bg-slate-800/80 text-center shadow-sm">
+                                                    <p class="text-xs font-bold uppercase tracking-wider text-[#0284C7] dark:text-sky-300">Outlets Clocked In</p>
+                                                    <p class="text-3xl font-black text-slate-900 dark:text-white mt-2">{{ $merchMetrics['outlets_visited_today'] }}</p>
+                                                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">of {{ $merchMetrics['total_outlets'] }} planned</p>
+                                                </div>
+
+                                                <div class="p-5 rounded-2xl bg-amber-50 border border-amber-200 dark:bg-amber-500/10 text-center shadow-sm">
+                                                    <p class="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">Not Covered</p>
+                                                    <p class="text-3xl font-black text-amber-600 dark:text-amber-400 mt-2">{{ $merchMetrics['not_covered_today'] }}</p>
+                                                    <p class="text-xs text-amber-700/80 dark:text-amber-300/80 mt-1">by outlet clock-in</p>
+                                                </div>
+
+                                                <div class="p-5 rounded-2xl bg-emerald-50 border border-emerald-200 dark:bg-emerald-500/10 text-center shadow-sm">
+                                                    <p class="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">Scored Today</p>
+                                                    <p class="text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-2">{{ $merchMetrics['outlets_scored_today'] }}</p>
+                                                    <p class="text-xs text-emerald-700/80 dark:text-emerald-300/80 mt-1">{{ $merchMetrics['coverage_today'] }}% scored coverage</p>
+                                                </div>
+
+                                                <div class="p-5 rounded-2xl bg-blue-50 border border-blue-200 dark:bg-blue-500/10 text-center shadow-sm">
+                                                    <p class="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300">Visit Time Today</p>
+                                                    <p class="text-3xl font-black text-blue-600 dark:text-blue-400 mt-2">{{ sprintf('%02d:%02d', intdiv((int) ($merchMetrics['total_visit_minutes_today'] ?? 0), 60), ((int) ($merchMetrics['total_visit_minutes_today'] ?? 0)) % 60) }}</p>
+                                                    <p class="text-xs text-blue-700/80 dark:text-blue-300/80 mt-1">total tracked visit duration</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- SUB-TAB 3: REGISTER NEW OUTLET -->
+                                    <div x-show="outletSubTab === 'register'" class="space-y-6" x-cloak>
+                                        <div class="rounded-2xl p-6 border border-sky-200 bg-white dark:bg-slate-900 shadow-md space-y-4">
+                                            <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between border-b border-sky-100 pb-4">
+                                                <div>
+                                                    <p class="text-xs font-extrabold uppercase tracking-widest text-[#0284C7]">Add Outlet for {{ auth()->user()->merchandiserKd->name ?? 'your KD' }}</p>
+                                                    <h3 class="text-xl font-black text-slate-900 dark:text-white mt-1">Register an Outlet</h3>
+                                                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Stand at the outlet before saving. The system captures and locks your GPS automatically for future clock-ins.</p>
+                                                </div>
+                                                <span class="inline-flex w-fit rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700">
                                                     GPS fills automatically
                                                 </span>
                                             </div>
 
-                                            <form method="POST" action="{{ route('merchandisers.outlets.store') }}" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-3" data-requires-gps-form>
+                                            <form method="POST" action="{{ route('merchandisers.outlets.store') }}" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-4 pt-2" data-requires-gps-form>
                                                 @csrf
                                                 <input type="hidden" name="latitude" class="user-lat-input">
                                                 <input type="hidden" name="longitude" class="user-lng-input">
 
                                                 <div class="xl:col-span-2">
-                                                    <label class="block text-[10px] uppercase tracking-wider text-brand-ash mb-1">Outlet Name *</label>
-                                                    <input type="text" name="name" value="{{ old('name') }}" required placeholder="e.g. Osu Main Shop" class="w-full rounded-xl border border-brand-white/10 bg-brand-black/40 px-3 py-2 text-sm text-brand-white placeholder:text-brand-white/30 focus:border-brand-red focus:ring-0">
+                                                    <label class="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">Outlet Name *</label>
+                                                    <input type="text" name="name" value="{{ old('name') }}" required placeholder="e.g. Osu Main Shop" class="w-full rounded-xl border border-sky-200 bg-[#F0F9FF] dark:bg-slate-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:border-[#155EEF]">
                                                 </div>
                                                 <div>
-                                                    <label class="block text-[10px] uppercase tracking-wider text-brand-ash mb-1">Outlet Code</label>
-                                                    <input type="text" name="code" value="{{ old('code') }}" placeholder="Optional" class="w-full rounded-xl border border-brand-white/10 bg-brand-black/40 px-3 py-2 text-sm text-brand-white placeholder:text-brand-white/30 focus:border-brand-red focus:ring-0">
+                                                    <label class="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">Outlet Code</label>
+                                                    <input type="text" name="code" value="{{ old('code') }}" placeholder="Optional" class="w-full rounded-xl border border-sky-200 bg-[#F0F9FF] dark:bg-slate-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:border-[#155EEF]">
                                                 </div>
                                                 <div>
-                                                    <label class="block text-[10px] uppercase tracking-wider text-brand-ash mb-1">Channel *</label>
-                                                    <select name="channel_type" required class="w-full rounded-xl border border-brand-white/10 bg-brand-black/40 px-3 py-2 text-sm text-brand-white focus:border-brand-red focus:ring-0">
+                                                    <label class="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">Channel *</label>
+                                                    <select name="channel_type" required class="w-full rounded-xl border border-sky-200 bg-[#F0F9FF] dark:bg-slate-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:border-[#155EEF]">
                                                         <option value="GT" {{ old('channel_type', 'GT') === 'GT' ? 'selected' : '' }}>GT</option>
                                                         <option value="SSM" {{ old('channel_type') === 'SSM' ? 'selected' : '' }}>SSM</option>
                                                     </select>
                                                 </div>
                                                 <div class="sm:col-span-2 xl:col-span-2">
-                                                    <label class="block text-[10px] uppercase tracking-wider text-brand-ash mb-1">Address</label>
-                                                    <input type="text" name="address" value="{{ old('address') }}" placeholder="Outlet address / landmark" class="w-full rounded-xl border border-brand-white/10 bg-brand-black/40 px-3 py-2 text-sm text-brand-white placeholder:text-brand-white/30 focus:border-brand-red focus:ring-0">
+                                                    <label class="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">Address</label>
+                                                    <input type="text" name="address" value="{{ old('address') }}" placeholder="Outlet address / landmark" class="w-full rounded-xl border border-sky-200 bg-[#F0F9FF] dark:bg-slate-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:border-[#155EEF]">
                                                 </div>
-                                                <div class="sm:col-span-2 xl:col-span-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                                    <p class="text-[11px] text-brand-white/45">GPS is captured from your device. Coordinates are locked after saving and can only be corrected by admin.</p>
-                                                    <button type="submit" class="rounded-xl bg-brand-red px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white hover:bg-red-600 transition-all">
+                                                <div class="sm:col-span-2 xl:col-span-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pt-2">
+                                                    <p class="text-[11px] text-slate-500 font-medium">GPS is captured from your device. Coordinates are locked after saving and can only be corrected by admin.</p>
+                                                    <button type="submit" class="rounded-xl bg-[#155EEF] px-6 py-3 text-xs font-bold uppercase tracking-wider text-white hover:bg-blue-700 transition-all shadow-md">
                                                         Add Outlet
                                                     </button>
                                                 </div>
                                             </form>
-                                        </div>
-
-                                        <div class="glass-panel rounded-2xl p-5 border border-brand-white/10 bg-brand-black/40">
-                                            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                                <div>
-                                                    <p class="text-xs uppercase tracking-[0.2em] text-brand-ash">Outlet closure list</p>
-                                                    <h3 class="mt-1 text-lg font-bold text-brand-white">{{ $merchMetrics['not_covered_today'] }} not covered of {{ $merchMetrics['total_outlets'] }}</h3>
-                                                </div>
-                                                <span class="inline-flex w-fit rounded-full border border-green-500/20 bg-green-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-green-400">
-                                                    {{ $merchMetrics['coverage_today'] }}% scored coverage
-                                                </span>
-                                            </div>
-                                            <div class="mt-4 grid gap-2 sm:grid-cols-2">
-                                                @forelse($pendingOutletsToday as $pendingOutlet)
-                                                    <a href="#outlet-card-{{ $pendingOutlet->id }}" onclick="highlightOutletCard({{ $pendingOutlet->id }}); return false;" class="block rounded-xl border border-brand-white/10 bg-brand-white/[0.04] hover:bg-brand-white/[0.08] hover:border-brand-red/40 transition-all p-3 group">
-                                                        <div class="flex items-center justify-between gap-2">
-                                                            <div>
-                                                                <p class="text-xs font-semibold text-brand-white group-hover:text-brand-red transition-colors">{{ $pendingOutlet->name }}</p>
-                                                                <p class="mt-0.5 text-[10px] text-brand-white/40">{{ $pendingOutlet->address ?: $pendingOutlet->code }}</p>
-                                                            </div>
-                                                            <span class="text-[10px] uppercase font-bold text-brand-red tracking-wider shrink-0 bg-brand-red/10 border border-brand-red/20 px-2 py-1 rounded-lg group-hover:bg-brand-red group-hover:text-white transition-all">
-                                                                Clock-In &rarr;
-                                                            </span>
-                                                        </div>
-                                                    </a>
-                                                @empty
-                                                    <div class="rounded-xl border border-green-500/20 bg-green-500/10 px-3 py-3 text-xs font-semibold text-green-400 sm:col-span-2">
-                                                        Every listed outlet has been clocked in today.
-                                                    </div>
-                                                @endforelse
-                                            </div>
-                                        </div>
-
-                                        @php
-                                            $assignmentsByOutlet = $todaysAssignments->keyBy('outlet_id');
-                                        @endphp
-
-                                        @forelse($outlets as $outlet)
-                                            @php
-                                                $timezone = auth()->user()->merchandiserRegion->timezone ?? 'Africa/Accra';
-                                                $localNow = \Carbon\Carbon::now($timezone);
-                                                $routeAssignment = $assignmentsByOutlet->get($outlet->id);
-                                                $attendance = $outletAttendanceByOutlet->get($outlet->id);
-                                                $hasClockedIn = (bool) $attendance;
-                                                $hasClockedOut = (bool) ($attendance?->clock_out_time);
-                                                $hasScored = $routeAssignment?->status === 'completed'
-                                                    || (bool) ($routeAssignment?->visit_id)
-                                                    || $scoredOutletIdsToday->contains($outlet->id);
-                                                $visitOpen = $localNow->betweenIncluded($clockWindow['start_at'], $clockWindow['end_at']);
-                                                $searchText = strtolower($outlet->name . ' ' . $outlet->code . ' ' . $outlet->address);
-                                                $statusLabel = $hasScored ? 'Scored' : ($hasClockedOut ? 'Visited' : ($hasClockedIn ? 'Clocked In' : 'Not Covered'));
-                                                $statusClass = $hasScored
-                                                    ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
-                                                    : ($hasClockedOut
-                                                        ? 'bg-sky-500/10 text-sky-300 border-sky-500/20'
-                                                        : ($hasClockedIn
-                                                            ? 'bg-amber-500/10 text-amber-200 border-amber-500/20'
-                                                            : 'bg-brand-red/10 text-brand-red border-brand-red/20'));
-                                            @endphp
-                                            
-                                            <div id="outlet-card-{{ $outlet->id }}" x-show="outletSearch === '' || @js($searchText).includes(outletSearch.toLowerCase())" class="glass-panel rounded-2xl p-5 border border-brand-white/10 bg-brand-black/40 hover:border-brand-red/20 hover:shadow-[0_0_15px_rgba(239,68,68,0.05)] transition-all duration-300 space-y-4">
-                                                <div class="flex items-start justify-between gap-3 flex-wrap">
-                                                    <div>
-                                                        <span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-brand-red/10 text-brand-red border border-brand-red/20 mb-2">
-                                                            {{ $outlet->channel_type }}
-                                                        </span>
-                                                        @if($routeAssignment)
-                                                            <span class="ml-2 inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider {{ $routeAssignment->status === 'completed' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-amber-500/10 text-amber-300 border border-amber-500/20' }}">
-                                                                Stop {{ $routeAssignment->sequence }} / {{ $routeAssignment->status }}
-                                                            </span>
-                                                        @endif
-                                                        <span class="ml-2 inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border {{ $statusClass }}">
-                                                            {{ $statusLabel }}
-                                                        </span>
-                                                        <h3 class="text-lg font-bold text-brand-white">{{ $outlet->name }}</h3>
-                                                        <p class="text-xs text-brand-white/50 mt-1">
-                                                            Code: {{ $outlet->code }}
-                                                            @if($outlet->address)
-                                                                | {{ $outlet->address }}
-                                                            @endif
-                                                        </p>
-                                                        <p class="mt-1 text-[10px] text-brand-white/35">
-                                                            Registered by {{ $outlet->registeredBy?->name ?? 'Brands / System' }}
-                                                            @if($outlet->created_at)
-                                                                on {{ $outlet->created_at->format('d M Y') }}
-                                                            @endif
-                                                        </p>
-                                                        <div class="mt-2 flex flex-wrap items-center gap-2">
-                                                            @if($outlet->coordinates_locked_at)
-                                                                <span class="inline-flex rounded-full border border-green-500/20 bg-green-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-green-300">GPS locked</span>
-                                                            @else
-                                                                <span class="inline-flex rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-200">GPS needs capture</span>
-                                                                <form method="POST" action="{{ route('merchandisers.outlets.coordinates.update', $outlet) }}" class="inline-flex items-center gap-2" data-requires-gps-form>
-                                                                    @csrf
-                                                                    @method('PATCH')
-                                                                    <input type="hidden" name="latitude" class="user-lat-input">
-                                                                    <input type="hidden" name="longitude" class="user-lng-input">
-                                                                    <button type="submit" class="rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-100 hover:bg-amber-500/20 transition">
-                                                                        Capture GPS
-                                                                    </button>
-                                                                </form>
-                                                            @endif
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    <div class="rounded-xl border border-brand-white/10 bg-brand-white/[0.04] px-4 py-2 text-xs text-brand-white/60">
-                                                        PJP outlet visit
-                                                    </div>
-                                                </div>
-
-                                                <!-- Outlet Visit Controls -->
-                                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-brand-white/5">
-                                                    <div class="rounded-xl border border-brand-white/5 bg-brand-black/20 p-3">
-                                                        <p class="text-[10px] uppercase tracking-wider text-brand-white/40">Clock-in</p>
-                                                        <p class="mt-1 text-sm font-bold text-brand-white">
-                                                            {{ $attendance?->clock_in_time ? $attendance->clock_in_time->timezone($timezone)->format('H:i') : 'Not started' }}
-                                                        </p>
-                                                    </div>
-                                                    <div class="rounded-xl border border-brand-white/5 bg-brand-black/20 p-3">
-                                                        <p class="text-[10px] uppercase tracking-wider text-brand-white/40">Clock-out</p>
-                                                        <p class="mt-1 text-sm font-bold text-brand-white">
-                                                            {{ $attendance?->clock_out_time ? $attendance->clock_out_time->timezone($timezone)->format('H:i') : 'Pending' }}
-                                                        </p>
-                                                    </div>
-                                                    <div class="rounded-xl border border-brand-white/5 bg-brand-black/20 p-3">
-                                                        <p class="text-[10px] uppercase tracking-wider text-brand-white/40">Visit Time</p>
-                                                        <p class="mt-1 text-sm font-bold text-brand-white">
-                                                            {{ $attendance?->visit_duration_minutes !== null ? $attendance->visit_duration_minutes.' min' : 'Calculates at clock-out' }}
-                                                        </p>
-                                                    </div>
-                                                </div>
-
-                                                <div class="flex flex-col gap-2 border-t border-brand-white/5 pt-3 sm:flex-row sm:items-center">
-                                                    @if(! $hasClockedIn)
-                                                        @if($visitOpen)
-                                                            <form method="POST" action="{{ route('merchandisers.clock-in') }}" class="sm:w-48" data-clock-form data-clock-verb="Clocking in">
-                                                                @csrf
-                                                                <input type="hidden" name="outlet_id" value="{{ $outlet->id }}">
-                                                                <input type="hidden" name="clock_in_type" value="outlet">
-                                                                <input type="hidden" name="latitude" class="user-lat-input">
-                                                                <input type="hidden" name="longitude" class="user-lng-input">
-                                                                <button type="submit" data-clock-submit class="w-full py-2.5 bg-brand-red hover:bg-red-600 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-md">
-                                                                    Clock In
-                                                                </button>
-                                                            </form>
-                                                        @else
-                                                            <div class="rounded-xl border border-brand-white/10 bg-brand-white/5 px-4 py-2.5 text-center text-xs font-bold uppercase tracking-wider text-brand-white/35 sm:w-48">
-                                                                Window Closed
-                                                            </div>
-                                                        @endif
-                                                    @else
-                                                        <a href="{{ route('merchandisers.visit', $outlet) }}" class="inline-flex justify-center rounded-xl bg-brand-red px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-red-600 sm:w-56">
-                                                            Perfect Store Entry
-                                                        </a>
-                                                    @endif
-
-                                                    @if($hasClockedIn && ! $hasClockedOut)
-                                                        @if($hasScored)
-                                                            <form method="POST" action="{{ route('merchandisers.clock-out') }}" class="sm:w-48" data-clock-form data-clock-verb="Clocking out">
-                                                                @csrf
-                                                                <input type="hidden" name="outlet_id" value="{{ $outlet->id }}">
-                                                                <input type="hidden" name="latitude" class="user-lat-input">
-                                                                <input type="hidden" name="longitude" class="user-lng-input">
-                                                                <button type="submit" data-clock-submit class="w-full py-2.5 border border-emerald-500/30 bg-emerald-500/10 text-emerald-200 text-xs font-bold uppercase tracking-wider rounded-xl transition hover:bg-emerald-500/20">
-                                                                    Clock Out
-                                                                </button>
-                                                            </form>
-                                                        @else
-                                                            <div class="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-2.5 text-xs font-semibold text-amber-100">
-                                                                Complete the Perfect Store entry before clock-out.
-                                                            </div>
-                                                        @endif
-                                                    @elseif($hasClockedOut)
-                                                        <div class="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-emerald-300 sm:w-48 text-center">
-                                                            Clocked Out
-                                                        </div>
-                                                    @endif
-                                                </div>
-                                            </div>
-                                        @empty
-                                            <div class="glass-panel rounded-2xl p-8 border border-brand-white/10 bg-brand-black/40 text-center space-y-4">
-                                                <div class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-white/5 text-brand-white/40 text-xl">
-                                                    🏬
-                                                </div>
-                                                <div>
-                                                    <h3 class="text-base font-bold text-brand-white">No outlets registered for your Key Distributor yet.</h3>
-                                                    <p class="mt-1 text-xs text-brand-white/50 max-w-md mx-auto">
-                                                        No route stops found for {{ $dayLabels[$selectedDay] ?? 'this day' }}. Use the registration form above to add your outlets under {{ auth()->user()->merchandiserKd->name ?? 'your KD' }}.
-                                                    </p>
-                                                </div>
-                                                @if($selectedDay !== 'all')
-                                                    <a href="{{ route('merchandisers.dashboard', ['day' => 'all']) }}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-red text-white text-xs font-bold uppercase tracking-wider hover:bg-red-600 transition-all shadow-lg">
-                                                        Show All Outlets ({{ $dayOutletCounts['all'] ?? 0 }})
-                                                    </a>
-                                                @endif
-                                            </div>
-                                        @endforelse
-                                    </div>
-
-                                    <!-- Right performance widgets -->
-                                    <div class="space-y-4">
-                                        <h2 class="text-xl font-display text-brand-white tracking-wider">📊 Stats Summary</h2>
-                                        <div class="glass-panel rounded-2xl p-5 border border-brand-white/10 bg-brand-black/40 space-y-6">
-                                            <div class="grid grid-cols-2 gap-3 text-center">
-                                                <div class="p-3 bg-brand-white/5 rounded-xl border border-brand-white/5">
-                                                    <p class="text-[10px] text-brand-white/40 uppercase tracking-wider">Outlets Clocked In</p>
-                                                    <p class="text-xl font-bold text-green-400 mt-1">{{ $merchMetrics['outlets_visited_today'] }}</p>
-                                                    <p class="text-[10px] text-brand-white/35">of {{ $merchMetrics['total_outlets'] }}</p>
-                                                </div>
-                                                <div class="p-3 bg-brand-white/5 rounded-xl border border-brand-white/5">
-                                                    <p class="text-[10px] text-brand-white/40 uppercase tracking-wider">Not Covered</p>
-                                                    <p class="text-xl font-bold text-amber-400 mt-1">{{ $merchMetrics['not_covered_today'] }}</p>
-                                                    <p class="text-[10px] text-brand-white/35">by outlet clock-in</p>
-                                                </div>
-                                                <div class="p-3 bg-brand-white/5 rounded-xl border border-brand-white/5">
-                                                    <p class="text-[10px] text-brand-white/40 uppercase tracking-wider">Scored Today</p>
-                                                    <p class="text-xl font-bold text-blue-400 mt-1">{{ $merchMetrics['outlets_scored_today'] }}</p>
-                                                    <p class="text-[10px] text-brand-white/35">{{ $merchMetrics['coverage_today'] }}% coverage</p>
-                                                </div>
-                                                <div class="p-3 bg-brand-white/5 rounded-xl border border-brand-white/5">
-                                                    <p class="text-[10px] text-brand-white/40 uppercase tracking-wider">Visit Time Today</p>
-                                                    <p class="text-xl font-bold text-emerald-400 mt-1">{{ $merchMetrics['total_visit_minutes_today'] }} min</p>
-                                                    <p class="text-[10px] text-brand-white/35">tracked visit duration</p>
-                                                </div>
-                                            </div>
-                                            <div class="rounded-xl border border-brand-white/10 bg-brand-white/[0.04] p-4">
-                                                <div class="flex items-center justify-between gap-3">
-                                                    <p class="text-[10px] uppercase tracking-wider text-brand-white/45">Monthly outlets covered</p>
-                                                    <p class="text-lg font-bold text-brand-white">{{ $merchMetrics['outlets_covered_month'] }}</p>
-                                                </div>
-                                                <div class="mt-3 h-2 overflow-hidden rounded-full bg-brand-white/10">
-                                                    @php
-                                                        $coveragePercent = (float) ($merchMetrics['monthly_coverage_rate'] ?? 0);
-                                                    @endphp
-                                                    <div class="h-full rounded-full bg-brand-red" style="width: {{ $coveragePercent }}%"></div>
-                                                </div>
-                                                <p class="mt-2 text-[10px] text-brand-white/35">{{ $coveragePercent }}% of {{ $merchMetrics['registered_outlets'] }} registered outlets this month</p>
-                                            </div>
-                                            <div class="space-y-2">
-                                                <h4 class="text-[10px] uppercase tracking-wider text-brand-white/60 font-semibold">Outlet coverage snapshot</h4>
-                                                <div class="h-[160px]">
-                                                    <canvas id="outletCoverageChart"></canvas>
-                                                </div>
-                                            </div>
-                                            <div class="space-y-2">
-                                                <h4 class="text-[10px] uppercase tracking-wider text-brand-white/60 font-semibold">7-day route execution</h4>
-                                                <div class="h-[120px]">
-                                                    <canvas id="punctualityChart"></canvas>
-                                                </div>
-                                            </div>
-                                            <div class="space-y-2">
-                                                <h4 class="text-[10px] uppercase tracking-wider text-brand-white/60 font-semibold">7-day coverage trend</h4>
-                                                <div class="h-[120px]">
-                                                    <canvas id="dailyCoverageTrendChart"></canvas>
-                                                </div>
-                                            </div>
-                                            <div class="space-y-2">
-                                                <h4 class="text-[10px] uppercase tracking-wider text-brand-white/60 font-semibold">Today's execution funnel</h4>
-                                                <div class="h-[130px]">
-                                                    <canvas id="visitFunnelChart"></canvas>
-                                                </div>
-                                            </div>
-                                            <div class="space-y-2">
-                                                <h4 class="text-[10px] uppercase tracking-wider text-brand-white/60 font-semibold">Live visit state</h4>
-                                                <div class="h-[130px]">
-                                                    <canvas id="visitStateChart"></canvas>
-                                                </div>
-                                            </div>
-                                            <div class="space-y-2">
-                                                <h4 class="text-[10px] uppercase tracking-wider text-brand-white/60 font-semibold">7-day visit minutes</h4>
-                                                <div class="h-[120px]">
-                                                    <canvas id="visitMinutesChart"></canvas>
-                                                </div>
-                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- TAB 2: PROFILE & BANKING -->
-                            <div x-show="activeTab === 'profile'" class="glass-panel rounded-2xl p-6 border border-brand-white/10 bg-brand-black/40 hover:border-brand-red/20 transition-all duration-300 space-y-6" style="display: none;">
-                                <h2 class="text-xl font-display text-brand-white tracking-wider">👤 Profile & Banking settings</h2>
-                                <form method="POST" action="{{ route('merchandisers.profile.update') }}" class="space-y-4" enctype="multipart/form-data">
-                                    @csrf
-                                    @method('PATCH')
-                                    
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <x-input-label for="name" value="Full Name" />
-                                            <x-text-input id="name" name="name" type="text" class="mt-1 block w-full" :value="auth()->user()->name" required />
-                                        </div>
-                                        <div>
-                                            <x-input-label for="email" value="Email Address" />
-                                            <x-text-input id="email" name="email" type="email" class="mt-1 block w-full" :value="auth()->user()->email" required />
-                                        </div>
-                                        <div>
-                                            <x-input-label for="phone" value="Phone Number" />
-                                            <x-text-input id="phone" name="phone" type="text" class="mt-1 block w-full" :value="auth()->user()->phone" required />
-                                        </div>
-                                        <div>
-                                            <x-input-label for="residential_address" value="Residential Address" />
-                                            <x-text-input id="residential_address" name="residential_address" type="text" class="mt-1 block w-full" :value="auth()->user()->residential_address" required />
-                                        </div>
-                                    </div>
-
-                                    <div class="border-t border-brand-white/10 pt-4 mt-6">
-                                        <h3 class="text-sm font-semibold uppercase tracking-wider text-brand-ash mb-3">Bank Details (Determined for Payroll payouts)</h3>
-                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div>
-                                                <x-input-label for="bank_name" value="Bank Name" />
-                                                <x-text-input id="bank_name" name="bank_name" type="text" class="mt-1 block w-full" :value="auth()->user()->bank_name" />
-                                            </div>
-                                            <div>
-                                                <x-input-label for="bank_branch" value="Bank Branch" />
-                                                <x-text-input id="bank_branch" name="bank_branch" type="text" class="mt-1 block w-full" :value="auth()->user()->bank_branch" />
-                                            </div>
-                                            <div>
-                                                <x-input-label for="bank_account_name" value="Account Holder Name" />
-                                                <x-text-input id="bank_account_name" name="bank_account_name" type="text" class="mt-1 block w-full" :value="auth()->user()->bank_account_name" />
-                                            </div>
-                                            <div>
-                                                <x-input-label for="bank_account_number" value="Account Number" />
-                                                <x-text-input id="bank_account_number" name="bank_account_number" type="text" class="mt-1 block w-full" :value="auth()->user()->bank_account_number" />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="border-t border-brand-white/10 pt-4 mt-6">
-                                        <h3 class="text-sm font-semibold uppercase tracking-wider text-brand-ash mb-3">MOMO Payout (Mobile Money Alternative)</h3>
-                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div>
-                                                <x-input-label for="momo_number" value="Momo Number" />
-                                                <x-text-input id="momo_number" name="momo_number" type="text" class="mt-1 block w-full" :value="auth()->user()->momo_number" />
-                                            </div>
-                                            <div>
-                                                <x-input-label for="momo_name" value="Registered Momo Name" />
-                                                <x-text-input id="momo_name" name="momo_name" type="text" class="mt-1 block w-full" :value="auth()->user()->momo_name" />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="border-t border-brand-white/10 pt-4 mt-6">
-                                        <h3 class="text-sm font-semibold uppercase tracking-wider text-brand-red mb-3">Change Password</h3>
-                                        <p class="mb-3 text-[10px] text-brand-ash">Use more than 8 characters with at least one letter, one number, and one symbol.</p>
-                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div>
-                                                <x-input-label for="password" value="New Password" />
-                                                <x-text-input id="password" name="password" type="password" class="mt-1 block w-full" autocomplete="new-password" />
-                                            </div>
-                                            <div>
-                                                <x-input-label for="password_confirmation" value="Confirm New Password" />
-                                                <x-text-input id="password_confirmation" name="password_confirmation" type="password" class="mt-1 block w-full" />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="flex justify-end pt-4">
-                                        <x-primary-button class="bg-brand-red hover:bg-red-600">
-                                            Update Profile Credentials
-                                        </x-primary-button>
-                                    </div>
-                                </form>
-                            </div>
+                            @include('merchandisers.partials.profile')
 
                             <!-- TAB 3: PAYROLL & LATENESS AUDIT -->
-                            <div x-show="activeTab === 'payroll'" class="glass-panel rounded-2xl p-6 border border-brand-white/10 bg-brand-black/40 hover:border-brand-red/20 transition-all duration-300 space-y-6" style="display: none;">
-                                <div class="flex items-center justify-between">
-                                    <h2 class="text-xl font-display text-brand-white tracking-wider">📊 Attendance-Based Payroll Audit</h2>
-                                    <span class="text-xs px-2.5 py-1 bg-brand-red/10 text-brand-red border border-brand-red/20 rounded-lg font-bold">Month: {{ now()->format('F Y') }}</span>
+                            <div x-show="activeTab === 'payroll'" x-cloak class="rounded-2xl p-6 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-6">
+                                <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+                                    <h2 class="text-xl font-bold text-slate-900 dark:text-white">📊 Attendance-Based Payroll Audit</h2>
+                                    <span class="text-xs px-3 py-1 bg-blue-100 text-blue-800 rounded-full font-bold">Month: {{ now()->format('F Y') }}</span>
                                 </div>
 
                                 <!-- Payroll Grid Cards -->
                                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                    <div class="p-4 bg-brand-white/5 rounded-xl border border-brand-white/5">
-                                        <p class="text-[10px] text-brand-white/40 uppercase tracking-wider">Base Salary</p>
-                                        <p class="text-2xl font-bold text-brand-white mt-1">{{ number_format($payroll['base_salary'], 2) }}</p>
-                                        <p class="text-[9px] text-brand-white/30 mt-1">Determined by Brands Team Admin</p>
+                                    <div class="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+                                        <p class="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Base Salary</p>
+                                        <p class="text-2xl font-black text-slate-900 dark:text-white mt-1">{{ number_format($payroll['base_salary'], 2) }}</p>
+                                        <p class="text-[10px] text-slate-400 mt-1 font-medium">Determined by Brands Team Admin</p>
                                     </div>
-                                    <div class="p-4 bg-brand-white/5 rounded-xl border border-brand-white/5">
-                                        <p class="text-[10px] text-brand-white/40 uppercase tracking-wider">Punctuality Work Rate</p>
-                                        <p class="text-2xl font-bold text-brand-red mt-1">{{ $payroll['work_rate'] }}%</p>
-                                        <p class="text-[9px] text-brand-white/30 mt-1">Goal target: 95% minimum</p>
+                                    <div class="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+                                        <p class="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Punctuality Work Rate</p>
+                                        <p class="text-2xl font-black text-blue-600 mt-1">{{ $payroll['work_rate'] }}%</p>
+                                        <p class="text-[10px] text-slate-400 mt-1 font-medium">Goal target: 95% minimum</p>
                                     </div>
-                                    <div class="p-4 bg-brand-white/5 rounded-xl border border-brand-white/5">
-                                        <p class="text-[10px] text-brand-white/40 uppercase tracking-wider">Calculated Deductions</p>
-                                        <p class="text-2xl font-bold text-brand-red mt-1">-{{ number_format($payroll['deductions'], 2) }}</p>
-                                        <p class="text-[9px] text-brand-white/30 mt-1">Based on late & missed slots</p>
+                                    <div class="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+                                        <p class="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Calculated Deductions</p>
+                                        <p class="text-2xl font-black text-amber-600 mt-1">-{{ number_format($payroll['deductions'], 2) }}</p>
+                                        <p class="text-[10px] text-slate-400 mt-1 font-medium">Based on late & missed slots</p>
                                     </div>
-                                    <div class="p-4 bg-brand-white/5 rounded-xl border border-brand-white/5">
-                                        <p class="text-[10px] text-brand-white/40 uppercase tracking-wider">Net Payment Payout</p>
-                                        <p class="text-2xl font-bold text-green-400 mt-1">{{ number_format($payroll['net_pay'], 2) }}</p>
-                                        <p class="text-[9px] text-brand-white/30 mt-1">Ready for Bank/Momo transfer</p>
+                                    <div class="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+                                        <p class="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Net Payment Payout</p>
+                                        <p class="text-2xl font-black text-emerald-600 mt-1">{{ number_format($payroll['net_pay'], 2) }}</p>
+                                        <p class="text-[10px] text-slate-400 mt-1 font-medium">Ready for Bank/Momo transfer</p>
                                     </div>
                                 </div>
 
                                 <!-- Deductions Breakdown Audit -->
-                                <div class="border-t border-brand-white/10 pt-4 space-y-4">
-                                    <h3 class="text-sm font-semibold uppercase tracking-wider text-brand-ash">Audit & Punctuality Breakdown</h3>
+                                <div class="border-t border-slate-100 dark:border-slate-800 pt-4 space-y-4">
+                                    <h3 class="text-xs font-extrabold uppercase tracking-wider text-[#0284C7]">Audit &amp; Punctuality Breakdown</h3>
                                     
                                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                        <div class="bg-brand-black/20 p-3 rounded-lg border border-brand-white/5 flex items-center justify-between">
-                                            <span class="text-xs text-brand-white/70">Excused Leave Days</span>
-                                            <span class="px-2 py-0.5 bg-green-500/10 text-green-400 font-bold rounded text-xs">{{ $payroll['leave_days_count'] }} days</span>
+                                        <div class="bg-slate-50 dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                                            <span class="text-xs text-slate-700 dark:text-slate-300 font-bold">Excused Leave Days</span>
+                                            <span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-extrabold rounded-lg text-xs">{{ $payroll['leave_days_count'] }} days</span>
                                         </div>
-                                        <div class="bg-brand-black/20 p-3 rounded-lg border border-brand-white/5 flex items-center justify-between">
-                                            <span class="text-xs text-brand-white/70">Missed Clock-In Slots</span>
-                                            <span class="px-2 py-0.5 bg-brand-red/10 text-brand-red font-bold rounded text-xs">{{ $payroll['missed_slots'] }} slots</span>
+                                        <div class="bg-slate-50 dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                                            <span class="text-xs text-slate-700 dark:text-slate-300 font-bold">Missed Clock-In Slots</span>
+                                            <span class="px-2.5 py-1 bg-rose-100 text-rose-800 font-extrabold rounded-lg text-xs">{{ $payroll['missed_slots'] }} slots</span>
                                         </div>
-                                        <div class="bg-brand-black/20 p-3 rounded-lg border border-brand-white/5 flex items-center justify-between">
-                                            <span class="text-xs text-brand-white/70">Late Clock-In Slots</span>
-                                            <span class="px-2 py-0.5 bg-yellow-500/10 text-yellow-400 font-bold rounded text-xs">{{ $payroll['late_slots'] }} slots</span>
+                                        <div class="bg-slate-50 dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                                            <span class="text-xs text-slate-700 dark:text-slate-300 font-bold">Late Clock-In Slots</span>
+                                            <span class="px-2.5 py-1 bg-amber-100 text-amber-900 font-extrabold rounded-lg text-xs">{{ $payroll['late_slots'] }} slots</span>
                                         </div>
                                     </div>
 
-                                    <blockquote class="bg-brand-red/5 border-l-4 border-brand-red rounded p-4 text-xs text-brand-white/80 leading-relaxed">
+                                    <blockquote class="bg-blue-50 border-l-4 border-blue-600 rounded-r-xl p-4 text-xs text-slate-700 leading-relaxed font-medium">
                                         💡 <strong>Deduction Penalty Policy:</strong> Base salary is audited against geofenced clock-in checkpoints. 
                                         Each unexcused missed slot incurs a <strong>1% deduction</strong> penalty. 
                                         Each late slot (occurring past the operational window buffer) incurs a <strong>0.5% deduction</strong> penalty. 
-                                        Days covered by an **Approved Leave Application** are excluded from penalty calculations.
+                                        Days covered by an <strong>Approved Leave Application</strong> are excluded from penalty calculations.
                                     </blockquote>
                                 </div>
                             </div>
 
                             <!-- TAB 4: LEAVES & ABSENCES -->
-                            <div x-show="activeTab === 'leaves'" class="space-y-6" style="display: none;">
-                                <div class="glass-panel rounded-2xl p-6 border border-brand-white/10 bg-brand-black/40 hover:border-brand-red/20 transition-all duration-300 space-y-4">
-                                    <div class="flex items-center justify-between">
-                                        <h2 class="text-xl font-display text-brand-white tracking-wider">📅 Leaves & Absences</h2>
-                                        <span class="text-xs px-2.5 py-1 bg-brand-white/10 text-brand-white border border-brand-white/20 rounded-lg font-bold">Leave Balance: {{ auth()->user()->leave_balance }} days</span>
+                            <div x-show="activeTab === 'leaves'" x-cloak class="space-y-6">
+                                <div class="rounded-2xl p-6 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-4">
+                                    <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+                                        <h2 class="text-xl font-bold text-slate-900 dark:text-white">📅 Leaves &amp; Absences</h2>
+                                        <span class="text-xs px-3 py-1 bg-blue-100 text-blue-800 rounded-full font-bold">Leave Balance: {{ auth()->user()->leave_balance }} days</span>
                                     </div>
 
                                     <form method="POST" action="{{ route('merchandisers.leaves.store') }}" class="space-y-4">
                                         @csrf
                                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div>
-                                                <x-input-label for="start_date" value="Start Date" />
-                                                <x-text-input id="start_date" name="start_date" type="date" class="mt-1 block w-full" required />
+                                                <x-input-label for="start_date" value="Start Date *" class="text-xs font-bold text-slate-700 dark:text-slate-300" />
+                                                <x-text-input id="start_date" name="start_date" type="date" class="mt-1 block w-full text-xs" required />
                                             </div>
                                             <div>
-                                                <x-input-label for="end_date" value="End Date" />
-                                                <x-text-input id="end_date" name="end_date" type="date" class="mt-1 block w-full" required />
+                                                <x-input-label for="end_date" value="End Date *" class="text-xs font-bold text-slate-700 dark:text-slate-300" />
+                                                <x-text-input id="end_date" name="end_date" type="date" class="mt-1 block w-full text-xs" required />
                                             </div>
                                             <div>
-                                                <x-input-label for="leave_type" value="Leave Type" />
-                                                <select id="leave_type" name="leave_type" class="mt-1 block w-full rounded-xl border border-brand-white/10 bg-brand-black/40 text-brand-white/80 p-2 text-xs" required>
+                                                <x-input-label for="leave_type" value="Leave Type *" class="text-xs font-bold text-slate-700 dark:text-slate-300" />
+                                                <select id="leave_type" name="leave_type" class="mt-1 block w-full rounded-xl border border-slate-300 bg-slate-50 text-slate-900 p-2.5 text-xs font-medium" required>
                                                     <option value="annual">Annual Leave</option>
                                                     <option value="sick">Sick Leave</option>
                                                     <option value="compassionate">Compassionate</option>
@@ -867,8 +858,8 @@
                                                 </select>
                                             </div>
                                             <div>
-                                                <x-input-label for="covering_staff_id" value="Duty Covering Colleague" />
-                                                <select id="covering_staff_id" name="covering_staff_id" class="mt-1 block w-full rounded-xl border border-brand-white/10 bg-brand-black/40 text-brand-white/80 p-2 text-xs" required>
+                                                <x-input-label for="covering_staff_id" value="Duty Covering Colleague *" class="text-xs font-bold text-slate-700 dark:text-slate-300" />
+                                                <select id="covering_staff_id" name="covering_staff_id" class="mt-1 block w-full rounded-xl border border-slate-300 bg-slate-50 text-slate-900 p-2.5 text-xs font-medium" required>
                                                     <option value="">Select colleague...</option>
                                                     @foreach($staffMembers as $member)
                                                         <option value="{{ $member->id }}">{{ $member->name }}</option>
@@ -877,47 +868,47 @@
                                             </div>
                                         </div>
                                         <div>
-                                            <x-input-label for="comments" value="Reason & Comments" />
-                                            <textarea id="comments" name="comments" rows="3" class="wysiwyg-editor mt-1 block w-full rounded-xl border border-brand-white/10 bg-brand-black/40 text-brand-white/80 p-2.5 text-xs" required></textarea>
+                                            <x-input-label for="comments" value="Reason &amp; Comments *" class="text-xs font-bold text-slate-700 dark:text-slate-300" />
+                                            <textarea id="comments" name="comments" rows="3" class="mt-1 block w-full rounded-xl border border-slate-300 bg-slate-50 text-slate-900 p-3 text-xs font-medium" placeholder="State reasons for leave application..." required></textarea>
                                         </div>
                                         <div class="flex justify-end">
-                                            <x-primary-button class="bg-brand-red hover:bg-red-600">
+                                            <button type="submit" class="px-6 py-3 rounded-xl bg-[#155EEF] hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider shadow-md transition">
                                                 Submit Leave Request
-                                            </x-primary-button>
+                                            </button>
                                         </div>
                                     </form>
                                 </div>
 
                                 <!-- Leaves History -->
-                                <div class="glass-panel rounded-2xl p-6 border border-brand-white/10 bg-brand-black/40 hover:border-brand-red/20 transition-all duration-300">
-                                    <h3 class="text-sm font-semibold uppercase tracking-wider text-brand-ash mb-4">Request Log</h3>
+                                <div class="rounded-2xl p-6 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+                                    <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-500 mb-4">Request Log</h3>
                                     <div class="overflow-x-auto">
                                         <table class="w-full text-left text-xs">
                                             <thead>
-                                                <tr class="text-brand-ash uppercase border-b border-brand-white/10">
+                                                <tr class="text-slate-500 uppercase border-b border-slate-200 dark:border-slate-700 font-bold">
                                                     <th class="pb-2">Period</th>
                                                     <th class="pb-2">Type</th>
                                                     <th class="pb-2">Status</th>
                                                     <th class="pb-2">Covering Colleague</th>
                                                 </tr>
                                             </thead>
-                                            <tbody class="divide-y divide-brand-white/5">
+                                            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                                                 @forelse($leaves as $leave)
                                                     <tr>
-                                                        <td class="py-3">
+                                                        <td class="py-3 font-semibold text-slate-900 dark:text-white">
                                                             {{ $leave->start_date->format('Y-m-d') }} to {{ $leave->end_date->format('Y-m-d') }}
                                                         </td>
-                                                        <td class="py-3 capitalize">{{ $leave->leave_type }}</td>
+                                                        <td class="py-3 capitalize text-slate-700 font-medium">{{ $leave->leave_type }}</td>
                                                         <td class="py-3">
-                                                            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase {{ $leave->status === 'approved' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : ($leave->status === 'rejected' ? 'bg-brand-red/10 text-brand-red border border-brand-red/20' : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20') }}">
+                                                            <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase {{ $leave->status === 'approved' ? 'bg-emerald-100 text-emerald-800' : ($leave->status === 'rejected' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-900') }}">
                                                                 {{ $leave->status }}
                                                             </span>
                                                         </td>
-                                                        <td class="py-3">{{ $leave->coveringStaff->name ?? 'None' }}</td>
+                                                        <td class="py-3 text-slate-600 font-medium">{{ $leave->coveringStaff->name ?? 'None' }}</td>
                                                     </tr>
                                                 @empty
                                                     <tr>
-                                                        <td colspan="4" class="py-4 text-center text-brand-white/30">No leaves requested.</td>
+                                                        <td colspan="4" class="py-6 text-center text-slate-500 font-medium">No leaves requested.</td>
                                                     </tr>
                                                 @endforelse
                                             </tbody>
@@ -927,70 +918,70 @@
                             </div>
 
                             <!-- TAB 5: PETTY CASH CLAIMS -->
-                            <div x-show="activeTab === 'claims'" class="space-y-6" style="display: none;">
-                                <div class="glass-panel rounded-2xl p-6 border border-brand-white/10 bg-brand-black/40 hover:border-brand-red/20 transition-all duration-300 space-y-4">
-                                    <h2 class="text-xl font-display text-brand-white tracking-wider">💰 Petty Cash Claims (Out-of-pocket reimbursements)</h2>
+                            <div x-show="activeTab === 'claims'" x-cloak class="space-y-6">
+                                <div class="rounded-2xl p-6 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-4">
+                                    <h2 class="text-xl font-bold text-slate-900 dark:text-white">💰 Petty Cash Claims (Out-of-pocket reimbursements)</h2>
                                     
                                     <form method="POST" action="{{ route('merchandisers.claims.store') }}" enctype="multipart/form-data" class="space-y-4">
                                         @csrf
                                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                             <div>
-                                                <x-input-label for="claim_amount" value="Reimbursement Amount" />
-                                                <x-text-input id="claim_amount" name="amount" type="number" step="0.01" class="mt-1 block w-full" required />
+                                                <x-input-label for="claim_amount" value="Reimbursement Amount *" class="text-xs font-bold text-slate-700 dark:text-slate-300" />
+                                                <x-text-input id="claim_amount" name="amount" type="number" step="0.01" class="mt-1 block w-full text-xs" required />
                                             </div>
                                             <div>
-                                                <x-input-label for="currency" value="Currency" />
-                                                <select id="currency" name="currency" class="mt-1 block w-full rounded-xl border border-brand-white/10 bg-brand-black/40 text-brand-white/80 p-2 text-xs" required>
+                                                <x-input-label for="currency" value="Currency *" class="text-xs font-bold text-slate-700 dark:text-slate-300" />
+                                                <select id="currency" name="currency" class="mt-1 block w-full rounded-xl border border-slate-300 bg-slate-50 text-slate-900 p-2.5 text-xs font-medium" required>
                                                     <option value="GHS">GHS (Ghanaian Cedi)</option>
                                                     <option value="NGN">NGN (Nigerian Naira)</option>
                                                     <option value="USD">USD (Dollar)</option>
                                                 </select>
                                             </div>
                                             <div>
-                                                <x-input-label for="receipt" value="Upload Receipt Image" />
-                                                <input id="receipt" name="receipt" type="file" class="mt-1.5 block w-full text-xs text-brand-white/60" required />
+                                                <x-input-label for="receipt" value="Upload Receipt Image *" class="text-xs font-bold text-slate-700 dark:text-slate-300" />
+                                                <input id="receipt" name="receipt" type="file" class="mt-1 block w-full text-xs text-slate-700" required />
                                             </div>
                                         </div>
                                         <div>
-                                            <x-input-label for="claim_desc" value="Reimbursement Description" />
-                                            <textarea id="claim_desc" name="description" rows="2" class="wysiwyg-editor mt-1 block w-full rounded-xl border border-brand-white/10 bg-brand-black/40 text-brand-white/80 p-2.5 text-xs" placeholder="e.g. Uber transit to Accra Mall shoprite for store audits" required></textarea>
+                                            <x-input-label for="claim_desc" value="Reimbursement Description *" class="text-xs font-bold text-slate-700 dark:text-slate-300" />
+                                            <textarea id="claim_desc" name="description" rows="2" class="mt-1 block w-full rounded-xl border border-slate-300 bg-slate-50 text-slate-900 p-3 text-xs font-medium" placeholder="e.g. Uber transit to Accra Mall shoprite for store audits" required></textarea>
                                         </div>
                                         <div class="flex justify-end">
-                                            <x-primary-button class="bg-brand-red hover:bg-red-600">
+                                            <button type="submit" class="px-6 py-3 rounded-xl bg-[#155EEF] hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider shadow-md transition">
                                                 Submit Claim
-                                            </x-primary-button>
+                                            </button>
                                         </div>
                                     </form>
                                 </div>
 
                                 <!-- Claims history -->
-                                <div class="glass-panel rounded-2xl p-6 border border-brand-white/10 bg-brand-black/40 hover:border-brand-red/20 transition-all duration-300">
-                                    <h3 class="text-sm font-semibold uppercase tracking-wider text-brand-ash mb-4">Claims History Log</h3>
+                                <div class="rounded-2xl p-6 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+                                    <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-500 mb-4">Claims History Log</h3>
                                     <div class="overflow-x-auto">
                                         <table class="w-full text-left text-xs">
                                             <thead>
-                                                <tr class="text-brand-ash uppercase border-b border-brand-white/10">
+                                                <tr class="text-slate-500 uppercase border-b border-slate-200 dark:border-slate-700 font-bold">
                                                     <th class="pb-2">Date</th>
                                                     <th class="pb-2">Description</th>
                                                     <th class="pb-2">Amount</th>
                                                     <th class="pb-2">Status</th>
                                                 </tr>
                                             </thead>
-                                            <tbody class="divide-y divide-brand-white/5">
+                                            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                                                 @forelse($claims as $claim)
                                                     <tr>
-                                                        <td class="py-3">{{ $claim->created_at->format('Y-m-d') }}</td>
-                                                        <td class="py-3">{{ $claim->description }}</td>
-                                                        <td class="py-3 font-bold">{{ $claim->currency }} {{ number_format($claim->amount, 2) }}</td>
+                                                        <td class="py-3 font-semibold text-slate-900 dark:text-white">{{ $claim->created_at->format('Y-m-d') }}</td>
+                                                        <td class="py-3 text-slate-700 font-medium">{{ $claim->description }}</td>
+                                                        <td class="py-3 font-bold text-slate-900 dark:text-white">{{ $claim->currency }} {{ number_format($claim->amount, 2) }}</td>
                                                         <td class="py-3 text-xs">
-                                                            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase {{ $claim->status === 'approved' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : ($claim->status === 'rejected' ? 'bg-brand-red/10 text-brand-red border border-brand-red/20' : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20') }}">
+                                                            <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase {{ $claim->status === 'approved' ? 'bg-emerald-100 text-emerald-800' : ($claim->status === 'rejected' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-900') }}">
                                                                 {{ $claim->status }}
                                                             </span>
                                                         </td>
                                                     </tr>
                                                 @empty
                                                     <tr>
-                                                        <td colspan="4" class="py-4 text-center text-brand-white/30">No reimbursement claims logged.</td>
+                                                        <td colspan="4" class="py-6 text-center text-slate-500 font-medium">No reimbursement claims logged.</td>
                                                     </tr>
                                                 @endforelse
                                             </tbody>
@@ -1000,69 +991,69 @@
                             </div>
 
                             <!-- TAB 6: SALARY ADVANCES -->
-                            <div x-show="activeTab === 'loans'" class="space-y-6" style="display: none;">
-                                <div class="glass-panel rounded-2xl p-6 border border-brand-white/10 bg-brand-black/40 hover:border-brand-red/20 transition-all duration-300 space-y-4">
-                                    <h2 class="text-xl font-display text-brand-white tracking-wider">💵 Salary Advances (Employee Loans)</h2>
+                            <div x-show="activeTab === 'loans'" x-cloak class="space-y-6">
+                                <div class="rounded-2xl p-6 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-4">
+                                    <h2 class="text-xl font-bold text-slate-900 dark:text-white">💵 Salary Advances (Employee Loans)</h2>
                                     
                                     <form method="POST" action="{{ route('merchandisers.loans.store') }}" class="space-y-4">
                                         @csrf
                                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                             <div>
-                                                <x-input-label for="loan_amount" value="Requested Loan Amount" />
-                                                <x-text-input id="loan_amount" name="amount" type="number" step="0.01" class="mt-1 block w-full" required />
+                                                <x-input-label for="loan_amount" value="Requested Loan Amount *" class="text-xs font-bold text-slate-700 dark:text-slate-300" />
+                                                <x-text-input id="loan_amount" name="amount" type="number" step="0.01" class="mt-1 block w-full text-xs" required />
                                             </div>
                                             <div>
-                                                <x-input-label for="repayment_style" value="Repayment Style" />
-                                                <select id="repayment_style" name="repayment_style" class="mt-1 block w-full rounded-xl border border-brand-white/10 bg-brand-black/40 text-brand-white/80 p-2 text-xs" required>
+                                                <x-input-label for="repayment_style" value="Repayment Style *" class="text-xs font-bold text-slate-700 dark:text-slate-300" />
+                                                <select id="repayment_style" name="repayment_style" class="mt-1 block w-full rounded-xl border border-slate-300 bg-slate-50 text-slate-900 p-2.5 text-xs font-medium" required>
                                                     <option value="monthly_deduction">Monthly Deduction Payout</option>
                                                     <option value="flat">One-off Lump sum Deduction</option>
                                                 </select>
                                             </div>
                                             <div>
-                                                <x-input-label for="monthly_deduction_amount" value="Monthly Deduction Amount" />
-                                                <x-text-input id="monthly_deduction_amount" name="monthly_deduction_amount" type="number" step="0.01" class="mt-1 block w-full" required />
+                                                <x-input-label for="monthly_deduction_amount" value="Monthly Deduction Amount *" class="text-xs font-bold text-slate-700 dark:text-slate-300" />
+                                                <x-text-input id="monthly_deduction_amount" name="monthly_deduction_amount" type="number" step="0.01" class="mt-1 block w-full text-xs" required />
                                             </div>
                                         </div>
                                         <div>
-                                            <x-input-label for="loan_reason" value="Reason for Loan Request" />
-                                            <textarea id="loan_reason" name="reason" rows="2" class="wysiwyg-editor mt-1 block w-full rounded-xl border border-brand-white/10 bg-brand-black/40 text-brand-white/80 p-2.5 text-xs" placeholder="Describe the purpose of the advance..." required></textarea>
+                                            <x-input-label for="loan_reason" value="Reason for Loan Request *" class="text-xs font-bold text-slate-700 dark:text-slate-300" />
+                                            <textarea id="loan_reason" name="reason" rows="2" class="mt-1 block w-full rounded-xl border border-slate-300 bg-slate-50 text-slate-900 p-3 text-xs font-medium" placeholder="Describe the purpose of the advance..." required></textarea>
                                         </div>
                                         <div class="flex justify-end">
-                                            <x-primary-button class="bg-brand-red hover:bg-red-600">
+                                            <button type="submit" class="px-6 py-3 rounded-xl bg-[#155EEF] hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider shadow-md transition">
                                                 Request Salary Advance
-                                            </x-primary-button>
+                                            </button>
                                         </div>
                                     </form>
                                 </div>
 
                                 <!-- Loan history -->
-                                <div class="glass-panel rounded-2xl p-6 border border-brand-white/10 bg-brand-black/40 hover:border-brand-red/20 transition-all duration-300">
-                                    <h3 class="text-sm font-semibold uppercase tracking-wider text-brand-ash mb-4">Advance Request History</h3>
+                                <div class="rounded-2xl p-6 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+                                    <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-500 mb-4">Advance Request History</h3>
                                     <div class="overflow-x-auto">
                                         <table class="w-full text-left text-xs">
                                             <thead>
-                                                <tr class="text-brand-ash uppercase border-b border-brand-white/10">
+                                                <tr class="text-slate-500 uppercase border-b border-slate-200 dark:border-slate-700 font-bold">
                                                     <th class="pb-2">Date</th>
                                                     <th class="pb-2">Amount Requested</th>
                                                     <th class="pb-2">Repayment Monthly Deduction</th>
                                                     <th class="pb-2">Status</th>
                                                 </tr>
                                             </thead>
-                                            <tbody class="divide-y divide-brand-white/5">
+                                            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                                                 @forelse($loans as $loan)
                                                     <tr>
-                                                        <td class="py-3">{{ $loan->created_at->format('Y-m-d') }}</td>
-                                                        <td class="py-3 font-bold">{{ number_format($loan->amount, 2) }}</td>
-                                                        <td class="py-3">{{ number_format($loan->monthly_deduction_amount, 2) }} / mo</td>
+                                                        <td class="py-3 font-semibold text-slate-900 dark:text-white">{{ $loan->created_at->format('Y-m-d') }}</td>
+                                                        <td class="py-3 font-bold text-slate-900 dark:text-white">{{ number_format($loan->amount, 2) }}</td>
+                                                        <td class="py-3 text-slate-700 font-medium">{{ number_format($loan->monthly_deduction_amount, 2) }} / mo</td>
                                                         <td class="py-3">
-                                                            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase {{ $loan->status === 'approved' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : ($loan->status === 'rejected' ? 'bg-brand-red/10 text-brand-red border border-brand-red/20' : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20') }}">
+                                                            <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase {{ $loan->status === 'approved' ? 'bg-emerald-100 text-emerald-800' : ($loan->status === 'rejected' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-900') }}">
                                                                 {{ $loan->status }}
                                                             </span>
                                                         </td>
                                                     </tr>
                                                 @empty
                                                     <tr>
-                                                        <td colspan="4" class="py-4 text-center text-brand-white/30">No salary advances requested.</td>
+                                                        <td colspan="4" class="py-6 text-center text-slate-500 font-medium">No salary advance requests logged.</td>
                                                     </tr>
                                                 @endforelse
                                             </tbody>
@@ -1433,7 +1424,7 @@
                             </div>
 
                             <!-- TAB 10: NOTIFICATIONS -->
-                            <div x-show="activeTab === 'notifications'" class="space-y-6" style="display: none;">
+                            <div x-show="activeTab === 'notifications-legacy'" class="space-y-6" style="display: none;">
                                 <h2 class="text-xl font-display text-brand-white tracking-wider">🔔 Announcements & Notifications</h2>
                                 
                                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1492,9 +1483,10 @@
                             </div>
 
                     </div>
-                @endif
 
             </main>
+
+
         </div>
     </div>
 
@@ -1599,9 +1591,11 @@
             var ctxVisitFunnel = document.getElementById('visitFunnelChart');
             var ctxVisitState = document.getElementById('visitStateChart');
             var ctxVisitMinutes = document.getElementById('visitMinutesChart');
+            var ctxMerchExecution = document.getElementById('merchExecutionTrendChart');
+            var ctxMerchKpiRadar = document.getElementById('merchKpiRadarChart');
             var dailyPerformance = @json($dailyPerformanceChart);
 
-            if (!ctxPunctual && !ctxOutletCoverage && !ctxDailyCoverageTrend && !ctxVisitFunnel && !ctxVisitState && !ctxVisitMinutes) {
+            if (!ctxPunctual && !ctxOutletCoverage && !ctxDailyCoverageTrend && !ctxVisitFunnel && !ctxVisitState && !ctxVisitMinutes && !ctxMerchExecution && !ctxMerchKpiRadar) {
                 return;
             }
 
@@ -1610,6 +1604,89 @@
             // Apply universal gray color to grid lines and text to adapt to both themes cleanly
             Chart.defaults.color = 'rgba(128, 128, 128, 0.8)';
             Chart.defaults.borderColor = 'rgba(128, 128, 128, 0.15)';
+            const tenantPrimary = getComputedStyle(document.documentElement).getPropertyValue('--merch-primary').trim() || '#005eef';
+
+            if (ctxMerchExecution) {
+                new Chart(ctxMerchExecution, {
+                    type: 'bar',
+                    data: {
+                        labels: dailyPerformance.labels || [],
+                        datasets: [
+                            {
+                                label: 'Scheduled',
+                                data: dailyPerformance.scheduled || [],
+                                backgroundColor: 'rgba(148,163,184,.38)',
+                                borderColor: 'rgba(148,163,184,.8)',
+                                borderWidth: 1,
+                                borderRadius: 4
+                            },
+                            {
+                                label: 'Scored',
+                                data: dailyPerformance.scored || [],
+                                backgroundColor: tenantPrimary,
+                                borderColor: tenantPrimary,
+                                borderWidth: 1,
+                                borderRadius: 4
+                            },
+                            {
+                                type: 'line',
+                                label: 'Coverage %',
+                                data: dailyPerformance.coverage || [],
+                                borderColor: '#16a34a',
+                                backgroundColor: 'rgba(22,163,74,.12)',
+                                borderWidth: 2,
+                                pointRadius: 3,
+                                tension: .32,
+                                yAxisID: 'coverage'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } },
+                        scales: {
+                            y: { beginAtZero: true, ticks: { precision: 0, font: { size: 9 } } },
+                            coverage: { beginAtZero: true, max: 100, position: 'right', grid: { drawOnChartArea: false }, ticks: { callback: value => value + '%', font: { size: 9 } } },
+                            x: { grid: { display: false }, ticks: { font: { size: 9 } } }
+                        }
+                    }
+                });
+            }
+
+            if (ctxMerchKpiRadar) {
+                new Chart(ctxMerchKpiRadar, {
+                    type: 'radar',
+                    data: {
+                        labels: ['Coverage', 'OSA', 'NPD', 'MHS', 'Planogram', 'Facings', 'SOS', 'POSM'],
+                        datasets: [
+                            {
+                                label: 'Actual',
+                                data: @json($merchKpiRadarValues),
+                                borderColor: tenantPrimary,
+                                backgroundColor: tenantPrimary + '24',
+                                pointBackgroundColor: tenantPrimary,
+                                borderWidth: 2
+                            },
+                            {
+                                label: 'Target',
+                                data: [100, 95, 100, 100, 100, 95, 100, 100],
+                                borderColor: '#16a34a',
+                                backgroundColor: 'transparent',
+                                borderDash: [5, 4],
+                                pointRadius: 0,
+                                borderWidth: 1.5
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } },
+                        scales: { r: { beginAtZero: true, min: 0, max: 100, ticks: { stepSize: 25, display: false }, pointLabels: { font: { size: 9 } } } }
+                    }
+                });
+            }
 
             if (ctxPunctual) {
                 new Chart(ctxPunctual, {
@@ -2004,5 +2081,67 @@
             }
         }
     </script>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         MOBILE BOTTOM NAVIGATION BAR (visible on mobile only)
+         Blueprint: Home | Schedule | + VISIT (center, dominant) | Outlets | KPIs
+    ═══════════════════════════════════════════════════════════ -->
+    <nav id="merch-bottom-nav"
+         class="lg:hidden fixed bottom-0 inset-x-0 z-[100] border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl overflow-visible"
+         style="padding-bottom: env(safe-area-inset-bottom, 0px); overflow: visible !important;"
+         x-data>
+        <div class="flex items-center justify-around px-2 py-2 gap-1 overflow-visible" style="overflow: visible !important;">
+
+            <!-- 1. Home / Dashboard -->
+            <button type="button"
+                    @click="activeTab = 'home'"
+                    :class="activeTab === 'home' ? 'text-[#155EEF] font-black' : 'text-slate-500 font-semibold'"
+                    class="flex flex-col items-center gap-1 flex-1 py-1 transition-colors min-w-0">
+                <span class="h-2 w-2 rounded-full" :class="activeTab === 'home' ? 'bg-[#155EEF]' : 'bg-slate-300 dark:bg-slate-700'"></span>
+                <span class="text-[10px] font-bold leading-none">Home</span>
+            </button>
+
+            <!-- 2. Schedule -->
+            <button type="button"
+                    @click="activeTab = 'schedule'"
+                    :class="activeTab === 'schedule' ? 'text-[#155EEF] font-black' : 'text-slate-500 font-semibold'"
+                    class="flex flex-col items-center gap-1 flex-1 py-1 transition-colors min-w-0">
+                <span class="h-2 w-2 rounded-full" :class="activeTab === 'schedule' ? 'bg-[#155EEF]' : 'bg-slate-300 dark:bg-slate-700'"></span>
+                <span class="text-[10px] font-bold leading-none">Schedule</span>
+            </button>
+
+            <!-- 3. + VISIT — Centre, Elevated, Dominant CTA (IN FRONT: z-50) -->
+            <div class="flex flex-col items-center flex-shrink-0 relative z-50 overflow-visible" style="overflow: visible !important;">
+                <button type="button"
+                        @click="activeTab = 'outlets'"
+                        class="-mt-8 relative z-50 flex items-center justify-center w-14 h-14 rounded-full shadow-2xl transition-all duration-200 active:scale-95 border-4 border-white dark:border-slate-900 cursor-pointer"
+                        style="background-color: #155EEF !important; color: #ffffff !important; box-shadow: 0 8px 24px rgba(21, 94, 239, 0.45) !important;"
+                        aria-label="Start outlet visit">
+                    <span class="text-2xl font-black text-white">+</span>
+                </button>
+                <span class="text-[9px] font-extrabold uppercase tracking-wider text-[#155EEF] mt-1 leading-none" style="color: #155EEF !important;">VISIT</span>
+            </div>
+
+            <!-- 4. Outlets -->
+            <button type="button"
+                    @click="activeTab = 'outlets'"
+                    :class="activeTab === 'outlets' ? 'text-[#155EEF] font-black' : 'text-slate-500 font-semibold'"
+                    class="flex flex-col items-center gap-1 flex-1 py-1 transition-colors min-w-0">
+                <span class="h-2 w-2 rounded-full" :class="activeTab === 'outlets' ? 'bg-[#155EEF]' : 'bg-slate-300 dark:bg-slate-700'"></span>
+                <span class="text-[10px] font-bold leading-none">Outlets</span>
+            </button>
+
+            <!-- 5. KPIs -->
+            <button type="button"
+                    @click="activeTab = 'kpis'"
+                    :class="activeTab === 'kpis' ? 'text-[#155EEF] font-black' : 'text-slate-500 font-semibold'"
+                    class="flex flex-col items-center gap-1 flex-1 py-1 transition-colors min-w-0">
+                <span class="h-2 w-2 rounded-full" :class="activeTab === 'kpis' ? 'bg-[#155EEF]' : 'bg-slate-300 dark:bg-slate-700'"></span>
+                <span class="text-[10px] font-bold leading-none">KPIs</span>
+            </button>
+
+        </div>
+    </nav>
+
 </body>
 </html>

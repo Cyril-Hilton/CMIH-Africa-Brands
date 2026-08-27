@@ -1,14 +1,22 @@
+@php
+    $merchTenant = \App\Support\MerchandiserTenant::theme(
+        \App\Support\MerchandiserTenant::forUser(auth()->user(), request())
+    );
+@endphp
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="dark">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="{{ $merchTenant['code'] === 'unilever' ? 'light' : 'dark' }}" data-merch-tenant="{{ $merchTenant['code'] }}">
 <head>
     @php
         $activeAdminTab = $activeTab ?? request('tab', 'overview');
-        $adminTabUrl = fn (string $tab, array $params = []) => route('merchandisers.admin.tab', array_merge(['adminTab' => $tab], $params));
+        $adminTabUrl = fn (string $tab, array $params = []) => route('merchandisers.admin.tab', array_merge([
+            'adminTab' => $tab,
+            'tenant' => $merchTenant['code'],
+        ], $params));
     @endphp
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Merchandiser Admin Hub — CMIH Africa</title>
+    <title>{{ $merchTenant['name'] }} Admin Hub | CMIH Africa</title>
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/logo/favicon.png') }}">
     <link rel="apple-touch-icon" sizes="192x192" href="{{ asset('images/logo/icon-192.png') }}">
@@ -16,6 +24,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @include('merchandisers.partials.tenant-theme')
     @if(in_array($activeAdminTab, ['overview', 'perfect-store', 'routes', 'executive', 'category-kpi', 'user-performance', 'price-promo', 'supervisor-dashboard', 'regional-dashboard', 'client-dashboard'], true))
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     @endif
@@ -30,13 +39,30 @@
         @endif
     @endif
     <style>
-        #admin-map { height: 540px; width: 100%; border-radius: 1rem; overflow: hidden; }
+        #admin-map {
+            height: clamp(420px, 58vh, 640px);
+            min-height: 420px;
+            width: 100%;
+            border-radius: 1rem;
+            overflow: hidden;
+            background: color-mix(in srgb, var(--merch-surface) 92%, var(--merch-primary) 8%);
+        }
+        #admin-map .leaflet-container,
+        #admin-map .gm-style {
+            min-height: inherit;
+            border-radius: inherit;
+        }
         [x-cloak] { display: none !important; }
-        .stat-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .stat-card {
+            min-width: 0;
+            min-height: 132px;
+            overflow: hidden;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
         .stat-card:hover { transform: translateY(-3px); box-shadow: 0 16px 40px rgba(0,0,0,0.4); }
         .nav-item { transition: all 0.18s ease; }
-        .nav-item.active { background: linear-gradient(135deg, rgba(220,38,38,0.2), rgba(220,38,38,0.08)); border-left: 3px solid #dc2626; color: #fff; }
-        .nav-item:not(.active):hover { background: rgba(255,255,255,0.05); }
+        .nav-item.active { background: color-mix(in srgb, var(--merch-primary) 16%, transparent); border-left: 3px solid var(--merch-primary); color: var(--merch-sidebar-ink); }
+        .nav-item:not(.active):hover { background: color-mix(in srgb, var(--merch-primary) 8%, transparent); }
         .kpi-glow-red   { box-shadow: 0 0 20px rgba(220,38,38,0.15); }
         .kpi-glow-green { box-shadow: 0 0 20px rgba(34,197,94,0.15); }
         .kpi-glow-blue  { box-shadow: 0 0 20px rgba(59,130,246,0.15); }
@@ -46,10 +72,17 @@
         .status-pill-suspended{ background: rgba(239,68,68,0.12);  color: #f87171; border: 1px solid rgba(239,68,68,0.25); }
         table { border-collapse: separate; border-spacing: 0; }
         tbody tr { transition: background 0.15s; }
-        tbody tr:hover { background: rgba(255,255,255,0.04); }
+        tbody tr:hover { background: color-mix(in srgb, var(--merch-primary) 5%, transparent); }
         .modal-overlay { backdrop-filter: blur(6px); }
-        main > [x-show] { width: 100%; min-width: 0; max-width: 100%; }
-        .shelfwatch-tab {
+        main > [x-show],
+        main > div,
+        .glass-panel,
+        .merch-card {
+            width: 100%;
+            min-width: 0;
+            max-width: 100%;
+        }
+        .perfect-store-tab {
             position: relative;
             z-index: 1;
             isolation: isolate;
@@ -60,7 +93,7 @@
             flex-direction: column;
             gap: 1.5rem;
         }
-        .shelfwatch-hero {
+        .perfect-store-hero {
             position: relative;
             overflow: hidden;
             border-radius: 1rem;
@@ -69,7 +102,7 @@
             padding: clamp(1rem, 2vw, 1.5rem);
             box-shadow: 0 18px 44px rgba(0,0,0,0.32);
         }
-        .shelfwatch-kpi-grid {
+        .perfect-store-kpi-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
             gap: clamp(0.75rem, 1.4vw, 1rem);
@@ -77,46 +110,84 @@
             width: 100%;
             min-width: 0;
         }
-        .shelfwatch-kpi-card {
+        .perfect-store-kpi-card {
             display: flex;
             min-width: 0;
-            min-height: 128px;
+            min-height: 154px;
             flex-direction: column;
-            justify-content: center;
+            justify-content: space-between;
             border-radius: 1rem;
             padding: clamp(1rem, 1.5vw, 1.25rem);
             overflow: hidden;
         }
-        .shelfwatch-kpi-label {
+        .perfect-store-kpi-label {
             margin-bottom: 0.55rem;
-            color: rgba(226,226,226,0.72);
-            font-size: 0.65rem;
-            font-weight: 700;
-            letter-spacing: 0.12em;
+            color: #0F172A !important;
+            font-size: 0.75rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
             line-height: 1.25;
             text-transform: uppercase;
+            overflow-wrap: anywhere;
         }
-        .shelfwatch-kpi-value {
-            font-size: clamp(1.9rem, 2.8vw, 2.9rem);
+        html.dark .perfect-store-kpi-label {
+            color: #F8FAFC !important;
+        }
+        .perfect-store-kpi-value {
+            font-size: clamp(2rem, 3vw, 3rem);
             line-height: 0.95;
             overflow-wrap: anywhere;
             word-break: break-word;
             font-variant-numeric: tabular-nums;
         }
-        .shelfwatch-kpi-note {
+        .perfect-store-kpi-note {
             margin-top: 0.65rem;
-            color: rgba(226,226,226,0.58);
-            font-size: 0.72rem;
+            color: #475569 !important;
+            font-size: 0.75rem;
+            font-weight: 600;
             line-height: 1.35;
         }
-        .shelfwatch-chart-card,
-        .shelfwatch-table-card {
+        html.dark .perfect-store-kpi-note {
+            color: #94A3B8 !important;
+        }
+        .perfect-store-chart-card,
+        .perfect-store-table-card {
             min-width: 0;
             overflow: hidden;
         }
+        .perfect-store-chart-card canvas,
+        .glass-panel canvas {
+            display: block;
+            width: 100% !important;
+            max-width: 100%;
+        }
+        .merch-shell-icon {
+            display: inline-flex;
+            width: 1.5rem;
+            min-width: 1.5rem;
+            height: 1.5rem;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.5rem;
+            background: color-mix(in srgb, var(--merch-primary) 14%, transparent);
+            color: var(--merch-sidebar-ink);
+            font-size: 0.64rem;
+            font-weight: 800;
+            letter-spacing: 0;
+            line-height: 1;
+        }
+        .merch-page-title {
+            display: block;
+            max-width: min(56vw, 52rem);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
         @media (max-width: 640px) {
-            .shelfwatch-kpi-grid { grid-template-columns: 1fr; }
-            .shelfwatch-kpi-card { min-height: 112px; }
+            .perfect-store-kpi-grid { grid-template-columns: 1fr; }
+            .perfect-store-kpi-card,
+            .stat-card { min-height: 118px; }
+            .merch-page-title { max-width: 58vw; }
         }
         /* Smooth, touch-friendly vertical scrolling for main content container */
         #merchandiser-admin-main {
@@ -139,7 +210,7 @@
             background: rgba(239, 68, 68, 0.6);
         }
         @media (max-width: 640px) {
-            #admin-map { height: 420px; border-radius: 0.75rem; }
+            #admin-map { height: 420px; min-height: 420px; border-radius: 0.75rem; }
             main { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
         }
         /* Desktop sidebars stay fixed to viewport height while main content scrolls independently. */
@@ -148,10 +219,19 @@
         }
     </style>
 </head>
-<body class="h-screen h-[100dvh] overflow-hidden bg-brand-black font-sans antialiased text-brand-white">
+<body class="h-screen h-[100dvh] overflow-hidden bg-brand-black font-sans antialiased text-brand-white" data-merch-tenant="{{ $merchTenant['code'] }}">
 
-<div class="h-screen h-[100dvh] overflow-hidden bg-inked" x-data="{
+<div class="merch-tenant-shell h-screen h-[100dvh] overflow-hidden" x-data="{
     sidebarOpen: false,
+    sidebarCollapsed: localStorage.getItem('cmih_admin_sidebar_collapsed') === 'true',
+    toggleSidebar() {
+        if (window.innerWidth < 1024) {
+            this.sidebarOpen = !this.sidebarOpen;
+        } else {
+            this.sidebarCollapsed = !this.sidebarCollapsed;
+            localStorage.setItem('cmih_admin_sidebar_collapsed', this.sidebarCollapsed);
+        }
+    },
     activeTab: @js($activeAdminTab),
     kdModalOpen: false,
     outletModalOpen: false,
@@ -229,40 +309,41 @@
              class="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
              @click="sidebarOpen = false"></div>
 
-        <!-- Sidebar (desktop: always visible static; mobile: slides in/out) -->
+        <!-- Sidebar (desktop: collapsible slide in/out; mobile: drawer) -->
         <aside id="merchandiser-admin-sidebar"
             aria-label="Merchandiser admin navigation"
-            :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
+            :class="{
+                'translate-x-0': sidebarOpen,
+                '-translate-x-full': !sidebarOpen,
+                'hidden lg:hidden': sidebarCollapsed,
+                'lg:static lg:flex lg:w-72 lg:translate-x-0 lg:opacity-100': !sidebarCollapsed
+            }"
             class="fixed inset-y-0 left-0 z-50 flex h-full max-h-screen min-h-0 w-72 shrink-0 flex-col
-                   border-r border-brand-white/10 bg-brand-black/98 backdrop-blur-xl
-                   overflow-y-auto overscroll-contain scrollbar-none transition-transform duration-300 ease-in-out
-                   lg:static lg:h-screen lg:translate-x-0">
+                   merch-sidebar border-r border-brand-white/10 bg-brand-black/98 backdrop-blur-xl
+                   overflow-y-auto overscroll-contain scrollbar-none transition-all duration-300 ease-in-out">
 
             <!-- Logo -->
-            <div class="flex items-center justify-between px-6 py-6 border-b border-brand-white/10">
-                <div class="flex items-center gap-3">
-                    <x-application-logo class="h-7 w-auto" />
-                    <div>
-                        <p class="text-[10px] uppercase tracking-[0.25em] text-brand-ash font-semibold">Admin Hub</p>
-                        <p class="text-xs text-brand-white font-bold">Merchandiser Portal</p>
-                    </div>
-                </div>
-                <button type="button" @click="sidebarOpen = false" class="lg:hidden text-brand-white/50 hover:text-brand-white p-1">✕</button>
+            <div class="px-6 py-6 border-b border-brand-white/10">
+                @include('merchandisers.partials.tenant-brand')
             </div>
 
-            <!-- Admin Badge -->
-            <div class="mx-4 mt-4 px-4 py-3 rounded-xl bg-brand-red/10 border border-brand-red/20 flex items-center gap-3">
-                <div class="w-8 h-8 rounded-full bg-brand-red/20 flex items-center justify-center text-brand-red text-sm font-bold shrink-0">
-                    {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
+            <!-- Prominent Centered User Profile Block (UI/UX Blueprint Design) -->
+            <div class="mx-4 mt-5 mb-4 p-4 rounded-2xl bg-slate-900/90 border border-slate-800 flex flex-col items-center text-center shadow-xl">
+                <div class="relative group">
+                    <div class="h-20 w-20 rounded-full overflow-hidden ring-4 ring-sky-500/30 shadow-2xl mx-auto flex items-center justify-center bg-[#E21C1E]">
+                        <img src="{{ auth()->user()->profilePhotoUrl() }}"
+                             alt="{{ auth()->user()->name }}"
+                             onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ urlencode(auth()->user()->name ?: 'User') }}&color=38BDF8&background=0F172A&bold=true';"
+                             class="h-full w-full object-cover rounded-full scale-125 transition-transform duration-300">
+                    </div>
                 </div>
-                <div class="min-w-0">
-                    <p class="text-xs font-semibold text-brand-white truncate">{{ auth()->user()->name }}</p>
-                    <p class="text-[10px] text-brand-red uppercase tracking-wider font-bold">{{ auth()->user()->access_role === 'super_admin' ? 'Super Admin' : 'Admin' }}</p>
-                </div>
+                <h3 class="mt-3 text-sm font-bold text-white truncate max-w-[200px] leading-tight">{{ auth()->user()->name }}</h3>
+                <p class="mt-0.5 text-[10px] font-extrabold uppercase tracking-widest text-sky-400">{{ auth()->user()->access_role === 'super_admin' ? 'Super Admin' : (auth()->user()->access_role === 'admin' ? 'Admin' : 'Management') }}</p>
             </div>
 
             <!-- Navigation -->
             <nav class="mt-5 px-3 space-y-1 flex-1">
+                <p class="px-4 pb-2 text-[9px] font-bold uppercase tracking-[0.3em] text-brand-ash/60">Operations</p>
                 <button @click="window.location.href = @js($adminTabUrl('overview')); sidebarOpen = false"
                     :class="activeTab === 'overview' ? 'active' : ''"
                     class="nav-item w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 text-sm text-brand-white/70 font-medium">
@@ -286,14 +367,14 @@
                     :class="activeTab === 'kds' ? 'active' : ''"
                     class="nav-item w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 text-sm text-brand-white/70 font-medium">
                     <span class="text-lg w-6 text-center">🏢</span>
-                    <span>Manage Key Distributors</span>
+                    <span>Outlets &amp; Distributors</span>
                 </button>
 
                 <button @click="window.location.href = @js($adminTabUrl('routes')); sidebarOpen = false"
                     :class="activeTab === 'routes' ? 'active' : ''"
                     class="nav-item w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 text-sm text-brand-white/70 font-medium">
                     <span class="text-lg w-6 text-center">RP</span>
-                    <span>Route Planning</span>
+                    <span>Schedules / PJP</span>
                     <span class="ml-auto text-[10px] text-brand-ash">{{ $routeSummary['pending'] }}</span>
                 </button>
 
@@ -313,11 +394,13 @@
                     <span class="ml-auto text-[10px] text-brand-ash">{{ $googleFormsCount }}/{{ $planogramsCount }}</span>
                 </button>
 
+                <p class="px-4 pb-2 pt-5 text-[9px] font-bold uppercase tracking-[0.3em] text-brand-ash/60">Management</p>
+
                 <button @click="window.location.href = @js($adminTabUrl('merchandisers')); sidebarOpen = false"
                     :class="activeTab === 'merchandisers' ? 'active' : ''"
                     class="nav-item w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 text-sm text-brand-white/70 font-medium">
                     <span class="text-lg w-6 text-center">👤</span>
-                    <span>Manage Merchandisers</span>
+                    <span>Field Team</span>
                     @if($pendingMerchandisers > 0)
                         <span class="ml-auto bg-amber-500 text-black text-[10px] font-bold px-2 py-0.5 rounded-full">{{ $pendingMerchandisers }}</span>
                     @endif
@@ -342,7 +425,7 @@
                     :class="activeTab === 'notifications' ? 'active' : ''"
                     class="nav-item w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 text-sm text-brand-white/70 font-medium">
                     <span class="text-lg w-6 text-center">🔔</span>
-                    <span>Notifications</span>
+                    <span>Announcements &amp; Approvals</span>
                     @if($totalPending > 0)
                         <span class="ml-auto bg-brand-red text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse">{{ $totalPending }}</span>
                     @endif
@@ -352,19 +435,11 @@
                     :class="activeTab === 'settings' ? 'active' : ''"
                     class="nav-item w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 text-sm text-brand-white/70 font-medium">
                     <span class="text-lg w-6 text-center">⏱️</span>
-                    <span>Clock Settings</span>
-                </button>
-
-                <button @click="window.location.href = @js($adminTabUrl('perfect-store')); sidebarOpen = false"
-                    :class="activeTab === 'perfect-store' ? 'active' : ''"
-                    class="nav-item w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 text-sm text-brand-white/70 font-medium">
-                    <span class="text-lg w-6 text-center">🎯</span>
-                    <span>Perfect Store KPIs</span>
-                    <span class="ml-auto text-[10px] text-lime-300 font-bold">95% Target</span>
+                    <span>System Settings</span>
                 </button>
 
                 <div class="px-4 pt-5 pb-1">
-                    <p class="text-[9px] font-bold uppercase tracking-[0.3em] text-brand-ash/60">ShelfWatch Analytics</p>
+                    <p class="text-[9px] font-extrabold uppercase tracking-[0.3em] text-slate-400 dark:text-slate-500">Performance &amp; Compliance</p>
                 </div>
 
                 <button @click="window.location.href = @js($adminTabUrl('gallery')); sidebarOpen = false"
@@ -389,27 +464,6 @@
                     <span>Category KPIs</span>
                 </button>
 
-                <button @click="window.location.href = @js($adminTabUrl('supervisor-dashboard')); sidebarOpen = false"
-                    :class="activeTab === 'supervisor-dashboard' ? 'active' : ''"
-                    class="nav-item w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 text-sm text-brand-white/70 font-medium">
-                    <span class="text-lg w-6 text-center">SD</span>
-                    <span>Supervisor Dashboard</span>
-                </button>
-
-                <button @click="window.location.href = @js($adminTabUrl('regional-dashboard')); sidebarOpen = false"
-                    :class="activeTab === 'regional-dashboard' ? 'active' : ''"
-                    class="nav-item w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 text-sm text-brand-white/70 font-medium">
-                    <span class="text-lg w-6 text-center">RD</span>
-                    <span>Regional Dashboard</span>
-                </button>
-
-                <button @click="window.location.href = @js($adminTabUrl('client-dashboard')); sidebarOpen = false"
-                    :class="activeTab === 'client-dashboard' ? 'active' : ''"
-                    class="nav-item w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 text-sm text-brand-white/70 font-medium">
-                    <span class="text-lg w-6 text-center">CD</span>
-                    <span>Client Dashboard</span>
-                </button>
-
                 <button @click="window.location.href = @js($adminTabUrl('user-performance')); sidebarOpen = false"
                     :class="activeTab === 'user-performance' ? 'active' : ''"
                     class="nav-item w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 text-sm text-brand-white/70 font-medium">
@@ -422,6 +476,32 @@
                     class="nav-item w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 text-sm text-brand-white/70 font-medium">
                     <span class="text-lg w-6 text-center">💰</span>
                     <span>Price &amp; Promo</span>
+                </button>
+
+                <!-- ISOLATED ROLE-BASED DASHBOARDS SECTION -->
+                <div class="px-4 pt-5 pb-1">
+                    <p class="text-[9px] font-extrabold uppercase tracking-[0.3em] text-sky-400">Role-Based Dashboards</p>
+                </div>
+
+                <button @click="window.location.href = @js($adminTabUrl('supervisor-dashboard')); sidebarOpen = false"
+                    :class="activeTab === 'supervisor-dashboard' ? 'active' : ''"
+                    class="nav-item w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 text-sm text-brand-white/70 font-medium">
+                    <span class="text-xs font-black px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">SD</span>
+                    <span>Supervisor Dashboard</span>
+                </button>
+
+                <button @click="window.location.href = @js($adminTabUrl('regional-dashboard')); sidebarOpen = false"
+                    :class="activeTab === 'regional-dashboard' ? 'active' : ''"
+                    class="nav-item w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 text-sm text-brand-white/70 font-medium">
+                    <span class="text-xs font-black px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/40">RD</span>
+                    <span>Regional Dashboard</span>
+                </button>
+
+                <button @click="window.location.href = @js($adminTabUrl('client-dashboard')); sidebarOpen = false"
+                    :class="activeTab === 'client-dashboard' ? 'active' : ''"
+                    class="nav-item w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 text-sm text-brand-white/70 font-medium">
+                    <span class="text-xs font-black px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">CD</span>
+                    <span>Client / TM Dashboard</span>
                 </button>
             </nav>
 
@@ -443,25 +523,37 @@
         <div class="flex h-full max-h-screen min-h-0 flex-1 flex-col min-w-0 overflow-hidden">
 
             <!-- Top Header Bar -->
-            <header class="shrink-0 border-b border-brand-white/10 bg-[#09090b] px-6 py-3.5 relative z-40 w-full min-w-0 shadow-lg">
+            <header class="merch-workspace-header shrink-0 border-b border-brand-white/10 px-4 py-3.5 sm:px-6 relative z-40 w-full min-w-0">
                 <div class="flex items-center justify-between gap-4">
                     <div class="flex items-center gap-3">
-                        <button type="button" @click.stop="sidebarOpen = true"
-                            :aria-expanded="sidebarOpen.toString()"
+                        <button type="button"
+                            @click="toggleSidebar()"
                             aria-controls="merchandiser-admin-sidebar"
-                            aria-label="Open navigation menu"
-                            class="lg:hidden inline-flex items-center justify-center w-9 h-9 rounded-xl border border-brand-white/20 text-brand-white/70 hover:text-brand-white transition">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            aria-label="Toggle navigation menu"
+                            class="inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition shadow-sm shrink-0"
+                            :title="sidebarCollapsed ? 'Expand / Show Sidebar' : 'Collapse / Hide Sidebar'">
+                            <svg class="w-4 h-4 text-brand-red shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                             </svg>
+                            <span class="font-extrabold" x-text="sidebarCollapsed ? 'Show Sidebar ☰' : 'Hide Sidebar ◀'">Hide Sidebar ◀</span>
                         </button>
+                        @if(auth()->user()->isMerchandiserPortalAdmin())
+                            <div class="hidden items-center rounded-lg border border-slate-300 dark:border-slate-700 p-1 sm:flex bg-slate-50 dark:bg-slate-900 shrink-0" aria-label="Tenant workspace">
+                                @foreach(\App\Support\MerchandiserTenant::all() as $tenantOption)
+                                    <a href="{{ $adminTabUrl($activeAdminTab, ['tenant' => $tenantOption['code']]) }}"
+                                       class="rounded-md px-3 py-1.5 text-[10px] font-bold transition shadow-sm {{ $merchTenant['code'] === $tenantOption['code'] ? 'merch-primary-button' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white' }}">
+                                        {{ $tenantOption['name'] }}
+                                    </a>
+                                @endforeach
+                            </div>
+                        @endif
                         <div>
                             <div class="flex items-center gap-2">
-                                <span class="text-[10px] uppercase font-bold tracking-[0.25em] text-brand-red bg-brand-red/10 border border-brand-red/20 px-2 py-0.5 rounded-md hidden sm:inline-block">Merchandiser Admin Hub</span>
-                                <span class="text-xs text-brand-white/40 hidden sm:inline-block">/</span>
-                                <span class="text-xs text-brand-ash font-medium hidden sm:inline-block" x-text="activeTab.replace('-', ' ').toUpperCase()"></span>
+                                <span class="text-[10px] uppercase font-bold tracking-[0.2em] text-blue-700 dark:text-blue-300 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-md hidden sm:inline-block">Merchandiser Admin Hub</span>
+                                <span class="text-xs text-slate-400 hidden sm:inline-block">/</span>
+                                <span class="text-xs font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider hidden sm:inline-block" x-text="activeTab.replace('-', ' ')"></span>
                             </div>
-                            <h1 class="text-lg font-display text-brand-white tracking-wide mt-0.5" x-text="{
+                            <h1 class="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight mt-0.5" x-text="{
                                 overview: '🏠 Dashboard Overview',
                                 'perfect-store': '🎯 Perfect Store KPI Command Center',
                                 tracking: '🗺️ Live Field Tracking',
@@ -478,28 +570,28 @@
                                 executive: '📊 Executive Summary',
                                 'category-kpi': '🏷️ Category Level KPIs',
                                 'user-performance': '👤 User Performance',
-                                'price-promo': '💰 Price & Promo Compliance'
+                                'price-promo': '💰 Price & Promo Compliance',
+                                'supervisor-dashboard': '🧭 Supervisor Dashboard (SD)',
+                                'regional-dashboard': '🗺️ Regional Dashboard (RD)',
+                                'client-dashboard': '📊 Client / TM Dashboard (CD)'
                             }[activeTab] || activeTab.replaceAll('-', ' ').toUpperCase()"></h1>
                         </div>
                     </div>
                     <div class="flex items-center gap-3">
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold hidden lg:inline-flex">
-                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Live System
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-xs font-bold hidden lg:inline-flex">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Live System
                         </span>
                         <!-- Pending badge -->
                         @if($totalPending > 0)
-                        <button @click="window.location.href = @js($adminTabUrl('notifications'))" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-red/15 border border-brand-red/30 text-brand-red text-xs font-bold animate-pulse hover:bg-brand-red/25 transition">
+                        <button @click="window.location.href = @js($adminTabUrl('notifications'))" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300 text-xs font-bold animate-pulse hover:bg-red-500/20 transition">
                             🔔 {{ $totalPending }} pending
                         </button>
                         @endif
-                        <!-- Date/time -->
-                        <span class="text-xs text-brand-white/60 font-medium hidden md:block border-l border-brand-white/10 pl-3">{{ now()->format('D, d M Y') }}</span>
-                        <!-- Theme toggle -->
-                        <button type="button" data-theme-toggle class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-brand-white/20 text-brand-white/70 transition hover:text-brand-white" aria-pressed="false">
-                            <span class="sr-only">Toggle theme</span>
-                            <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4.5"></circle><path d="M12 2.5v2.5M12 19v2.5M4.5 12H2M22 12h-2.5M5.8 5.8l1.8 1.8M16.4 16.4l1.8 1.8M18.2 5.8l-1.8 1.8M7.6 16.4l-1.8 1.8"></path></svg>
-                            <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 14.5A8.5 8.5 0 1 1 9.5 3a7 7 0 0 0 11.5 11.5z"></path></svg>
-                        </button>
+                        <!-- Prominent High-Contrast Date Badge -->
+                        <div class="hidden md:inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs font-bold shadow-sm">
+                            <span class="text-sm">📅</span>
+                            <span>{{ now()->format('D, d M Y') }}</span>
+                        </div>
                     </div>
                 </div>
             </header>
@@ -580,7 +672,7 @@
                 @endif
 
                 {{-- ═══════════════════════════════════════════════════
-                     TAB: EXECUTIVE SUMMARY (ShelfWatch)
+                     TAB: PERFECT STORE EXECUTIVE SUMMARY
                 ════════════════════════════════════════════════════ --}}
                                 @if($activeAdminTab === 'executive')
                     @include('merchandisers.admin-tabs.executive')
@@ -610,9 +702,19 @@
 
 <script>
 const adminChartsAvailable = typeof Chart !== 'undefined';
+function getChartThemeColors() {
+    const isDark = document.documentElement.classList.contains('dark');
+    return {
+        text: isDark ? '#94A3B8' : '#0F172A',
+        grid: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+        legendText: isDark ? '#CBD5E1' : '#1E293B',
+    };
+}
+
 if (adminChartsAvailable) {
-    Chart.defaults.color = 'rgba(255,255,255,0.72)';
-    Chart.defaults.borderColor = 'rgba(255,255,255,0.1)';
+    const themeColors = getChartThemeColors();
+    Chart.defaults.color = themeColors.text;
+    Chart.defaults.borderColor = themeColors.grid;
 }
 
 const merchKpiChartOptions = {
@@ -621,12 +723,15 @@ const merchKpiChartOptions = {
     plugins: {
         legend: {
             position: 'bottom',
-            labels: { color: 'rgba(255,255,255,0.7)', font: { size: 10 } }
+            labels: {
+                color: getChartThemeColors().legendText,
+                font: { size: 10, weight: 'bold' }
+            }
         }
     },
     scales: {
-        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 9 } } },
-        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 9 } }, beginAtZero: true, max: 100 }
+        x: { grid: { color: getChartThemeColors().grid }, ticks: { color: getChartThemeColors().text, font: { size: 9, weight: '600' } } },
+        y: { grid: { color: getChartThemeColors().grid }, ticks: { color: getChartThemeColors().text, font: { size: 9, weight: '600' } }, beginAtZero: true, max: 100 }
     }
 };
 
@@ -648,6 +753,8 @@ function initPerfectStoreOverviewCharts() {
     const payload = readPerfectStoreOverviewChartData();
     if (!payload) return;
 
+    const themeColors = getChartThemeColors();
+
     const perfectMetricRadarCtx = document.getElementById('perfectStoreMetricRadarChart');
     if (perfectMetricRadarCtx) {
         Chart.getChart(perfectMetricRadarCtx)?.destroy();
@@ -659,16 +766,16 @@ function initPerfectStoreOverviewCharts() {
                     {
                         label: 'Actual',
                         data: payload.metrics?.actual || [],
-                        backgroundColor: 'rgba(239,68,68,0.16)',
-                        borderColor: 'rgba(239,68,68,0.9)',
+                        backgroundColor: 'rgba(239,68,68,0.2)',
+                        borderColor: 'rgba(239,68,68,0.95)',
                         borderWidth: 2,
                         pointBackgroundColor: '#ef4444',
                     },
                     {
                         label: 'Target',
                         data: payload.metrics?.targets || [],
-                        backgroundColor: 'rgba(34,197,94,0.08)',
-                        borderColor: 'rgba(34,197,94,0.7)',
+                        backgroundColor: 'rgba(34,197,94,0.1)',
+                        borderColor: 'rgba(34,197,94,0.85)',
                         borderDash: [4, 4],
                         borderWidth: 1.5,
                         pointBackgroundColor: '#22c55e',
@@ -679,15 +786,15 @@ function initPerfectStoreOverviewCharts() {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { position: 'bottom', labels: { color: 'rgba(255,255,255,0.7)', font: { size: 10 } } }
+                    legend: { position: 'bottom', labels: { color: themeColors.legendText, font: { size: 10, weight: 'bold' } } }
                 },
                 scales: {
                     r: {
                         beginAtZero: true,
                         max: 100,
-                        grid: { color: 'rgba(255,255,255,0.08)' },
-                        angleLines: { color: 'rgba(255,255,255,0.08)' },
-                        pointLabels: { color: 'rgba(255,255,255,0.7)', font: { size: 10 } },
+                        grid: { color: themeColors.grid },
+                        angleLines: { color: themeColors.grid },
+                        pointLabels: { color: themeColors.text, font: { size: 10, weight: 'bold' } },
                         ticks: { display: false }
                     }
                 }
@@ -699,14 +806,14 @@ function initPerfectStoreOverviewCharts() {
         {
             id: 'perfectStoreMerchChart',
             data: payload.merchandisers || {},
-            backgroundColor: 'rgba(14,165,233,0.55)',
-            borderColor: 'rgba(14,165,233,0.95)',
+            backgroundColor: 'rgba(14,165,233,0.75)',
+            borderColor: 'rgba(14,165,233,1)',
         },
         {
             id: 'perfectStoreKdChart',
             data: payload.kds || {},
-            backgroundColor: 'rgba(167,139,250,0.55)',
-            borderColor: 'rgba(167,139,250,0.95)',
+            backgroundColor: 'rgba(167,139,250,0.75)',
+            borderColor: 'rgba(167,139,250,1)',
         },
     ];
 
@@ -867,25 +974,34 @@ if (statusCtx && adminChartsAvailable) {
             datasets: [{
                 data: [{{ $activeMerchandisers }}, {{ $pendingMerchandisers }}, {{ $suspendedMerchandisers }}],
                 backgroundColor: [
-                    'rgba(34,197,94,0.65)',
-                    'rgba(245,158,11,0.65)',
-                    'rgba(239,68,68,0.65)'
-                ],
-                borderColor: [
                     '#22c55e',
                     '#f59e0b',
                     '#ef4444'
                 ],
-                borderWidth: 1.5
+                borderColor: [
+                    '#16a34a',
+                    '#d97706',
+                    '#dc2626'
+                ],
+                borderWidth: 2,
+                hoverOffset: 8
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            radius: '90%',
+            cutout: '50%',
             plugins: {
                 legend: {
-                    position: 'bottom',
-                    labels: { color: 'rgba(255,255,255,0.7)', font: { size: 10 } }
+                    position: window.innerWidth > 768 ? 'right' : 'bottom',
+                    labels: {
+                        color: typeof Chart !== 'undefined' ? Chart.defaults.color : '#334155',
+                        font: { size: 14, weight: 'bold' },
+                        padding: 20,
+                        usePointStyle: true,
+                        pointStyle: 'circle'
+                    }
                 }
             }
         }
@@ -902,10 +1018,10 @@ if (kdCtx && adminChartsAvailable) {
             datasets: [{
                 label: 'Visits',
                 data: @json(array_values($visitsByKd)),
-                backgroundColor: 'rgba(59,130,246,0.65)',
+                backgroundColor: 'rgba(59,130,246,0.75)',
                 borderColor: '#3b82f6',
                 borderWidth: 1.5,
-                borderRadius: 4
+                borderRadius: 6
             }]
         },
         options: {
@@ -913,8 +1029,8 @@ if (kdCtx && adminChartsAvailable) {
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
             scales: {
-                x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 9 } } },
-                y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 9 }, stepSize: 1 }, beginAtZero: true }
+                x: { grid: { color: 'rgba(148,163,184,0.15)' }, ticks: { color: typeof Chart !== 'undefined' ? Chart.defaults.color : '#334155', font: { size: 11, weight: 'bold' } } },
+                y: { grid: { color: 'rgba(148,163,184,0.15)' }, ticks: { color: typeof Chart !== 'undefined' ? Chart.defaults.color : '#334155', font: { size: 11, weight: 'bold' }, stepSize: 1 }, beginAtZero: true }
             }
         }
     });
@@ -930,11 +1046,11 @@ if (assetsCtx && adminChartsAvailable) {
             datasets: [{
                 data: @json(array_values($assetsByItem)),
                 backgroundColor: [
-                    'rgba(168,85,247,0.65)',
-                    'rgba(236,72,153,0.65)',
-                    'rgba(6,182,212,0.65)',
-                    'rgba(20,184,166,0.65)',
-                    'rgba(249,115,22,0.65)'
+                    'rgba(168,85,247,0.75)',
+                    'rgba(236,72,153,0.75)',
+                    'rgba(6,182,212,0.75)',
+                    'rgba(20,184,166,0.75)',
+                    'rgba(249,115,22,0.75)'
                 ],
                 borderWidth: 1.5
             }]
@@ -945,7 +1061,7 @@ if (assetsCtx && adminChartsAvailable) {
             plugins: {
                 legend: {
                     position: 'bottom',
-                    labels: { color: 'rgba(255,255,255,0.7)', font: { size: 10 } }
+                    labels: { color: typeof Chart !== 'undefined' ? Chart.defaults.color : '#334155', font: { size: 11, weight: 'bold' }, padding: 14 }
                 }
             }
         }
@@ -962,10 +1078,10 @@ if (regionCtx && adminChartsAvailable) {
             datasets: [{
                 label: 'Outlets',
                 data: @json(array_values($outletsByRegion)),
-                backgroundColor: 'rgba(14,165,233,0.62)',
+                backgroundColor: 'rgba(14,165,233,0.75)',
                 borderColor: '#0ea5e9',
                 borderWidth: 1.5,
-                borderRadius: 5
+                borderRadius: 6
             }]
         },
         options: {
@@ -974,8 +1090,8 @@ if (regionCtx && adminChartsAvailable) {
             indexAxis: 'y',
             plugins: { legend: { display: false } },
             scales: {
-                x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 9 }, stepSize: 1 }, beginAtZero: true },
-                y: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.55)', font: { size: 9 } } }
+                x: { grid: { color: 'rgba(148,163,184,0.15)' }, ticks: { color: typeof Chart !== 'undefined' ? Chart.defaults.color : '#334155', font: { size: 11, weight: 'bold' }, stepSize: 1 }, beginAtZero: true },
+                y: { grid: { display: false }, ticks: { color: typeof Chart !== 'undefined' ? Chart.defaults.color : '#334155', font: { size: 11, weight: 'bold' } } }
             }
         }
     });

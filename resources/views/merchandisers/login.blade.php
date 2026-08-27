@@ -1,27 +1,73 @@
 <x-guest-layout>
-    <div class="space-y-6">
+    @php
+        $merchTenant = \App\Support\MerchandiserTenant::theme($activeTenant);
+    @endphp
+    <div class="space-y-6" x-data="{
+        activeRole: @js($activeRole),
+        activeTenant: @js($activeTenant),
+        roles: @js($portalRoles),
+        tenants: @js($merchandiserTenants),
+    }">
+        <!-- Header -->
+        <div class="text-center space-y-2">
+            <p class="text-xs font-bold uppercase tracking-[0.3em] text-brand-ash">CMIH Africa Merchandiser Portal</p>
+            <h2 class="text-3xl font-display text-brand-white">Unified Portal Access</h2>
+            <p class="text-xs text-brand-white/70">Select your portal role tab and brand workspace to sign in or register.</p>
+        </div>
+
+        <!-- 4 Role Tabs -->
+        <div class="grid grid-cols-2 gap-2 sm:grid-cols-4 rounded-xl border border-brand-white/15 bg-brand-black/60 p-1.5">
+            @foreach($portalRoles as $roleKey => $roleDef)
+                <button type="button"
+                        @click="activeRole = '{{ $roleKey }}'"
+                        :class="activeRole === '{{ $roleKey }}' ? 'bg-brand-red text-white shadow-lg' : 'text-brand-white/60 hover:text-brand-white hover:bg-white/5'"
+                        class="rounded-lg py-2.5 px-2 text-center text-xs font-bold transition duration-200">
+                    <span class="block text-sm mb-0.5">{{ $roleDef['icon'] }}</span>
+                    <span>{{ $roleDef['short_label'] }}</span>
+                </button>
+            @endforeach
+        </div>
+
+        <!-- Brand Selector (Unilever vs GGBL) with Real Logos -->
         <div class="space-y-2">
-            <p class="text-xs uppercase tracking-[0.3em] text-brand-ash">Merchandiser Portal Access</p>
-            <h2 class="text-3xl font-display text-brand-white">Field Agent Login</h2>
-            <p class="text-sm text-brand-white/70">External merchandisers see the field dashboard. Brands team members can sign in with their existing CMIH credentials to manage merchandisers.</p>
+            <label class="block text-xs font-bold uppercase tracking-wider text-brand-ash">Select Brand Workspace</label>
+            <div class="grid grid-cols-2 gap-3">
+                @foreach($merchandiserTenants as $tenantKey => $tenantDef)
+                    <button type="button"
+                            @click="activeTenant = '{{ $tenantKey }}'"
+                            :class="activeTenant === '{{ $tenantKey }}' ? 'border-amber-400 bg-amber-400/10 ring-2 ring-amber-400/30' : 'border-brand-white/15 bg-brand-black/40 hover:border-brand-white/30'"
+                            class="flex items-center gap-3 rounded-xl border p-3 text-left transition duration-200">
+                        <img src="{{ asset($tenantDef['logo']) }}"
+                             alt="{{ $tenantDef['name'] }}"
+                             class="h-10 w-10 object-contain shrink-0 rounded-lg p-1 bg-white/10">
+                        <div class="min-w-0">
+                            <p class="text-xs font-bold text-brand-white truncate">{{ $tenantDef['name'] }}</p>
+                            <p class="text-[10px] text-brand-ash truncate">{{ $tenantDef['code'] === 'unilever' ? 'Blue & White' : 'Black & Gold' }}</p>
+                        </div>
+                    </button>
+                @endforeach
+            </div>
         </div>
 
         <x-auth-session-status class="mb-4" :status="session('status')" />
 
-        <form method="POST" action="{{ route('merchandisers.login') }}" class="space-y-5">
+        <!-- Form -->
+        <form method="POST" action="{{ route('merchandisers.login') }}" class="space-y-4">
             @csrf
+            <input type="hidden" name="portal_role" :value="activeRole">
+            <input type="hidden" name="merchandiser_tenant" :value="activeTenant">
 
             <div>
                 <x-input-label for="email" :value="__('Email Address')" />
-                <x-text-input id="email" type="email" name="email" :value="old('email')" required autofocus placeholder="yourname@domain.com" />
+                <x-text-input id="email" type="email" name="email" :value="old('email')" required autofocus placeholder="name@company.com" />
                 <x-input-error :messages="$errors->get('email')" class="mt-2" />
             </div>
 
             <div>
                 <x-input-label for="password" :value="__('Password')" />
                 <div class="relative w-full">
-                    <x-text-input id="password" type="password" name="password" required placeholder="Enter your password" class="pr-10" />
-                    <button type="button" onclick="togglePasswordVisibility('password', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-brand-white/50 hover:text-brand-white transition-colors" aria-label="Toggle password visibility">
+                    <x-text-input id="password" type="password" name="password" required placeholder="Enter password" class="pr-10" />
+                    <button type="button" onclick="togglePasswordVisibility('password', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-brand-white/50 hover:text-brand-white transition-colors">
                         <i class="fa-solid fa-eye"></i>
                     </button>
                 </div>
@@ -38,18 +84,43 @@
                 </a>
             </div>
 
-            <x-primary-button class="w-full justify-center">
-                Access Field Dashboard
+            <x-primary-button class="w-full justify-center py-3 text-sm font-bold">
+                <span x-text="activeRole === 'admin' ? 'Log In to Admin Hub' : 'Log In to ' + (roles[activeRole]?.label || 'Portal')"></span>
             </x-primary-button>
         </form>
 
-        <p class="text-xs text-brand-white/60">
-            Need an account? <a href="{{ route('merchandisers.register') }}" class="text-amber-500 hover:text-amber-400 font-semibold underline">Register here</a>.
-        </p>
+        <!-- Quick Demo Credentials helper box -->
+        <div class="rounded-xl border border-sky-500/30 bg-sky-500/10 p-3.5 text-xs text-sky-200 space-y-1.5 shadow-sm">
+            <div class="flex items-center justify-between font-bold text-sky-300 border-b border-sky-500/20 pb-1">
+                <span>🔑 Active Test Credentials:</span>
+                <span class="uppercase tracking-wider text-[10px] text-amber-300 font-extrabold" x-text="roles[activeRole]?.label || activeRole"></span>
+            </div>
+            <div class="flex items-center justify-between text-[11px] font-mono">
+                <span>Email: <strong class="text-white font-bold" x-text="{ field: 'merchandiser@cmih.africa', supervisor: 'supervisor@cmih.africa', client: 'client@cmih.africa', admin: 'admin@cmih.africa' }[activeRole] || 'merchandiser@cmih.africa'"></strong></span>
+                <span>Pass: <strong class="text-white font-bold">Password@123</strong></span>
+            </div>
+        </div>
 
-        <div class="pt-4 border-t border-brand-white/10 mt-4">
+        <!-- Registration link (Allowed for Field, Supervisor, Client) -->
+        <div class="rounded-xl border border-brand-white/10 bg-white/5 p-4 text-center text-xs text-brand-white/70"
+             x-show="activeRole !== 'admin'">
+            Need a new account?
+            <a :href="'{{ route('merchandisers.register') }}?role=' + activeRole + '&tenant=' + activeTenant"
+               class="font-bold text-amber-400 hover:text-amber-300 underline ml-1">
+                Register as <span x-text="roles[activeRole]?.label"></span>
+            </a>
+            <p class="mt-1 text-[10px] text-brand-ash">Registrations require approval from the Brands Team Admin.</p>
+        </div>
+
+        <div class="rounded-xl border border-brand-white/10 bg-white/5 p-4 text-center text-xs text-brand-white/70"
+             x-show="activeRole === 'admin'">
+            <p class="font-semibold text-brand-white">Admin Hub Sign-in Only</p>
+            <p class="mt-1 text-[10px] text-brand-ash">Brands Team members and Super Admins can log in directly with their existing staff credentials.</p>
+        </div>
+
+        <div class="pt-2 text-center">
             <a href="{{ route('merchandisers.portal') }}" class="text-xs text-brand-white/60 hover:text-brand-white underline">
-                ← Back to Gate selection
+                ← Back to Portal Home
             </a>
         </div>
     </div>

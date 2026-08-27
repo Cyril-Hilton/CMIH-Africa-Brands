@@ -10,11 +10,12 @@
         <input 
             :type="show ? 'text' : 'password'"
             @disabled($disabled) 
-            {{ $attributes->merge(['class' => 'w-full rounded-md border border-brand-white/10 bg-brand-black/40 pl-3 pr-10 py-2.5 text-sm text-brand-white placeholder-brand-white/40 focus:border-brand-red focus:ring-brand-red'])->except('type') }}
+            style="color: #0f172a !important; background-color: #ffffff !important; -webkit-text-fill-color: #0f172a !important;"
+            {{ $attributes->merge(['class' => 'w-full rounded-xl border border-slate-300 bg-white pl-3 pr-10 py-2.5 text-sm text-slate-900 font-bold placeholder-slate-400 focus:border-brand-red focus:ring-brand-red'])->except('type') }}
         >
         <button 
             type="button" 
-            class="absolute inset-y-0 right-0 pr-3 flex items-center text-brand-white/50 hover:text-brand-white transition-colors"
+            class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-slate-900 transition-colors"
             @click="show = !show"
         >
             <!-- Open Eye Icon (when show is false) -->
@@ -29,7 +30,5 @@
         </button>
     </div>
 @else
-    <input @disabled($disabled) {{ $attributes->merge(['class' => 'mt-1 w-full rounded-md border border-brand-white/10 bg-brand-black/40 px-3 py-2.5 text-sm text-brand-white placeholder-brand-white/40 focus:border-brand-red focus:ring-brand-red']) }}>
+    <input @disabled($disabled) style="color: #0f172a !important; background-color: #ffffff !important; -webkit-text-fill-color: #0f172a !important;" {{ $attributes->merge(['class' => 'mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 font-bold placeholder-slate-400 focus:border-brand-red focus:ring-brand-red']) }}>
 @endif
-
-

@@ -20,10 +20,16 @@ class User extends Authenticatable
 
     public const MERCHANDISER_ROLE = 'merchandiser';
     public const MERCHANDISER_SUPERVISOR_ROLE = 'merchandiser_supervisor';
+    public const MERCHANDISER_CLIENT_ROLE = 'merchandiser_client';
     public const BRAND_PROMOTER_ROLE = 'brand_promoter';
     public const MERCHANDISER_FIELD_ROLES = [
         self::MERCHANDISER_ROLE,
+    ];
+    public const MERCHANDISER_PORTAL_EXTERNAL_ROLES = [
+        self::MERCHANDISER_ROLE,
         self::MERCHANDISER_SUPERVISOR_ROLE,
+        self::MERCHANDISER_CLIENT_ROLE,
+        self::BRAND_PROMOTER_ROLE,
     ];
 
     /**
@@ -144,6 +150,7 @@ class User extends Authenticatable
         'merchandiser_working_days',
         'merchandiser_daily_outlet_target',
         'merchandiser_outlet_frequency',
+        'merchandiser_tenant',
     ];
 
     /**
@@ -750,6 +757,8 @@ class User extends Authenticatable
             'super_admin' => 'Super Admin',
             'merchandiser' => 'Merchandiser',
             'merchandiser_supervisor' => 'Merchandiser Supervisor',
+            'merchandiser_client' => 'Client / TM',
+            'brand_promoter' => 'Brand Promoter',
         ][$value] ?? Str::of($value)->replace(['_', '-'], ' ')->squish()->title()->toString();
     }
 
@@ -881,8 +890,7 @@ class User extends Authenticatable
         return $query->where(function ($q) {
             $q->whereNull('access_role')
               ->orWhereNotIn('access_role', [
-                  ...self::MERCHANDISER_FIELD_ROLES,
-                  self::BRAND_PROMOTER_ROLE,
+                  ...self::MERCHANDISER_PORTAL_EXTERNAL_ROLES,
               ]);
         });
     }
@@ -890,6 +898,16 @@ class User extends Authenticatable
     public function scopeMerchandisers($query)
     {
         return $query->whereIn('access_role', self::MERCHANDISER_FIELD_ROLES);
+    }
+
+    public function scopeMerchandiserPortalAccounts($query)
+    {
+        return $query->whereIn('access_role', self::MERCHANDISER_PORTAL_EXTERNAL_ROLES);
+    }
+
+    public function scopeForMerchandiserTenant($query, ?string $tenant)
+    {
+        return $query->where('merchandiser_tenant', \App\Support\MerchandiserTenant::normalize($tenant));
     }
 
     public function scopeMerchandiserSupervisors($query)
@@ -910,6 +928,16 @@ class User extends Authenticatable
     public function isMerchandiserSupervisor(): bool
     {
         return $this->access_role === self::MERCHANDISER_SUPERVISOR_ROLE;
+    }
+
+    public function isMerchandiserClient(): bool
+    {
+        return $this->access_role === self::MERCHANDISER_CLIENT_ROLE;
+    }
+
+    public function isMerchandiserPortalExternalAccount(): bool
+    {
+        return in_array($this->access_role, self::MERCHANDISER_PORTAL_EXTERNAL_ROLES, true);
     }
 
     public function nextBirthdayDate(?Carbon $from = null): ?Carbon
@@ -958,17 +986,25 @@ class User extends Authenticatable
     public function isMerchandiserPortalAdmin(): bool
     {
         return $this->hasRole(['admin', 'super_admin'])
-            || $this->isBrandsTeamMember()
-            || $this->isMerchandiserSupervisor();
+            || $this->isBrandsTeamMember();
     }
 
     public function profilePhotoUrl(): string
     {
-        if ($this->profile_photo_path) {
-            return Storage::disk('public')->url($this->profile_photo_path);
+        $photo = $this->profile_photo_path ?: $this->passport_photo_path;
+
+        if ($photo) {
+            if (Str::startsWith($photo, ['http://', 'https://'])) {
+                return $photo;
+            }
+
+            $cleanPath = ltrim(preg_replace('/^\/?storage\//', '', $photo), '/');
+
+            return '/storage/' . $cleanPath;
         }
 
-        return asset('images/CMIH%20WEB%20ASSETS/Company%20logo/CMIH%20Logo_light%20theme.png');
+        $name = urlencode($this->name ?: 'User');
+        return "https://ui-avatars.com/api/?name={$name}&color=38BDF8&background=0F172A&bold=true";
     }
 
     public function idCardReady(): bool

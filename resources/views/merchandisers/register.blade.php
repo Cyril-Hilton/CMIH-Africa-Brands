@@ -6,13 +6,22 @@
             <p class="text-sm text-brand-white/70">Create your merchandiser account. All external agents require admin approval before activation.</p>
         </div>
 
-        <form method="POST" action="{{ route('merchandisers.register') }}" class="space-y-4">
+        <form method="POST" action="{{ route('merchandisers.register') }}" enctype="multipart/form-data" class="space-y-4">
             @csrf
 
             <div>
                 <x-input-label for="name" :value="__('Full Name')" />
                 <x-text-input id="name" type="text" name="name" :value="old('name')" required placeholder="Enter your full name" />
                 <x-input-error :messages="$errors->get('name')" class="mt-1" />
+            </div>
+
+            <div>
+                <x-input-label for="profile_photo" :value="__('Profile Photo / Headshot Image (Required)')" />
+                <div class="mt-1.5 flex items-center gap-3 rounded-xl border border-brand-white/15 bg-brand-white/5 p-3 transition hover:border-brand-red/40">
+                    <input id="profile_photo" type="file" name="profile_photo" accept="image/*" required class="w-full text-xs text-brand-white/80 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-red file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-white hover:file:bg-brand-red/80 cursor-pointer">
+                </div>
+                <p class="text-[10px] text-brand-white/50 mt-1">Upload a clear front-facing headshot photo for your ID card and portal avatar (JPG, PNG, WEBP, max 5MB).</p>
+                <x-input-error :messages="$errors->get('profile_photo')" class="mt-1" />
             </div>
 
             <div>
@@ -39,6 +48,26 @@
                 <p class="text-[10px] text-brand-white/40 mt-0.5">Must be between 18 and 65 years of age.</p>
                 <x-input-error :messages="$errors->get('date_of_birth')" class="mt-1" />
             </div>
+
+            <fieldset class="space-y-2">
+                <legend class="text-xs font-semibold uppercase tracking-[0.16em] text-brand-white/75">Brand affiliation</legend>
+                <p class="text-xs leading-5 text-brand-white/55">Choose the business whose outlets and field instructions you work on.</p>
+                <div class="grid gap-3 sm:grid-cols-2">
+                    @foreach($merchandiserTenants as $tenant)
+                        <label class="group cursor-pointer rounded-xl border border-brand-white/10 bg-brand-white/5 p-4 transition hover:border-brand-red/45 hover:bg-brand-red/5">
+                            <input type="radio" name="merchandiser_tenant" value="{{ $tenant['code'] }}" class="sr-only peer" @checked(old('merchandiser_tenant', 'unilever') === $tenant['code']) required>
+                            <span class="flex items-center gap-3 peer-checked:text-brand-red">
+                                <img src="{{ asset($tenant['logo']) }}" alt="" class="h-10 w-10 object-contain" style="filter: {{ $tenant['logo_filter'] }}">
+                                <span>
+                                    <span class="block text-sm font-bold">{{ $tenant['name'] }}</span>
+                                    <span class="mt-1 block text-[10px] uppercase tracking-[0.12em] opacity-60">Field merchandising team</span>
+                                </span>
+                            </span>
+                        </label>
+                    @endforeach
+                </div>
+                <x-input-error :messages="$errors->get('merchandiser_tenant')" class="mt-1" />
+            </fieldset>
 
             <div>
                 <x-input-label for="password" :value="__('Password')" />

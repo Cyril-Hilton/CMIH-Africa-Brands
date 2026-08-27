@@ -100,6 +100,7 @@ class MerchandiserPortalTest extends TestCase
             'contact_email' => 'young@personal.com',
             'phone' => '12345678',
             'date_of_birth' => Carbon::now()->subYears(17)->toDateString(),
+            'merchandiser_tenant' => 'unilever',
             'password' => 'Password123!',
             'password_confirmation' => 'Password123!',
         ]);
@@ -113,6 +114,7 @@ class MerchandiserPortalTest extends TestCase
             'contact_email' => 'old@personal.com',
             'phone' => '12345678',
             'date_of_birth' => Carbon::now()->subYears(66)->toDateString(),
+            'merchandiser_tenant' => 'unilever',
             'password' => 'Password123!',
             'password_confirmation' => 'Password123!',
         ]);
@@ -126,6 +128,7 @@ class MerchandiserPortalTest extends TestCase
             'contact_email' => 'valid@personal.com',
             'phone' => '12345678',
             'date_of_birth' => Carbon::now()->subYears(25)->toDateString(),
+            'merchandiser_tenant' => 'unilever',
             'password' => 'Password123!',
             'password_confirmation' => 'Password123!',
         ]);
@@ -146,6 +149,7 @@ class MerchandiserPortalTest extends TestCase
             'contact_email' => 'agent@personal.com',
             'phone' => '12345678',
             'date_of_birth' => Carbon::now()->subYears(25)->toDateString(),
+            'merchandiser_tenant' => 'unilever',
             'password' => 'Password123',
             'password_confirmation' => 'Password123',
         ]);
@@ -158,6 +162,7 @@ class MerchandiserPortalTest extends TestCase
             'contact_email' => 'secure-agent@personal.com',
             'phone' => '12345678',
             'date_of_birth' => Carbon::now()->subYears(25)->toDateString(),
+            'merchandiser_tenant' => 'unilever',
             'password' => 'Password123!',
             'password_confirmation' => 'Password123!',
         ]);
@@ -168,6 +173,65 @@ class MerchandiserPortalTest extends TestCase
             'access_role' => 'merchandiser',
         ]);
     }
+
+    #[Test]
+    public function merchandiser_registration_persists_unilever_and_ggbl_tenant_selections()
+    {
+        foreach ([
+            'unilever' => 'unilever-agent@cmih.africa',
+            'ggbl' => 'ggbl-agent@cmih.africa',
+        ] as $tenant => $email) {
+            $response = $this->post(route('merchandisers.register'), [
+                'name' => strtoupper($tenant).' Agent',
+                'email' => $email,
+                'contact_email' => $tenant.'-agent@personal.com',
+                'phone' => '12345678',
+                'date_of_birth' => Carbon::now()->subYears(25)->toDateString(),
+                'merchandiser_tenant' => $tenant,
+                'password' => 'Password123!',
+                'password_confirmation' => 'Password123!',
+            ]);
+
+            $response->assertRedirect(route('merchandisers.login'));
+            $this->assertDatabaseHas('users', [
+                'email' => $email,
+                'access_role' => 'merchandiser',
+                'merchandiser_tenant' => $tenant,
+            ]);
+        }
+    }
+
+    #[Test]
+    public function merchandiser_dashboard_uses_the_selected_tenant_theme_attribute()
+    {
+        $region = Region::create(['name' => 'Tenant Theme Region']);
+        $kd = KeyDistributor::create([
+            'name' => 'Tenant Theme KD',
+            'region_id' => $region->id,
+        ]);
+
+        foreach (['unilever', 'ggbl'] as $tenant) {
+            $user = User::create([
+                'name' => strtoupper($tenant).' Theme Agent',
+                'email' => $tenant.'-theme-agent@cmih.africa',
+                'contact_email' => $tenant.'-theme-agent@personal.com',
+                'phone' => '12345678',
+                'date_of_birth' => '1995-05-05',
+                'password' => Hash::make('Pass123'),
+                'access_role' => 'merchandiser',
+                'status' => 'active',
+                'kd_id' => $kd->id,
+                'region_id' => $region->id,
+                'merchandiser_tenant' => $tenant,
+            ]);
+
+            $this->actingAs($user)
+                ->get(route('merchandisers.dashboard'))
+                ->assertOk()
+                ->assertSee('data-merch-tenant="'.$tenant.'"', false);
+        }
+    }
+
     #[Test]
     public function duplicate_merchandiser_contact_email_returns_validation_error_instead_of_server_error()
     {
@@ -188,6 +252,7 @@ class MerchandiserPortalTest extends TestCase
             'contact_email' => 'existing-personal@example.com',
             'phone' => '87654321',
             'date_of_birth' => Carbon::now()->subYears(25)->toDateString(),
+            'merchandiser_tenant' => 'unilever',
             'password' => 'Password123!',
             'password_confirmation' => 'Password123!',
         ]);
@@ -348,6 +413,7 @@ class MerchandiserPortalTest extends TestCase
             'contact_email' => 'new-field-agent@personal.com',
             'phone' => '12345678',
             'date_of_birth' => Carbon::now()->subYears(25)->toDateString(),
+            'merchandiser_tenant' => 'unilever',
             'password' => 'Password123!',
             'password_confirmation' => 'Password123!',
         ]);
@@ -4384,7 +4450,25 @@ class MerchandiserPortalTest extends TestCase
             ->assertExitCode(0);
 
         $this->assertDatabaseCount('merchandiser_kpi_alert_events', 1);
-        $this->assertSame(1, \App\Models\Notification::where('title', 'Missed outlet visit')->count());
+        $this->assertSame(1, \App\Models\Notification::where('user_id', $user->id)
+            ->where('title', 'Outstanding outlets carried forward')
+            ->count());
+        $this->assertSame(1, \App\Models\Notification::where('user_id', $admin->id)
+            ->where('title', 'Outstanding visits carried forward')
+            ->count());
+        $this->assertDatabaseHas('merchandiser_outlet_assignments', [
+            'user_id' => $user->id,
+            'outlet_id' => $outlet->id,
+            'assigned_date' => '2026-07-21 00:00:00',
+            'source' => 'carryover',
+            'status' => 'planned',
+        ]);
+        $this->assertDatabaseHas('merchandiser_outlet_assignments', [
+            'user_id' => $user->id,
+            'outlet_id' => $outlet->id,
+            'assigned_date' => '2026-07-20 00:00:00',
+            'status' => 'carried_over',
+        ]);
 
         Carbon::setTestNow();
     }

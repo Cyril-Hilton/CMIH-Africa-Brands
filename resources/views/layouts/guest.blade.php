@@ -28,6 +28,31 @@
                 a { color: inherit; text-decoration: none; }
             </style>
         @endif
+
+        <style>
+            input, select, textarea {
+                color: #0f172a !important;
+                background-color: #ffffff !important;
+                -webkit-text-fill-color: #0f172a !important;
+            }
+            input::placeholder,
+            textarea::placeholder,
+            input::-webkit-input-placeholder,
+            textarea::-webkit-input-placeholder {
+                color: #94a3b8 !important;
+                opacity: 1 !important;
+                font-weight: 500 !important;
+                -webkit-text-fill-color: #94a3b8 !important;
+            }
+            input:-webkit-autofill,
+            input:-webkit-autofill:hover, 
+            input:-webkit-autofill:focus, 
+            input:-webkit-autofill:active {
+                -webkit-text-fill-color: #0f172a !important;
+                -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
+                transition: background-color 5000s ease-in-out 0s;
+            }
+        </style>
     </head>
     <body class="min-h-screen bg-brand-black font-sans antialiased text-brand-white">
         <div class="min-h-screen bg-hero-grid">

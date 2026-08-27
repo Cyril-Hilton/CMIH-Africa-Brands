@@ -1,6 +1,6 @@
-                <div class="shelfwatch-tab">
+                <div class="perfect-store-tab">
                     {{-- Executive Hero Banner --}}
-                    <div class="shelfwatch-hero">
+                    <div class="perfect-store-hero">
                         <div class="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-blue-500/10 blur-3xl"></div>
                         <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div>
@@ -14,53 +14,53 @@
                     </div>
 
                     {{-- KPI Bar --}}
-                    <div class="shelfwatch-kpi-grid">
-                        <div class="stat-card glass-panel shelfwatch-kpi-card border-t-2 border-t-blue-500 border border-brand-white/10 bg-[#121215] shadow-xl hover:-translate-y-1 transition-all">
-                            <p class="shelfwatch-kpi-label">Scheduled Visits</p>
-                            <p class="shelfwatch-kpi-value font-display text-blue-400 font-bold">{{ number_format($execScheduled) }}</p>
+                    <div class="perfect-store-kpi-grid">
+                        <div class="stat-card glass-panel perfect-store-kpi-card border-t-2 border-t-blue-500 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm hover:-translate-y-1 transition-all">
+                            <p class="perfect-store-kpi-label">Scheduled Visits</p>
+                            <p class="perfect-store-kpi-value font-display text-blue-600 dark:text-blue-400 font-bold">{{ number_format($execScheduled) }}</p>
                         </div>
-                        <div class="stat-card glass-panel shelfwatch-kpi-card border-t-2 border-t-emerald-500 border border-brand-white/10 bg-[#121215] shadow-xl hover:-translate-y-1 transition-all">
-                            <p class="shelfwatch-kpi-label">Completed Visits</p>
-                            <p class="shelfwatch-kpi-value font-display text-emerald-400 font-bold">{{ number_format($execActual) }}</p>
+                        <div class="stat-card glass-panel perfect-store-kpi-card border-t-2 border-t-emerald-500 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm hover:-translate-y-1 transition-all">
+                            <p class="perfect-store-kpi-label">Completed Visits</p>
+                            <p class="perfect-store-kpi-value font-display text-emerald-600 dark:text-emerald-400 font-bold">{{ number_format($execActual) }}</p>
                         </div>
-                        <div class="stat-card glass-panel shelfwatch-kpi-card border-t-2 border-t-amber-500 border border-brand-white/10 bg-[#121215] shadow-xl hover:-translate-y-1 transition-all">
-                            <p class="shelfwatch-kpi-label">Audit Compliance</p>
-                            <p class="shelfwatch-kpi-value font-display text-amber-400 font-bold">{{ $execCompliance }}%</p>
-                            <p class="shelfwatch-kpi-note">Target 100%</p>
+                        <div class="stat-card glass-panel perfect-store-kpi-card border-t-2 border-t-amber-500 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm hover:-translate-y-1 transition-all">
+                            <p class="perfect-store-kpi-label">Audit Compliance</p>
+                            <p class="perfect-store-kpi-value font-display text-amber-600 dark:text-amber-400 font-bold">{{ $execCompliance }}%</p>
+                            <p class="perfect-store-kpi-note">Target 100%</p>
                         </div>
-                        <div class="stat-card glass-panel shelfwatch-kpi-card border-t-2 border-t-green-500 border border-brand-white/10 bg-[#121215] shadow-xl hover:-translate-y-1 transition-all">
-                            <p class="shelfwatch-kpi-label">% Active Users</p>
-                            <p class="shelfwatch-kpi-value font-display text-green-300 font-bold">{{ $execActiveRate }}%</p>
+                        <div class="stat-card glass-panel perfect-store-kpi-card border-t-2 border-t-green-500 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm hover:-translate-y-1 transition-all">
+                            <p class="perfect-store-kpi-label">% Active Users</p>
+                            <p class="perfect-store-kpi-value font-display text-green-600 dark:text-green-400 font-bold">{{ $execActiveRate }}%</p>
                         </div>
-                        <div class="stat-card glass-panel shelfwatch-kpi-card border-t-2 border-t-sky-500 border border-brand-white/10 bg-[#121215] shadow-xl hover:-translate-y-1 transition-all">
-                            <p class="shelfwatch-kpi-label">Total Images</p>
-                            <p class="shelfwatch-kpi-value font-display text-sky-400 font-bold">{{ number_format($totalImagesCount) }}</p>
+                        <div class="stat-card glass-panel perfect-store-kpi-card border-t-2 border-t-sky-500 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm hover:-translate-y-1 transition-all">
+                            <p class="perfect-store-kpi-label">Total Images</p>
+                            <p class="perfect-store-kpi-value font-display text-sky-600 dark:text-sky-400 font-bold">{{ number_format($totalImagesCount) }}</p>
                         </div>
-                        <div class="stat-card glass-panel shelfwatch-kpi-card border-t-2 border-t-purple-500 border border-brand-white/10 bg-[#121215] shadow-xl hover:-translate-y-1 transition-all">
-                            <p class="shelfwatch-kpi-label">SKU Count</p>
-                            <p class="shelfwatch-kpi-value font-display text-purple-400 font-bold">{{ $execSkuCount }}</p>
+                        <div class="stat-card glass-panel perfect-store-kpi-card border-t-2 border-t-purple-500 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm hover:-translate-y-1 transition-all">
+                            <p class="perfect-store-kpi-label">SKU Count</p>
+                            <p class="perfect-store-kpi-value font-display text-purple-600 dark:text-purple-400 font-bold">{{ $execSkuCount }}</p>
                         </div>
-                        <div class="stat-card glass-panel shelfwatch-kpi-card border-t-2 border-t-brand-red border border-brand-white/10 bg-[#121215] shadow-xl hover:-translate-y-1 transition-all">
-                            <p class="shelfwatch-kpi-label">Active Merchandisers</p>
-                            <p class="shelfwatch-kpi-value font-display text-white font-bold">{{ $activeMerchandisers }}</p>
-                            <p class="shelfwatch-kpi-note">of {{ $totalMerchandisers }} active</p>
+                        <div class="stat-card glass-panel perfect-store-kpi-card border-t-2 border-t-brand-red border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm hover:-translate-y-1 transition-all">
+                            <p class="perfect-store-kpi-label">Active Merchandisers</p>
+                            <p class="perfect-store-kpi-value font-display text-slate-900 dark:text-white font-bold">{{ $activeMerchandisers }}</p>
+                            <p class="perfect-store-kpi-note">of {{ $totalMerchandisers }} active</p>
                         </div>
                     </div>
 
                     {{-- Charts --}}
                     <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
-                        <div class="glass-panel shelfwatch-chart-card rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
+                        <div class="glass-panel perfect-store-chart-card rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
                             <p class="text-xs uppercase tracking-widest text-brand-ash mb-4">Scheduled vs Completed Visits (7-Day Trend)</p>
                             <div class="h-64"><canvas id="execVisitTrendChart"></canvas></div>
                         </div>
-                        <div class="glass-panel shelfwatch-chart-card rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
+                        <div class="glass-panel perfect-store-chart-card rounded-2xl border border-brand-white/10 bg-brand-white/[0.04] p-5">
                             <p class="text-xs uppercase tracking-widest text-brand-ash mb-4">Image Capture by Day</p>
                             <div class="h-64"><canvas id="execImageValidityChart"></canvas></div>
                         </div>
                     </div>
 
                     {{-- Merchandiser summary table --}}
-                    <div class="glass-panel shelfwatch-table-card rounded-2xl border border-brand-white/10 overflow-hidden">
+                    <div class="glass-panel perfect-store-table-card rounded-2xl border border-brand-white/10 overflow-hidden">
                         <div class="border-b border-brand-white/10 px-5 py-4 flex items-center justify-between">
                             <p class="text-xs uppercase tracking-widest text-brand-ash">Field Team Summary</p>
                         </div>
@@ -98,5 +98,5 @@
                 </div>
 
                 {{-- ═══════════════════════════════════════════════════
-                     TAB: CATEGORY LEVEL KPIs (ShelfWatch)
+                     TAB: PERFECT STORE CATEGORY LEVEL KPIs
                 ════════════════════════════════════════════════════ --}}

@@ -82,6 +82,50 @@ class DatabaseSeeder extends Seeder
             );
         }
 
+        // Active Demo Accounts for Testing All 4 Merchandiser Roles
+        $demoAccounts = [
+            [
+                'email' => 'merchandiser@cmih.africa',
+                'name' => 'Ama Field Agent',
+                'access_role' => 'merchandiser',
+                'merchandiser_tenant' => 'unilever',
+            ],
+            [
+                'email' => 'supervisor@cmih.africa',
+                'name' => 'Kofi Supervisor',
+                'access_role' => 'merchandiser_supervisor',
+                'merchandiser_tenant' => 'unilever',
+            ],
+            [
+                'email' => 'client@cmih.africa',
+                'name' => 'Unilever Client Lead',
+                'access_role' => 'merchandiser_client',
+                'merchandiser_tenant' => 'unilever',
+            ],
+            [
+                'email' => 'admin@cmih.africa',
+                'name' => 'Stephanie Brands Admin',
+                'access_role' => 'super_admin',
+                'merchandiser_tenant' => 'unilever',
+            ],
+        ];
+
+        foreach ($demoAccounts as $demo) {
+            User::updateOrCreate(
+                ['email' => $demo['email']],
+                [
+                    'name' => $demo['name'],
+                    'contact_email' => $demo['email'],
+                    'password' => Hash::make('Password@123'),
+                    'access_role' => $demo['access_role'],
+                    'status' => 'active',
+                    'merchandiser_tenant' => $demo['merchandiser_tenant'],
+                    'email_verified_at' => now(),
+                    'must_reset_password' => false,
+                ]
+            );
+        }
+
         $this->call([
             SiteContentSeeder::class,
             BrandSeeder::class,

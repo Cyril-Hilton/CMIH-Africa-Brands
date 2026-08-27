@@ -479,6 +479,7 @@ Route::prefix('merchandisers')->name('merchandisers.')->group(function () {
         
         // HRM & Financial sub-portal submissions
         Route::patch('/profile/update', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'updateProfile'])->name('profile.update');
+        Route::post('/profile/photo', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'updateProfilePhoto'])->name('profile.photo.update');
         Route::post('/leaves', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'submitLeave'])->name('leaves.store');
         Route::post('/claims', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'submitClaim'])->name('claims.store');
         Route::post('/loans', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'submitLoan'])->name('loans.store');
@@ -490,6 +491,19 @@ Route::prefix('merchandisers')->name('merchandisers.')->group(function () {
         Route::get('/native-forms/{form}', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'showNativeForm'])->name('native-forms.show');
         Route::post('/native-forms/{form}', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'submitNativeForm'])->name('native-forms.submit');
         Route::post('/notifications/{notification}/read', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'markNotificationRead'])->name('notifications.read');
+        Route::get('/reports/{type}/download', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'downloadOwnReport'])
+            ->whereIn('type', ['coverage', 'kpis', 'visits', 'photos', 'summary'])
+            ->name('reports.download');
+
+        // ── Merchandiser Supervisor Portal ─────────────────────
+        Route::prefix('supervisor')->name('supervisor.')->group(function () {
+            Route::get('/dashboard', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'dashboard'])->defaults('adminTab', 'supervisor-dashboard')->name('dashboard');
+        });
+
+        // ── Merchandiser Client / TM Portal ─────────────────────
+        Route::prefix('client')->name('client.')->group(function () {
+            Route::get('/dashboard', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'dashboard'])->defaults('adminTab', 'client-dashboard')->name('dashboard');
+        });
 
         // ── Merchandiser Admin Hub (admin/super_admin only) ─────────────────────
         Route::middleware(['role:admin,super_admin'])->prefix('admin')->name('admin.')->group(function () {

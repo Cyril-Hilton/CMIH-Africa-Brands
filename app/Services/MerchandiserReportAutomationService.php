@@ -102,32 +102,109 @@ class MerchandiserReportAutomationService
             ->get();
 
         $sent = 0;
-        foreach ($missed as $assignment) {
-            $dedupe = 'missed-visit:'.$date->toDateString().':'.$assignment->id;
-            $created = $this->recordAlert($dedupe, [
-                'alert_type' => 'missed_visit',
-                'metric' => 'coverage',
-                'scope_type' => 'assignment',
-                'scope_id' => $assignment->id,
-                'period_date' => $date->toDateString(),
-                'payload' => [
-                    'merchandiser' => $assignment->user?->name,
-                    'outlet' => $assignment->outlet?->name,
-                ],
-            ]);
-
-            if (! $created) {
+        foreach ($missed->groupBy('user_id') as $assignments) {
+            $user = $assignments->first()?->user;
+            if (! $user || $user->status !== 'active') {
                 continue;
             }
 
-            $message = ($assignment->user?->name ?? 'A merchandiser').' has not completed '
-                .($assignment->outlet?->name ?? 'an assigned outlet').' for '.$date->format('d M Y').'.';
+            $carryDate = $this->nextWorkingDate($user, $date);
+            $carried = 0;
 
-            $this->notifyAdmins('Missed outlet visit', $message, route('merchandisers.admin.tab', ['adminTab' => 'routes']));
-            $sent++;
+            foreach ($assignments as $assignment) {
+                $dedupe = 'missed-visit:'.$date->toDateString().':'.$assignment->id;
+                $created = $this->recordAlert($dedupe, [
+                    'alert_type' => 'missed_visit',
+                    'metric' => 'coverage',
+                    'scope_type' => 'assignment',
+                    'scope_id' => $assignment->id,
+                    'period_date' => $date->toDateString(),
+                    'payload' => [
+                        'merchandiser' => $user->name,
+                        'outlet' => $assignment->outlet?->name,
+                        'carried_to' => $carryDate->toDateString(),
+                    ],
+                ]);
+
+                $nextSequence = ((int) MerchandiserOutletAssignment::where('user_id', $user->id)
+                    ->whereDate('assigned_date', $carryDate->toDateString())
+                    ->max('sequence')) + 1;
+                $carryOver = MerchandiserOutletAssignment::where('user_id', $user->id)
+                    ->where('outlet_id', $assignment->outlet_id)
+                    ->whereDate('assigned_date', $carryDate->toDateString())
+                    ->first();
+                $carryCreated = false;
+
+                if (! $carryOver) {
+                    $carryOver = MerchandiserOutletAssignment::create([
+                        'user_id' => $user->id,
+                        'outlet_id' => $assignment->outlet_id,
+                        'assigned_date' => $carryDate->toDateString(),
+                        'sequence' => $nextSequence,
+                        'status' => 'planned',
+                        'source' => 'carryover',
+                        'assigned_start_at' => $carryDate->copy()->setTime(8, 0),
+                        'assigned_end_at' => $carryDate->copy()->setTime(17, 0),
+                        'notes' => 'Carried over from '.$date->toDateString().' because the outlet visit was incomplete.',
+                    ]);
+                    $carryCreated = true;
+                }
+
+                if ($carryCreated) {
+                    $carried++;
+                }
+
+                if ($assignment->status !== 'carried_over') {
+                    $assignment->update([
+                        'status' => 'carried_over',
+                        'notes' => trim(($assignment->notes ? $assignment->notes.PHP_EOL : '')
+                            .'Outstanding visit carried to '.$carryDate->toDateString().'.'),
+                    ]);
+                }
+
+                if ($created) {
+                    $sent++;
+                }
+            }
+
+            if ($carried === 0) {
+                continue;
+            }
+
+            $message = $carried.' outstanding '.Str::plural('outlet', $carried)
+                .' from '.$date->format('d M Y').' '.($carried === 1 ? 'has' : 'have')
+                .' been carried to '.$carryDate->format('d M Y').'. They are marked as carried over in your schedule.';
+
+            Notification::create([
+                'user_id' => $user->id,
+                'title' => 'Outstanding outlets carried forward',
+                'message' => $message,
+                'url' => route('merchandisers.dashboard', ['day' => 'today']),
+            ]);
+
+            $this->notifyAdmins(
+                'Outstanding visits carried forward',
+                $user->name.': '.$message,
+                route('merchandisers.admin.tab', ['adminTab' => 'routes'])
+            );
         }
 
         return $sent;
+    }
+
+    private function nextWorkingDate(User $user, Carbon $date): Carbon
+    {
+        $routePlanner = app(MerchandiserRoutePlanner::class);
+        $workingDays = $routePlanner->workingDays($user);
+        $holidays = $routePlanner->publicHolidayDates();
+        $candidate = $date->copy()->addDay()->startOfDay();
+
+        while (! in_array($candidate->isoWeekday(), $workingDays, true)
+            || in_array($candidate->toDateString(), $holidays, true)) {
+            $candidate->addDay();
+        }
+
+        return $candidate;
     }
 
     private function recordAlert(string $dedupeKey, array $attributes): bool

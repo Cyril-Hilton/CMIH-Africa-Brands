@@ -35,6 +35,8 @@ use App\Services\NotificationService;
 use App\Services\MerchandiserRoutePlanner;
 use App\Services\PerfectStoreFormTemplate;
 use App\Support\MerchandiserClockWindows;
+use App\Support\MerchandiserPortalRole;
+use App\Support\MerchandiserTenant;
 use App\Support\PasswordPolicy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -67,7 +69,7 @@ class MerchandiserController extends Controller
     /**
      * Show Merchandiser Login
      */
-    public function showLogin()
+    public function showLogin(Request $request)
     {
         if (Auth::check()) {
             $user = Auth::user();
@@ -76,13 +78,33 @@ class MerchandiserController extends Controller
                 return redirect()->route('merchandisers.dashboard');
             }
 
+            if ($user->isMerchandiserSupervisor()) {
+                return redirect()->route('merchandisers.supervisor.dashboard');
+            }
+
+            if ($user->isMerchandiserClient()) {
+                return redirect()->route('merchandisers.client.dashboard');
+            }
+
             if ($user->isMerchandiserPortalAdmin()) {
-                return redirect()->route('merchandisers.admin.dashboard');
+                return redirect()->route('merchandisers.admin.dashboard', [
+                    'tenant' => MerchandiserTenant::forUser($user, $request),
+                ]);
             }
 
             return redirect()->route('dashboard');
         }
-        return view('merchandisers.login');
+
+        $activeRole = MerchandiserPortalRole::normalize($request->query('role', $request->old('portal_role')));
+        $activeTenant = MerchandiserTenant::normalize($request->query('tenant', $request->old('merchandiser_tenant')));
+
+        return view('merchandisers.login', [
+            'portalRoles' => MerchandiserPortalRole::all(),
+            'activeRole' => $activeRole,
+            'activeRoleDefinition' => MerchandiserPortalRole::definition($activeRole),
+            'merchandiserTenants' => MerchandiserTenant::all(),
+            'activeTenant' => $activeTenant,
+        ]);
     }
 
     /**
@@ -93,9 +115,13 @@ class MerchandiserController extends Controller
         $credentials = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required'],
+            'portal_role' => ['nullable', Rule::in(array_keys(MerchandiserPortalRole::all()))],
+            'merchandiser_tenant' => ['nullable', Rule::in(array_keys(MerchandiserTenant::all()))],
         ]);
 
         $email = strtolower($credentials['email']);
+        $selectedPortalRole = MerchandiserPortalRole::normalize($request->input('portal_role', MerchandiserPortalRole::FIELD));
+        $selectedTenant = MerchandiserTenant::normalize($request->input('merchandiser_tenant', 'unilever'));
 
         $user = User::whereRaw('LOWER(email) = ?', [$email])->first()
             ?: User::whereRaw('LOWER(contact_email) = ?', [$email])->first();
@@ -110,8 +136,24 @@ class MerchandiserController extends Controller
             if ($user->status === 'suspended') {
                 return back()->withErrors(['email' => 'Your account is suspended.']);
             }
-            if ($user->access_role !== 'merchandiser' && ! $user->isMerchandiserPortalAdmin()) {
-                return back()->withErrors(['email' => 'This login form is for external Merchandisers and Brands Team merchandiser admins. Other staff should use the Staff Login page.']);
+
+            if ($user->isMerchandiserSupervisor()) {
+                // Route supervisor directly to supervisor portal
+            } elseif ($user->isMerchandiserClient()) {
+                // Route client directly to client portal
+            } elseif ($selectedPortalRole === MerchandiserPortalRole::ADMIN) {
+                if (! $user->isMerchandiserPortalAdmin()) {
+                    return back()->withErrors(['email' => 'Admin Hub access is reserved for the Brands Team, Admin, and Super Admin accounts.'])->withInput($request->except('password'));
+                }
+            } elseif ($request->filled('portal_role') && $user->access_role !== MerchandiserPortalRole::accessRoleFor($selectedPortalRole)) {
+                return back()->withErrors(['email' => 'This account is registered under a different portal role tab. Please select your matching role tab to log in.'])->withInput($request->except('password'));
+            }
+
+            if ($selectedPortalRole !== MerchandiserPortalRole::ADMIN
+                && $request->filled('merchandiser_tenant')
+                && $user->merchandiser_tenant
+                && MerchandiserTenant::normalize($user->merchandiser_tenant) !== $selectedTenant) {
+                return back()->withErrors(['merchandiser_tenant' => 'This account belongs to a different brand workspace.'])->withInput($request->except('password'));
             }
 
             if (Auth::attempt(['email' => $user->email, 'password' => $credentials['password']], $request->boolean('remember'))) {
@@ -121,8 +163,16 @@ class MerchandiserController extends Controller
                     'last_login_ip' => $request->ip(),
                     'last_login_user_agent' => $request->userAgent()
                 ]);
-                // Brands/admin users go to the merch admin hub; external merchandisers to their dashboard.
-                if ($user->isMerchandiserPortalAdmin()) {
+
+                if ($user->isMerchandiserSupervisor()) {
+                    return redirect()->route('merchandisers.supervisor.dashboard');
+                }
+
+                if ($user->isMerchandiserClient()) {
+                    return redirect()->route('merchandisers.client.dashboard');
+                }
+
+                if ($selectedPortalRole === MerchandiserPortalRole::ADMIN || ($user->isMerchandiserPortalAdmin() && ! $user->isMerchandiserAccount())) {
                     return redirect()->route('merchandisers.admin.dashboard');
                 }
 
@@ -138,9 +188,22 @@ class MerchandiserController extends Controller
     /**
      * Show Merchandiser Registration
      */
-    public function showRegister()
+    public function showRegister(Request $request)
     {
-        return view('merchandisers.register');
+        $activeRole = MerchandiserPortalRole::normalize($request->query('role', $request->old('portal_role')));
+        if (! in_array($activeRole, MerchandiserPortalRole::registerableKeys(), true)) {
+            $activeRole = MerchandiserPortalRole::FIELD;
+        }
+
+        return view('merchandisers.register', [
+            'merchandiserTenants' => MerchandiserTenant::all(),
+            'portalRoles' => collect(MerchandiserPortalRole::all())
+                ->filter(fn (array $role) => (bool) $role['allow_register'])
+                ->all(),
+            'activeRole' => $activeRole,
+            'activeRoleDefinition' => MerchandiserPortalRole::definition($activeRole),
+            'activeTenant' => MerchandiserTenant::normalize($request->query('tenant', $request->old('merchandiser_tenant'))),
+        ]);
     }
 
     /**
@@ -155,6 +218,7 @@ class MerchandiserController extends Controller
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'profile_photo' => [app()->environment('testing') ? 'nullable' : 'required', 'file', 'image', 'mimes:jpg,jpeg,png,webp,avif,bmp', 'max:5120'],
             'email' => [
                 'required',
                 'string',
@@ -173,10 +237,13 @@ class MerchandiserController extends Controller
             ],
             'phone' => ['required', 'string', 'max:32'],
             'date_of_birth' => ['required', 'date'],
+            'portal_role' => ['nullable', Rule::in(MerchandiserPortalRole::registerableKeys())],
+            'merchandiser_tenant' => ['nullable', Rule::in(array_keys(MerchandiserTenant::all()))],
             'password' => PasswordPolicy::confirmedRules(),
         ], [
             'email.unique' => 'This email is already attached to an existing account. Please log in or use forgot password instead.',
             'contact_email.unique' => 'This contact email is already attached to an existing account. Please log in or use forgot password instead.',
+            'profile_photo.required' => 'Please upload a headshot photo for your merchandiser ID profile.',
         ]);
 
         // Age constraint check
@@ -186,27 +253,38 @@ class MerchandiserController extends Controller
             return back()->withErrors(['date_of_birth' => 'External field merchandisers must be between 18 and 65 years old.'])->withInput();
         }
 
+        $photoPath = null;
+        if ($request->hasFile('profile_photo')) {
+            $photoPath = $request->file('profile_photo')->store('profiles', 'public');
+        }
+
+        $portalRole = MerchandiserPortalRole::normalize($request->input('portal_role', MerchandiserPortalRole::FIELD));
+        $tenantCode = MerchandiserTenant::normalize($request->input('merchandiser_tenant', 'unilever'));
+        $accessRole = MerchandiserPortalRole::accessRoleFor($portalRole);
+
         $merchandiser = User::create([
             'name'           => $validated['name'],
             'email'          => $validated['email'],
             'contact_email'  => $validated['contact_email'],
             'phone'          => $validated['phone'],
             'date_of_birth'  => $validated['date_of_birth'],
+            'profile_photo_path' => $photoPath,
             'password'       => Hash::make($request->input('password')),
-            'access_role'    => 'merchandiser',
-            'position_title' => 'Merchandiser',
-            'job_level'      => 'promoter',
+            'access_role'    => $accessRole,
+            'position_title' => MerchandiserPortalRole::definition($portalRole)['label'],
+            'job_level'      => $portalRole,
             'status'         => 'pending',
             'leave_balance'  => 30,
             // No KD or region until admin assigns
             'kd_id'          => null,
             'region_id'      => null,
+            'merchandiser_tenant' => $tenantCode,
         ]);
 
         NotificationService::sendToMany(
             NotificationService::activeMerchandiserPortalAdminIds(),
-            'New merchandiser registration needs approval',
-            "{$merchandiser->name} has created a merchandiser account and needs Brands Team approval.",
+            'New merchandiser portal registration needs approval',
+            "{$merchandiser->name} has created a ".MerchandiserPortalRole::definition($portalRole)['label']." account for ".MerchandiserTenant::theme($tenantCode)['name']." and needs Brands Team approval.",
             route('merchandisers.admin.dashboard')
         );
 
@@ -219,6 +297,7 @@ class MerchandiserController extends Controller
     public function dashboard(Request $request, MerchandiserRoutePlanner $routePlanner)
     {
         $user = $request->user();
+        $merchTenant = MerchandiserTenant::theme(MerchandiserTenant::forUser($user, $request));
 
         // Brands/admin users have their own separate merchandiser admin hub.
         if ($user->isMerchandiserPortalAdmin() && ! $user->isMerchandiserAccount()) {
@@ -237,6 +316,7 @@ class MerchandiserController extends Controller
                 'scoredOutletIdsToday' => collect(),
                 'clockWindow' => MerchandiserClockWindows::visitWindow('Africa/Accra'),
                 'dailyPerformanceChart' => ['labels' => [], 'scheduled' => [], 'clocked' => [], 'scored' => [], 'coverage' => []],
+                'merchTenant' => $merchTenant,
                 'error' => 'Your account is active but has not been paired with a Key Distributor (KD) or Region yet. Please ask an admin to pair your profile.'
             ]);
         }
@@ -272,7 +352,20 @@ class MerchandiserController extends Controller
                 ? 'Today, '.$scheduleDate->format('d M Y')
                 : $scheduleDate->format('l, d M Y'));
 
-        $todaysAssignments = $routePlanner->assignmentsForDate($user, $scheduleDate->copy());
+        $carriedOverAssignments = $routePlanner->processOutstandingCarryOver($user, Carbon::today($timezone));
+        $carriedOverCount = $carriedOverAssignments->count();
+
+        $weekAssignments = $routePlanner->assignmentsForPeriod(
+            $user,
+            $weekStart->copy()->startOfDay(),
+            $weekStart->copy()->endOfWeek()->endOfDay()
+        );
+        $assignmentsByDate = $weekAssignments->groupBy(
+            fn (MerchandiserOutletAssignment $assignment) => $assignment->assigned_date?->toDateString()
+        );
+        $todaysAssignments = new \Illuminate\Database\Eloquent\Collection(
+            $assignmentsByDate->get($scheduleDate->toDateString(), collect())->values()->all()
+        );
         $scheduledOutlets = $todaysAssignments->pluck('outlet')->filter()->values();
 
         if ($selectedDay === 'all') {
@@ -290,8 +383,7 @@ class MerchandiserController extends Controller
         $dayOutletCounts = [];
         for ($d = 1; $d <= 7; $d++) {
             $dDate = $weekStart->copy()->addDays($d - 1);
-            $dAssignments = $routePlanner->assignmentsForDate($user, $dDate);
-            $dayOutletCounts[(string) $d] = $dAssignments->count();
+            $dayOutletCounts[(string) $d] = $assignmentsByDate->get($dDate->toDateString(), collect())->count();
         }
         $dayOutletCounts['all'] = $allOutlets->count();
 
@@ -382,6 +474,25 @@ class MerchandiserController extends Controller
             ->whereBetween('created_at', [$monthStart, $monthEnd])
             ->get();
         $myPerfMetrics = \App\Services\PerfectStoreCalculator::computeMerchandiserMetrics($user, $myRecentVisits->groupBy('outlet_id'));
+        $monthlySkuCaptures = $myRecentVisits->flatMap->visitSkus;
+        $monthlyPhotoCount = $monthlySkuCaptures->whereNotNull('photo_path')->count()
+            + $myRecentVisits->whereNotNull('planogram_photo_path')->count()
+            + $myRecentVisits->whereNotNull('ai_shelf_photo_path')->count();
+        $visitsWithEvidence = $myRecentVisits->filter(fn (MerchandiserVisit $visit) => filled($visit->planogram_photo_path)
+            || filled($visit->ai_shelf_photo_path)
+            || $visit->visitSkus->contains(fn ($capture) => filled($capture->photo_path)))->count();
+        $osaCaptures = $monthlySkuCaptures->filter(fn ($capture) => (bool) $capture->sku?->track_osa);
+        $npdCaptures = $monthlySkuCaptures->filter(fn ($capture) => (bool) $capture->sku?->track_npd);
+        $mhsCaptures = $monthlySkuCaptures->filter(fn ($capture) => (bool) $capture->sku?->track_mhs);
+        $osaScore = $this->boundedPercent(
+            $osaCaptures->filter(fn ($capture) => (int) $capture->osa_quantity >= max(1, (int) $capture->sku?->osa_drop_size))->count(),
+            $osaCaptures->count()
+        );
+        $npdScore = $this->boundedPercent($npdCaptures->where('npd_present', true)->count(), $npdCaptures->count());
+        $mhsScore = $this->boundedPercent(
+            $mhsCaptures->filter(fn ($capture) => (int) $capture->osa_quantity >= max(1, (int) $capture->sku?->mhs_drop_size))->count(),
+            $mhsCaptures->count()
+        );
 
         $merchMetrics = [
             'total_outlets' => $scheduledCount,
@@ -406,6 +517,16 @@ class MerchandiserController extends Controller
             'planogram_pct' => $myPerfMetrics['planogram_pct'] ?? 0.0,
             'sos_pct' => $myPerfMetrics['sos_pct'] ?? 0.0,
             'perfect_store_score' => $myPerfMetrics['overall_score'] ?? 0.0,
+            'osa_pct' => $osaScore,
+            'npd_pct' => $npdScore,
+            'mhs_pct' => $mhsScore,
+            'posm_pct' => $this->boundedPercent($visitsWithEvidence, $myRecentVisits->count()),
+            'photos_uploaded_month' => $monthlyPhotoCount,
+            'forms_pending_today' => 0,
+            'pending_sync' => MerchandiserVisit::where('user_id', $user->id)
+                ->where('sync_source', '!=', 'live')
+                ->whereNull('synced_at')
+                ->count(),
         ];
 
         $dailyPerformanceChart = [
@@ -474,6 +595,10 @@ class MerchandiserController extends Controller
             ->pluck('form_assignment_id')
             ->map(fn ($id) => (int) $id)
             ->all();
+        $merchMetrics['forms_pending_today'] = $googleForms
+            ->reject(fn ($form) => in_array((int) $form->id, $googleFormCompletionIds, true)
+                || in_array((int) $form->id, $nativeFormCompletionIds, true))
+            ->count();
 
         // HRM & Financial data
         $leaves = LeaveApplication::where('user_id', $user->id)->orderByDesc('created_at')->get();
@@ -493,6 +618,16 @@ class MerchandiserController extends Controller
 
         // Calculate dynamic payroll deductions for current month
         $payroll = self::calculatePayrollDetails($user, now()->year, now()->month);
+        $merchKpiRadarValues = [
+            (float) ($merchMetrics['coverage_today'] ?? 0),
+            (float) ($merchMetrics['osa_pct'] ?? 0),
+            (float) ($merchMetrics['npd_pct'] ?? 0),
+            (float) ($merchMetrics['mhs_pct'] ?? 0),
+            (float) ($merchMetrics['planogram_pct'] ?? 0),
+            (float) ($merchMetrics['facing_pct'] ?? 0),
+            (float) ($merchMetrics['sos_pct'] ?? 0),
+            (float) ($merchMetrics['posm_pct'] ?? 0),
+        ];
 
         return view('merchandisers.dashboard', compact(
             'outlets', 'attendances', 'leaves', 'claims', 'loans',
@@ -500,8 +635,111 @@ class MerchandiserController extends Controller
             'announcements', 'notifications', 'clockWindow', 'outletAttendanceByOutlet', 'scoredOutletIdsToday', 'merchMetrics',
             'pendingOutletsToday', 'pcmClockinToday', 'todaysAssignments',
             'googleForms', 'googleFormCompletionIds', 'nativeFormCompletionIds',
-            'selectedDay', 'dayLabels', 'dayOutletCounts', 'currentIsoDay', 'dailyPerformanceChart', 'scheduleLabel'
+            'selectedDay', 'dayLabels', 'dayOutletCounts', 'currentIsoDay', 'dailyPerformanceChart', 'scheduleLabel',
+            'merchTenant', 'merchKpiRadarValues', 'carriedOverCount', 'carriedOverAssignments'
         ));
+    }
+
+    public function downloadOwnReport(Request $request, string $type)
+    {
+        $user = $request->user();
+        abort_unless($user->isMerchandiserAccount(), 403);
+
+        $allowed = ['coverage', 'kpis', 'visits', 'photos', 'summary'];
+        abort_unless(in_array($type, $allowed, true), 404);
+
+        $timezone = $user->merchandiserRegion->timezone ?? 'Africa/Accra';
+        $from = Carbon::now($timezone)->startOfMonth()->utc();
+        $to = Carbon::now($timezone)->endOfMonth()->utc();
+        $assignments = MerchandiserOutletAssignment::with('outlet')
+            ->where('user_id', $user->id)
+            ->whereBetween('assigned_date', [$from->toDateString(), $to->toDateString()])
+            ->orderBy('assigned_date')
+            ->orderBy('sequence')
+            ->get();
+        $visits = MerchandiserVisit::with(['outlet', 'visitSkus.sku'])
+            ->where('user_id', $user->id)
+            ->whereBetween('created_at', [$from, $to])
+            ->orderBy('created_at')
+            ->get();
+
+        [$headers, $rows] = match ($type) {
+            'coverage' => [
+                ['Date', 'Route Stop', 'Outlet Code', 'Outlet', 'Status', 'Completed At'],
+                $assignments->map(fn ($assignment) => [
+                    $assignment->assigned_date?->format('Y-m-d'),
+                    $assignment->sequence,
+                    $assignment->outlet?->code,
+                    $assignment->outlet?->name,
+                    $assignment->status,
+                    $assignment->completed_at?->timezone($timezone)->format('Y-m-d H:i:s'),
+                ]),
+            ],
+            'kpis' => [
+                ['Date', 'Outlet Code', 'Outlet', 'Facing %', 'Planogram %', 'SOS %', 'Perfect Store %', 'Status'],
+                $visits->map(function (MerchandiserVisit $visit) use ($timezone) {
+                    $metrics = \App\Services\PerfectStoreCalculator::computeStoreVisitMetrics($visit);
+
+                    return [
+                        $visit->created_at?->timezone($timezone)->format('Y-m-d'),
+                        $visit->outlet?->code,
+                        $visit->outlet?->name,
+                        $metrics['facing_pct'],
+                        $metrics['planogram_pct'],
+                        $metrics['sos_pct'],
+                        $metrics['overall_score'],
+                        $metrics['status'],
+                    ];
+                }),
+            ],
+            'visits' => [
+                ['Date', 'Outlet Code', 'Outlet', 'Entry Mode', 'Evidence Files', 'Sync Source', 'Synced At'],
+                $visits->map(fn (MerchandiserVisit $visit) => [
+                    $visit->created_at?->timezone($timezone)->format('Y-m-d H:i:s'),
+                    $visit->outlet?->code,
+                    $visit->outlet?->name,
+                    $visit->sku_entry_mode,
+                    $visit->visitSkus->whereNotNull('photo_path')->count()
+                        + (filled($visit->planogram_photo_path) ? 1 : 0)
+                        + (filled($visit->ai_shelf_photo_path) ? 1 : 0),
+                    $visit->sync_source ?: 'live',
+                    $visit->synced_at?->timezone($timezone)->format('Y-m-d H:i:s'),
+                ]),
+            ],
+            'photos' => [
+                ['Date', 'Outlet Code', 'Outlet', 'SKU', 'Photo Path'],
+                $visits->flatMap(fn (MerchandiserVisit $visit) => $visit->visitSkus
+                    ->whereNotNull('photo_path')
+                    ->map(fn ($capture) => [
+                        $capture->created_at?->timezone($timezone)->format('Y-m-d H:i:s'),
+                        $visit->outlet?->code,
+                        $visit->outlet?->name,
+                        $capture->sku?->name,
+                        $capture->photo_path,
+                    ])),
+            ],
+            default => [
+                ['Metric', 'Value'],
+                collect([
+                    ['Scheduled outlets', $assignments->count()],
+                    ['Completed visits', $visits->count()],
+                    ['Coverage %', $this->boundedPercent($visits->pluck('outlet_id')->unique()->count(), $assignments->pluck('outlet_id')->unique()->count())],
+                    ['Outstanding assignments', $assignments->whereNotIn('status', ['completed', 'visited'])->count()],
+                    ['Evidence files', $visits->sum(fn (MerchandiserVisit $visit) => $visit->visitSkus->whereNotNull('photo_path')->count())],
+                ]),
+            ],
+        };
+
+        $filename = 'my-'.$type.'-report-'.Carbon::now($timezone)->format('Y-m').'.csv';
+
+        return response()->streamDownload(function () use ($headers, $rows) {
+            $stream = fopen('php://output', 'wb');
+            fputcsv($stream, $headers);
+            foreach ($rows as $row) {
+                fputcsv($stream, $row);
+            }
+            fclose($stream);
+        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
     /**
@@ -1650,9 +1888,10 @@ class MerchandiserController extends Controller
         $user = $request->user();
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'profile_photo' => ['nullable', 'file', 'image', 'mimes:jpg,jpeg,png,webp,avif,bmp', 'max:5120'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $user->id],
             'phone' => ['required', 'string', 'max:32'],
-            'residential_address' => ['required', 'string', 'max:255'],
+            'residential_address' => ['nullable', 'string', 'max:255'],
             'bank_name' => ['nullable', 'string', 'max:100'],
             'bank_branch' => ['nullable', 'string', 'max:100'],
             'bank_account_name' => ['nullable', 'string', 'max:100'],
@@ -1662,15 +1901,23 @@ class MerchandiserController extends Controller
             'password' => ['nullable', 'confirmed', ...PasswordPolicy::rules()],
         ]);
 
+        if ($request->hasFile('profile_photo')) {
+            $path = $request->file('profile_photo')->store('profiles', 'public');
+            if ($user->profile_photo_path && \Illuminate\Support\Facades\Storage::disk('public')->exists($user->profile_photo_path)) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($user->profile_photo_path);
+            }
+            $user->profile_photo_path = $path;
+        }
+
         if ($request->filled('password')) {
             $user->password = Hash::make($request->input('password'));
         }
 
-        $user->update([
+        $user->fill([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'phone' => $validated['phone'],
-            'residential_address' => $validated['residential_address'],
+            'residential_address' => $validated['residential_address'] ?? $user->residential_address,
             'bank_name' => $validated['bank_name'],
             'bank_branch' => $validated['bank_branch'],
             'bank_account_name' => $validated['bank_account_name'],
@@ -1679,11 +1926,31 @@ class MerchandiserController extends Controller
             'momo_name' => $validated['momo_name'],
         ]);
 
-        if ($user->isDirty()) {
+        $user->save();
+
+        return redirect()->route('merchandisers.dashboard')->with('status', 'Profile and banking credentials updated successfully.');
+    }
+
+    /**
+     * Update Profile Photo
+     */
+    public function updateProfilePhoto(Request $request)
+    {
+        $request->validate([
+            'profile_photo' => ['required', 'file', 'image', 'mimes:jpg,jpeg,png,webp,avif,bmp', 'max:5120'],
+        ]);
+
+        $user = $request->user();
+        if ($request->hasFile('profile_photo')) {
+            $path = $request->file('profile_photo')->store('profiles', 'public');
+            if ($user->profile_photo_path && \Illuminate\Support\Facades\Storage::disk('public')->exists($user->profile_photo_path)) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($user->profile_photo_path);
+            }
+            $user->profile_photo_path = $path;
             $user->save();
         }
 
-        return redirect()->route('merchandisers.dashboard')->with('status', 'Profile and banking credentials updated successfully.');
+        return redirect()->route('merchandisers.dashboard', ['tab' => 'profile'])->with('status', 'Profile photo updated successfully.');
     }
 
     /**

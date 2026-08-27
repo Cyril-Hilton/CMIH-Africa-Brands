@@ -14,14 +14,69 @@
 </head>
 <body class="bg-[#0b0c10] text-[#c5c6c7] font-sans min-h-screen antialiased selection:bg-amber-500 selection:text-black">
 
-    <header class="border-b border-brand-white/10 bg-brand-black/40 backdrop-blur-xl sticky top-0 z-40">
-        <div class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-            <a href="{{ route('merchandisers.dashboard') }}" class="text-xs text-brand-white/60 hover:text-brand-white font-bold flex items-center gap-1.5 transition-all">
-                ← Return to Dashboard
-            </a>
-            <span class="text-xs uppercase tracking-[0.2em] font-semibold text-brand-ash">Store Execution Form</span>
+    <header class="border-b border-brand-white/10 bg-brand-black/60 backdrop-blur-xl sticky top-0 z-40">
+        <!-- Step progress bar -->
+        <div class="w-full h-1 bg-brand-white/10">
+            <div class="h-full bg-brand-red transition-all duration-500" style="width: 57%"></div><!-- Step 4 of 7 ≈ 57% -->
         </div>
+        <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+            <a href="{{ route('merchandisers.dashboard') }}" class="text-xs text-brand-white/60 hover:text-brand-white font-bold flex items-center gap-1.5 transition-all shrink-0">
+                ← Back
+            </a>
+            <!-- Step indicator -->
+            <div class="flex items-center gap-1.5 flex-1 justify-center overflow-x-auto scrollbar-none">
+                @foreach([
+                    ['n' => 1, 'label' => 'Confirm'],
+                    ['n' => 2, 'label' => 'Clock In'],
+                    ['n' => 3, 'label' => 'Visit'],
+                    ['n' => 4, 'label' => 'Perfect Store'],
+                    ['n' => 5, 'label' => 'Evidence'],
+                    ['n' => 6, 'label' => 'Review'],
+                    ['n' => 7, 'label' => 'Submit'],
+                ] as $step)
+                    <div class="flex items-center gap-1 shrink-0">
+                        <span class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold
+                            {{ $step['n'] < 4 ? 'bg-emerald-500 text-white' : ($step['n'] === 4 ? 'bg-brand-red text-white ring-2 ring-brand-red/30' : 'bg-brand-white/10 text-brand-ash') }}">
+                            {{ $step['n'] < 4 ? '✓' : $step['n'] }}
+                        </span>
+                        <span class="text-[9px] font-semibold hidden sm:inline
+                            {{ $step['n'] < 4 ? 'text-emerald-400' : ($step['n'] === 4 ? 'text-brand-white' : 'text-brand-ash') }}">
+                            {{ $step['label'] }}
+                        </span>
+                        @if($step['n'] < 7)
+                            <span class="text-brand-white/20 text-[10px]">›</span>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+            <!-- Live Visit Timer -->
+            <div class="shrink-0 text-right">
+                <p class="text-[9px] uppercase tracking-wider text-brand-ash">Visit Timer</p>
+                <p id="visit-timer" class="text-xs font-bold text-amber-300 tabular-nums">00:00</p>
+            </div>
+        </div>
+        <!-- Outlet identity bar -->
+        <div class="border-t border-brand-white/10 bg-brand-black/40 px-4 py-2 flex items-center gap-3 max-w-4xl mx-auto">
+            <span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-brand-red/10 text-brand-red border border-brand-red/20">{{ $outlet->channel_type }}</span>
+            <span class="text-sm font-bold text-brand-white truncate">{{ $outlet->name }}</span>
+            <span class="text-[10px] text-brand-ash truncate">{{ $outlet->code }}</span>
+            <span class="ml-auto text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-2 py-0.5">Active Visit</span>
+        </div>
+        <script>
+            (function() {
+                const startTime = Date.now();
+                const el = document.getElementById('visit-timer');
+                if (!el) return;
+                setInterval(() => {
+                    const s = Math.floor((Date.now() - startTime) / 1000);
+                    const mm = String(Math.floor(s / 60)).padStart(2, '0');
+                    const ss = String(s % 60).padStart(2, '0');
+                    el.textContent = mm + ':' + ss;
+                }, 1000);
+            })();
+        </script>
     </header>
+
 
     <main class="max-w-4xl mx-auto px-4 py-6">
         
@@ -292,10 +347,10 @@
                     $skuCategories = $skus->groupBy(fn ($sku) => trim((string) ($sku->category ?: 'Uncategorized')));
                 @endphp
                 @if($skuCategories->isNotEmpty())
-                    <div class="mb-5 rounded-2xl border border-pink-400/20 bg-pink-500/5 p-4">
+                    <div class="mb-5 rounded-2xl border border-amber-400/20 bg-amber-500/5 p-4">
                         <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
                             <div>
-                                <p class="text-xs uppercase tracking-widest text-pink-200">Category Share of Shelf</p>
+                                <p class="text-xs uppercase tracking-widest text-amber-300 font-bold">Category Share of Shelf</p>
                                 <p class="mt-1 text-[11px] text-brand-white/45">Capture Unilever facings and total category facings once for each category.</p>
                             </div>
                         </div>

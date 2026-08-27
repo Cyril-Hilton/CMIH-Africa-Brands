@@ -177,10 +177,10 @@
         justify-content: space-between;
         gap: 0.75rem;
         margin: 0.75rem 0 1rem;
-        border: 1px solid rgba(255, 255, 255, 0.10);
-        border-radius: 1rem;
-        background: rgba(255, 255, 255, 0.04);
-        padding: 0.75rem;
+        border: 1.5px solid #BAE6FD;
+        border-radius: 0.875rem;
+        background: #F0F9FF;
+        padding: 0.75rem 1rem;
     }
 
     .app-table-tools__label {
@@ -188,19 +188,21 @@
         flex-wrap: wrap;
         align-items: center;
         gap: 0.5rem;
-        color: rgba(255, 255, 255, 0.55);
-        font-size: 0.65rem;
-        font-weight: 700;
-        letter-spacing: 0.18em;
+        color: #0369A1;
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.1em;
         text-transform: uppercase;
     }
 
     .app-table-tools__label [data-table-filter-count] {
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.08);
-        padding: 0.25rem 0.5rem;
-        color: rgba(255, 255, 255, 0.72);
-        letter-spacing: 0.08em;
+        border-radius: 0.5rem;
+        background: #E0F2FE;
+        border: 1px solid #7DD3FC;
+        padding: 0.2rem 0.6rem;
+        color: #0369A1;
+        font-weight: 800;
+        letter-spacing: 0.05em;
         text-transform: none;
     }
 
@@ -216,12 +218,13 @@
     .app-table-tools__select,
     .app-table-tools__input {
         min-height: 2.5rem;
-        border-radius: 0.85rem;
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        background: rgba(0, 0, 0, 0.55);
+        border-radius: 0.75rem;
+        border: 1.5px solid #7DD3FC;
+        background: #E0F2FE;
         padding: 0.6rem 0.8rem;
-        color: #fff;
+        color: #0F172A;
         font-size: 0.75rem;
+        font-weight: 700;
         outline: none;
     }
 
@@ -235,28 +238,30 @@
 
     .app-table-tools__select:focus,
     .app-table-tools__input:focus {
-        border-color: rgba(226, 28, 30, 0.65);
-        box-shadow: 0 0 0 3px rgba(226, 28, 30, 0.14);
+        border-color: #0284C7;
+        box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2);
     }
 
     .app-table-tools__clear {
         min-height: 2.5rem;
-        border-radius: 0.85rem;
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        background: rgba(255, 255, 255, 0.06);
-        padding: 0.6rem 0.9rem;
-        color: rgba(255, 255, 255, 0.72);
-        font-size: 0.68rem;
+        border-radius: 0.75rem;
+        border: 1px solid #B91C1C;
+        background: #E21C1E;
+        padding: 0.5rem 1rem;
+        color: #FFFFFF;
+        font-size: 0.7rem;
         font-weight: 800;
-        letter-spacing: 0.15em;
+        letter-spacing: 0.1em;
         text-transform: uppercase;
-        transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+        box-shadow: 0 1px 3px 0 rgba(226, 28, 30, 0.3);
+        cursor: pointer;
+        transition: background 0.18s ease, color 0.18s ease;
     }
 
     .app-table-tools__clear:hover {
-        border-color: rgba(226, 28, 30, 0.35);
-        background: rgba(226, 28, 30, 0.14);
-        color: #fff;
+        border-color: #991B1B;
+        background: #B91C1C;
+        color: #FFFFFF;
     }
 
     .app-table-sortable {
@@ -573,5 +578,34 @@
         padding: 0.75rem 1rem;
         color: rgb(254 202 202);
         font-size: 0.75rem;
+    }
+
+    /* High-contrast input text visibility engine */
+    input[type="text"], 
+    input[type="email"], 
+    input[type="password"], 
+    input[type="date"], 
+    select, 
+    textarea {
+        color: #0f172a !important;
+        background-color: #ffffff !important;
+    }
+    input::placeholder,
+    textarea::placeholder,
+    input::-webkit-input-placeholder,
+    textarea::-webkit-input-placeholder {
+        color: #94a3b8 !important;
+        opacity: 1 !important;
+        font-weight: 500 !important;
+        -webkit-text-fill-color: #94a3b8 !important;
+    }
+    /* Browser Autofill Contrast */
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover, 
+    input:-webkit-autofill:focus, 
+    input:-webkit-autofill:active {
+        -webkit-text-fill-color: #0f172a !important;
+        -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
+        transition: background-color 5000s ease-in-out 0s;
     }
 }
