@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="{{ $merchTenant['code'] === 'unilever' ? 'light' : 'dark' }}" data-merch-tenant="{{ $merchTenant['code'] }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="{{ $merchTenant['code'] === 'unilever' ? '' : 'dark' }}" data-theme="{{ $merchTenant['code'] === 'unilever' ? 'light' : 'dark' }}" data-merch-tenant="{{ $merchTenant['code'] }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -195,15 +195,15 @@
                 <div class="mt-5 mb-4 flex flex-col items-center text-center pb-5 border-b border-white/10">
                     <form method="POST" action="{{ route('merchandisers.profile.photo.update') }}" enctype="multipart/form-data" class="relative group">
                         @csrf
-                        <div class="h-20 w-20 rounded-full overflow-hidden ring-4 ring-sky-500/30 shadow-2xl mx-auto relative aspect-square shrink-0 bg-[#E21C1E] flex items-center justify-center">
+                        <div class="relative mx-auto h-20 w-20 shrink-0 overflow-hidden rounded-full bg-white ring-4 ring-white/40 shadow-2xl">
                             <img src="{{ auth()->user()->profilePhotoUrl() }}"
                                  alt="{{ auth()->user()->name }}"
-                                 onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ urlencode(auth()->user()->name ?: 'User') }}&color=38BDF8&background=0F172A&bold=true';"
-                                 class="w-full h-full object-cover rounded-full block scale-[1.45] transform-gpu origin-center transition-transform duration-300"
-                                 style="width: 100% !important; height: 100% !important; object-fit: cover !important;"
+                                 onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ urlencode(auth()->user()->name ?: 'User') }}&color=FFFFFF&background={{ ltrim($merchTenant['primary'] ?? '0F0E9A', '#') }}&bold=true';"
+                                 class="absolute inset-0 h-full w-full rounded-full object-cover object-center"
+                                 style="width: 100% !important; height: 100% !important; object-fit: cover !important; object-position: center center !important;"
                                  @click="$dispatch('open-avatar-modal'); activeTab = 'profile'">
                         </div>
-                        <label class="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-[#155EEF] text-white flex items-center justify-center text-xs shadow-lg hover:scale-110 transition cursor-pointer z-10" title="Upload Staff Photo">
+                        <label class="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-[#0F0E9A] text-white flex items-center justify-center text-xs shadow-lg hover:scale-110 transition cursor-pointer z-10" title="Upload Staff Photo">
                             📷
                             <input type="file" name="profile_photo" accept="image/*" class="hidden" onchange="this.form.submit()">
                         </label>
@@ -340,12 +340,13 @@
                                     @click="toggleSidebar()"
                                     aria-controls="merchandiser-sidebar"
                                     aria-label="Toggle navigation menu"
-                                    class="inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 text-xs font-extrabold text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition shadow-sm"
-                                    :title="sidebarCollapsed ? 'Expand / Show Sidebar' : 'Collapse / Hide Sidebar'">
+                                    class="merch-menu-toggle inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 text-xs font-extrabold text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition shadow-sm"
+                                    :aria-expanded="window.innerWidth < 1024 ? sidebarOpen.toString() : (!sidebarCollapsed).toString()"
+                                    :title="window.innerWidth < 1024 ? (sidebarOpen ? 'Hide navigation menu' : 'Open navigation menu') : (sidebarCollapsed ? 'Expand / Show Sidebar' : 'Collapse / Hide Sidebar')">
                                 <svg class="w-4 h-4 text-brand-red" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                                 </svg>
-                                <span class="font-extrabold" x-text="sidebarCollapsed ? 'Show Sidebar ☰' : 'Hide Sidebar ◀'">Hide Sidebar ◀</span>
+                                <span class="font-extrabold" x-text="window.innerWidth < 1024 ? (sidebarOpen ? 'Hide Menu ◀' : 'Menu ☰') : (sidebarCollapsed ? 'Show Sidebar ☰' : 'Hide Sidebar ◀')">Menu ☰</span>
                             </button>
                             <span class="text-xs uppercase tracking-[0.2em] font-bold text-slate-900 dark:text-slate-100 hidden sm:inline-block">Field Portal</span>
                         </div>
@@ -377,9 +378,9 @@
                       class="merch-main-content main-scrollbar-none min-h-0 flex-1 max-w-7xl w-full mx-auto overflow-y-auto overflow-x-hidden overscroll-contain px-4 py-5 pb-28 sm:px-6 sm:py-8 sm:pb-28 lg:px-10 lg:pb-8 min-w-0 space-y-6">
 
                     <!-- Welcome Banner -->
-                    <div x-show="activeTab === 'home'" class="rounded-2xl p-6 border border-sky-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div x-show="activeTab === 'home'" class="merch-welcome-banner rounded-2xl p-6 border shadow-sm flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                            <p class="text-xs uppercase tracking-[0.2em] font-extrabold text-[#0284C7]">Welcome back,</p>
+                            <p class="text-xs uppercase tracking-[0.2em] font-extrabold text-[#0F0E9A]">Welcome back,</p>
                             <h1 class="text-3xl font-black text-slate-900 dark:text-white mt-1">{{ auth()->user()->name }}</h1>
                             <p class="text-xs text-slate-600 dark:text-slate-400 font-medium mt-1">
                                 📍 Region: <span class="text-slate-900 dark:text-white font-bold">{{ auth()->user()->merchandiserRegion->name ?? 'N/A' }}</span>
@@ -422,7 +423,7 @@
                                         <div>
                                             <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-lime-300">My Facing Score</p>
                                             <p class="text-2xl font-display text-brand-white mt-1">{{ number_format($merchMetrics['facing_pct'] ?? 0, 1) }}%</p>
-                                            <p class="text-[10px] text-brand-white/50 mt-0.5">Target: 95% Overall</p>
+                                            <p class="text-[10px] text-brand-white/50 mt-0.5">Target: {{ $configuredKpiTargets['facing'] !== null ? number_format($configuredKpiTargets['facing'], 0).'%' : 'Not configured' }}</p>
                                         </div>
                                         <div class="w-10 h-10 rounded-full bg-lime-500/20 border border-lime-500/40 flex items-center justify-center text-lime-300 text-sm font-bold">
                                             📐
@@ -433,7 +434,7 @@
                                         <div>
                                             <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-300">Planogram Alignment</p>
                                             <p class="text-2xl font-display text-brand-white mt-1">{{ number_format($merchMetrics['planogram_pct'] ?? 0, 1) }}%</p>
-                                            <p class="text-[10px] text-brand-white/50 mt-0.5">Target: 100% Alignment</p>
+                                            <p class="text-[10px] text-brand-white/50 mt-0.5">Target: {{ $configuredKpiTargets['planogram'] !== null ? number_format($configuredKpiTargets['planogram'], 0).'%' : 'Not configured' }} Alignment</p>
                                         </div>
                                         <div class="w-10 h-10 rounded-full bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-300 text-sm font-bold">
                                             🖼️
@@ -444,7 +445,7 @@
                                         <div>
                                             <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-pink-300">Share of Shelf (SOS)</p>
                                             <p class="text-2xl font-display text-brand-white mt-1">{{ number_format($merchMetrics['sos_pct'] ?? 0, 1) }}%</p>
-                                            <p class="text-[10px] text-brand-white/50 mt-0.5">Category Unilever Share</p>
+                                            <p class="text-[10px] text-brand-white/50 mt-0.5">Target: {{ $configuredKpiTargets['sos'] !== null ? number_format($configuredKpiTargets['sos'], 0).'%' : 'Category target' }}</p>
                                         </div>
                                         <div class="w-10 h-10 rounded-full bg-pink-500/20 border border-pink-500/40 flex items-center justify-center text-pink-300 text-sm font-bold">
                                             🏷️
@@ -453,27 +454,30 @@
                                 </div>
 
                                 <div x-data="{ outletSubTab: 'list' }" class="space-y-6">
-                                    <!-- Sub-Tab Header Navigation Bar -->
-                                    <div class="flex items-center gap-2 border-b border-sky-200 dark:border-slate-800 pb-3 overflow-x-auto scrollbar-none">
+                                    <!-- Sub-Tab Header Navigation Bar (Responsive Mobile Vertical Stack / Desktop Horizontal Tabs) -->
+                                    <div class="grid grid-cols-1 sm:flex sm:items-center gap-2 border-b border-sky-200 dark:border-slate-800 pb-3">
                                         <button type="button" @click="outletSubTab = 'list'"
-                                                :style="outletSubTab === 'list' ? 'background-color: #155EEF !important; color: #ffffff !important;' : 'background-color: #E0F2FE; color: #0C4A6E;'"
+                                                :style="outletSubTab === 'list' ? 'background-color: #155EEF !important; color: #ffffff !important;' : 'background-color: #E0F2FE !important; color: #0C4A6E !important; border: 1px solid #BAE6FD !important;'"
                                                 :class="outletSubTab === 'list' ? 'shadow-md font-black' : 'hover:bg-sky-200 font-bold'"
-                                                class="px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition flex items-center gap-2 whitespace-nowrap">
+                                                class="w-full sm:w-auto px-4 py-3 sm:py-2.5 rounded-xl text-xs uppercase tracking-wider transition flex items-center justify-center sm:justify-start gap-2 text-center sm:text-left">
                                             <span>Assigned Outlets List</span>
-                                            <span class="px-2 py-0.5 rounded-full text-[10px] bg-white/20 text-white font-extrabold">{{ $merchMetrics['assigned_outlets_today'] }}</span>
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold"
+                                                  :style="outletSubTab === 'list' ? 'background-color: rgba(255,255,255,0.25) !important; color: #ffffff !important;' : 'background-color: #0284C7 !important; color: #ffffff !important;'">
+                                                {{ $merchMetrics['assigned_outlets_today'] }}
+                                            </span>
                                         </button>
 
                                         <button type="button" @click="outletSubTab = 'stats'"
-                                                :style="outletSubTab === 'stats' ? 'background-color: #155EEF !important; color: #ffffff !important;' : 'background-color: #E0F2FE; color: #0C4A6E;'"
+                                                :style="outletSubTab === 'stats' ? 'background-color: #155EEF !important; color: #ffffff !important;' : 'background-color: #E0F2FE !important; color: #0C4A6E !important; border: 1px solid #BAE6FD !important;'"
                                                 :class="outletSubTab === 'stats' ? 'shadow-md font-black' : 'hover:bg-sky-200 font-bold'"
-                                                class="px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition flex items-center gap-2 whitespace-nowrap">
+                                                class="w-full sm:w-auto px-4 py-3 sm:py-2.5 rounded-xl text-xs uppercase tracking-wider transition flex items-center justify-center sm:justify-start gap-2 text-center sm:text-left">
                                             <span>Field Stats Summary</span>
                                         </button>
 
                                         <button type="button" @click="outletSubTab = 'register'"
-                                                :style="outletSubTab === 'register' ? 'background-color: #155EEF !important; color: #ffffff !important;' : 'background-color: #E0F2FE; color: #0C4A6E;'"
+                                                :style="outletSubTab === 'register' ? 'background-color: #155EEF !important; color: #ffffff !important;' : 'background-color: #E0F2FE !important; color: #0C4A6E !important; border: 1px solid #BAE6FD !important;'"
                                                 :class="outletSubTab === 'register' ? 'shadow-md font-black' : 'hover:bg-sky-200 font-bold'"
-                                                class="px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition flex items-center gap-2 whitespace-nowrap">
+                                                class="w-full sm:w-auto px-4 py-3 sm:py-2.5 rounded-xl text-xs uppercase tracking-wider transition flex items-center justify-center sm:justify-start gap-2 text-center sm:text-left">
                                             <span>Register New Outlet</span>
                                         </button>
                                     </div>
@@ -482,17 +486,17 @@
                                     <div x-show="outletSubTab === 'list'" class="space-y-5" x-cloak>
                                         <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                                             <div>
-                                                <h2 class="text-xl font-bold text-slate-900 dark:text-white tracking-tight">🏬 Assigned Outlets ({{ $scheduleLabel ?? ($dayLabels[$selectedDay] ?? 'Selected Day') }})</h2>
-                                                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400 font-medium">{{ $merchMetrics['assigned_outlets_today'] }} planned for this view, {{ $merchMetrics['clockins_today'] }} clocked in, {{ $merchMetrics['outlets_scored_today'] }} scored, {{ $merchMetrics['not_covered_today'] }} not covered.</p>
+                                                <h2 class="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Assigned Outlets ({{ $scheduleLabel ?? ($dayLabels[$selectedDay] ?? 'Selected Day') }})</h2>
+                                                <p class="mt-1 text-xs text-slate-600 dark:text-slate-300 font-medium">{{ $merchMetrics['assigned_outlets_today'] }} planned for this view, {{ $merchMetrics['clockins_today'] }} clocked in, {{ $merchMetrics['outlets_scored_today'] }} scored, {{ $merchMetrics['not_covered_today'] }} not covered.</p>
                                             </div>
                                             <div class="w-full sm:w-80">
                                                 <label class="block text-[10px] font-extrabold uppercase tracking-wider text-[#0284C7] dark:text-sky-300 mb-1">Search Outlets</label>
-                                                <input x-model.debounce.150ms="outletSearch" type="search" placeholder="Search outlet name, code, address..." class="w-full rounded-xl border border-sky-200 bg-[#F0F9FF] dark:bg-slate-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-sky-400 focus:border-[#155EEF] focus:ring-2 focus:ring-sky-200">
+                                                <input x-model.debounce.150ms="outletSearch" type="search" placeholder="Search outlet name, code, address..." class="w-full rounded-xl border border-sky-300 bg-[#F0F9FF] dark:bg-slate-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-[#155EEF] focus:ring-2 focus:ring-sky-200">
                                             </div>
                                         </div>
 
-                                        <!-- Day Schedule Filter Bar (Light Blue Theme) -->
-                                        <div class="flex flex-wrap items-center gap-1.5 p-2 rounded-2xl bg-[#E0F2FE] dark:bg-slate-800 border border-sky-200 dark:border-slate-700 overflow-x-auto scrollbar-none">
+                                        <!-- Day Schedule Filter Bar (High-Contrast Theme Guaranteed) -->
+                                        <div class="flex flex-wrap items-center gap-2 p-2.5 rounded-2xl bg-[#E0F2FE] dark:bg-slate-900 border border-sky-200 dark:border-slate-800">
                                             @foreach(['today' => $dayLabels['today'], '1' => 'Mon', '2' => 'Tue', '3' => 'Wed', '4' => 'Thu', '5' => 'Fri', '6' => 'Sat', '7' => 'Sun', 'all' => 'All Outlets'] as $dayKey => $dayName)
                                                 @php
                                                     $isCurrentDayTab = ($dayKey === 'today' && $selectedDay === 'today') || ($selectedDay === $dayKey);
@@ -500,12 +504,14 @@
                                                     $isTodayPill = ($dayKey === 'today') || ($dayKey === $currentIsoDay);
                                                 @endphp
                                                 <a href="{{ route('merchandisers.dashboard', ['day' => $dayKey]) }}"
-                                                   class="px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap {{ $isCurrentDayTab ? 'bg-[#155EEF] text-white shadow-md' : 'bg-white text-[#0C4A6E] hover:bg-sky-100 dark:bg-slate-700 dark:text-white' }}">
+                                                   style="{{ $isCurrentDayTab ? 'background-color: #155EEF !important; color: #ffffff !important; border: 1px solid #155EEF !important;' : 'background-color: #F0F9FF !important; color: #0C4A6E !important; border: 1px solid #BAE6FD !important;' }}"
+                                                   class="px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap shadow-sm hover:scale-[1.02]">
                                                     <span>{{ $dayName }}</span>
                                                     @if($isTodayPill && $dayKey !== 'today')
-                                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                                                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
                                                     @endif
-                                                    <span class="px-1.5 py-0.5 rounded-md text-[10px] {{ $isCurrentDayTab ? 'bg-white/20 text-white' : 'bg-sky-100 text-[#0C4A6E] dark:bg-slate-600 dark:text-slate-200' }}">
+                                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-black"
+                                                          style="{{ $isCurrentDayTab ? 'background-color: rgba(255,255,255,0.25) !important; color: #ffffff !important;' : 'background-color: #0284C7 !important; color: #ffffff !important;' }}">
                                                         {{ $count }}
                                                     </span>
                                                 </a>
@@ -516,7 +522,7 @@
                                         <div class="rounded-2xl p-5 border border-sky-200 bg-[#F0F9FF] dark:bg-slate-900 space-y-4 shadow-sm">
                                             <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                                 <div>
-                                                    <p class="text-xs font-extrabold uppercase tracking-widest text-[#0284C7]">Outlet Visit Window</p>
+                                                    <p class="text-xs font-extrabold uppercase tracking-widest text-[#0F0E9A]">Outlet Visit Window</p>
                                                     <h3 class="mt-1 text-xl font-black text-slate-900 dark:text-white">{{ $clockWindow['start_at']->format('g:i A') }} - {{ $clockWindow['end_at']->format('g:i A') }}</h3>
                                                     <p class="mt-1 text-xs text-slate-600 dark:text-slate-400 font-medium">Clock in and clock out at every assigned outlet during this window. Perfect Store entry becomes available after the outlet clock-in.</p>
                                                 </div>
@@ -588,7 +594,7 @@
                                                                 @endif
                                                             </p>
                                                         </div>
-                                                        <div class="rounded-xl border border-sky-200 bg-[#F0F9FF] dark:bg-slate-800 px-4 py-2 text-xs font-bold text-[#0284C7]">
+                                                        <div class="rounded-xl border border-sky-200 bg-[#F0F9FF] dark:bg-slate-800 px-4 py-2 text-xs font-bold text-[#0F0E9A]">
                                                             PJP Outlet Visit
                                                         </div>
                                                     </div>
@@ -623,7 +629,7 @@
                                                                     <input type="hidden" name="clock_in_type" value="outlet">
                                                                     <input type="hidden" name="latitude" class="user-lat-input">
                                                                     <input type="hidden" name="longitude" class="user-lng-input">
-                                                                    <button type="submit" data-clock-submit class="w-full py-2.5 bg-[#155EEF] hover:bg-blue-700 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-md">
+                                                                    <button type="submit" data-clock-submit class="w-full py-2.5 bg-[#0F0E9A] hover:bg-blue-700 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-md">
                                                                         Clock In
                                                                     </button>
                                                                 </form>
@@ -633,7 +639,7 @@
                                                                 </div>
                                                             @endif
                                                         @else
-                                                            <a href="{{ route('merchandisers.visit', $outlet) }}" class="inline-flex justify-center rounded-xl bg-[#155EEF] px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-blue-700 sm:w-56 shadow-md">
+                                                            <a href="{{ route('merchandisers.visit', $outlet) }}" class="inline-flex justify-center rounded-xl bg-[#0F0E9A] px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-blue-700 sm:w-56 shadow-md">
                                                                 Perfect Store Entry
                                                             </a>
                                                         @endif
@@ -690,7 +696,7 @@
 
                                             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                                 <div class="p-5 rounded-2xl bg-[#F0F9FF] border border-sky-200 dark:bg-slate-800/80 text-center shadow-sm">
-                                                    <p class="text-xs font-bold uppercase tracking-wider text-[#0284C7] dark:text-sky-300">Outlets Clocked In</p>
+                                                    <p class="text-xs font-bold uppercase tracking-wider text-[#0F0E9A] dark:text-sky-300">Outlets Clocked In</p>
                                                     <p class="text-3xl font-black text-slate-900 dark:text-white mt-2">{{ $merchMetrics['outlets_visited_today'] }}</p>
                                                     <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">of {{ $merchMetrics['total_outlets'] }} planned</p>
                                                 </div>
@@ -711,6 +717,7 @@
                                                     <p class="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300">Visit Time Today</p>
                                                     <p class="text-3xl font-black text-blue-600 dark:text-blue-400 mt-2">{{ sprintf('%02d:%02d', intdiv((int) ($merchMetrics['total_visit_minutes_today'] ?? 0), 60), ((int) ($merchMetrics['total_visit_minutes_today'] ?? 0)) % 60) }}</p>
                                                     <p class="text-xs text-blue-700/80 dark:text-blue-300/80 mt-1">total tracked visit duration</p>
+                                                    <p class="mt-2 text-[11px] font-bold text-blue-900 dark:text-blue-100">Monthly outlets covered: {{ $merchMetrics['outlets_covered_month'] ?? 0 }} ({{ $merchMetrics['monthly_coverage_rate'] ?? 0 }}%)</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -721,7 +728,7 @@
                                         <div class="rounded-2xl p-6 border border-sky-200 bg-white dark:bg-slate-900 shadow-md space-y-4">
                                             <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between border-b border-sky-100 pb-4">
                                                 <div>
-                                                    <p class="text-xs font-extrabold uppercase tracking-widest text-[#0284C7]">Add Outlet for {{ auth()->user()->merchandiserKd->name ?? 'your KD' }}</p>
+                                                    <p class="text-xs font-extrabold uppercase tracking-widest text-[#0F0E9A]">Add Outlet for {{ auth()->user()->merchandiserKd->name ?? 'your KD' }}</p>
                                                     <h3 class="text-xl font-black text-slate-900 dark:text-white mt-1">Register an Outlet</h3>
                                                     <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Stand at the outlet before saving. The system captures and locks your GPS automatically for future clock-ins.</p>
                                                 </div>
@@ -737,26 +744,26 @@
 
                                                 <div class="xl:col-span-2">
                                                     <label class="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">Outlet Name *</label>
-                                                    <input type="text" name="name" value="{{ old('name') }}" required placeholder="e.g. Osu Main Shop" class="w-full rounded-xl border border-sky-200 bg-[#F0F9FF] dark:bg-slate-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:border-[#155EEF]">
+                                                    <input type="text" name="name" value="{{ old('name') }}" required placeholder="e.g. Osu Main Shop" class="w-full rounded-xl border border-sky-200 bg-[#F0F9FF] dark:bg-slate-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:border-[#0F0E9A]">
                                                 </div>
                                                 <div>
                                                     <label class="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">Outlet Code</label>
-                                                    <input type="text" name="code" value="{{ old('code') }}" placeholder="Optional" class="w-full rounded-xl border border-sky-200 bg-[#F0F9FF] dark:bg-slate-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:border-[#155EEF]">
+                                                    <input type="text" name="code" value="{{ old('code') }}" placeholder="Optional" class="w-full rounded-xl border border-sky-200 bg-[#F0F9FF] dark:bg-slate-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:border-[#0F0E9A]">
                                                 </div>
                                                 <div>
                                                     <label class="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">Channel *</label>
-                                                    <select name="channel_type" required class="w-full rounded-xl border border-sky-200 bg-[#F0F9FF] dark:bg-slate-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:border-[#155EEF]">
+                                                    <select name="channel_type" required class="w-full rounded-xl border border-sky-200 bg-[#F0F9FF] dark:bg-slate-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:border-[#0F0E9A]">
                                                         <option value="GT" {{ old('channel_type', 'GT') === 'GT' ? 'selected' : '' }}>GT</option>
                                                         <option value="SSM" {{ old('channel_type') === 'SSM' ? 'selected' : '' }}>SSM</option>
                                                     </select>
                                                 </div>
                                                 <div class="sm:col-span-2 xl:col-span-2">
                                                     <label class="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">Address</label>
-                                                    <input type="text" name="address" value="{{ old('address') }}" placeholder="Outlet address / landmark" class="w-full rounded-xl border border-sky-200 bg-[#F0F9FF] dark:bg-slate-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:border-[#155EEF]">
+                                                    <input type="text" name="address" value="{{ old('address') }}" placeholder="Outlet address / landmark" class="w-full rounded-xl border border-sky-200 bg-[#F0F9FF] dark:bg-slate-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:border-[#0F0E9A]">
                                                 </div>
                                                 <div class="sm:col-span-2 xl:col-span-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pt-2">
                                                     <p class="text-[11px] text-slate-500 font-medium">GPS is captured from your device. Coordinates are locked after saving and can only be corrected by admin.</p>
-                                                    <button type="submit" class="rounded-xl bg-[#155EEF] px-6 py-3 text-xs font-bold uppercase tracking-wider text-white hover:bg-blue-700 transition-all shadow-md">
+                                                    <button type="submit" class="rounded-xl bg-[#0F0E9A] px-6 py-3 text-xs font-bold uppercase tracking-wider text-white hover:bg-blue-700 transition-all shadow-md">
                                                         Add Outlet
                                                     </button>
                                                 </div>
@@ -802,7 +809,7 @@
 
                                 <!-- Deductions Breakdown Audit -->
                                 <div class="border-t border-slate-100 dark:border-slate-800 pt-4 space-y-4">
-                                    <h3 class="text-xs font-extrabold uppercase tracking-wider text-[#0284C7]">Audit &amp; Punctuality Breakdown</h3>
+                                    <h3 class="text-xs font-extrabold uppercase tracking-wider text-[#0F0E9A]">Audit &amp; Punctuality Breakdown</h3>
                                     
                                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                         <div class="bg-slate-50 dark:bg-slate-800 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between">
@@ -872,7 +879,7 @@
                                             <textarea id="comments" name="comments" rows="3" class="mt-1 block w-full rounded-xl border border-slate-300 bg-slate-50 text-slate-900 p-3 text-xs font-medium" placeholder="State reasons for leave application..." required></textarea>
                                         </div>
                                         <div class="flex justify-end">
-                                            <button type="submit" class="px-6 py-3 rounded-xl bg-[#155EEF] hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider shadow-md transition">
+                                            <button type="submit" class="px-6 py-3 rounded-xl bg-[#0F0E9A] hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider shadow-md transition">
                                                 Submit Leave Request
                                             </button>
                                         </div>
@@ -947,7 +954,7 @@
                                             <textarea id="claim_desc" name="description" rows="2" class="mt-1 block w-full rounded-xl border border-slate-300 bg-slate-50 text-slate-900 p-3 text-xs font-medium" placeholder="e.g. Uber transit to Accra Mall shoprite for store audits" required></textarea>
                                         </div>
                                         <div class="flex justify-end">
-                                            <button type="submit" class="px-6 py-3 rounded-xl bg-[#155EEF] hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider shadow-md transition">
+                                            <button type="submit" class="px-6 py-3 rounded-xl bg-[#0F0E9A] hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider shadow-md transition">
                                                 Submit Claim
                                             </button>
                                         </div>
@@ -1019,7 +1026,7 @@
                                             <textarea id="loan_reason" name="reason" rows="2" class="mt-1 block w-full rounded-xl border border-slate-300 bg-slate-50 text-slate-900 p-3 text-xs font-medium" placeholder="Describe the purpose of the advance..." required></textarea>
                                         </div>
                                         <div class="flex justify-end">
-                                            <button type="submit" class="px-6 py-3 rounded-xl bg-[#155EEF] hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider shadow-md transition">
+                                            <button type="submit" class="px-6 py-3 rounded-xl bg-[#0F0E9A] hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider shadow-md transition">
                                                 Request Salary Advance
                                             </button>
                                         </div>
@@ -1670,7 +1677,7 @@
                             },
                             {
                                 label: 'Target',
-                                data: [100, 95, 100, 100, 100, 95, 100, 100],
+                                data: @json($merchKpiRadarTargets),
                                 borderColor: '#16a34a',
                                 backgroundColor: 'transparent',
                                 borderDash: [5, 4],
@@ -2087,7 +2094,7 @@
          Blueprint: Home | Schedule | + VISIT (center, dominant) | Outlets | KPIs
     ═══════════════════════════════════════════════════════════ -->
     <nav id="merch-bottom-nav"
-         class="lg:hidden fixed bottom-0 inset-x-0 z-[100] border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl overflow-visible"
+         class="merch-bottom-nav lg:hidden fixed bottom-0 inset-x-0 z-[100] border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl overflow-visible"
          style="padding-bottom: env(safe-area-inset-bottom, 0px); overflow: visible !important;"
          x-data>
         <div class="flex items-center justify-around px-2 py-2 gap-1 overflow-visible" style="overflow: visible !important;">
@@ -2095,18 +2102,18 @@
             <!-- 1. Home / Dashboard -->
             <button type="button"
                     @click="activeTab = 'home'"
-                    :class="activeTab === 'home' ? 'text-[#155EEF] font-black' : 'text-slate-500 font-semibold'"
+                    :class="activeTab === 'home' ? 'text-[#0F0E9A] font-black' : 'text-slate-500 font-semibold'"
                     class="flex flex-col items-center gap-1 flex-1 py-1 transition-colors min-w-0">
-                <span class="h-2 w-2 rounded-full" :class="activeTab === 'home' ? 'bg-[#155EEF]' : 'bg-slate-300 dark:bg-slate-700'"></span>
+                <span class="h-2 w-2 rounded-full" :class="activeTab === 'home' ? 'bg-[#0F0E9A]' : 'bg-slate-300 dark:bg-slate-700'"></span>
                 <span class="text-[10px] font-bold leading-none">Home</span>
             </button>
 
             <!-- 2. Schedule -->
             <button type="button"
                     @click="activeTab = 'schedule'"
-                    :class="activeTab === 'schedule' ? 'text-[#155EEF] font-black' : 'text-slate-500 font-semibold'"
+                    :class="activeTab === 'schedule' ? 'text-[#0F0E9A] font-black' : 'text-slate-500 font-semibold'"
                     class="flex flex-col items-center gap-1 flex-1 py-1 transition-colors min-w-0">
-                <span class="h-2 w-2 rounded-full" :class="activeTab === 'schedule' ? 'bg-[#155EEF]' : 'bg-slate-300 dark:bg-slate-700'"></span>
+                <span class="h-2 w-2 rounded-full" :class="activeTab === 'schedule' ? 'bg-[#0F0E9A]' : 'bg-slate-300 dark:bg-slate-700'"></span>
                 <span class="text-[10px] font-bold leading-none">Schedule</span>
             </button>
 
@@ -2115,28 +2122,28 @@
                 <button type="button"
                         @click="activeTab = 'outlets'"
                         class="-mt-8 relative z-50 flex items-center justify-center w-14 h-14 rounded-full shadow-2xl transition-all duration-200 active:scale-95 border-4 border-white dark:border-slate-900 cursor-pointer"
-                        style="background-color: #155EEF !important; color: #ffffff !important; box-shadow: 0 8px 24px rgba(21, 94, 239, 0.45) !important;"
+                        style="background-color: #0F0E9A !important; color: #ffffff !important; box-shadow: 0 8px 24px rgba(21, 94, 239, 0.45) !important;"
                         aria-label="Start outlet visit">
                     <span class="text-2xl font-black text-white">+</span>
                 </button>
-                <span class="text-[9px] font-extrabold uppercase tracking-wider text-[#155EEF] mt-1 leading-none" style="color: #155EEF !important;">VISIT</span>
+                <span class="text-[9px] font-extrabold uppercase tracking-wider text-[#0F0E9A] mt-1 leading-none" style="color: #0F0E9A !important;">VISIT</span>
             </div>
 
             <!-- 4. Outlets -->
             <button type="button"
                     @click="activeTab = 'outlets'"
-                    :class="activeTab === 'outlets' ? 'text-[#155EEF] font-black' : 'text-slate-500 font-semibold'"
+                    :class="activeTab === 'outlets' ? 'text-[#0F0E9A] font-black' : 'text-slate-500 font-semibold'"
                     class="flex flex-col items-center gap-1 flex-1 py-1 transition-colors min-w-0">
-                <span class="h-2 w-2 rounded-full" :class="activeTab === 'outlets' ? 'bg-[#155EEF]' : 'bg-slate-300 dark:bg-slate-700'"></span>
+                <span class="h-2 w-2 rounded-full" :class="activeTab === 'outlets' ? 'bg-[#0F0E9A]' : 'bg-slate-300 dark:bg-slate-700'"></span>
                 <span class="text-[10px] font-bold leading-none">Outlets</span>
             </button>
 
             <!-- 5. KPIs -->
             <button type="button"
                     @click="activeTab = 'kpis'"
-                    :class="activeTab === 'kpis' ? 'text-[#155EEF] font-black' : 'text-slate-500 font-semibold'"
+                    :class="activeTab === 'kpis' ? 'text-[#0F0E9A] font-black' : 'text-slate-500 font-semibold'"
                     class="flex flex-col items-center gap-1 flex-1 py-1 transition-colors min-w-0">
-                <span class="h-2 w-2 rounded-full" :class="activeTab === 'kpis' ? 'bg-[#155EEF]' : 'bg-slate-300 dark:bg-slate-700'"></span>
+                <span class="h-2 w-2 rounded-full" :class="activeTab === 'kpis' ? 'bg-[#0F0E9A]' : 'bg-slate-300 dark:bg-slate-700'"></span>
                 <span class="text-[10px] font-bold leading-none">KPIs</span>
             </button>
 
