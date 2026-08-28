@@ -63,7 +63,7 @@ class AuthenticatedSessionController extends Controller
         }
 
         if ($user->isMerchandiserSupervisor()) {
-            return redirect()->route('merchandisers.admin.dashboard');
+            return redirect()->route('merchandisers.supervisor.dashboard');
         }
 
         if ($user->isMerchandiserAccount()) {

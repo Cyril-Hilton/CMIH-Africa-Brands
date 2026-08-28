@@ -919,7 +919,16 @@ class User extends Authenticatable
 
     public function scopeMerchandiserSupervisors($query)
     {
-        return $query->where('access_role', self::MERCHANDISER_SUPERVISOR_ROLE);
+        return $query->where(function ($q) {
+            $q->where('access_role', self::MERCHANDISER_SUPERVISOR_ROLE)
+                ->orWhereIn('id', MerchandiserSupervisorAssignment::query()
+                    ->select('supervisor_id')
+                    ->whereNotNull('supervisor_id'))
+                ->orWhereIn('id', static::query()
+                    ->select('supervisor_id')
+                    ->whereNotNull('supervisor_id')
+                    ->whereIn('access_role', self::MERCHANDISER_FIELD_ROLES));
+        });
     }
 
     public function isMerchandiserAccount(): bool
@@ -934,7 +943,18 @@ class User extends Authenticatable
 
     public function isMerchandiserSupervisor(): bool
     {
-        return $this->access_role === self::MERCHANDISER_SUPERVISOR_ROLE;
+        if ($this->access_role === self::MERCHANDISER_SUPERVISOR_ROLE) {
+            return true;
+        }
+
+        if (! $this->exists || ! $this->id) {
+            return false;
+        }
+
+        return MerchandiserSupervisorAssignment::where('supervisor_id', $this->id)->exists()
+            || static::where('supervisor_id', $this->id)
+                ->whereIn('access_role', self::MERCHANDISER_FIELD_ROLES)
+                ->exists();
     }
 
     public function isMerchandiserClient(): bool

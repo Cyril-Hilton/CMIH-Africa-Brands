@@ -392,6 +392,67 @@ class MerchandiserPortalTest extends TestCase
         $response->assertRedirect(route('merchandisers.dashboard'));
         $this->assertAuthenticatedAs($user);
     }
+
+    #[Test]
+    public function legacy_assigned_supervisor_logs_into_the_supervisor_portal()
+    {
+        $supervisor = User::create([
+            'name' => 'Legacy Supervisor',
+            'email' => 'legacy-supervisor@cmih.africa',
+            'contact_email' => 'legacy-supervisor@personal.com',
+            'phone' => '12345678',
+            'password' => Hash::make('Pass123'),
+            'access_role' => 'staff',
+            'job_level' => 'executive',
+            'status' => 'active',
+        ]);
+
+        User::create([
+            'name' => 'Assigned Field Agent',
+            'email' => 'assigned-field-agent@cmih.africa',
+            'contact_email' => 'assigned-field-agent@personal.com',
+            'phone' => '12345678',
+            'date_of_birth' => '1995-05-05',
+            'password' => Hash::make('Pass123'),
+            'access_role' => User::MERCHANDISER_ROLE,
+            'status' => 'active',
+            'supervisor_id' => $supervisor->id,
+        ]);
+
+        $response = $this->post(route('merchandisers.login'), [
+            'email' => 'legacy-supervisor@cmih.africa',
+            'password' => 'Pass123',
+        ]);
+
+        $response->assertRedirect(route('merchandisers.supervisor.dashboard'));
+        $this->assertAuthenticatedAs($supervisor);
+
+        $this->get(route('merchandisers.supervisor.dashboard'))
+            ->assertOk()
+            ->assertSee('Supervisor Leaderboard');
+    }
+
+    #[Test]
+    public function main_login_routes_merchandiser_supervisors_to_the_supervisor_portal()
+    {
+        $supervisor = User::create([
+            'name' => 'Main Login Supervisor',
+            'email' => 'main-login-supervisor@cmih.africa',
+            'contact_email' => 'main-login-supervisor@personal.com',
+            'phone' => '12345678',
+            'password' => Hash::make('Pass123'),
+            'access_role' => User::MERCHANDISER_SUPERVISOR_ROLE,
+            'status' => 'active',
+        ]);
+
+        $response = $this->post('/login', [
+            'email' => 'main-login-supervisor@cmih.africa',
+            'password' => 'Pass123',
+        ]);
+
+        $response->assertRedirect(route('merchandisers.supervisor.dashboard'));
+        $this->assertAuthenticatedAs($supervisor);
+    }
     #[Test]
     public function new_merchandiser_registration_notifies_brands_team_admins()
     {
