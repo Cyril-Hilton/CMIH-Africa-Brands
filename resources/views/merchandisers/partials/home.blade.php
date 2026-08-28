@@ -290,11 +290,21 @@
                 }
             };
 
+            @php
+                $realKpiArray = [
+                    (float)($merchMetrics['osa_pct'] ?? 0),
+                    (float)($merchMetrics['npd_pct'] ?? 0),
+                    (float)($merchMetrics['mhs_pct'] ?? 0),
+                    (float)($merchMetrics['planogram_pct'] ?? 0),
+                    (float)($merchMetrics['facing_pct'] ?? 0),
+                    (float)($merchMetrics['sos_pct'] ?? 0),
+                ];
+            @endphp
             var kpiDataSets = {
-                daily: [98.5, 96.0, 97.2, 99.0, 95.5, 93.0],
-                weekly: [92.0, 85.5, 90.0, 94.5, 88.0, 84.5],
-                monthly: [88.0, 82.0, 86.5, 91.0, 84.0, 79.5],
-                yearly: [78.5, 72.0, 75.8, 82.0, 74.5, 70.0]
+                daily: @json($realKpiArray),
+                weekly: @json($realKpiArray),
+                monthly: @json($realKpiArray),
+                yearly: @json($realKpiArray)
             };
 
             function switchTrendPeriod(period) {

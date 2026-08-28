@@ -1009,11 +1009,11 @@ if (routeDailyCtx && adminChartsAvailable) {
     new Chart(routeDailyCtx, {
         type: 'bar',
         data: {
-            labels: @json($routeDailyChart['labels']),
+            labels: @json($routeDailyChart['labels'] ?? []),
             datasets: [
                 {
                     label: 'Total',
-                    data: @json($routeDailyChart['total']),
+                    data: @json($routeDailyChart['total'] ?? []),
                     backgroundColor: 'rgba(59,130,246,0.42)',
                     borderColor: 'rgba(59,130,246,0.9)',
                     borderWidth: 1.2,
@@ -1021,7 +1021,7 @@ if (routeDailyCtx && adminChartsAvailable) {
                 },
                 {
                     label: 'Completed',
-                    data: @json($routeDailyChart['completed']),
+                    data: @json($routeDailyChart['completed'] ?? []),
                     backgroundColor: 'rgba(34,197,94,0.5)',
                     borderColor: 'rgba(34,197,94,0.9)',
                     borderWidth: 1.2,
@@ -1029,7 +1029,7 @@ if (routeDailyCtx && adminChartsAvailable) {
                 },
                 {
                     label: 'Planned',
-                    data: @json($routeDailyChart['planned']),
+                    data: @json($routeDailyChart['planned'] ?? []),
                     backgroundColor: 'rgba(245,158,11,0.45)',
                     borderColor: 'rgba(245,158,11,0.9)',
                     borderWidth: 1.2,
@@ -1059,9 +1059,9 @@ if (routeStatusCtx && adminChartsAvailable) {
     new Chart(routeStatusCtx, {
         type: 'doughnut',
         data: {
-            labels: @json($routeStatusChart['labels']),
+            labels: @json($routeStatusChart['labels'] ?? []),
             datasets: [{
-                data: @json($routeStatusChart['data']),
+                data: @json($routeStatusChart['data'] ?? []),
                 backgroundColor: [
                     'rgba(34,197,94,0.68)',
                     'rgba(14,165,233,0.62)',
@@ -1200,9 +1200,9 @@ window.initMerchandiserStatusChart = function(root = document) {
     const statusCtx = root.querySelector ? root.querySelector('#statusChart') : document.getElementById('statusChart');
     if (!statusCtx || typeof Chart === 'undefined') return;
 
-    const active = parseInt(statusCtx.dataset.active || '{{ $activeMerchandisers }}', 10);
-    const pending = parseInt(statusCtx.dataset.pending || '{{ $pendingMerchandisers }}', 10);
-    const suspended = parseInt(statusCtx.dataset.suspended || '{{ $suspendedMerchandisers }}', 10);
+    const active = parseInt(statusCtx.dataset.active || '{{ $activeMerchandisers ?? 0 }}', 10);
+    const pending = parseInt(statusCtx.dataset.pending || '{{ $pendingMerchandisers ?? 0 }}', 10);
+    const suspended = parseInt(statusCtx.dataset.suspended || '{{ $suspendedMerchandisers ?? 0 }}', 10);
 
     Chart.getChart(statusCtx)?.destroy();
 
@@ -1262,7 +1262,7 @@ window.initMerchandiserStatusChart = function(root = document) {
                     cornerRadius: 10,
                     callbacks: {
                         label: function(context) {
-                            var total = {{ max(1, $totalMerchandisers) }};
+                            var total = {{ max(1, $totalMerchandisers ?? 0) }};
                             var pct = ((context.parsed.y / total) * 100).toFixed(1);
                             return ' Count: ' + context.parsed.y + ' merchandisers (' + pct + '% of total)';
                         }
@@ -1297,10 +1297,10 @@ if (kdCtx && adminChartsAvailable) {
     new Chart(kdCtx, {
         type: 'bar',
         data: {
-            labels: @json(array_keys($visitsByKd)),
+            labels: @json(array_keys($visitsByKd ?? [])),
             datasets: [{
                 label: 'Visits',
-                data: @json(array_values($visitsByKd)),
+                data: @json(array_values($visitsByKd ?? [])),
                 backgroundColor: 'rgba(59,130,246,0.75)',
                 borderColor: '#3b82f6',
                 borderWidth: 1.5,
@@ -1325,9 +1325,9 @@ if (assetsCtx && adminChartsAvailable) {
     new Chart(assetsCtx, {
         type: 'pie',
         data: {
-            labels: @json(array_keys($assetsByItem)),
+            labels: @json(array_keys($assetsByItem ?? [])),
             datasets: [{
-                data: @json(array_values($assetsByItem)),
+                data: @json(array_values($assetsByItem ?? [])),
                 backgroundColor: [
                     'rgba(168,85,247,0.75)',
                     'rgba(236,72,153,0.75)',
@@ -1357,10 +1357,10 @@ if (regionCtx && adminChartsAvailable) {
     new Chart(regionCtx, {
         type: 'bar',
         data: {
-            labels: @json(array_keys($outletsByRegion)),
+            labels: @json(array_keys($outletsByRegion ?? [])),
             datasets: [{
                 label: 'Outlets',
-                data: @json(array_values($outletsByRegion)),
+                data: @json(array_values($outletsByRegion ?? [])),
                 backgroundColor: 'rgba(14,165,233,0.75)',
                 borderColor: '#0ea5e9',
                 borderWidth: 1.5,
@@ -1385,9 +1385,9 @@ if (channelCtx && adminChartsAvailable) {
     new Chart(channelCtx, {
         type: 'doughnut',
         data: {
-            labels: @json(array_keys($outletsByChannel)),
+            labels: @json(array_keys($outletsByChannel ?? [])),
             datasets: [{
-                data: @json(array_values($outletsByChannel)),
+                data: @json(array_values($outletsByChannel ?? [])),
                 backgroundColor: ['#22c55e', '#38bdf8', '#f59e0b', '#a78bfa', '#ef4444', '#14b8a6'],
                 borderColor: getChartThemeColors().grid,
                 borderWidth: 1.5
@@ -1412,9 +1412,9 @@ if (clockCoverageCtx && adminChartsAvailable) {
     new Chart(clockCoverageCtx, {
         type: 'pie',
         data: {
-            labels: @json(array_keys($clockCoverageChart)),
+            labels: @json(array_keys($clockCoverageChart ?? [])),
             datasets: [{
-                data: @json(array_values($clockCoverageChart)),
+                data: @json(array_values($clockCoverageChart ?? [])),
                 backgroundColor: ['rgba(34,197,94,0.68)', 'rgba(239,68,68,0.58)'],
                 borderColor: ['#22c55e', '#ef4444'],
                 borderWidth: 1.5
@@ -1922,7 +1922,7 @@ document.addEventListener('DOMContentLoaded', () => {
 @if($activeAdminTab === 'perfect-store' || $activeAdminTab === 'overview')
 <script>
 (function() {
-    const kdData = @json($perfectStoreKdData);
+    const kdData = @json($perfectStoreKdData ?? []);
     const kdCanvas = document.getElementById('perfectStoreKdBarChart');
     if (kdCanvas && kdData.length) {
         new Chart(kdCanvas, {
@@ -1946,7 +1946,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const sosData = @json($categorySosData);
+    const sosData = @json($categorySosData ?? []);
     const sosCanvas = document.getElementById('categorySosDoughnutChart');
     if (sosCanvas && sosData.length) {
         new Chart(sosCanvas, {

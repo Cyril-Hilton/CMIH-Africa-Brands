@@ -127,13 +127,120 @@
                     <div class="space-y-6 {{ $currentSubTab === 'executive' ? '' : 'hidden' }}">
 
                     @php
+                        $perfectStoreSummary = $perfectStoreSummary ?? \App\Services\PerfectStoreKpiService::emptySummary();
+                        $totalMerchandisers = $totalMerchandisers ?? 0;
+                        $topPerformers = $topPerformers ?? collect();
+                        $suspendedMerchandisers = $suspendedMerchandisers ?? 0;
+                        $attendanceChart = $attendanceChart ?? [];
+                        $totalKds = $totalKds ?? 0;
+                        $totalOutlets = $totalOutlets ?? 0;
+                        $totalVisitsCount = $totalVisitsCount ?? 0;
+                        $totalSkusCount = $totalSkusCount ?? 0;
+                        $totalAssets = $totalAssets ?? 0;
+                        $assignedOutlets = $assignedOutlets ?? 0;
+                        $liveLocationCount = $liveLocationCount ?? 0;
+                        $activeSupervisors = $activeSupervisors ?? 0;
+                        $totalSupervisors = $totalSupervisors ?? 0;
+                        $supervisorCount = $supervisorCount ?? 0;
+                        $clientCount = $clientCount ?? 0;
+                        $adminCount = $adminCount ?? 0;
+                        $merchandiserCount = $merchandiserCount ?? 0;
+                        $allMerchandisers = $allMerchandisers ?? collect();
+                        $regions = $regions ?? collect();
+                        $channels = $channels ?? collect();
+                        $recentVisits = $recentVisits ?? collect();
+                        $recentClockins = $recentClockins ?? collect();
+                        $recentReports = $recentReports ?? collect();
+                        $todaysVisits = $todaysVisits ?? collect();
+                        $todaysClockins = $todaysClockins ?? collect();
+                        $pendingLeavesList = $pendingLeavesList ?? collect();
+                        $pendingClaimsList = $pendingClaimsList ?? collect();
+                        $pendingLoansList = $pendingLoansList ?? collect();
+                        $activeMerchandiserUsers = $activeMerchandiserUsers ?? collect();
+                        $supervisorUsers = $supervisorUsers ?? collect();
+                        $kdList = $kdList ?? collect();
+                        $outletList = $outletList ?? collect();
+                        $brands = $brands ?? collect();
+                        $categories = $categories ?? collect();
+                        $skus = $skus ?? collect();
+                        $allAssetsTotal = $allAssetsTotal ?? 0;
+                        $assignedAssetsTotal = $assignedAssetsTotal ?? 0;
+                        $unassignedAssetsTotal = $unassignedAssetsTotal ?? 0;
+                        $activeKdsCount = $activeKdsCount ?? 0;
+                        $totalKdsCount = $totalKdsCount ?? 0;
+                        $activeOutletsCount = $activeOutletsCount ?? 0;
+                        $googleForms = $googleForms ?? collect();
+                        $formSubmissionsCount = $formSubmissionsCount ?? 0;
+                        $svc = app(\App\Services\PerfectStoreKpiService::class);
+                        $now = now();
+                        $periodSummaries = [
+                            'daily'   => $svc->summary($now->copy()->startOfDay(), $now->copy()->endOfDay()),
+                            'weekly'  => $svc->summary($now->copy()->startOfWeek(), $now->copy()->endOfWeek()),
+                            'monthly' => $svc->summary($now->copy()->startOfMonth(), $now->copy()->endOfMonth()),
+                            'yearly'  => $svc->summary($now->copy()->startOfYear(), $now->copy()->endOfYear()),
+                        ];
+
+                        $extractRadarMetrics = function(array $sum) {
+                            $ov = $sum['overview'] ?? [];
+                            return collect(['coverage', 'osa', 'npd', 'mhs', 'planogram', 'facing', 'sos'])
+                                ->map(fn ($m) => $ov[$m] === null ? 0 : (float) ($ov[$m] ?? 0))
+                                ->values()
+                                ->all();
+                        };
+
+                        $extractMerchScores = function(array $sum) {
+                            $merchs = collect($sum['merchandisers'] ?? collect())->take(8);
+                            return $merchs->pluck('perfect_store_score')->map(fn ($v) => (float) $v)->values()->all();
+                        };
+
+                        $extractKdScores = function(array $sum) {
+                            $kds = collect($sum['kds'] ?? collect())->take(8);
+                            return $kds->pluck('perfect_store_score')->map(fn ($v) => (float) $v)->values()->all();
+                        };
+
+                        $extractCoveragePair = function(array $sum) {
+                            $cov = (float) ($sum['overview']['coverage'] ?? 0);
+                            return [round($cov, 1), round(max(0, 100 - $cov), 1)];
+                        };
+
+                        $realAdminChartDatasets = [
+                            'perfectStoreMetricRadarChart' => [
+                                'daily'   => $extractRadarMetrics($periodSummaries['daily']),
+                                'weekly'  => $extractRadarMetrics($periodSummaries['weekly']),
+                                'monthly' => $extractRadarMetrics($periodSummaries['monthly']),
+                                'yearly'  => $extractRadarMetrics($periodSummaries['yearly']),
+                            ],
+                            'perfectStoreMerchChart' => [
+                                'daily'   => $extractMerchScores($periodSummaries['daily']),
+                                'weekly'  => $extractMerchScores($periodSummaries['weekly']),
+                                'monthly' => $extractMerchScores($periodSummaries['monthly']),
+                                'yearly'  => $extractMerchScores($periodSummaries['yearly']),
+                            ],
+                            'perfectStoreKdChart' => [
+                                'daily'   => $extractKdScores($periodSummaries['daily']),
+                                'weekly'  => $extractKdScores($periodSummaries['weekly']),
+                                'monthly' => $extractKdScores($periodSummaries['monthly']),
+                                'yearly'  => $extractKdScores($periodSummaries['yearly']),
+                            ],
+                            'statusChart' => [
+                                'daily'   => [$activeMerchandisers ?? 0, $pendingMerchandisers ?? 0, $suspendedMerchandisers ?? 0],
+                                'weekly'  => [$activeMerchandisers ?? 0, $pendingMerchandisers ?? 0, $suspendedMerchandisers ?? 0],
+                                'monthly' => [$activeMerchandisers ?? 0, $pendingMerchandisers ?? 0, $suspendedMerchandisers ?? 0],
+                                'yearly'  => [$activeMerchandisers ?? 0, $pendingMerchandisers ?? 0, $suspendedMerchandisers ?? 0],
+                            ],
+                            'clockCoverageChart' => [
+                                'daily'   => $extractCoveragePair($periodSummaries['daily']),
+                                'weekly'  => $extractCoveragePair($periodSummaries['weekly']),
+                                'monthly' => $extractCoveragePair($periodSummaries['monthly']),
+                                'yearly'  => $extractCoveragePair($periodSummaries['yearly']),
+                            ],
+                        ];
+
                         $perfectOverview = $perfectStoreSummary['overview'] ?? [];
                         $perfectTargets = $perfectStoreSummary['targets'] ?? [];
                         $metricLabel = fn ($value) => $value === null ? 'N/A' : number_format((float) $value, 1) . '%';
                         $perfectMetricLabels = ['Coverage', 'OSA', 'NPD', 'MHS', 'Planogram', 'Facing', 'SOS'];
-                        $perfectMetricValues = collect(['coverage', 'osa', 'npd', 'mhs', 'planogram', 'facing', 'sos'])
-                            ->map(fn ($metric) => $perfectOverview[$metric] === null ? 0 : (float) ($perfectOverview[$metric] ?? 0))
-                            ->values();
+                        $perfectMetricValues = $extractRadarMetrics($perfectStoreSummary);
                         $perfectTargetValues = collect(['coverage', 'osa', 'npd', 'mhs', 'planogram', 'facing', 'sos'])
                             ->map(fn ($metric) => (float) ($perfectTargets[$metric] ?? 100))
                             ->values();
@@ -300,11 +407,14 @@
                                 <button type="button" @click="adminPeriod = 'monthly'" :class="adminPeriod === 'monthly' ? 'bg-[#0F0E9A] text-white shadow-xs font-black' : 'text-slate-700 dark:text-slate-300 font-bold hover:text-slate-900 dark:hover:text-white'" class="rounded-lg px-2.5 py-1 text-[10px] uppercase transition">Monthly</button>
                                 <button type="button" @click="adminPeriod = 'yearly'" :class="adminPeriod === 'yearly' ? 'bg-[#0F0E9A] text-white shadow-xs font-black' : 'text-slate-700 dark:text-slate-300 font-bold hover:text-slate-900 dark:hover:text-white'" class="rounded-lg px-2.5 py-1 text-[10px] uppercase transition">Yearly</button>
                             </div>
-                            <span class="rounded-full border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-900 dark:text-white">{{ $perfectStoreRangeLabel }}</span>
+                            <span class="rounded-full border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-900 dark:text-white">{{ $perfectStoreRangeLabel ?? 'This Month' }}</span>
                         </div>
                     </div>
                     <div class="grid grid-cols-1 gap-5 mb-6 xl:grid-cols-3">
                         <script type="application/json" data-perfect-store-overview-charts>@json($perfectOverviewChartPayload)</script>
+                        <script>
+                            window.adminChartDatasets = Object.assign({}, window.adminChartDatasets || {}, @json($realAdminChartDatasets));
+                        </script>
                         
                         <!-- Radar Chart Card with Period Filters -->
                         <div x-data="{ radarPeriod: 'weekly' }" class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm space-y-3">
@@ -374,9 +484,9 @@
                                     <button type="button" @click="statusPeriod = 'yearly'; switchAdminChartPeriod('statusChart', 'yearly')" :class="statusPeriod === 'yearly' ? 'bg-[#0F0E9A] text-white shadow-xs font-black' : 'text-slate-600 dark:text-slate-400 font-bold hover:text-slate-900 dark:hover:text-white'" class="rounded-lg px-2 py-0.5 text-[9px] uppercase transition">Yearly</button>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <span class="text-[10px] font-extrabold px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">Active: {{ $activeMerchandisers }}</span>
-                                    <span class="text-[10px] font-extrabold px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">Pending: {{ $pendingMerchandisers }}</span>
-                                    <span class="text-[10px] font-extrabold px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800">Suspended: {{ $suspendedMerchandisers }}</span>
+                                    <span class="text-[10px] font-extrabold px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">Active: {{ $activeMerchandisers ?? 0 }}</span>
+                                    <span class="text-[10px] font-extrabold px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">Pending: {{ $pendingMerchandisers ?? 0 }}</span>
+                                    <span class="text-[10px] font-extrabold px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800">Suspended: {{ $suspendedMerchandisers ?? 0 }}</span>
                                 </div>
                             </div>
                         </div>
@@ -388,9 +498,9 @@
                                 <div class="min-w-0">
                                     <p class="text-[10px] font-extrabold uppercase tracking-widest text-emerald-800 dark:text-emerald-300 truncate">Active Ratio</p>
                                     <p class="text-2xl font-black text-emerald-900 dark:text-emerald-100 mt-1 tabular-nums">
-                                        {{ $totalMerchandisers > 0 ? number_format(($activeMerchandisers / $totalMerchandisers) * 100, 1) : 0 }}%
+                                        {{ ($totalMerchandisers ?? 0) > 0 ? number_format((($activeMerchandisers ?? 0) / $totalMerchandisers) * 100, 1) : 0 }}%
                                     </p>
-                                    <p class="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold mt-0.5 truncate">{{ $activeMerchandisers }} of {{ $totalMerchandisers }} total</p>
+                                    <p class="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold mt-0.5 truncate">{{ $activeMerchandisers ?? 0 }} of {{ $totalMerchandisers ?? 0 }} total</p>
                                 </div>
                                 <div class="w-10 h-10 shrink-0 rounded-full border-2 border-emerald-500 flex items-center justify-center bg-white dark:bg-slate-900 text-emerald-600 font-black text-sm shadow-xs">
                                     <i class="fa-solid fa-bolt text-emerald-600 dark:text-emerald-400 text-base"></i>
@@ -402,7 +512,7 @@
                                 <div class="min-w-0">
                                     <p class="text-[10px] font-extrabold uppercase tracking-widest text-amber-800 dark:text-amber-300 truncate">Pending Queue</p>
                                     <p class="text-2xl font-black text-amber-900 dark:text-amber-100 mt-1 tabular-nums">
-                                        {{ $pendingMerchandisers }}
+                                        {{ $pendingMerchandisers ?? 0 }}
                                     </p>
                                     <p class="text-[10px] text-amber-700 dark:text-amber-400 font-semibold mt-0.5 truncate">Awaiting review</p>
                                 </div>
@@ -416,9 +526,9 @@
                                 <div class="min-w-0">
                                     <p class="text-[10px] font-extrabold uppercase tracking-widest text-rose-800 dark:text-rose-300 truncate">Suspension Rate</p>
                                     <p class="text-2xl font-black text-rose-900 dark:text-rose-100 mt-1 tabular-nums">
-                                        {{ $totalMerchandisers > 0 ? number_format(($suspendedMerchandisers / $totalMerchandisers) * 100, 1) : 0 }}%
+                                        {{ ($totalMerchandisers ?? 0) > 0 ? number_format((($suspendedMerchandisers ?? 0) / $totalMerchandisers) * 100, 1) : 0 }}%
                                     </p>
-                                    <p class="text-[10px] text-rose-700 dark:text-rose-400 font-semibold mt-0.5 truncate">{{ $suspendedMerchandisers }} accounts</p>
+                                    <p class="text-[10px] text-rose-700 dark:text-rose-400 font-semibold mt-0.5 truncate">{{ $suspendedMerchandisers ?? 0 }} accounts</p>
                                 </div>
                                 <div class="w-10 h-10 shrink-0 rounded-full border-2 border-rose-500 flex items-center justify-center bg-white dark:bg-slate-900 text-rose-600 font-black text-sm shadow-xs">
                                     <i class="fa-solid fa-shield-halved text-rose-600 dark:text-rose-400 text-base"></i>
