@@ -59,9 +59,9 @@ class MerchandiserAdminHubController extends Controller
         }
     }
 
-    private function guardAdminOrSupervisor()
+    private function guardAdminOrSupervisor(?Request $request = null)
     {
-        $user = auth()->user();
+        $user = auth()->user() ?: ($request ? $request->user() : request()->user());
         if (! $user || (! $user->isMerchandiserPortalAdmin() && ! $user->isMerchandiserSupervisor())) {
             abort(403, 'Unauthorized');
         }
@@ -70,9 +70,9 @@ class MerchandiserAdminHubController extends Controller
     /**
      * Guard for viewing Merchandiser Hub tabs (allows admins, supervisors, and clients).
      */
-    private function guardHubView(): void
+    private function guardHubView(?Request $request = null): void
     {
-        $user = auth()->user();
+        $user = auth()->user() ?: ($request ? $request->user() : request()->user());
         if (! $user || (! $user->isMerchandiserPortalAdmin() && ! $user->isMerchandiserSupervisor() && ! $user->isMerchandiserClient())) {
             abort(403, 'Unauthorized');
         }
@@ -98,7 +98,7 @@ class MerchandiserAdminHubController extends Controller
      */
     public function dashboard(Request $request, ?string $adminTab = null, bool $roleDashboard = false)
     {
-        $roleDashboard ? $this->guardHubView() : $this->guardAdmin();
+        $this->guardHubView($request);
         $activeTab = $this->resolveAdminTab($request, $adminTab);
 
         // ── KPI Counts ─────────────────────────────────────────────────────────

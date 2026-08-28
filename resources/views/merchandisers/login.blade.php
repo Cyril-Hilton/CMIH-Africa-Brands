@@ -94,10 +94,10 @@
         <!-- Registration link (Allowed for Field, Supervisor, Client) -->
         <div class="rounded-xl border border-brand-white/10 bg-white/5 p-4 text-center text-xs text-brand-white/70"
              x-show="activeRole !== 'admin'">
-            Need a new account?
+            New to the Merchandiser Portal?
             <a :href="'{{ route('merchandisers.register') }}?role=' + activeRole + '&tenant=' + activeTenant"
                class="font-bold text-amber-400 hover:text-amber-300 underline ml-1">
-                Register as <span x-text="roles[activeRole]?.label"></span>
+                Register Here
             </a>
             <p class="mt-1 text-[10px] text-brand-ash">Registrations require approval from the Brands Team Admin.</p>
         </div>

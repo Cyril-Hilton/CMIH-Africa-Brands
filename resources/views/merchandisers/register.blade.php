@@ -1,13 +1,34 @@
 <x-guest-layout>
     <div class="space-y-6">
         <div class="space-y-2">
-            <p class="text-xs uppercase tracking-[0.3em] text-brand-ash">Apply as Field Agent</p>
-            <h2 class="text-3xl font-display text-brand-white">Register Profile</h2>
-            <p class="text-sm text-brand-white/70">Create your merchandiser account. All external agents require admin approval before activation.</p>
+            <p class="text-xs uppercase tracking-[0.3em] text-brand-ash">Merchandiser Portal Access</p>
+            <h2 class="text-3xl font-display text-brand-white">Register Account</h2>
+            <p class="text-sm text-brand-white/70">Create your merchandiser portal account. Select your role and brand workspace. All accounts require admin approval before activation.</p>
         </div>
 
         <form method="POST" action="{{ route('merchandisers.register') }}" enctype="multipart/form-data" class="space-y-4">
             @csrf
+
+            <!-- Unified Role Selector (Field Agent, Supervisor, Client / TM) -->
+            <fieldset class="space-y-2">
+                <legend class="text-xs font-semibold uppercase tracking-[0.16em] text-brand-white/75">Select Portal Role</legend>
+                <p class="text-xs leading-5 text-brand-white/55">Choose the account role you are applying for in the portal.</p>
+                <div class="grid gap-2.5 sm:grid-cols-3">
+                    @foreach($portalRoles as $roleKey => $roleDef)
+                        <label class="group cursor-pointer rounded-xl border border-brand-white/10 bg-brand-white/5 p-3 transition hover:border-brand-red/45 hover:bg-brand-red/5">
+                            <input type="radio" name="portal_role" value="{{ $roleKey }}" class="sr-only peer" @checked(old('portal_role', $activeRole) === $roleKey) required>
+                            <div class="flex flex-col gap-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-base">{{ $roleDef['icon'] }}</span>
+                                    <span class="text-xs font-bold text-brand-white group-hover:text-white peer-checked:text-brand-red">{{ $roleDef['label'] }}</span>
+                                </div>
+                                <p class="text-[10px] text-brand-ash leading-snug">{{ $roleDef['short_label'] }} registration</p>
+                            </div>
+                        </label>
+                    @endforeach
+                </div>
+                <x-input-error :messages="$errors->get('portal_role')" class="mt-1" />
+            </fieldset>
 
             <div>
                 <x-input-label for="name" :value="__('Full Name')" />
