@@ -7,9 +7,9 @@
 /.github export-ignore
 CHANGELOG.md export-ignore
 .styleci.yml export-ignore
-public/images/**/*.jpg filter=lfs diff=lfs merge=lfs -text
-public/images/**/*.jpeg filter=lfs diff=lfs merge=lfs -text
-public/images/**/*.png filter=lfs diff=lfs merge=lfs -text
+public/images/**/*.jpg -text
+public/images/**/*.jpeg -text
+public/images/**/*.png -text
 public/images/logo/favicon.png -filter -diff -merge -text
 public/images/logo/icon-192.png -filter -diff -merge -text
 public/images/logo/icon-512.png -filter -diff -merge -text
