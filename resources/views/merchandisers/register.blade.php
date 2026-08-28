@@ -19,7 +19,7 @@
                         <label class="group cursor-pointer rounded-xl border border-brand-white/10 bg-brand-white/5 p-3 transition hover:border-brand-red/45 hover:bg-brand-red/5 active:scale-[0.99] min-w-0">
                             <input type="radio" name="portal_role" value="{{ $roleKey }}" class="sr-only peer" @checked(old('portal_role', $activeRole) === $roleKey) required>
                             <div class="flex items-center gap-2.5 min-w-0">
-                                <span class="text-lg shrink-0">{{ $roleDef['icon'] }}</span>
+                                <span class="text-base shrink-0"><i class="{{ $roleDef['icon_class'] }} text-amber-400"></i></span>
                                 <div class="min-w-0 flex-1">
                                     <span class="block text-xs font-bold text-brand-white group-hover:text-white peer-checked:text-brand-red truncate">{{ $roleDef['label'] }}</span>
                                     <p class="text-[10px] text-brand-ash leading-snug truncate">{{ $roleDef['short_label'] }} registration</p>

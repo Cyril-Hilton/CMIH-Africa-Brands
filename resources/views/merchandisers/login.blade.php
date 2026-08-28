@@ -22,7 +22,7 @@
                         @click="activeRole = '{{ $roleKey }}'"
                         :class="activeRole === '{{ $roleKey }}' ? 'bg-brand-red text-white shadow-lg' : 'text-brand-white/60 hover:text-brand-white hover:bg-white/5'"
                         class="rounded-lg py-2.5 px-2 text-center text-xs font-bold transition duration-200">
-                    <span class="block text-sm mb-0.5">{{ $roleDef['icon'] }}</span>
+                    <span class="block text-sm mb-0.5"><i class="{{ $roleDef['icon_class'] }} text-amber-400"></i></span>
                     <span>{{ $roleDef['short_label'] }}</span>
                 </button>
             @endforeach
