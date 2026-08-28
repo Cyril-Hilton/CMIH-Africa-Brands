@@ -35,7 +35,9 @@
                         <div class="merch-card rounded-2xl p-4 sm:p-5 border border-emerald-200 dark:border-emerald-800/50 bg-emerald-50/60 dark:bg-emerald-950/20 shadow-sm flex flex-col justify-between">
                             <div class="flex items-center justify-between">
                                 <p class="text-[10px] uppercase tracking-widest text-emerald-800 dark:text-emerald-300 font-extrabold">Active Agents</p>
-                                <span class="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400 text-xs inline-flex items-center justify-center"><i class="fa-solid fa-users text-sm"></i></span>
+                                <div class="h-9 w-9 shrink-0 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-xs">
+                                    <i class="fa-solid fa-users text-base"></i>
+                                </div>
                             </div>
                             <p class="mt-3 text-3xl font-black text-emerald-900 dark:text-emerald-100 tabular-nums">{{ $activeMerchandisers }}</p>
                             <p class="mt-1 text-xs text-emerald-700 dark:text-emerald-400 font-semibold">of {{ $totalMerchandisers }} total</p>
@@ -45,7 +47,9 @@
                         <div class="merch-card rounded-2xl p-4 sm:p-5 border border-amber-200 dark:border-amber-800/50 bg-amber-50/60 dark:bg-amber-950/20 shadow-sm flex flex-col justify-between">
                             <div class="flex items-center justify-between">
                                 <p class="text-[10px] uppercase tracking-widest text-amber-800 dark:text-amber-300 font-extrabold">Pending Pairing</p>
-                                <span class="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-400 text-xs inline-flex items-center justify-center"><i class="fa-solid fa-clock-rotate-left text-sm"></i></span>
+                                <div class="h-9 w-9 shrink-0 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shadow-xs">
+                                    <i class="fa-solid fa-clock-rotate-left text-base"></i>
+                                </div>
                             </div>
                             <p class="mt-3 text-3xl font-black text-amber-900 dark:text-amber-100 tabular-nums">{{ $pendingMerchandisers }}</p>
                             <p class="mt-1 text-xs text-amber-700 dark:text-amber-400 font-semibold">awaiting pairing</p>
@@ -55,7 +59,9 @@
                         <div class="merch-card rounded-2xl p-4 sm:p-5 border border-sky-200 dark:border-sky-800/50 bg-sky-50/60 dark:bg-sky-950/20 shadow-sm flex flex-col justify-between">
                             <div class="flex items-center justify-between">
                                 <p class="text-[10px] uppercase tracking-widest text-sky-800 dark:text-sky-300 font-extrabold">Clock-Ins</p>
-                                <span class="p-1.5 rounded-lg bg-sky-100 dark:bg-sky-900/60 text-sky-600 dark:text-sky-400 text-xs inline-flex items-center justify-center"><i class="fa-solid fa-location-dot text-sm"></i></span>
+                                <div class="h-9 w-9 shrink-0 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-600 dark:text-sky-400 shadow-xs">
+                                    <i class="fa-solid fa-location-dot text-base"></i>
+                                </div>
                             </div>
                             <p class="mt-3 text-3xl font-black text-sky-900 dark:text-sky-100 tabular-nums">{{ $todayClockins }}</p>
                             <p class="mt-1 text-xs text-sky-700 dark:text-sky-400 font-semibold">{{ $clockRangeLabel }}</p>
@@ -65,7 +71,9 @@
                         <div class="merch-card rounded-2xl p-4 sm:p-5 border border-indigo-200 dark:border-indigo-800/50 bg-indigo-50/60 dark:bg-indigo-950/20 shadow-sm flex flex-col justify-between">
                             <div class="flex items-center justify-between">
                                 <p class="text-[10px] uppercase tracking-widest text-indigo-800 dark:text-indigo-300 font-extrabold">PCM / PJP</p>
-                                <span class="p-1.5 rounded-lg bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 text-xs inline-flex items-center justify-center"><i class="fa-solid fa-clipboard-list text-sm"></i></span>
+                                <div class="h-9 w-9 shrink-0 rounded-xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-xs">
+                                    <i class="fa-solid fa-clipboard-list text-base"></i>
+                                </div>
                             </div>
                             <p class="mt-3 text-3xl font-black text-indigo-900 dark:text-indigo-100 tabular-nums">{{ $clockPcmCount + $clockPjpCount }}</p>
                             <p class="mt-1 text-xs text-indigo-700 dark:text-indigo-400 font-semibold">{{ $clockPcmCount }} PCM · {{ $clockPjpCount }} PJP</p>
@@ -75,7 +83,9 @@
                         <div class="merch-card rounded-2xl p-4 sm:p-5 border border-rose-200 dark:border-rose-800/50 bg-rose-50/60 dark:bg-rose-950/20 shadow-sm flex flex-col justify-between">
                             <div class="flex items-center justify-between">
                                 <p class="text-[10px] uppercase tracking-widest text-rose-800 dark:text-rose-300 font-extrabold">Approvals Queue</p>
-                                <span class="p-1.5 rounded-lg bg-rose-100 dark:bg-rose-900/60 text-rose-600 dark:text-rose-400 text-xs inline-flex items-center justify-center"><i class="fa-solid fa-bell text-sm"></i></span>
+                                <div class="h-9 w-9 shrink-0 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-600 dark:text-rose-400 shadow-xs">
+                                    <i class="fa-solid fa-bell text-base"></i>
+                                </div>
                             </div>
                             <p class="mt-3 text-3xl font-black text-rose-900 dark:text-rose-100 tabular-nums">{{ $pendingLeaves + $pendingClaims + $pendingLoans }}</p>
                             <p class="mt-1 text-xs text-rose-700 dark:text-rose-400 font-semibold">{{ $pendingLeaves }}L · {{ $pendingClaims }}C · {{ $pendingLoans }}Ln</p>
@@ -156,7 +166,7 @@
                                 'val'    => (float) ($perfectOverview['coverage'] ?? 0),
                                 'textVal'=> $metricLabel($perfectOverview['coverage'] ?? null),
                                 'sub'    => ($perfectOverview['scored'] ?? 0).' scored of '.($perfectOverview['scheduled'] ?? 0),
-                                'icon'   => '<i class="fa-solid fa-crosshair text-sm"></i>',
+                                'icon'   => '<i class="fa-solid fa-crosshairs text-base text-emerald-600 dark:text-emerald-400"></i>',
                                 'stroke' => '#10B981',
                                 'bg'     => '#ECFDF5',
                                 'border' => '#A7F3D0',
@@ -168,7 +178,7 @@
                                 'val'    => (float) ($perfectOverview['osa'] ?? 0),
                                 'textVal'=> $metricLabel($perfectOverview['osa'] ?? null),
                                 'sub'    => 'Target '.($perfectTargets['osa'] ?? 95).'%',
-                                'icon'   => '<i class="fa-solid fa-box-open text-sm"></i>',
+                                'icon'   => '<i class="fa-solid fa-box-open text-base text-blue-600 dark:text-blue-400"></i>',
                                 'stroke' => '#2563EB',
                                 'bg'     => '#EFF6FF',
                                 'border' => '#BFDBFE',
@@ -180,7 +190,7 @@
                                 'val'    => ($perfectOverview['npd'] ?? null) !== null ? (float)$perfectOverview['npd'] : 0,
                                 'textVal'=> $metricLabel($perfectOverview['npd'] ?? null),
                                 'sub'    => 'All-or-nothing per store',
-                                'icon'   => '<i class="fa-solid fa-wand-magic-sparkles text-sm"></i>',
+                                'icon'   => '<i class="fa-solid fa-wand-magic-sparkles text-base text-purple-600 dark:text-purple-400"></i>',
                                 'stroke' => '#7C3AED',
                                 'bg'     => '#F5F3FF',
                                 'border' => '#DDD6FE',
@@ -192,7 +202,7 @@
                                 'val'    => ($perfectOverview['mhs'] ?? null) !== null ? (float)$perfectOverview['mhs'] : 0,
                                 'textVal'=> $metricLabel($perfectOverview['mhs'] ?? null),
                                 'sub'    => 'Must-have SKU compliance',
-                                'icon'   => '<i class="fa-solid fa-star text-sm"></i>',
+                                'icon'   => '<i class="fa-solid fa-star text-base text-amber-500 dark:text-amber-400"></i>',
                                 'stroke' => '#F59E0B',
                                 'bg'     => '#FFFBEB',
                                 'border' => '#FDE68A',
@@ -204,7 +214,7 @@
                                 'val'    => (float) ($perfectOverview['planogram'] ?? 0),
                                 'textVal'=> $metricLabel($perfectOverview['planogram'] ?? null),
                                 'sub'    => 'Target '.($perfectTargets['planogram'] ?? 100).'%',
-                                'icon'   => '<i class="fa-solid fa-ruler-combined text-sm"></i>',
+                                'icon'   => '<i class="fa-solid fa-ruler-combined text-base text-cyan-600 dark:text-cyan-400"></i>',
                                 'stroke' => '#06B6D4',
                                 'bg'     => '#ECFEFF',
                                 'border' => '#A5F3FC',
@@ -216,7 +226,7 @@
                                 'val'    => (float) ($perfectOverview['facing'] ?? 0),
                                 'textVal'=> $metricLabel($perfectOverview['facing'] ?? null),
                                 'sub'    => 'Target '.($perfectTargets['facing'] ?? 95).'%',
-                                'icon'   => '<i class="fa-solid fa-chart-column text-sm"></i>',
+                                'icon'   => '<i class="fa-solid fa-chart-column text-base text-indigo-600 dark:text-indigo-400"></i>',
                                 'stroke' => '#6366F1',
                                 'bg'     => '#EEF2FF',
                                 'border' => '#C7D2FE',
@@ -228,7 +238,7 @@
                                 'val'    => (float) ($perfectOverview['sos'] ?? 0),
                                 'textVal'=> $metricLabel($perfectOverview['sos'] ?? null),
                                 'sub'    => 'Unilever facings vs category',
-                                'icon'   => '<i class="fa-solid fa-tag text-sm"></i>',
+                                'icon'   => '<i class="fa-solid fa-tag text-base text-rose-600 dark:text-rose-400"></i>',
                                 'stroke' => '#E11D48',
                                 'bg'     => '#FFF1F2',
                                 'border' => '#FECDD3',
@@ -240,7 +250,7 @@
                                 'val'    => (float) ($perfectOverview['perfect_store_score'] ?? 0),
                                 'textVal'=> $metricLabel($perfectOverview['perfect_store_score'] ?? null),
                                 'sub'    => ($perfectOverview['visits'] ?? 0).' scored visit(s)',
-                                'icon'   => '<i class="fa-solid fa-trophy text-sm"></i>',
+                                'icon'   => '<i class="fa-solid fa-trophy text-base text-[#0F0E9A] dark:text-indigo-300"></i>',
                                 'stroke' => '#0F0E9A',
                                 'bg'     => '#EEF2FF',
                                 'border' => '#C7D2FE',
