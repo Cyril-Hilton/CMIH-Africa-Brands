@@ -4,18 +4,18 @@
                         <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                             <div>
                                 <p class="text-xs uppercase tracking-widest text-slate-900 dark:text-white font-extrabold">Live tracking clock-in filter</p>
-                                <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">{{ $clockRangeLabel }}</p>
+                                <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">{{ $clockRangeLabel ?? 'Today' }}</p>
                                 <p class="mt-1 text-xs text-slate-600 dark:text-slate-400 font-semibold">{{ count(array_filter($merchandiserLocations, fn($m) => $m['clocked_in'])) }} of {{ count($merchandiserLocations) }} agents clocked in for this range</p>
                             </div>
                             <form method="GET" action="{{ route('merchandisers.admin.dashboard') }}" class="grid w-full gap-3 sm:grid-cols-[repeat(2,minmax(0,1fr))_auto_auto] lg:w-auto">
                                 <input type="hidden" name="tab" value="tracking">
                                 <label class="block">
                                     <span class="text-[10px] uppercase tracking-wider text-slate-700 dark:text-slate-300 font-bold">From</span>
-                                    <input type="date" name="clock_from" value="{{ $clockFromInput }}" class="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-white font-semibold focus:border-brand-red focus:ring-0">
+                                    <input type="date" name="clock_from" value="{{ $clockFromInput ?? '' }}" class="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-white font-semibold focus:border-brand-red focus:ring-0">
                                 </label>
                                 <label class="block">
                                     <span class="text-[10px] uppercase tracking-wider text-slate-700 dark:text-slate-300 font-bold">To</span>
-                                    <input type="date" name="clock_to" value="{{ $clockToInput }}" class="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-white font-semibold focus:border-brand-red focus:ring-0">
+                                    <input type="date" name="clock_to" value="{{ $clockToInput ?? '' }}" class="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-white font-semibold focus:border-brand-red focus:ring-0">
                                 </label>
                                 <button type="submit" class="self-end rounded-xl bg-brand-red px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-white hover:bg-red-700 transition shadow-sm">
                                     Apply
@@ -32,7 +32,7 @@
                             <div>
                                 <p class="text-xs uppercase tracking-widest text-slate-900 dark:text-white font-extrabold">Real-Time Field Positions</p>
                                 <p class="text-sm text-slate-900 dark:text-white font-bold mt-0.5">{{ count(array_filter($merchandiserLocations, fn($m) => $m['latitude'])) }} of {{ count($merchandiserLocations) }} agents transmitting GPS</p>
-                                <p class="mt-1 text-xs text-slate-600 dark:text-slate-400 font-semibold">{{ count(array_filter($merchandiserLocations, fn($m) => $m['clocked_in'])) }} clocked in between {{ $clockRangeLabel }}</p>
+                                <p class="mt-1 text-xs text-slate-600 dark:text-slate-400 font-semibold">{{ count(array_filter($merchandiserLocations, fn($m) => $m['clocked_in'])) }} clocked in between {{ $clockRangeLabel ?? 'Today' }}</p>
                             </div>
                             <div class="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
                                 <span class="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse"></span> Clocked In Field Route

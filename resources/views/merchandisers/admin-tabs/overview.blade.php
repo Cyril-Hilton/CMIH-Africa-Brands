@@ -7,17 +7,17 @@
                         <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                             <div>
                                 <p class="text-xs uppercase tracking-widest text-slate-900 dark:text-white font-extrabold">Clock-in filter</p>
-                                <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">{{ $clockRangeLabel }}</p>
+                                <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">{{ $clockRangeLabel ?? 'Today' }}</p>
                             </div>
                             <form method="GET" action="{{ route('merchandisers.admin.dashboard') }}" class="grid w-full gap-3 sm:grid-cols-[repeat(2,minmax(0,1fr))_auto_auto] lg:w-auto">
                                 <input type="hidden" name="tab" value="overview">
                                 <label class="block">
                                     <span class="text-[10px] uppercase tracking-wider text-slate-700 dark:text-slate-300 font-bold">From</span>
-                                    <input type="date" name="clock_from" value="{{ $clockFromInput }}" class="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-white font-semibold focus:border-brand-red focus:ring-0">
+                                    <input type="date" name="clock_from" value="{{ $clockFromInput ?? '' }}" class="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-white font-semibold focus:border-brand-red focus:ring-0">
                                 </label>
                                 <label class="block">
                                     <span class="text-[10px] uppercase tracking-wider text-slate-700 dark:text-slate-300 font-bold">To</span>
-                                    <input type="date" name="clock_to" value="{{ $clockToInput }}" class="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-white font-semibold focus:border-brand-red focus:ring-0">
+                                    <input type="date" name="clock_to" value="{{ $clockToInput ?? '' }}" class="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-white font-semibold focus:border-brand-red focus:ring-0">
                                 </label>
                                 <button type="submit" class="self-end rounded-xl bg-brand-red px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-white hover:bg-red-700 transition shadow-sm">
                                     Apply
@@ -39,8 +39,8 @@
                                     <i class="fa-solid fa-users text-base"></i>
                                 </div>
                             </div>
-                            <p class="mt-3 text-3xl font-black text-emerald-900 dark:text-emerald-100 tabular-nums">{{ $activeMerchandisers }}</p>
-                            <p class="mt-1 text-xs text-emerald-700 dark:text-emerald-400 font-semibold">of {{ $totalMerchandisers }} total</p>
+                            <p class="mt-3 text-3xl font-black text-emerald-900 dark:text-emerald-100 tabular-nums">{{ $activeMerchandisers ?? 0 }}</p>
+                            <p class="mt-1 text-xs text-emerald-700 dark:text-emerald-400 font-semibold">of {{ $totalMerchandisers ?? 0 }} total</p>
                         </div>
 
                         <!-- Pending Activation -->
@@ -51,7 +51,7 @@
                                     <i class="fa-solid fa-clock-rotate-left text-base"></i>
                                 </div>
                             </div>
-                            <p class="mt-3 text-3xl font-black text-amber-900 dark:text-amber-100 tabular-nums">{{ $pendingMerchandisers }}</p>
+                            <p class="mt-3 text-3xl font-black text-amber-900 dark:text-amber-100 tabular-nums">{{ $pendingMerchandisers ?? 0 }}</p>
                             <p class="mt-1 text-xs text-amber-700 dark:text-amber-400 font-semibold">awaiting pairing</p>
                         </div>
 
@@ -63,8 +63,8 @@
                                     <i class="fa-solid fa-location-dot text-base"></i>
                                 </div>
                             </div>
-                            <p class="mt-3 text-3xl font-black text-sky-900 dark:text-sky-100 tabular-nums">{{ $todayClockins }}</p>
-                            <p class="mt-1 text-xs text-sky-700 dark:text-sky-400 font-semibold">{{ $clockRangeLabel }}</p>
+                            <p class="mt-3 text-3xl font-black text-sky-900 dark:text-sky-100 tabular-nums">{{ $todayClockins ?? 0 }}</p>
+                            <p class="mt-1 text-xs text-sky-700 dark:text-sky-400 font-semibold">{{ $clockRangeLabel ?? 'Today' }}</p>
                         </div>
 
                         <!-- PCM / PJP -->
@@ -75,8 +75,8 @@
                                     <i class="fa-solid fa-clipboard-list text-base"></i>
                                 </div>
                             </div>
-                            <p class="mt-3 text-3xl font-black text-indigo-900 dark:text-indigo-100 tabular-nums">{{ $clockPcmCount + $clockPjpCount }}</p>
-                            <p class="mt-1 text-xs text-indigo-700 dark:text-indigo-400 font-semibold">{{ $clockPcmCount }} PCM · {{ $clockPjpCount }} PJP</p>
+                            <p class="mt-3 text-3xl font-black text-indigo-900 dark:text-indigo-100 tabular-nums">{{ ($clockPcmCount ?? 0) + ($clockPjpCount ?? 0) }}</p>
+                            <p class="mt-1 text-xs text-indigo-700 dark:text-indigo-400 font-semibold">{{ $clockPcmCount ?? 0 }} PCM · {{ $clockPjpCount ?? 0 }} PJP</p>
                         </div>
 
                         <!-- Pending Approvals -->
@@ -87,8 +87,8 @@
                                     <i class="fa-solid fa-bell text-base"></i>
                                 </div>
                             </div>
-                            <p class="mt-3 text-3xl font-black text-rose-900 dark:text-rose-100 tabular-nums">{{ $pendingLeaves + $pendingClaims + $pendingLoans }}</p>
-                            <p class="mt-1 text-xs text-rose-700 dark:text-rose-400 font-semibold">{{ $pendingLeaves }}L · {{ $pendingClaims }}C · {{ $pendingLoans }}Ln</p>
+                            <p class="mt-3 text-3xl font-black text-rose-900 dark:text-rose-100 tabular-nums">{{ ($pendingLeaves ?? 0) + ($pendingClaims ?? 0) + ($pendingLoans ?? 0) }}</p>
+                            <p class="mt-1 text-xs text-rose-700 dark:text-rose-400 font-semibold">{{ $pendingLeaves ?? 0 }}L · {{ $pendingClaims ?? 0 }}C · {{ $pendingLoans ?? 0 }}Ln</p>
                         </div>
                     </div>
 

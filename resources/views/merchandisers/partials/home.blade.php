@@ -31,7 +31,7 @@
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between relative z-10">
                     <div class="min-w-0">
                         <h1 class="text-xl font-black sm:text-2xl tracking-tight" style="color: #FFFFFF !important;">
-                            Good {{ now()->hour < 12 ? 'morning' : (now()->hour < 17 ? 'afternoon' : 'evening') }}, {{ str(auth()->user()->name)->before(' ') }}! 👋
+                            Good {{ now()->hour < 12 ? 'morning' : (now()->hour < 17 ? 'afternoon' : 'evening') }}, {{ str(auth()->user()->name)->before(' ') }}! <i class="fa-solid fa-hand text-amber-300 text-lg"></i>
                         </h1>
                         <p class="mt-1 text-sm font-semibold" style="color: #E0F2FE !important;">
                             Here's your performance overview for today.
@@ -58,7 +58,7 @@
                     <article class="merch-card rounded-2xl p-4 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex flex-col justify-between">
                         <div class="flex items-center justify-between">
                             <p class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">SCHEDULED OUTLETS</p>
-                            <span class="text-blue-600 dark:text-blue-400 text-sm">🏢</span>
+                            <span class="text-blue-600 dark:text-blue-400 text-sm"><i class="fa-solid fa-building"></i></span>
                         </div>
                         <p class="mt-3 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{{ $merchMetrics['assigned_outlets_today'] ?? 0 }}</p>
                         <p class="mt-1 text-[10px] font-medium text-slate-400">PJP plan</p>
@@ -68,7 +68,7 @@
                     <article class="merch-card rounded-2xl p-4 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex flex-col justify-between">
                         <div class="flex items-center justify-between">
                             <p class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">VISITS COMPLETED</p>
-                            <span class="text-emerald-500 text-sm">✓</span>
+                            <span class="text-emerald-500 text-sm"><i class="fa-solid fa-check"></i></span>
                         </div>
                         <p class="mt-3 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{{ $merchMetrics['outlets_scored_today'] ?? 0 }}</p>
                         <p class="mt-1 text-[10px] font-medium text-slate-400">Submitted</p>
@@ -94,7 +94,7 @@
                     <article class="merch-card rounded-2xl p-4 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex flex-col justify-between">
                         <div class="flex items-center justify-between">
                             <p class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">HOURS WORKED</p>
-                            <span class="text-blue-600 text-sm">🕒</span>
+                            <span class="text-blue-600 text-sm"><i class="fa-solid fa-clock"></i></span>
                         </div>
                         <p class="mt-3 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{{ sprintf('%02d:%02d', intdiv((int) ($merchMetrics['total_visit_minutes_today'] ?? 0), 60), ((int) ($merchMetrics['total_visit_minutes_today'] ?? 0)) % 60) }}</p>
                         <p class="mt-1 text-[10px] font-medium text-slate-400">of {{ $workingWindowLabel }} hrs</p>
@@ -104,7 +104,7 @@
                     <article class="merch-card rounded-2xl p-3.5 sm:p-4 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex flex-col justify-between col-span-2 lg:col-span-1 min-w-0 overflow-hidden">
                         <div class="flex items-center justify-between gap-1">
                             <p class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 truncate">STATUS</p>
-                            <span class="text-sky-500 text-xs shrink-0">📌</span>
+                            <span class="text-sky-500 text-xs shrink-0"><i class="fa-solid fa-thumbtack"></i></span>
                         </div>
                         <div class="my-2 flex items-center justify-start min-w-0">
                             <span class="inline-flex max-w-full items-center justify-center px-2.5 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider text-center leading-tight whitespace-normal shadow-2xs"
@@ -215,7 +215,7 @@
                     <div class="flex flex-col gap-2.5">
                         <div class="min-w-0">
                             <h2 class="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2 whitespace-nowrap truncate">
-                                <span class="text-blue-600">📈</span> Visit Execution Trend
+                                <span class="text-blue-600"><i class="fa-solid fa-chart-line"></i></span> Visit Execution Trend
                             </h2>
                             <p class="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">Scheduled vs completed outlet visits</p>
                         </div>
@@ -239,7 +239,7 @@
                     <div class="flex flex-col gap-2.5">
                         <div class="min-w-0">
                             <h2 class="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2 whitespace-nowrap truncate">
-                                <span class="text-emerald-600">📊</span> Perfect Store KPI Breakdown
+                                <span class="text-emerald-600"><i class="fa-solid fa-chart-column"></i></span> Perfect Store KPI Breakdown
                             </h2>
                             <p class="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">Score vs configured target (%)</p>
                         </div>
@@ -433,7 +433,7 @@
                                 <div class="flex items-center gap-3 min-w-0">
                                     <span class="text-xs font-mono font-bold text-slate-400">{{ $plannedTime ?: 'No time set' }}</span>
                                     <div class="min-w-0">
-                                        <p class="text-xs font-bold text-slate-900 dark:text-white truncate">📍 {{ $outlet->name }}</p>
+                                        <p class="text-xs font-bold text-slate-900 dark:text-white truncate"><i class="fa-solid fa-location-dot text-rose-500 mr-1"></i> {{ $outlet->name }}</p>
                                         <p class="text-[10px] text-slate-500 dark:text-slate-400 truncate">{{ $outlet->location ?: ($outlet->keyDistributor?->name ?? 'Location pending') }}</p>
                                     </div>
                                 </div>
@@ -502,7 +502,7 @@
             <div class="space-y-3 border-t border-b border-slate-100 dark:border-slate-800 py-4">
                 <div class="flex items-center justify-between text-xs">
                     <div class="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-medium">
-                        <span class="text-blue-600 text-sm">📦</span>
+                        <span class="text-blue-600 text-sm"><i class="fa-solid fa-box-open"></i></span>
                         <span>Outlets Visited</span>
                     </div>
                     <span class="font-extrabold text-slate-900 dark:text-white">{{ $merchMetrics['outlets_scored_today'] ?? 0 }} / {{ $merchMetrics['assigned_outlets_today'] ?? 0 }}</span>
@@ -510,7 +510,7 @@
 
                 <div class="flex items-center justify-between text-xs">
                     <div class="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-medium">
-                        <span class="text-blue-600 text-sm">🏬</span>
+                        <span class="text-blue-600 text-sm"><i class="fa-solid fa-building"></i></span>
                         <span>Outlets Remaining</span>
                     </div>
                     <span class="font-extrabold text-slate-900 dark:text-white">{{ $merchMetrics['not_covered_today'] ?? 0 }}</span>
@@ -518,7 +518,7 @@
 
                 <div class="flex items-center justify-between text-xs">
                     <div class="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-medium">
-                        <span class="text-blue-600 text-sm">📷</span>
+                        <span class="text-blue-600 text-sm"><i class="fa-solid fa-camera"></i></span>
                         <span>Photos Uploaded</span>
                     </div>
                     <span class="font-extrabold text-slate-900 dark:text-white">{{ $merchMetrics['photos_uploaded_month'] ?? 0 }}</span>
@@ -526,7 +526,7 @@
 
                 <div class="flex items-center justify-between text-xs">
                     <div class="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-medium">
-                        <span class="text-blue-600 text-sm">📋</span>
+                        <span class="text-blue-600 text-sm"><i class="fa-solid fa-clipboard-list"></i></span>
                         <span>Forms Pending</span>
                     </div>
                     <span class="font-extrabold text-slate-900 dark:text-white">{{ $merchMetrics['forms_pending_today'] ?? 0 }}</span>
@@ -536,11 +536,11 @@
             <!-- Action Buttons -->
             <div class="space-y-2.5">
                 <button type="button" @click="activeTab = 'outlets'" class="w-full py-3 px-4 rounded-xl bg-[#0F0E9A] hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider shadow-md transition flex items-center justify-center gap-2">
-                    <span>▶</span>
+                    <i class="fa-solid fa-play text-xs"></i>
                     <span>{{ ($merchMetrics['active_outlet_clockins_today'] ?? 0) > 0 ? 'CONTINUE VISIT' : 'START DAY' }}</span>
                 </button>
                 <button type="button" @click="activeTab = 'kpis'" class="w-full py-3 px-4 rounded-xl border-2 border-[#0F0E9A] bg-white dark:bg-slate-900 text-[#0F0E9A] font-bold text-xs uppercase tracking-wider hover:bg-blue-50 transition flex items-center justify-center gap-2">
-                    <span>🕒</span>
+                    <i class="fa-solid fa-clock text-xs"></i>
                     <span>CLOCK OUT</span>
                 </button>
             </div>

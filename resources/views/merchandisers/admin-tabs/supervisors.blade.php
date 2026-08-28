@@ -397,7 +397,7 @@
 
                         <div class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
                             <div class="px-5 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
-                                <p class="text-xs uppercase tracking-widest text-slate-900 dark:text-white font-extrabold">PCM / PJP Clock-in logs - {{ $clockRangeLabel }}</p>
+                                <p class="text-xs uppercase tracking-widest text-slate-900 dark:text-white font-extrabold">PCM / PJP Clock-in logs - {{ $clockRangeLabel ?? 'Today' }}</p>
                             </div>
                             <div class="overflow-x-auto">
                                 <table class="w-full min-w-[760px] text-sm">

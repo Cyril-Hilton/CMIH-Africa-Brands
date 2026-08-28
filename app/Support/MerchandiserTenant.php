@@ -9,12 +9,15 @@ final class MerchandiserTenant
 {
     public const UNILEVER = 'unilever';
     public const GGBL = 'ggbl';
+    private const ASSET_VERSION = '20260828';
 
     /**
      * @return array<string, array<string, string>>
      */
     public static function all(): array
     {
+        $assetVersion = '?v='.self::ASSET_VERSION;
+
         return [
             self::UNILEVER => [
                 'code' => self::UNILEVER,
@@ -30,8 +33,8 @@ final class MerchandiserTenant
                 'muted' => '#4D4D4D',
                 'sidebar' => '#0F0E9A',
                 'sidebar_ink' => '#FFFFFF',
-                'logo' => 'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/DARK%20THEME/Unilever%20white.png',
-                'workspace_logo' => 'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/LIGHT%20THEME/Unilever%20black.png',
+                'logo' => 'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/DARK%20THEME/Unilever%20white.png'.$assetVersion,
+                'workspace_logo' => 'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/LIGHT%20THEME/Unilever%20black.png'.$assetVersion,
                 'logo_filter' => 'none',
             ],
             self::GGBL => [
@@ -48,8 +51,8 @@ final class MerchandiserTenant
                 'muted' => '#A6A6A6',
                 'sidebar' => '#000000',
                 'sidebar_ink' => '#FDF9F2',
-                'logo' => 'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/DARK%20THEME/Guinness%20light.png',
-                'workspace_logo' => 'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/LIGHT%20THEME/Guinness%20dark.png',
+                'logo' => 'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/DARK%20THEME/Guinness%20light.png'.$assetVersion,
+                'workspace_logo' => 'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/LIGHT%20THEME/Guinness%20dark.png'.$assetVersion,
                 'logo_filter' => 'none',
             ],
         ];
