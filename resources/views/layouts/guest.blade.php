@@ -54,9 +54,9 @@
             }
         </style>
     </head>
-    <body class="min-h-screen bg-brand-black font-sans antialiased text-brand-white">
-        <div class="min-h-screen bg-hero-grid">
-            <div class="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-5 sm:px-6 lg:px-8">
+    <body class="min-h-screen bg-brand-black font-sans antialiased text-brand-white overflow-x-hidden max-w-full">
+        <div class="min-h-screen bg-hero-grid overflow-x-hidden w-full max-w-full">
+            <div class="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-5 sm:px-6 lg:px-8 overflow-hidden">
                 <header class="flex shrink-0 items-center justify-between gap-4 rounded-2xl border border-brand-white/10 bg-brand-black/55 px-4 py-3 backdrop-blur-xl sm:px-5">
                     <a href="{{ route('home') }}" class="inline-flex min-w-0 items-center gap-3">
                         <x-application-logo class="h-10 w-auto shrink-0" />
