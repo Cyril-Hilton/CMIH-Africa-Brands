@@ -353,7 +353,7 @@
                 'lg:static lg:flex lg:w-72 lg:translate-x-0 lg:opacity-100': !sidebarCollapsed
             }"
             class="fixed inset-y-0 left-0 z-50 flex h-full max-h-screen min-h-0 w-72 shrink-0 flex-col
-                   merch-sidebar border-r border-brand-white/10 bg-[#0A0D18] text-white
+                   merch-sidebar border-r border-brand-white/10 text-white
                    overflow-y-auto overscroll-contain scrollbar-none transition-all duration-300 ease-in-out">
 
             <!-- Header Container (Logo + Profile Card) -->
