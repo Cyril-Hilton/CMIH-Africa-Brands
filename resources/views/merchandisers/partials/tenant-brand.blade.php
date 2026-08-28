@@ -8,7 +8,7 @@
     <img src="{{ asset($merchTenant['logo']) }}"
          alt="{{ $merchTenant['name'] }}"
          class="h-10 w-auto max-w-[3.5rem] object-contain shrink-0 rounded-lg p-1 bg-white/10"
-         style="filter: {{ $merchTenant['code'] === 'unilever' ? 'invert(1)' : 'none' }};"
+         style="filter: {{ $merchTenant['logo_filter'] ?? 'none' }};"
          loading="eager">
     <div class="min-w-0">
         <p class="text-xs font-extrabold text-white leading-snug">{{ $merchTenant['portal_name'] }}</p>

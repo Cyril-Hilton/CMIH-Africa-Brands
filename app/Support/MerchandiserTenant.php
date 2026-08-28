@@ -30,7 +30,8 @@ final class MerchandiserTenant
                 'muted' => '#4D4D4D',
                 'sidebar' => '#0F0E9A',
                 'sidebar_ink' => '#FFFFFF',
-                'logo' => 'storage/brands/unilever-light.png',
+                'logo' => 'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/DARK%20THEME/Unilever%20white.png',
+                'workspace_logo' => 'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/LIGHT%20THEME/Unilever%20black.png',
                 'logo_filter' => 'none',
             ],
             self::GGBL => [
@@ -47,7 +48,8 @@ final class MerchandiserTenant
                 'muted' => '#A6A6A6',
                 'sidebar' => '#000000',
                 'sidebar_ink' => '#FDF9F2',
-                'logo' => 'storage/brands/guinness-light.png',
+                'logo' => 'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/DARK%20THEME/Guinness%20light.png',
+                'workspace_logo' => 'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/LIGHT%20THEME/Guinness%20dark.png',
                 'logo_filter' => 'none',
             ],
         ];

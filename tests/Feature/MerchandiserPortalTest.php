@@ -228,7 +228,35 @@ class MerchandiserPortalTest extends TestCase
             $this->actingAs($user)
                 ->get(route('merchandisers.dashboard'))
                 ->assertOk()
-                ->assertSee('data-merch-tenant="'.$tenant.'"', false);
+                ->assertSee('data-merch-tenant="'.$tenant.'"', false)
+                ->assertSee(
+                    $tenant === 'unilever'
+                        ? 'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/DARK%20THEME/Unilever%20white.png'
+                        : 'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/DARK%20THEME/Guinness%20light.png',
+                    false
+                )
+                ->assertDontSee($tenant === 'unilever' ? 'storage/brands/unilever-light.png' : 'storage/brands/guinness-light.png', false);
+        }
+    }
+
+    #[Test]
+    public function merchandiser_login_and_registration_use_public_brand_logo_assets()
+    {
+        $expectedLogos = [
+            'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/LIGHT%20THEME/Unilever%20black.png',
+            'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/LIGHT%20THEME/Guinness%20dark.png',
+        ];
+
+        foreach ([route('merchandisers.login'), route('merchandisers.register')] as $url) {
+            $response = $this->get($url)->assertOk();
+
+            foreach ($expectedLogos as $logo) {
+                $response->assertSee($logo, false);
+            }
+
+            $response
+                ->assertDontSee('storage/brands/unilever-light.png', false)
+                ->assertDontSee('storage/brands/guinness-light.png', false);
         }
     }
 
@@ -1839,7 +1867,7 @@ class MerchandiserPortalTest extends TestCase
         $supervisorResponse->assertSeeText('Supervisor Leaderboard');
         $this->actingAs($supervisor)
             ->get(route('merchandisers.admin.dashboard', ['tab' => 'supervisors']))
-            ->assertForbidden();
+            ->assertRedirect(route('merchandisers.supervisor.dashboard'));
     }
     #[Test]
     public function brands_admin_can_demote_a_supervisor_back_to_regular_merchandiser()

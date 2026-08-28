@@ -1,17 +1,19 @@
 
 const initLoader = () => {
-    // Check if we should show the loader immediately on page load
     const shouldShowOnLoad = sessionStorage.getItem('show-loader') === 'true';
+    let hideTimer = null;
 
     const loader = document.createElement('div');
     loader.id = 'global-loader';
+    loader.setAttribute('aria-live', 'polite');
+    loader.setAttribute('aria-busy', 'false');
     
     if (shouldShowOnLoad) {
-        // Create it as visible and transition-ready
-        loader.className = 'fixed inset-0 z-[100] flex items-center justify-center bg-brand-black/50 backdrop-blur-sm transition-opacity duration-300';
+        loader.className = 'fixed inset-0 z-[100] flex items-center justify-center bg-brand-black/40 backdrop-blur-sm transition-opacity duration-300';
+        document.documentElement.classList.add('cmih-loader-active');
+        loader.setAttribute('aria-busy', 'true');
     } else {
-        // Create it as hidden
-        loader.className = 'fixed inset-0 z-[100] hidden flex items-center justify-center bg-brand-black/50 backdrop-blur-sm transition-opacity duration-300 opacity-0';
+        loader.className = 'fixed inset-0 z-[100] hidden flex items-center justify-center bg-brand-black/40 backdrop-blur-sm transition-opacity duration-300 opacity-0';
     }
     
     loader.innerHTML = `
@@ -23,18 +25,27 @@ const initLoader = () => {
     document.body.appendChild(loader);
 
     const showLoader = () => {
+        if (hideTimer) {
+            clearTimeout(hideTimer);
+            hideTimer = null;
+        }
+
         sessionStorage.setItem('show-loader', 'true');
+        document.documentElement.classList.add('cmih-loader-active');
+        loader.setAttribute('aria-busy', 'true');
         loader.classList.remove('hidden');
-        // Force reflow
         void loader.offsetWidth;
         loader.classList.remove('opacity-0');
     };
 
     const hideLoader = () => {
         sessionStorage.removeItem('show-loader');
+        loader.setAttribute('aria-busy', 'false');
         loader.classList.add('opacity-0');
-        setTimeout(() => {
+        hideTimer = setTimeout(() => {
             loader.classList.add('hidden');
+            document.documentElement.classList.remove('cmih-loader-active');
+            hideTimer = null;
         }, 300);
     };
 

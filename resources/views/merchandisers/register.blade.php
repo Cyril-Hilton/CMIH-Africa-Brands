@@ -86,7 +86,7 @@
                             <input type="radio" name="merchandiser_tenant" value="{{ $tenant['code'] }}" class="sr-only peer" @checked(old('merchandiser_tenant', 'unilever') === $tenant['code']) required>
                             <span class="flex items-center gap-3 min-w-0">
                                 <div class="h-10 w-10 sm:h-11 sm:w-11 shrink-0 rounded-xl bg-white p-1.5 flex items-center justify-center shadow-md">
-                                    <img src="{{ asset($tenant['code'] === 'unilever' ? 'storage/brands/unilever-light.png' : 'storage/brands/guinness-light.png') }}"
+                                    <img src="{{ asset($tenant['workspace_logo'] ?? $tenant['logo']) }}"
                                          alt="{{ $tenant['name'] }}"
                                          class="h-full w-full object-contain">
                                 </div>

@@ -306,6 +306,14 @@ class MerchandiserController extends Controller
         $user = $request->user();
         $merchTenant = MerchandiserTenant::theme(MerchandiserTenant::forUser($user, $request));
 
+        if ($user->isMerchandiserSupervisor()) {
+            return redirect()->route('merchandisers.supervisor.dashboard');
+        }
+
+        if ($user->isMerchandiserClient()) {
+            return redirect()->route('merchandisers.client.dashboard');
+        }
+
         // Brands/admin users have their own separate merchandiser admin hub.
         if ($user->isMerchandiserPortalAdmin() && ! $user->isMerchandiserAccount()) {
             return redirect()->route('merchandisers.admin.dashboard');

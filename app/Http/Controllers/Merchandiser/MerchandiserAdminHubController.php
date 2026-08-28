@@ -100,6 +100,19 @@ class MerchandiserAdminHubController extends Controller
     {
         $this->guardHubView($request);
         $activeTab = $this->resolveAdminTab($request, $adminTab);
+        $currentUser = $request->user();
+
+        if (! $roleDashboard && ! $currentUser?->isMerchandiserPortalAdmin()) {
+            if ($currentUser?->isMerchandiserSupervisor()) {
+                return redirect()->route('merchandisers.supervisor.dashboard');
+            }
+
+            if ($currentUser?->isMerchandiserClient()) {
+                return redirect()->route('merchandisers.client.dashboard');
+            }
+
+            abort(403, 'Unauthorized');
+        }
 
         // ── KPI Counts ─────────────────────────────────────────────────────────
         $totalMerchandisers   = User::merchandisers()->count();

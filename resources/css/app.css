@@ -563,11 +563,25 @@
         /* Multiply works best for colors on white */
     }
 
+    html.cmih-loader-active body {
+        cursor: progress;
+    }
+
+    html.cmih-loader-active body > :not(#global-loader):not(script):not(style):not(noscript) {
+        filter: blur(3px);
+        transition: filter 180ms ease;
+    }
+
+    #global-loader {
+        color: #ffffff;
+    }
+
     .cmih-silent-loading {
         cursor: progress;
-        opacity: 0.62;
+        filter: blur(1.5px);
+        opacity: 0.78;
         pointer-events: none;
-        transition: opacity 160ms ease;
+        transition: filter 160ms ease, opacity 160ms ease;
     }
 
     .cmih-silent-error {

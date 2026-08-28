@@ -44,7 +44,7 @@
                 </div>
             </section>
 
-            <!-- Today's Summary (5 Cards with Mockup Design) -->
+            <!-- Today's Summary cards -->
             <section>
                 <div class="mb-3 flex items-center justify-between gap-3">
                     <h2 class="text-sm font-bold text-slate-900 dark:text-white">Today's Summary</h2>
