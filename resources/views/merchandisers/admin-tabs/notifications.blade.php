@@ -5,17 +5,17 @@
                         <button @click="notifTab = 'leaves'"
                             :class="notifTab === 'leaves' ? 'bg-brand-red text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'"
                             class="px-4 py-2 rounded-xl text-xs font-extrabold uppercase tracking-wider transition border border-slate-300 dark:border-slate-700">
-                            📅 Leaves <span class="ml-1 bg-black/20 dark:bg-white/20 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">{{ $pendingLeaves }}</span>
+                            <i class="fa-solid fa-calendar-days text-sky-400"></i> Leaves <span class="ml-1 bg-black/20 dark:bg-white/20 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">{{ $pendingLeaves }}</span>
                         </button>
                         <button @click="notifTab = 'claims'"
                             :class="notifTab === 'claims' ? 'bg-brand-red text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'"
                             class="px-4 py-2 rounded-xl text-xs font-extrabold uppercase tracking-wider transition border border-slate-300 dark:border-slate-700">
-                            💰 Claims <span class="ml-1 bg-black/20 dark:bg-white/20 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">{{ $pendingClaims }}</span>
+                            <i class="fa-solid fa-money-bill-wave text-emerald-500"></i> Claims <span class="ml-1 bg-black/20 dark:bg-white/20 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">{{ $pendingClaims }}</span>
                         </button>
                         <button @click="notifTab = 'loans'"
                             :class="notifTab === 'loans' ? 'bg-brand-red text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'"
                             class="px-4 py-2 rounded-xl text-xs font-extrabold uppercase tracking-wider transition border border-slate-300 dark:border-slate-700">
-                            💵 Loans <span class="ml-1 bg-black/20 dark:bg-white/20 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">{{ $pendingLoans }}</span>
+                            <i class="fa-solid fa-hand-holding-dollar text-amber-400"></i> Loans <span class="ml-1 bg-black/20 dark:bg-white/20 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">{{ $pendingLoans }}</span>
                         </button>
                     </div>
 
@@ -57,7 +57,7 @@
                                             </td>
                                         </tr>
                                         @empty
-                                        <tr><td colspan="5" class="px-5 py-8 text-center text-slate-600 dark:text-slate-400 text-sm font-semibold">✅ No pending leave applications.</td></tr>
+                                        <tr><td colspan="5" class="px-5 py-8 text-center text-slate-600 dark:text-slate-400 text-sm font-semibold"><i class="fa-solid fa-circle-check text-emerald-500"></i> No pending leave applications.</td></tr>
                                         @endforelse
                                     </tbody>
                                 </table>
@@ -100,7 +100,7 @@
                                             </td>
                                         </tr>
                                         @empty
-                                        <tr><td colspan="4" class="px-5 py-8 text-center text-slate-600 dark:text-slate-400 text-sm font-semibold">✅ No pending claims.</td></tr>
+                                        <tr><td colspan="4" class="px-5 py-8 text-center text-slate-600 dark:text-slate-400 text-sm font-semibold"><i class="fa-solid fa-circle-check text-emerald-500"></i> No pending claims.</td></tr>
                                         @endforelse
                                     </tbody>
                                 </table>
@@ -143,7 +143,7 @@
                                             </td>
                                         </tr>
                                         @empty
-                                        <tr><td colspan="4" class="px-5 py-8 text-center text-slate-600 dark:text-slate-400 text-sm font-semibold">✅ No pending loan requests.</td></tr>
+                                        <tr><td colspan="4" class="px-5 py-8 text-center text-slate-600 dark:text-slate-400 text-sm font-semibold"><i class="fa-solid fa-circle-check text-emerald-500"></i> No pending loan requests.</td></tr>
                                         @endforelse
                                     </tbody>
                                 </table>

@@ -6,7 +6,7 @@
                                 <div class="inline-flex items-center gap-2 rounded-full border border-sky-400/40 bg-sky-100 dark:bg-sky-500/20 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-sky-800 dark:text-sky-300 mb-2">
                                     <span class="h-2 w-2 rounded-full bg-sky-500 animate-pulse"></span> Photo Evidence
                                 </div>
-                                <h2 class="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-wide">📸 Merchandiser Shelf Photo Gallery Catalog</h2>
+                                <h2 class="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-wide"><i class="fa-solid fa-camera text-indigo-500"></i> Merchandiser Shelf Photo Gallery Catalog</h2>
                                 <p class="text-xs text-slate-600 dark:text-slate-400 font-semibold mt-1">Browse, filter, and audit store shelf images captured by field merchandisers across Key Distributors.</p>
                             </div>
                         </div>
@@ -76,7 +76,7 @@
                     {{-- Image grid --}}
                     @if($galleryImages->isEmpty())
                         <div class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-16 text-center shadow-sm">
-                            <p class="text-4xl mb-3">📸</p>
+                            <p class="text-4xl mb-3"><i class="fa-solid fa-camera text-indigo-500"></i></p>
                             <p class="text-slate-900 dark:text-white font-bold">No images found</p>
                             <p class="text-xs text-slate-600 dark:text-slate-400 font-semibold mt-1">Try adjusting your filters or check that field teams have submitted visits with photos.</p>
                         </div>

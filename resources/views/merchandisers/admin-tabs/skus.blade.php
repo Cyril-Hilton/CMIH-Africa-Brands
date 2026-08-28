@@ -172,7 +172,7 @@
                                                     @if($sku->reference_image_path)
                                                         <img src="{{ Storage::disk('public')->url($sku->reference_image_path) }}" alt="{{ $sku->name }}" class="h-full w-full object-cover">
                                                     @else
-                                                        <div class="flex h-full w-full items-center justify-center text-2xl opacity-50">📦</div>
+                                                        <div class="flex h-full w-full items-center justify-center text-2xl opacity-50"><i class="fa-solid fa-box-open text-sky-500"></i></div>
                                                     @endif
                                                 </div>
                                                 <div class="min-w-0">

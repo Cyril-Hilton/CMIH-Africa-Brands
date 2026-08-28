@@ -637,12 +637,12 @@
                         <!-- Pending badge -->
                         @if(($totalPending ?? 0) > 0)
                         <button @click="window.location.href = @js($adminTabUrl('notifications'))" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300 text-xs font-bold animate-pulse hover:bg-red-500/20 transition">
-                            🔔 {{ $totalPending ?? 0 }} pending
+                            <i class="fa-solid fa-bell text-xs"></i> {{ $totalPending ?? 0 }} pending
                         </button>
                         @endif
                         <!-- Prominent High-Contrast Date Badge -->
                         <div class="hidden md:inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs font-bold shadow-sm">
-                            <span class="text-sm">📅</span>
+                            <i class="fa-solid fa-calendar-days text-sky-600 dark:text-sky-400 text-xs"></i>
                             <span>{{ now()->format('D, d M Y') }}</span>
                         </div>
                     </div>

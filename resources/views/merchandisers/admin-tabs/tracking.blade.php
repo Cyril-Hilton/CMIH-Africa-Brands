@@ -47,7 +47,7 @@
                     <!-- Agent List Card -->
                     <div class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden w-full">
                         <div class="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                            <p class="text-xs uppercase tracking-widest text-slate-900 dark:text-white font-extrabold">📋 All Field Agents — Status Snapshot</p>
+                            <p class="text-xs uppercase tracking-widest text-slate-900 dark:text-white font-extrabold"><i class="fa-solid fa-clipboard-list text-purple-500"></i> All Field Agents — Status Snapshot</p>
                             <span class="text-[10px] text-slate-600 dark:text-slate-400 font-bold">{{ count($merchandiserLocations) }} agents</span>
                         </div>
                         <div class="overflow-x-auto w-full">

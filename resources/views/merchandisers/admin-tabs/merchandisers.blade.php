@@ -103,7 +103,7 @@
                                             <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                                                 <!-- Set Salary Card -->
                                                 <div class="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm">
-                                                    <p class="text-[10px] uppercase tracking-widest text-slate-900 dark:text-white mb-3 font-extrabold">💰 Set Monthly Payroll</p>
+                                                    <p class="text-[10px] uppercase tracking-widest text-slate-900 dark:text-white mb-3 font-extrabold"><i class="fa-solid fa-money-bill-wave text-emerald-500"></i> Set Monthly Payroll</p>
                                                     <form method="POST" action="{{ route('merchandisers.admin.payroll.set', $m) }}" class="flex gap-2">
                                                         @csrf
                                                         <input type="number" name="salary" step="0.01" min="0" value="{{ $m->salary }}"
@@ -114,7 +114,7 @@
                                                 </div>
                                                 <!-- Reassign Card -->
                                                 <div class="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm">
-                                                    <p class="text-[10px] uppercase tracking-widest text-slate-900 dark:text-white mb-3 font-extrabold">🔗 Assign / Reassign</p>
+                                                    <p class="text-[10px] uppercase tracking-widest text-slate-900 dark:text-white mb-3 font-extrabold"><i class="fa-solid fa-link text-indigo-500"></i> Assign / Reassign</p>
                                                     <form method="POST" action="{{ route('merchandisers.admin.merchandisers.reassign', $m) }}" class="flex flex-col gap-2">
                                                         @csrf
                                                         <select name="kd_id" class="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs px-2 py-2 font-semibold focus:border-brand-red focus:ring-0">
@@ -159,7 +159,7 @@
                                                 </div>
                                                 <!-- Personal Info Card -->
                                                 <div class="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm">
-                                                    <p class="text-[10px] uppercase tracking-widest text-slate-900 dark:text-white mb-3 font-extrabold">👤 Profile Info</p>
+                                                    <p class="text-[10px] uppercase tracking-widest text-slate-900 dark:text-white mb-3 font-extrabold"><i class="fa-solid fa-user text-sky-500"></i> Profile Info</p>
                                                     <div class="space-y-2 text-xs">
                                                         <div class="flex justify-between gap-2"><span class="text-slate-600 dark:text-slate-400 font-semibold shrink-0">Joined</span><span class="text-slate-900 dark:text-white font-bold text-right">{{ $m->created_at->format('d M Y') }}</span></div>
                                                         <div class="flex justify-between gap-2"><span class="text-slate-600 dark:text-slate-400 font-semibold shrink-0">Phone</span><span class="text-slate-900 dark:text-white font-bold text-right">{{ $m->phone ?? '—' }}</span></div>

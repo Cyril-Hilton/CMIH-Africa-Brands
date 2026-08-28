@@ -2,16 +2,16 @@
 
                     <!-- Sub-tabs -->
                     <div class="flex gap-2 mb-5 flex-wrap">
-                        <button @click="kdTab = 'list'" :class="kdTab === 'list' ? 'bg-brand-red text-white' : 'border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700'" class="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition shadow-sm">🏢 Key Distributors</button>
-                        <button @click="kdTab = 'outlets'" :class="kdTab === 'outlets' ? 'bg-brand-red text-white' : 'border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700'" class="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition shadow-sm">🏪 Outlets</button>
-                        <button @click="kdTab = 'pairings'" :class="kdTab === 'pairings' ? 'bg-brand-red text-white' : 'border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700'" class="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition shadow-sm">🔗 Pairings</button>
+                        <button @click="kdTab = 'list'" :class="kdTab === 'list' ? 'bg-brand-red text-white' : 'border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700'" class="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition shadow-sm"><i class="fa-solid fa-building text-sky-500"></i> Key Distributors</button>
+                        <button @click="kdTab = 'outlets'" :class="kdTab === 'outlets' ? 'bg-brand-red text-white' : 'border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700'" class="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition shadow-sm"><i class="fa-solid fa-store text-emerald-500"></i> Outlets</button>
+                        <button @click="kdTab = 'pairings'" :class="kdTab === 'pairings' ? 'bg-brand-red text-white' : 'border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700'" class="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition shadow-sm"><i class="fa-solid fa-link text-indigo-500"></i> Pairings</button>
                     </div>
 
                     <!-- KD List Tab -->
                     <div x-show="kdTab === 'list'" x-transition>
                         <!-- Add KD Form -->
                         <div class="merch-card rounded-2xl p-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm mb-5" x-data="{ newRegion: false }">
-                            <p class="text-xs uppercase tracking-widest text-slate-900 dark:text-white font-extrabold mb-4">➕ Add New Key Distributor</p>
+                            <p class="text-xs uppercase tracking-widest text-slate-900 dark:text-white font-extrabold mb-4"><i class="fa-solid fa-plus text-emerald-500"></i> Add New Key Distributor</p>
                             <form method="POST" action="{{ route('merchandisers.admin.kds.store') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" data-gps-coordinate-scope>
                                 @csrf
                                 <input type="text" name="name" placeholder="KD Name *" required class="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm px-4 py-2.5 font-semibold focus:border-brand-red focus:ring-0 placeholder-slate-400">
@@ -21,7 +21,7 @@
                                     <select name="region_id" @change="newRegion = $event.target.value === '__new__'" class="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm px-4 py-2.5 font-semibold focus:border-brand-red focus:ring-0">
                                         <option value="">Select Region *</option>
                                         @foreach($regions as $r)<option value="{{ $r->id }}">{{ $r->name }}</option>@endforeach
-                                        <option value="__new__">✏️ Other — Add New Region</option>
+                                        <option value="__new__"><i class="fa-solid fa-pen text-amber-500"></i> Other — Add New Region</option>
                                     </select>
                                     <input x-show="newRegion" x-transition type="text" name="new_region" placeholder="Type new region name…"
                                         class="rounded-xl border border-brand-red/40 bg-red-50 dark:bg-brand-red/10 text-slate-900 dark:text-white text-sm px-4 py-2.5 font-semibold focus:border-brand-red focus:ring-0 placeholder-slate-400">
@@ -72,7 +72,7 @@
                                                     <p class="leading-snug text-slate-900 dark:text-slate-200 font-semibold">{{ $kd->address ?? '—' }}</p>
                                                     @if(! is_null($kd->latitude) && ! is_null($kd->longitude))
                                                         <p class="inline-flex items-center gap-1 rounded-full border border-emerald-300 dark:border-emerald-500/30 bg-emerald-100 dark:bg-emerald-500/20 px-2 py-0.5 font-mono text-[10px] font-bold text-emerald-800 dark:text-emerald-300">
-                                                            📍 {{ number_format((float) $kd->latitude, 7) }}, {{ number_format((float) $kd->longitude, 7) }}
+                                                            <i class="fa-solid fa-location-dot text-rose-500"></i> {{ number_format((float) $kd->latitude, 7) }}, {{ number_format((float) $kd->longitude, 7) }}
                                                         </p>
                                                     @else
                                                         <p class="inline-flex items-center gap-1 rounded-full border border-red-300 dark:border-red-500/30 bg-red-100 dark:bg-brand-red/20 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-red-800 dark:text-red-300">
@@ -357,7 +357,7 @@
                     @if(false)
                     <div x-show="false" x-cloak class="hidden">
                         <div class="glass-panel rounded-2xl p-5 border border-brand-white/10 mb-5">
-                            <p class="text-xs uppercase tracking-widest text-brand-ash mb-4">➕ Add Outlet to KD</p>
+                            <p class="text-xs uppercase tracking-widest text-brand-ash mb-4"><i class="fa-solid fa-plus text-emerald-500"></i> Add Outlet to KD</p>
                             <form method="POST" action="{{ route('merchandisers.admin.outlets.store') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                 @csrf
                                 <select name="kd_id" required class="rounded-xl border border-brand-white/10 bg-brand-black text-brand-white text-sm px-4 py-2.5 focus:border-brand-red focus:ring-0">

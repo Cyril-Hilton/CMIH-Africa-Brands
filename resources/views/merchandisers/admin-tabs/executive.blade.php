@@ -7,7 +7,7 @@
                                 <div class="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-blue-400 mb-2">
                                     <span class="h-2 w-2 rounded-full bg-blue-400 animate-pulse"></span> Executive Control Center
                                 </div>
-                                <h2 class="text-2xl md:text-3xl font-display text-white tracking-wide">📊 Executive Performance Summary</h2>
+                                <h2 class="text-2xl md:text-3xl font-display text-white tracking-wide"><i class="fa-solid fa-chart-pie text-sky-500"></i> Executive Performance Summary</h2>
                                 <p class="text-xs text-brand-white/60 mt-1">High-level field execution metrics, audit compliance, visit trends, and team achievements.</p>
                             </div>
                         </div>

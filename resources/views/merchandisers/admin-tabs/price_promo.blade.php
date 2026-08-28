@@ -70,7 +70,7 @@
 
                     {{-- Guidance panel --}}
                     <div class="merch-card rounded-2xl border border-amber-400/30 bg-white dark:bg-slate-900 p-5 shadow-sm">
-                        <p class="text-xs font-extrabold uppercase tracking-widest text-amber-800 dark:text-amber-300 mb-3">📌 POSM Compliance Definition</p>
+                        <p class="text-xs font-extrabold uppercase tracking-widest text-amber-800 dark:text-amber-300 mb-3"><i class="fa-solid fa-thumbtack text-amber-500"></i> POSM Compliance Definition</p>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-slate-600 dark:text-slate-400 font-semibold">
                             <div><p class="font-bold text-slate-900 dark:text-white mb-1">POSM Compliance</p><p>% of store visits where at least one shelf/POSM photo was captured by the merchandiser during the visit.</p></div>
                             <div><p class="font-bold text-slate-900 dark:text-white mb-1">Price Tag Compliance</p><p>% of SKU checks where a shelf price was recorded. Enables price monitoring and competitive intelligence.</p></div>

@@ -6,11 +6,11 @@
                                 <div class="inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-100 dark:bg-emerald-500/20 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-emerald-800 dark:text-emerald-300 mb-2">
                                     <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span> Team Analytics
                                 </div>
-                                <h2 class="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-wide">👤 Merchandiser & Supervisor Performance Tracking</h2>
+                                <h2 class="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-wide"><i class="fa-solid fa-user text-sky-500"></i> Merchandiser & Supervisor Performance Tracking</h2>
                                 <p class="text-xs text-slate-600 dark:text-slate-400 font-semibold mt-1">Decoupled performance tracking for field merchandisers and supervisor team accountability.</p>
                             </div>
                             <div class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 overflow-x-auto">
-                                @foreach(['daily' => '📅 Daily', 'weekly' => '📆 Weekly', 'monthly' => '📊 Monthly', 'yearly' => '🏆 Yearly'] as $pKey => $pLabel)
+                                @foreach(['daily' => '<i class="fa-solid fa-calendar-day"></i> Daily', 'weekly' => '<i class="fa-solid fa-calendar-week"></i> Weekly', 'monthly' => '<i class="fa-solid fa-chart-pie text-sky-500"></i> Monthly', 'yearly' => '<i class="fa-solid fa-trophy"></i> Yearly'] as $pKey => $pLabel)
                                     <a href="{{ route('merchandisers.admin.tab', ['adminTab' => 'user-performance', 'perf_period' => $pKey]) }}"
                                        class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 {{ $perfPeriod === $pKey ? 'bg-brand-red text-white shadow-sm' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700' }}">
                                         {{ $pLabel }}

@@ -6,7 +6,7 @@
                                 <div class="inline-flex items-center gap-2 rounded-full border border-pink-400/40 bg-pink-100 dark:bg-pink-500/20 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-pink-800 dark:text-pink-300 mb-2">
                                     <span class="h-2 w-2 rounded-full bg-pink-500 animate-pulse"></span> Category Analytics
                                 </div>
-                                <h2 class="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-wide">🏷️ Category Level KPIs & Share of Shelf</h2>
+                                <h2 class="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-wide"><i class="fa-solid fa-tag text-emerald-500"></i> Category Level KPIs & Share of Shelf</h2>
                                 <p class="text-xs text-slate-600 dark:text-slate-400 font-semibold mt-1">Category-level KPI aggregation — OSA, NPD, MHS scored per product category based on all field visit SKU checks.</p>
                             </div>
                         </div>
@@ -135,7 +135,7 @@
 
                     @if($categoryKpis->isEmpty())
                         <div class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-16 text-center shadow-sm">
-                            <p class="text-4xl mb-3">🏷️</p>
+                            <p class="text-4xl mb-3"><i class="fa-solid fa-tag text-emerald-500"></i></p>
                             <p class="text-slate-900 dark:text-white font-bold">No category KPI data yet</p>
                             <p class="text-xs text-slate-600 dark:text-slate-400 font-semibold mt-1">Field teams need to complete SKU visits with scoring before category roll-ups appear.</p>
                         </div>

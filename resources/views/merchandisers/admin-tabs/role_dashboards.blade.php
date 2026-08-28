@@ -121,7 +121,7 @@
                     <div class="border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50 px-5 py-4 flex flex-wrap items-center justify-between gap-3">
                         <div>
                             <p class="text-xs uppercase tracking-widest text-slate-900 dark:text-white font-black flex items-center gap-2">
-                                <span>👥</span> Team Performance &amp; Coverage Roster
+                                <span><i class="fa-solid fa-users text-emerald-500"></i></span> Team Performance &amp; Coverage Roster
                             </p>
                             <p class="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Individual merchandiser execution status, schedule, and KPI audits</p>
                         </div>
@@ -188,7 +188,7 @@
                                         </td>
                                         <td class="px-5 py-3.5 text-right">
                                             <a href="{{ route('merchandisers.admin.tab', ['adminTab' => 'tracking', 'merch' => $row['user_id'] ?? '']) }}" class="inline-flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-700 px-2 py-1 text-[10px] font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
-                                                <span>📍 Track</span>
+                                                <span><i class="fa-solid fa-location-dot text-rose-500"></i> Track</span>
                                             </a>
                                         </td>
                                     </tr>
@@ -232,9 +232,9 @@
                 <div class="merch-card rounded-2xl p-5 border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-sm space-y-3">
                     <div class="flex items-center justify-between">
                         <p class="text-xs uppercase tracking-widest text-emerald-900 dark:text-emerald-300 font-black flex items-center gap-2">
-                            <span>📋</span> Supervisor PJP Clock-In
+                            <span><i class="fa-solid fa-clipboard-list text-purple-500"></i></span> Supervisor PJP Clock-In
                         </p>
-                        <span class="p-1 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 text-xs">📍</span>
+                        <span class="p-1 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 text-xs"><i class="fa-solid fa-location-dot text-rose-500"></i></span>
                     </div>
                     <p class="text-xs text-emerald-800 dark:text-emerald-400 font-medium leading-relaxed">
                         Start your daily Permanent Journey Plan (PJP) supervisory visit route and record field notes.
@@ -261,7 +261,7 @@
                 <div class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
                     <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
                         <p class="text-xs uppercase tracking-widest text-slate-900 dark:text-white font-extrabold flex items-center gap-2">
-                            <span>🖼️</span> Photo Review Queue
+                            <span><i class="fa-solid fa-images text-purple-500"></i></span> Photo Review Queue
                         </p>
                         <a href="{{ route('merchandisers.admin.tab', ['adminTab' => 'gallery']) }}" class="rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition">Open Gallery</a>
                     </div>

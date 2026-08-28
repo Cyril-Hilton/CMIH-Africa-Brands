@@ -35,7 +35,7 @@
                         <div class="merch-card rounded-2xl p-4 sm:p-5 border border-emerald-200 dark:border-emerald-800/50 bg-emerald-50/60 dark:bg-emerald-950/20 shadow-sm flex flex-col justify-between">
                             <div class="flex items-center justify-between">
                                 <p class="text-[10px] uppercase tracking-widest text-emerald-800 dark:text-emerald-300 font-extrabold">Active Agents</p>
-                                <span class="p-1 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 text-xs">👥</span>
+                                <span class="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400 text-xs inline-flex items-center justify-center"><i class="fa-solid fa-users text-sm"></i></span>
                             </div>
                             <p class="mt-3 text-3xl font-black text-emerald-900 dark:text-emerald-100 tabular-nums">{{ $activeMerchandisers }}</p>
                             <p class="mt-1 text-xs text-emerald-700 dark:text-emerald-400 font-semibold">of {{ $totalMerchandisers }} total</p>
@@ -45,7 +45,7 @@
                         <div class="merch-card rounded-2xl p-4 sm:p-5 border border-amber-200 dark:border-amber-800/50 bg-amber-50/60 dark:bg-amber-950/20 shadow-sm flex flex-col justify-between">
                             <div class="flex items-center justify-between">
                                 <p class="text-[10px] uppercase tracking-widest text-amber-800 dark:text-amber-300 font-extrabold">Pending Pairing</p>
-                                <span class="p-1 rounded-lg bg-amber-100 dark:bg-amber-900/60 text-amber-600 text-xs">⏳</span>
+                                <span class="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-400 text-xs inline-flex items-center justify-center"><i class="fa-solid fa-clock-rotate-left text-sm"></i></span>
                             </div>
                             <p class="mt-3 text-3xl font-black text-amber-900 dark:text-amber-100 tabular-nums">{{ $pendingMerchandisers }}</p>
                             <p class="mt-1 text-xs text-amber-700 dark:text-amber-400 font-semibold">awaiting pairing</p>
@@ -55,7 +55,7 @@
                         <div class="merch-card rounded-2xl p-4 sm:p-5 border border-sky-200 dark:border-sky-800/50 bg-sky-50/60 dark:bg-sky-950/20 shadow-sm flex flex-col justify-between">
                             <div class="flex items-center justify-between">
                                 <p class="text-[10px] uppercase tracking-widest text-sky-800 dark:text-sky-300 font-extrabold">Clock-Ins</p>
-                                <span class="p-1 rounded-lg bg-sky-100 dark:bg-sky-900/60 text-sky-600 text-xs">📍</span>
+                                <span class="p-1.5 rounded-lg bg-sky-100 dark:bg-sky-900/60 text-sky-600 dark:text-sky-400 text-xs inline-flex items-center justify-center"><i class="fa-solid fa-location-dot text-sm"></i></span>
                             </div>
                             <p class="mt-3 text-3xl font-black text-sky-900 dark:text-sky-100 tabular-nums">{{ $todayClockins }}</p>
                             <p class="mt-1 text-xs text-sky-700 dark:text-sky-400 font-semibold">{{ $clockRangeLabel }}</p>
@@ -65,7 +65,7 @@
                         <div class="merch-card rounded-2xl p-4 sm:p-5 border border-indigo-200 dark:border-indigo-800/50 bg-indigo-50/60 dark:bg-indigo-950/20 shadow-sm flex flex-col justify-between">
                             <div class="flex items-center justify-between">
                                 <p class="text-[10px] uppercase tracking-widest text-indigo-800 dark:text-indigo-300 font-extrabold">PCM / PJP</p>
-                                <span class="p-1 rounded-lg bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 text-xs">📋</span>
+                                <span class="p-1.5 rounded-lg bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 text-xs inline-flex items-center justify-center"><i class="fa-solid fa-clipboard-list text-sm"></i></span>
                             </div>
                             <p class="mt-3 text-3xl font-black text-indigo-900 dark:text-indigo-100 tabular-nums">{{ $clockPcmCount + $clockPjpCount }}</p>
                             <p class="mt-1 text-xs text-indigo-700 dark:text-indigo-400 font-semibold">{{ $clockPcmCount }} PCM · {{ $clockPjpCount }} PJP</p>
@@ -75,7 +75,7 @@
                         <div class="merch-card rounded-2xl p-4 sm:p-5 border border-rose-200 dark:border-rose-800/50 bg-rose-50/60 dark:bg-rose-950/20 shadow-sm flex flex-col justify-between">
                             <div class="flex items-center justify-between">
                                 <p class="text-[10px] uppercase tracking-widest text-rose-800 dark:text-rose-300 font-extrabold">Approvals Queue</p>
-                                <span class="p-1 rounded-lg bg-rose-100 dark:bg-rose-900/60 text-rose-600 text-xs">🔔</span>
+                                <span class="p-1.5 rounded-lg bg-rose-100 dark:bg-rose-900/60 text-rose-600 dark:text-rose-400 text-xs inline-flex items-center justify-center"><i class="fa-solid fa-bell text-sm"></i></span>
                             </div>
                             <p class="mt-3 text-3xl font-black text-rose-900 dark:text-rose-100 tabular-nums">{{ $pendingLeaves + $pendingClaims + $pendingLoans }}</p>
                             <p class="mt-1 text-xs text-rose-700 dark:text-rose-400 font-semibold">{{ $pendingLeaves }}L · {{ $pendingClaims }}C · {{ $pendingLoans }}Ln</p>
@@ -156,7 +156,7 @@
                                 'val'    => (float) ($perfectOverview['coverage'] ?? 0),
                                 'textVal'=> $metricLabel($perfectOverview['coverage'] ?? null),
                                 'sub'    => ($perfectOverview['scored'] ?? 0).' scored of '.($perfectOverview['scheduled'] ?? 0),
-                                'icon'   => '🎯',
+                                'icon'   => '<i class="fa-solid fa-crosshair text-sm"></i>',
                                 'stroke' => '#10B981',
                                 'bg'     => '#ECFDF5',
                                 'border' => '#A7F3D0',
@@ -168,7 +168,7 @@
                                 'val'    => (float) ($perfectOverview['osa'] ?? 0),
                                 'textVal'=> $metricLabel($perfectOverview['osa'] ?? null),
                                 'sub'    => 'Target '.($perfectTargets['osa'] ?? 95).'%',
-                                'icon'   => '📦',
+                                'icon'   => '<i class="fa-solid fa-box-open text-sm"></i>',
                                 'stroke' => '#2563EB',
                                 'bg'     => '#EFF6FF',
                                 'border' => '#BFDBFE',
@@ -180,7 +180,7 @@
                                 'val'    => ($perfectOverview['npd'] ?? null) !== null ? (float)$perfectOverview['npd'] : 0,
                                 'textVal'=> $metricLabel($perfectOverview['npd'] ?? null),
                                 'sub'    => 'All-or-nothing per store',
-                                'icon'   => '✨',
+                                'icon'   => '<i class="fa-solid fa-wand-magic-sparkles text-sm"></i>',
                                 'stroke' => '#7C3AED',
                                 'bg'     => '#F5F3FF',
                                 'border' => '#DDD6FE',
@@ -192,7 +192,7 @@
                                 'val'    => ($perfectOverview['mhs'] ?? null) !== null ? (float)$perfectOverview['mhs'] : 0,
                                 'textVal'=> $metricLabel($perfectOverview['mhs'] ?? null),
                                 'sub'    => 'Must-have SKU compliance',
-                                'icon'   => '⭐',
+                                'icon'   => '<i class="fa-solid fa-star text-sm"></i>',
                                 'stroke' => '#F59E0B',
                                 'bg'     => '#FFFBEB',
                                 'border' => '#FDE68A',
@@ -204,7 +204,7 @@
                                 'val'    => (float) ($perfectOverview['planogram'] ?? 0),
                                 'textVal'=> $metricLabel($perfectOverview['planogram'] ?? null),
                                 'sub'    => 'Target '.($perfectTargets['planogram'] ?? 100).'%',
-                                'icon'   => '📐',
+                                'icon'   => '<i class="fa-solid fa-ruler-combined text-sm"></i>',
                                 'stroke' => '#06B6D4',
                                 'bg'     => '#ECFEFF',
                                 'border' => '#A5F3FC',
@@ -216,7 +216,7 @@
                                 'val'    => (float) ($perfectOverview['facing'] ?? 0),
                                 'textVal'=> $metricLabel($perfectOverview['facing'] ?? null),
                                 'sub'    => 'Target '.($perfectTargets['facing'] ?? 95).'%',
-                                'icon'   => '📊',
+                                'icon'   => '<i class="fa-solid fa-chart-column text-sm"></i>',
                                 'stroke' => '#6366F1',
                                 'bg'     => '#EEF2FF',
                                 'border' => '#C7D2FE',
@@ -228,7 +228,7 @@
                                 'val'    => (float) ($perfectOverview['sos'] ?? 0),
                                 'textVal'=> $metricLabel($perfectOverview['sos'] ?? null),
                                 'sub'    => 'Unilever facings vs category',
-                                'icon'   => '🏷️',
+                                'icon'   => '<i class="fa-solid fa-tag text-sm"></i>',
                                 'stroke' => '#E11D48',
                                 'bg'     => '#FFF1F2',
                                 'border' => '#FECDD3',
@@ -240,7 +240,7 @@
                                 'val'    => (float) ($perfectOverview['perfect_store_score'] ?? 0),
                                 'textVal'=> $metricLabel($perfectOverview['perfect_store_score'] ?? null),
                                 'sub'    => ($perfectOverview['visits'] ?? 0).' scored visit(s)',
-                                'icon'   => '🏆',
+                                'icon'   => '<i class="fa-solid fa-trophy text-sm"></i>',
                                 'stroke' => '#0F0E9A',
                                 'bg'     => '#EEF2FF',
                                 'border' => '#C7D2FE',
@@ -271,7 +271,7 @@
                                         <circle cx="30" cy="30" r="26" stroke="{{ $kpi['stroke'] }}" stroke-width="4.5" fill="none"
                                                 stroke-dasharray="{{ $dashArray }}" stroke-dashoffset="{{ $dashOffset }}" stroke-linecap="round" />
                                     </svg>
-                                    <span class="absolute text-base font-black">{{ $kpi['icon'] }}</span>
+                                    <span class="absolute text-base font-black flex items-center justify-center text-slate-700 dark:text-slate-200">{!! $kpi['icon'] !!}</span>
                                 </div>
                             </div>
                         @endforeach
@@ -350,7 +350,7 @@
                         <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
                             <div>
                                 <h3 class="text-xs uppercase tracking-widest text-slate-900 dark:text-white font-extrabold flex items-center gap-2">
-                                    <span class="p-1 rounded-lg bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 text-xs">👥</span>
+                                    <span class="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 text-xs inline-flex items-center justify-center"><i class="fa-solid fa-users text-sm"></i></span>
                                     Merchandiser Status Analytics & Field Readiness
                                 </h3>
                                 <p class="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">Live status breakdown across active, pending activation, and suspended field agents.</p>
@@ -383,7 +383,7 @@
                                     <p class="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold mt-0.5 truncate">{{ $activeMerchandisers }} of {{ $totalMerchandisers }} total</p>
                                 </div>
                                 <div class="w-10 h-10 shrink-0 rounded-full border-2 border-emerald-500 flex items-center justify-center bg-white dark:bg-slate-900 text-emerald-600 font-black text-sm shadow-xs">
-                                    ⚡
+                                    <i class="fa-solid fa-bolt text-emerald-600 dark:text-emerald-400 text-base"></i>
                                 </div>
                             </div>
 
@@ -397,7 +397,7 @@
                                     <p class="text-[10px] text-amber-700 dark:text-amber-400 font-semibold mt-0.5 truncate">Awaiting review</p>
                                 </div>
                                 <div class="w-10 h-10 shrink-0 rounded-full border-2 border-amber-500 flex items-center justify-center bg-white dark:bg-slate-900 text-amber-600 font-black text-sm shadow-xs">
-                                    ⏳
+                                    <i class="fa-solid fa-clock-rotate-left text-amber-600 dark:text-amber-400 text-base"></i>
                                 </div>
                             </div>
 
@@ -411,7 +411,7 @@
                                     <p class="text-[10px] text-rose-700 dark:text-rose-400 font-semibold mt-0.5 truncate">{{ $suspendedMerchandisers }} accounts</p>
                                 </div>
                                 <div class="w-10 h-10 shrink-0 rounded-full border-2 border-rose-500 flex items-center justify-center bg-white dark:bg-slate-900 text-rose-600 font-black text-sm shadow-xs">
-                                    🛡️
+                                    <i class="fa-solid fa-shield-halved text-rose-600 dark:text-rose-400 text-base"></i>
                                 </div>
                             </div>
                         </div>
@@ -423,7 +423,7 @@
                         <!-- Visits by KD Bar Chart Card -->
                         <div x-data="{ kdPeriod: 'weekly' }" class="merch-card rounded-2xl p-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex flex-col space-y-3">
                             <div class="flex items-center justify-between gap-2">
-                                <p class="text-xs uppercase tracking-widest text-slate-900 dark:text-white font-extrabold truncate">🏬 Visits by Key Distributor</p>
+                                <p class="text-xs uppercase tracking-widest text-slate-900 dark:text-white font-extrabold truncate"><i class="fa-solid fa-building text-emerald-500"></i> Visits by Key Distributor</p>
                                 <div class="inline-flex shrink-0 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 p-0.5">
                                     <button type="button" @click="kdPeriod = 'daily'; switchAdminChartPeriod('kdVisitsChart', 'daily')" :class="kdPeriod === 'daily' ? 'bg-[#0F0E9A] text-white shadow-xs font-black' : 'text-slate-600 dark:text-slate-400 font-bold hover:text-slate-900 dark:hover:text-white'" class="rounded-lg px-2 py-0.5 text-[9px] uppercase transition">Daily</button>
                                     <button type="button" @click="kdPeriod = 'weekly'; switchAdminChartPeriod('kdVisitsChart', 'weekly')" :class="kdPeriod === 'weekly' ? 'bg-[#0F0E9A] text-white shadow-xs font-black' : 'text-slate-600 dark:text-slate-400 font-bold hover:text-slate-900 dark:hover:text-white'" class="rounded-lg px-2 py-0.5 text-[9px] uppercase transition">Weekly</button>
@@ -439,7 +439,7 @@
                         <!-- Asset POSM items Pie Chart Card -->
                         <div x-data="{ assetPeriod: 'weekly' }" class="merch-card rounded-2xl p-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex flex-col space-y-3">
                             <div class="flex items-center justify-between gap-2">
-                                <p class="text-xs uppercase tracking-widest text-slate-900 dark:text-white font-extrabold truncate">📁 POSM / Gear Deployments</p>
+                                <p class="text-xs uppercase tracking-widest text-slate-900 dark:text-white font-extrabold truncate"><i class="fa-solid fa-folder text-indigo-500"></i> POSM / Gear Deployments</p>
                                 <div class="inline-flex shrink-0 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 p-0.5">
                                     <button type="button" @click="assetPeriod = 'daily'; switchAdminChartPeriod('assetsChart', 'daily')" :class="assetPeriod === 'daily' ? 'bg-[#0F0E9A] text-white shadow-xs font-black' : 'text-slate-600 dark:text-slate-400 font-bold hover:text-slate-900 dark:hover:text-white'" class="rounded-lg px-2 py-0.5 text-[9px] uppercase transition">Daily</button>
                                     <button type="button" @click="assetPeriod = 'weekly'; switchAdminChartPeriod('assetsChart', 'weekly')" :class="assetPeriod === 'weekly' ? 'bg-[#0F0E9A] text-white shadow-xs font-black' : 'text-slate-600 dark:text-slate-400 font-bold hover:text-slate-900 dark:hover:text-white'" class="rounded-lg px-2 py-0.5 text-[9px] uppercase transition">Weekly</button>
@@ -460,7 +460,7 @@
                             <div class="flex flex-wrap items-center justify-between gap-2 pb-1 border-b border-slate-100 dark:border-slate-800">
                                 <div class="min-w-0">
                                     <p class="text-xs uppercase tracking-wider text-slate-900 dark:text-white font-extrabold flex items-center gap-1.5 truncate">
-                                        <span>🗺️</span> <span>Outlets by Region</span>
+                                        <span><i class="fa-solid fa-map text-amber-500"></i></span> <span>Outlets by Region</span>
                                     </p>
                                     <p class="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">Regional coverage split</p>
                                 </div>
@@ -481,7 +481,7 @@
                             <div class="flex flex-wrap items-center justify-between gap-2 pb-1 border-b border-slate-100 dark:border-slate-800">
                                 <div class="min-w-0">
                                     <p class="text-xs uppercase tracking-wider text-slate-900 dark:text-white font-extrabold flex items-center gap-1.5 truncate">
-                                        <span>🏪</span> <span>Outlet Channel Mix</span>
+                                        <span><i class="fa-solid fa-store text-emerald-500"></i></span> <span>Outlet Channel Mix</span>
                                     </p>
                                     <p class="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">Channel distribution</p>
                                 </div>
@@ -502,7 +502,7 @@
                             <div class="flex flex-wrap items-center justify-between gap-2 pb-1 border-b border-slate-100 dark:border-slate-800">
                                 <div class="min-w-0">
                                     <p class="text-xs uppercase tracking-wider text-slate-900 dark:text-white font-extrabold flex items-center gap-1.5 truncate">
-                                        <span>📍</span> <span>Clock-In Coverage</span>
+                                        <span><i class="fa-solid fa-location-dot text-rose-500"></i></span> <span>Clock-In Coverage</span>
                                     </p>
                                     <p class="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">Compliance ratio</p>
                                 </div>
@@ -522,7 +522,7 @@
                     <!-- Top Performers Table -->
                     <div class="glass-panel rounded-2xl border border-brand-white/10 overflow-hidden mb-6">
                         <div class="px-5 py-4 border-b border-brand-white/10 flex items-center justify-between">
-                            <p class="text-xs uppercase tracking-widest text-brand-ash">🏆 Top Performers — This Month</p>
+                            <p class="text-xs uppercase tracking-widest text-brand-ash"><i class="fa-solid fa-trophy text-amber-500"></i> Top Performers — This Month</p>
                             <button @click="window.location.href = @js($adminTabUrl('merchandisers'))" class="text-xs text-brand-red hover:underline">View All →</button>
                         </div>
                         <div class="overflow-x-auto">
@@ -678,7 +678,7 @@
                                             <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
                                                 <td class="px-6 py-3.5 font-bold text-slate-900 dark:text-white flex items-center gap-2">
                                                     <span class="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center text-xs font-black shrink-0">
-                                                        🏢
+                                                        <i class="fa-solid fa-building text-sky-500"></i>
                                                     </span>
                                                     <span>{{ $rollup['name'] }}</span>
                                                 </td>
@@ -730,7 +730,7 @@
                                             <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
                                                 <td class="px-6 py-3.5 font-bold text-slate-900 dark:text-white flex items-center gap-2">
                                                     <span class="w-7 h-7 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 flex items-center justify-center text-xs font-black shrink-0">
-                                                        🗺️
+                                                        <i class="fa-solid fa-map text-amber-500"></i>
                                                     </span>
                                                     <span>{{ $rollup['name'] }}</span>
                                                 </td>
@@ -781,7 +781,7 @@
                                             <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
                                                 <td class="px-6 py-3.5 font-bold text-slate-900 dark:text-white flex items-center gap-2">
                                                     <span class="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center justify-center text-xs font-black shrink-0">
-                                                        🏷️
+                                                        <i class="fa-solid fa-tag text-emerald-500"></i>
                                                     </span>
                                                     <span>{{ $rollup['name'] }}</span>
                                                 </td>
@@ -847,7 +847,7 @@
                             <div class="flex flex-wrap items-center justify-between gap-3">
                                 <div>
                                     <p class="text-xs uppercase tracking-widest text-slate-900 dark:text-white font-extrabold flex items-center gap-2">
-                                        📅 Attendance Execution Trend
+                                        <i class="fa-solid fa-calendar-days text-sky-400"></i> Attendance Execution Trend
                                     </p>
                                     <p class="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Daily clock-in compliance over custom timeframes</p>
                                 </div>
@@ -866,7 +866,7 @@
 
                         <!-- KD & Outlet Summary Card -->
                         <div class="merch-card rounded-2xl p-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-4">
-                            <p class="text-xs uppercase tracking-widest text-slate-900 dark:text-white font-black mb-4">🏢 Infrastructure Summary</p>
+                            <p class="text-xs uppercase tracking-widest text-slate-900 dark:text-white font-black mb-4"><i class="fa-solid fa-building text-sky-500"></i> Infrastructure Summary</p>
                             <div class="space-y-4">
                                 <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
                                     <span class="text-xs text-slate-600 dark:text-slate-400 font-bold">Key Distributors</span>
@@ -901,7 +901,7 @@
                     <div class="merch-card rounded-2xl p-6 space-y-4 mb-6 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm" x-data="{ targetType: 'all', roleFilter: 'merchandiser' }">
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
                             <div class="flex items-center gap-2">
-                                <span class="text-lg">📣</span>
+                                <span class="text-lg"><i class="fa-solid fa-bullhorn text-amber-500"></i></span>
                                 <div>
                                     <h4 class="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white">Broadcast Notification</h4>
                                     <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Send announcements or push alerts to field team members.</p>
@@ -922,17 +922,17 @@
                                     <label class="flex items-center gap-2.5 p-3 rounded-xl border cursor-pointer transition select-none"
                                            :class="targetType === 'all' ? 'border-[#0F0E9A] bg-sky-500/10 text-slate-900 dark:text-white font-bold' : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 text-slate-600 dark:text-slate-400'">
                                         <input type="radio" name="target_type" value="all" x-model="targetType" class="text-[#0F0E9A] focus:ring-0">
-                                        <span>📢 Select All Field Staff</span>
+                                        <span><i class="fa-solid fa-bullhorn text-sky-500"></i> Select All Field Staff</span>
                                     </label>
                                     <label class="flex items-center gap-2.5 p-3 rounded-xl border cursor-pointer transition select-none"
                                            :class="targetType === 'role' ? 'border-[#0F0E9A] bg-sky-500/10 text-slate-900 dark:text-white font-bold' : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 text-slate-600 dark:text-slate-400'">
                                         <input type="radio" name="target_type" value="role" x-model="targetType" class="text-[#0F0E9A] focus:ring-0">
-                                        <span>👥 Filter by Role</span>
+                                        <span><i class="fa-solid fa-users text-emerald-500"></i> Filter by Role</span>
                                     </label>
                                     <label class="flex items-center gap-2.5 p-3 rounded-xl border cursor-pointer transition select-none"
                                            :class="targetType === 'specific' ? 'border-[#0F0E9A] bg-sky-500/10 text-slate-900 dark:text-white font-bold' : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 text-slate-600 dark:text-slate-400'">
                                         <input type="radio" name="target_type" value="specific" x-model="targetType" class="text-[#0F0E9A] focus:ring-0">
-                                        <span>🎯 Select Specific Users</span>
+                                        <span><i class="fa-solid fa-crosshair text-indigo-500"></i> Select Specific Users</span>
                                     </label>
                                 </div>
                             </div>
@@ -991,7 +991,7 @@
                         <div class="merch-card rounded-2xl p-6 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex flex-col justify-between space-y-4">
                             <div>
                                 <div class="flex items-center gap-2 mb-2">
-                                    <span class="text-base">📥</span>
+                                    <span class="text-base"><i class="fa-solid fa-file-arrow-down text-emerald-500"></i></span>
                                     <h4 class="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white">Export Merchandiser Portal Data</h4>
                                 </div>
                                 <p class="text-xs text-slate-500 dark:text-slate-400 mb-4 font-medium">Select operations data to download as CSV, Excel-compatible, or PDF reports.</p>
@@ -1004,15 +1004,15 @@
                                             <span class="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">.CSV</span>
                                         </div>
                                         <a href="{{ route('merchandisers.admin.export', 'merchandisers') }}?format=csv" class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white transition group">
-                                            <span>👤 Merchandisers List</span>
+                                            <span><i class="fa-solid fa-user text-sky-500"></i> Merchandisers List</span>
                                             <span class="text-slate-400 group-hover:translate-x-0.5 transition-transform">↓</span>
                                         </a>
                                         <a href="{{ route('merchandisers.admin.export', 'attendance') }}?format=csv" class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white transition group">
-                                            <span>📅 Attendance Logs</span>
+                                            <span><i class="fa-solid fa-calendar-days text-sky-400"></i> Attendance Logs</span>
                                             <span class="text-slate-400 group-hover:translate-x-0.5 transition-transform">↓</span>
                                         </a>
                                         <a href="{{ route('merchandisers.admin.export', 'assets') }}?format=csv" class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white transition group">
-                                            <span>📁 POSM &amp; Field Gear</span>
+                                            <span><i class="fa-solid fa-folder text-indigo-500"></i> POSM &amp; Field Gear</span>
                                             <span class="text-slate-400 group-hover:translate-x-0.5 transition-transform">↓</span>
                                         </a>
                                     </div>
@@ -1024,15 +1024,15 @@
                                             <span class="text-[9px] font-bold text-sky-600 dark:text-sky-400 bg-sky-500/10 px-1.5 py-0.5 rounded">.XLSX</span>
                                         </div>
                                         <a href="{{ route('merchandisers.admin.export', 'leaves') }}?format=excel" class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white transition group">
-                                            <span>🍂 Leave Applications</span>
+                                            <span><i class="fa-solid fa-calendar-minus text-amber-500"></i> Leave Applications</span>
                                             <span class="text-slate-400 group-hover:translate-x-0.5 transition-transform">↓</span>
                                         </a>
                                         <a href="{{ route('merchandisers.admin.export', 'claims') }}?format=excel" class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white transition group">
-                                            <span>💰 Petty Cash Claims</span>
+                                            <span><i class="fa-solid fa-money-bill-wave text-emerald-500"></i> Petty Cash Claims</span>
                                             <span class="text-slate-400 group-hover:translate-x-0.5 transition-transform">↓</span>
                                         </a>
                                         <a href="{{ route('merchandisers.admin.export', 'loans') }}?format=excel" class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white transition group">
-                                            <span>💵 Salary Advances</span>
+                                            <span><i class="fa-solid fa-hand-holding-dollar text-amber-400"></i> Salary Advances</span>
                                             <span class="text-slate-400 group-hover:translate-x-0.5 transition-transform">↓</span>
                                         </a>
                                     </div>
@@ -1044,15 +1044,15 @@
                                             <span class="text-[9px] font-bold text-red-600 dark:text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded">.PDF</span>
                                         </div>
                                         <a href="{{ route('merchandisers.admin.export', 'merchandisers') }}?format=pdf" class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white transition group">
-                                            <span>📄 Merchandisers Summary</span>
+                                            <span><i class="fa-solid fa-file-lines text-slate-400"></i> Merchandisers Summary</span>
                                             <span class="text-slate-400 group-hover:translate-x-0.5 transition-transform">↓</span>
                                         </a>
                                         <a href="{{ route('merchandisers.admin.export', 'attendance') }}?format=pdf" class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white transition group">
-                                            <span>📊 Attendance PDF Report</span>
+                                            <span><i class="fa-solid fa-chart-pie text-sky-500"></i> Attendance PDF Report</span>
                                             <span class="text-slate-400 group-hover:translate-x-0.5 transition-transform">↓</span>
                                         </a>
                                         <a href="{{ route('merchandisers.admin.export', 'assets') }}?format=pdf" class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white transition group">
-                                            <span>📋 Field Gear Audit PDF</span>
+                                            <span><i class="fa-solid fa-clipboard-list text-purple-500"></i> Field Gear Audit PDF</span>
                                             <span class="text-slate-400 group-hover:translate-x-0.5 transition-transform">↓</span>
                                         </a>
                                     </div>
@@ -1063,7 +1063,7 @@
                         <!-- Client Link Share Generator -->
                         <div class="merch-card rounded-2xl p-6 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-4">
                             <div class="flex items-center gap-2 mb-2">
-                                <span class="text-base">🔗</span>
+                                <span class="text-base"><i class="fa-solid fa-link text-indigo-500"></i></span>
                                 <h4 class="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white">Generate Client Share Link</h4>
                             </div>
                             <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Links remain valid for 24 hours. Toggle sections to customize shared metrics.</p>
@@ -1141,7 +1141,7 @@
                     @if($recentReports->count() > 0)
                     <div class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden mb-6">
                         <div class="px-5 py-4 border-b border-slate-200 dark:border-slate-800">
-                            <p class="text-xs uppercase tracking-widest text-slate-900 dark:text-white font-extrabold">🔗 Active Shared Reports</p>
+                            <p class="text-xs uppercase tracking-widest text-slate-900 dark:text-white font-extrabold"><i class="fa-solid fa-link text-indigo-500"></i> Active Shared Reports</p>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-sm">

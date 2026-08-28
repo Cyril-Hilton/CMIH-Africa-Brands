@@ -257,11 +257,11 @@
                     <div class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm space-y-6">
                         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
                             <div>
-                                <h3 class="text-lg font-bold text-slate-900 dark:text-white tracking-wide uppercase">🧭 Supervisor Accountability & Team Performance</h3>
+                                <h3 class="text-lg font-bold text-slate-900 dark:text-white tracking-wide uppercase"><i class="fa-solid fa-compass text-amber-500"></i> Supervisor Accountability & Team Performance</h3>
                                 <p class="text-xs text-slate-600 dark:text-slate-400 font-semibold">Performance tracking for field supervisors aggregating team merchandiser metrics.</p>
                             </div>
                             <div class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 overflow-x-auto">
-                                @foreach(['daily' => '📅 Daily', 'weekly' => '📆 Weekly', 'monthly' => '📊 Monthly', 'yearly' => '🏆 Yearly'] as $pKey => $pLabel)
+                                @foreach(['daily' => '<i class="fa-solid fa-calendar-day"></i> Daily', 'weekly' => '<i class="fa-solid fa-calendar-week"></i> Weekly', 'monthly' => '<i class="fa-solid fa-chart-pie text-sky-500"></i> Monthly', 'yearly' => '<i class="fa-solid fa-trophy"></i> Yearly'] as $pKey => $pLabel)
                                     <a href="{{ route('merchandisers.admin.tab', ['adminTab' => 'supervisors', 'perf_period' => $pKey]) }}"
                                        class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 {{ $perfPeriod === $pKey ? 'bg-brand-red text-white shadow-sm' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700' }}">
                                         {{ $pLabel }}
