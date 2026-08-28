@@ -2862,25 +2862,13 @@ class MerchandiserAdminHubController extends Controller
             ];
         }
 
-        $firstRecordedDates = collect([
-            MerchandiserOutletAssignment::query()->min('assigned_date'),
-            MerchandiserVisit::query()->min('created_at'),
-        ])->filter();
-
-        $from = $firstRecordedDates->isEmpty()
-            ? Carbon::now($timezone)->startOfDay()
-            : $firstRecordedDates
-                ->map(fn ($date) => Carbon::parse($date, $timezone)->startOfDay())
-                ->sortBy(fn (Carbon $date) => $date->timestamp)
-                ->first();
-        $to = Carbon::now($timezone)->endOfDay();
+        $from = Carbon::now($timezone)->startOfWeek()->startOfDay();
+        $to = Carbon::now($timezone)->endOfWeek()->endOfDay();
 
         return [
             $from,
             $to,
-            $firstRecordedDates->isEmpty()
-                ? 'No Perfect Store activity recorded yet'
-                : 'All recorded activity ('.$from->format('d M Y').' - '.$to->format('d M Y').')',
+            'This Week ('.$from->format('d M').' - '.$to->format('d M Y').')',
         ];
     }
 

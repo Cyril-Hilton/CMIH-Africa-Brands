@@ -236,16 +236,20 @@
                             ],
                         ];
 
-                        $perfectOverview = $perfectStoreSummary['overview'] ?? [];
-                        $perfectTargets = $perfectStoreSummary['targets'] ?? [];
+                        $activeSummary = (request()->filled('clock_from') || request()->filled('clock_to'))
+                            ? $perfectStoreSummary
+                            : $periodSummaries['weekly'];
+
+                        $perfectOverview = $activeSummary['overview'] ?? [];
+                        $perfectTargets = $activeSummary['targets'] ?? [];
                         $metricLabel = fn ($value) => $value === null ? 'N/A' : number_format((float) $value, 1) . '%';
                         $perfectMetricLabels = ['Coverage', 'OSA', 'NPD', 'MHS', 'Planogram', 'Facing', 'SOS'];
-                        $perfectMetricValues = $extractRadarMetrics($perfectStoreSummary);
+                        $perfectMetricValues = $extractRadarMetrics($activeSummary);
                         $perfectTargetValues = collect(['coverage', 'osa', 'npd', 'mhs', 'planogram', 'facing', 'sos'])
                             ->map(fn ($metric) => (float) ($perfectTargets[$metric] ?? 100))
                             ->values();
-                        $perfectMerchChart = collect($perfectStoreSummary['merchandisers'] ?? collect())->take(8);
-                        $perfectKdChart = collect($perfectStoreSummary['kds'] ?? collect())->take(8);
+                        $perfectMerchChart = collect($activeSummary['merchandisers'] ?? collect())->take(8);
+                        $perfectKdChart = collect($activeSummary['kds'] ?? collect())->take(8);
                         $perfectMerchChartLabels = $perfectMerchChart->pluck('name')->values();
                         $perfectMerchChartScores = $perfectMerchChart->pluck('perfect_store_score')->map(fn ($value) => (float) $value)->values();
                         $perfectKdChartLabels = $perfectKdChart->pluck('name')->values();
