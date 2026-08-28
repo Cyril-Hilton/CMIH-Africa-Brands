@@ -70,7 +70,7 @@ class MerchandiserController extends Controller
             }
             return redirect()->route('dashboard');
         }
-        return view('merchandisers.gateway');
+        return redirect()->route('merchandisers.login');
     }
 
     /**

@@ -70,7 +70,7 @@
         </p>
 
         <div class="pt-6 border-t border-brand-white/10 mt-6">
-            <a href="{{ route('merchandisers.portal') }}" class="group flex items-center justify-between gap-3 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-2.5 text-xs font-semibold text-amber-400 hover:bg-amber-500/10 hover:border-amber-500/40 transition-all duration-300">
+            <a href="{{ route('merchandisers.login') }}" class="group flex items-center justify-between gap-3 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-2.5 text-xs font-semibold text-amber-400 hover:bg-amber-500/10 hover:border-amber-500/40 transition-all duration-300">
                 <span class="flex items-center gap-2">
                     <span>✨</span> Merchandiser Portal Access
                 </span>

@@ -42,7 +42,7 @@
     </div>
 
     <div class="merch-bridge">
-        <a href="{{ route('merchandisers.portal') }}" class="merch-btn">Merchandiser Sign In ↗</a>
+        <a href="{{ route('merchandisers.login') }}" class="merch-btn">Merchandiser Sign In ↗</a>
     </div>
 
     <div class="brand-zone" id="brands">

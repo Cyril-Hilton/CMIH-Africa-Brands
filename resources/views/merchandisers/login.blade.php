@@ -109,8 +109,8 @@
         </div>
 
         <div class="pt-2 text-center">
-            <a href="{{ route('merchandisers.portal') }}" class="text-xs text-brand-white/60 hover:text-brand-white underline">
-                ← Back to Portal Home
+            <a href="{{ url('/') }}" class="text-xs text-brand-white/60 hover:text-brand-white underline">
+                ← Back to Main Platform
             </a>
         </div>
     </div>

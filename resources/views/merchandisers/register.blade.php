@@ -92,8 +92,8 @@
         </p>
 
         <div class="pt-4 border-t border-brand-white/10 mt-4">
-            <a href="{{ route('merchandisers.portal') }}" class="text-xs text-brand-white/60 hover:text-brand-white underline">
-                ← Back to Gate selection
+            <a href="{{ route('merchandisers.login') }}" class="text-xs text-brand-white/60 hover:text-brand-white underline">
+                ← Back to Sign In
             </a>
         </div>
     </div>
