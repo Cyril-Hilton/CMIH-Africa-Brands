@@ -254,6 +254,7 @@
         }
     },
     activeTab: @js($activeAdminTab),
+    liveLocationCount: @js($liveLocationCount ?? 0),
     overviewSubTab: @js(request('subtab', 'executive')),
     profileSubTab: @js(request('subtab', 'personal')),
     setOverviewSubTab(tab) {
@@ -437,7 +438,7 @@
                     class="nav-item group w-full text-left px-3.5 py-2.5 rounded-xl flex items-center gap-3 text-xs transition-all duration-200">
                     <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                     <span class="truncate">Live Tracking</span>
-                    <span class="ml-auto rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-black text-emerald-300 border border-emerald-500/30" x-text="liveLocationCount"></span>
+                    <span class="ml-auto rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-[10px] font-black text-emerald-300 border border-emerald-500/40 shadow-sm" x-text="liveLocationCount">{{ $liveLocationCount ?? 0 }}</span>
                 </button>
 
                 <button @click="window.location.href = @js($adminTabUrl('kds')); sidebarOpen = false"
