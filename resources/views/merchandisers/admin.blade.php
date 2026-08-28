@@ -341,10 +341,7 @@
         <!-- Mobile overlay backdrop -->
         <div x-show="sidebarOpen" x-cloak
              class="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
-             @click="sidebarOpen = false"></div>
-
-        <!-- Sidebar (desktop: collapsible slide in/out; mobile: drawer) -->
-        <aside id="merchandiser-admin-sidebar"
+                    <aside id="merchandiser-admin-sidebar"
             aria-label="Merchandiser admin navigation"
             :class="{
                 'translate-x-0': sidebarOpen,
@@ -354,16 +351,16 @@
             }"
             class="fixed inset-y-0 left-0 z-50 flex h-full max-h-screen min-h-0 w-72 shrink-0 flex-col
                    merch-sidebar border-r border-brand-white/10 bg-[#0A0D18] text-white
-                   overflow-hidden transition-all duration-300 ease-in-out">
+                   overflow-y-auto overscroll-contain scrollbar-none transition-all duration-300 ease-in-out">
 
-            <!-- Fixed Header Container (Logo + Profile Card Inspired by Merchandiser Nav) -->
-            <div class="shrink-0 bg-[#0A0D18]">
+            <!-- Header Container (Logo + Profile Card) -->
+            <div class="shrink-0">
                 <!-- Logo -->
                 <div class="px-5 py-4 border-b border-white/10">
                     @include('merchandisers.partials.tenant-brand')
                 </div>
 
-                <!-- User Profile Block (Inherited from Merchandiser Field Agent Sidebar & Admin Hub Styling) -->
+                <!-- User Profile Block -->
                 <div class="mx-4 my-4 p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col items-center text-center shadow-xl relative backdrop-blur-md">
                     <form method="POST" action="{{ route('merchandisers.profile.photo.update') }}" enctype="multipart/form-data" class="relative group my-1">
                         @csrf
@@ -398,8 +395,8 @@
                 </div>
             </div>
 
-            <!-- Scrollable Navigation Container (Invisible scrollbar) -->
-            <nav class="px-3 py-2 space-y-1 flex-1 overflow-y-auto min-h-0 scrollbar-none overscroll-contain" style="scrollbar-width: none; -ms-overflow-style: none;">
+            <!-- Navigation Container -->
+            <nav class="px-3 py-2 space-y-1 shrink-0">
                 @if(auth()->user()->isMerchandiserSupervisor() || auth()->user()->isMerchandiserClient())
                     <div class="px-3 pb-1.5 pt-2">
                         <p class="text-[9px] font-extrabold uppercase tracking-[0.25em] text-white/50">Workspace</p>
@@ -586,11 +583,11 @@
                 @endif
             </nav>
 
-            <!-- Fixed Bottom Logout Footer -->
-            <div class="px-4 py-3.5 border-t border-white/10 shrink-0 bg-[#0A0D18]">
+            <!-- Bottom Logout Footer -->
+            <div class="px-4 py-3.5 border-t border-white/10 shrink-0 mt-auto mb-2">
                 <form method="POST" action="{{ route('merchandisers.logout') }}">
                     @csrf
-                    <button type="submit" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs text-brand-white/50 hover:text-brand-red hover:bg-brand-red/10 transition-all font-medium">
+                    <button type="submit" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs text-brand-white/70 hover:text-brand-red hover:bg-brand-red/10 transition-all font-medium">
                         <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                         </svg>

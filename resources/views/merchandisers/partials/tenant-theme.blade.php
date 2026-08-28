@@ -31,12 +31,12 @@
         font-family: 'Sora', system-ui, -apple-system, sans-serif;
     }
 
-    /* ── SIDEBAR NAVIGATION (ALWAYS DARK ACCENT) ───────────────── */
+    /* ── SIDEBAR NAVIGATION (UNIFIED DARK GLASSMORPHIC THEME) ── */
     #merchandiser-sidebar,
     #merchandiser-admin-sidebar,
     .merch-sidebar {
-        background: {{ $isLight ? $merchTenant['primary'] : '#000000' }} !important;
-        border-right: 1px solid {{ $isLight ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.06)' }} !important;
+        background: #0A0D18 !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
         color: #FFFFFF !important;
     }
 
@@ -378,10 +378,9 @@
     }
 
     body[data-merch-tenant="unilever"] .merch-sidebar {
-        background:
-            linear-gradient(180deg, #0F0E9A 0%, #1412B8 52%, #0066CC 100%) !important;
-        border-right: 1px solid rgba(255, 255, 255, 0.28) !important;
-        box-shadow: 18px 0 48px rgba(15, 14, 154, 0.20) !important;
+        background: #0A0D18 !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
+        box-shadow: 18px 0 48px rgba(0, 0, 0, 0.35) !important;
     }
 
     body[data-merch-tenant="unilever"] .merch-sidebar > div,
