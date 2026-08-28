@@ -118,9 +118,9 @@ return new class extends Migration
         DB::table('merchandiser_google_form_assignments')->insert([
             'title' => 'Perfect Store Audit',
             'description' => 'Complete the Perfect Store audit using either the live Google Form or the native inbuilt portal form.',
-            'google_form_url' => 'https://docs.google.com/forms/d/e/1FAIpQLSfAKE-pKp82legHbJ5qza-R0lTVZ6fagvzG669Lc3PPDaHS6Q/viewform',
+            'google_form_url' => null,
             'category' => 'Perfect Store',
-            'google_enabled' => true,
+            'google_enabled' => false,
             'native_enabled' => true,
             'native_template_key' => 'perfect_store_v1',
             'status' => 'active',

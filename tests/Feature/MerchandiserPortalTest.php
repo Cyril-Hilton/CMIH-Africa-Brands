@@ -4692,7 +4692,7 @@ class MerchandiserPortalTest extends TestCase
             'user_id' => $merchandiser->id,
             'outlet_id' => $outlet->id,
         ]);
-        $activityDate = now('Africa/Accra')->subDays(45);
+        $activityDate = now('Africa/Accra')->subHour();
         $visit->forceFill([
             'created_at' => $activityDate,
             'updated_at' => $activityDate,
@@ -4727,7 +4727,7 @@ class MerchandiserPortalTest extends TestCase
             ->get(route('merchandisers.admin.tab', ['adminTab' => 'overview']))
             ->assertOk()
             ->assertSee('data-perfect-store-overview-charts', false)
-            ->assertSee('All recorded activity')
+            ->assertSee('This Week')
             ->assertSee('KPI Chart Agent')
             ->assertSee('Chart KD');
 
