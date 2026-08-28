@@ -341,7 +341,10 @@
         <!-- Mobile overlay backdrop -->
         <div x-show="sidebarOpen" x-cloak
              class="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
-                    <aside id="merchandiser-admin-sidebar"
+             @click="sidebarOpen = false"></div>
+
+        <!-- Sidebar (desktop: collapsible slide in/out; mobile: drawer) -->
+        <aside id="merchandiser-admin-sidebar"
             aria-label="Merchandiser admin navigation"
             :class="{
                 'translate-x-0': sidebarOpen,
