@@ -142,11 +142,26 @@ const initPrefetch = () => {
 const initImageFallbacks = () => {
     const fallbackUrl = `${window.location.origin}/images/logo/icon-192.png`;
 
+    const isProtectedBrandAsset = (src) => {
+        try {
+            return decodeURIComponent(src).includes('/images/CMIH WEB ASSETS/BRAND LOGOS/');
+        } catch (error) {
+            return src.includes('/images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/');
+        }
+    };
+
     const applyFallback = (target) => {
         if (!(target instanceof HTMLImageElement)) return;
 
         const src = target.getAttribute('src') || '';
-        if (!src || target.dataset.imageFallbackApplied === 'true' || target.dataset.noFallback === 'true') return;
+        if (
+            !src ||
+            target.dataset.imageFallbackApplied === 'true' ||
+            target.dataset.noFallback === 'true' ||
+            isProtectedBrandAsset(src)
+        ) {
+            return;
+        }
 
         target.dataset.imageFallbackApplied = 'true';
         target.src = target.dataset.fallbackSrc || fallbackUrl;
@@ -157,11 +172,13 @@ const initImageFallbacks = () => {
 
     document.addEventListener('error', (event) => applyFallback(event.target), true);
 
-    document.querySelectorAll('img').forEach((image) => {
-        if (image.complete && image.naturalWidth === 0) {
-            applyFallback(image);
-        }
-    });
+    window.addEventListener('load', () => {
+        document.querySelectorAll('img').forEach((image) => {
+            if (image.complete && image.naturalWidth === 0) {
+                applyFallback(image);
+            }
+        });
+    }, { once: true });
 };
 
 document.addEventListener('DOMContentLoaded', () => {

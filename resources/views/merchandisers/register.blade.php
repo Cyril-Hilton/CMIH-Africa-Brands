@@ -88,6 +88,7 @@
                                 <div class="h-10 w-10 sm:h-11 sm:w-11 shrink-0 rounded-xl bg-white p-1.5 flex items-center justify-center shadow-md">
                                     <img src="{{ asset($tenant['workspace_logo'] ?? $tenant['logo']) }}"
                                          alt="{{ $tenant['name'] }}"
+                                         data-no-fallback="true"
                                          class="h-full w-full object-contain">
                                 </div>
                                 <span class="min-w-0 flex-1">

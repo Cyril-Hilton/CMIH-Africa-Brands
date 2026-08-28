@@ -235,6 +235,7 @@ class MerchandiserPortalTest extends TestCase
                         : 'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/DARK%20THEME/Guinness%20light.png',
                     false
                 )
+                ->assertSee('data-no-fallback="true"', false)
                 ->assertDontSee($tenant === 'unilever' ? 'storage/brands/unilever-light.png' : 'storage/brands/guinness-light.png', false);
         }
     }
@@ -255,6 +256,7 @@ class MerchandiserPortalTest extends TestCase
             }
 
             $response
+                ->assertSee('data-no-fallback="true"', false)
                 ->assertDontSee('storage/brands/unilever-light.png', false)
                 ->assertDontSee('storage/brands/guinness-light.png', false);
         }
