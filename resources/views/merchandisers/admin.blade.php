@@ -631,9 +631,9 @@
                             <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Live System
                         </span>
                         <!-- Pending badge -->
-                        @if($totalPending > 0)
+                        @if(($totalPending ?? 0) > 0)
                         <button @click="window.location.href = @js($adminTabUrl('notifications'))" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300 text-xs font-bold animate-pulse hover:bg-red-500/20 transition">
-                            🔔 {{ $totalPending }} pending
+                            🔔 {{ $totalPending ?? 0 }} pending
                         </button>
                         @endif
                         <!-- Prominent High-Contrast Date Badge -->

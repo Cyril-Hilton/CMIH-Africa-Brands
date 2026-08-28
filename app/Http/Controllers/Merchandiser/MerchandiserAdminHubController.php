@@ -1093,11 +1093,13 @@ class MerchandiserAdminHubController extends Controller
                 });
         }
 
+        $totalPending = (int) $pendingLeaves + (int) $pendingClaims + (int) $pendingLoans;
+
         return view('merchandisers.admin', compact(
             'activeTab',
             'totalMerchandisers', 'activeMerchandisers', 'pendingMerchandisers', 'suspendedMerchandisers',
             'totalKds', 'totalOutlets', 'todayClockins',
-            'pendingLeaves', 'pendingClaims', 'pendingLoans',
+            'pendingLeaves', 'pendingClaims', 'pendingLoans', 'totalPending',
             'liveLocationCount',
             'attendanceChart', 'topPerformers',
             'clockFromInput', 'clockToInput', 'clockRangeLabel',
