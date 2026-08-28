@@ -625,6 +625,13 @@ class User extends Authenticatable
         return in_array($this->access_role, $roleList, true) || $this->access_role === 'super_admin';
     }
 
+    public function isSuperAdmin(): bool
+    {
+        $level = strtolower(trim((string) $this->job_level));
+
+        return $this->access_role === 'super_admin' || $level === 'super_admin';
+    }
+
     public function isCvoOrSuperAdmin(): bool
     {
         $position = strtolower(trim((string) $this->position_title));

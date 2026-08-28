@@ -1952,7 +1952,7 @@ document.addEventListener('DOMContentLoaded', () => {
             data: {
                 labels: sosData.map(c => c.category),
                 datasets: [{
-                    data: sosData.map(c => c.unilever_facings || c.total_facings || 10),
+                    data: sosData.map(c => Number(c.unilever_facings ?? c.total_facings ?? 0)),
                     backgroundColor: ['#ec4899', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4'],
                     borderWidth: 0
                 }]

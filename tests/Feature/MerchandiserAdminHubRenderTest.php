@@ -46,7 +46,7 @@ class MerchandiserAdminHubRenderTest extends TestCase
             'overview' => ['overview', 'Clock-in filter'],
             'tracking' => ['tracking', 'Live tracking clock-in filter'],
             'routes' => ['routes', 'Route Assignment Window'],
-            'perfect store' => ['perfect-store', 'Delivery-Style Store Milestone Audit Trackers'],
+            'perfect store' => ['perfect-store', 'Store Execution Audit Trackers'],
             'gallery' => ['gallery', 'Merchandiser Shelf Photo Gallery Catalog'],
             'executive' => ['executive', 'Executive Performance Summary'],
             'category kpi' => ['category-kpi', 'Category Level KPIs'],

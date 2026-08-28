@@ -167,7 +167,7 @@
                                             {{ $row['kd_name'] }}
                                         </td>
                                         <td class="px-5 py-3.5 text-center font-bold text-slate-700 dark:text-slate-300 text-xs">
-                                            {{ $row['scheduled'] ?? 20 }}
+                                            {{ $row['scheduled'] ?? 0 }}
                                         </td>
                                         <td class="px-5 py-3.5 text-center font-bold text-slate-700 dark:text-slate-300 text-xs">
                                             {{ $row['visited'] ?? 0 }}

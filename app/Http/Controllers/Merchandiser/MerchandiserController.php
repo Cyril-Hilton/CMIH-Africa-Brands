@@ -1965,7 +1965,8 @@ class MerchandiserController extends Controller
 
         $user->save();
 
-        return redirect()->back()->with('status', 'Profile and banking credentials updated successfully.');
+        return redirect()->back(302, [], route('merchandisers.dashboard'))
+            ->with('status', 'Profile and banking credentials updated successfully.');
     }
 
     /**
@@ -1996,7 +1997,8 @@ class MerchandiserController extends Controller
             $user->save();
         }
 
-        return redirect()->back()->with('status', 'Profile photo updated successfully.');
+        return redirect()->back(302, [], route('merchandisers.dashboard'))
+            ->with('status', 'Profile photo updated successfully.');
     }
 
     /**

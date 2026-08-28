@@ -1774,8 +1774,8 @@ class MerchandiserPortalTest extends TestCase
         $supervisorResponse = $this->actingAs($supervisor)->get(route('merchandisers.supervisor.dashboard'));
 
         $supervisorResponse->assertOk();
-        $supervisorResponse->assertSeeText('Supervisor Dashboard');
         $supervisorResponse->assertSeeText('Team Coverage');
+        $supervisorResponse->assertSeeText('Supervisor Leaderboard');
         $this->actingAs($supervisor)
             ->get(route('merchandisers.admin.dashboard', ['tab' => 'supervisors']))
             ->assertForbidden();

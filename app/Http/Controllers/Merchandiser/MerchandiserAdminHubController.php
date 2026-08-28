@@ -98,7 +98,7 @@ class MerchandiserAdminHubController extends Controller
      */
     public function dashboard(Request $request, ?string $adminTab = null, bool $roleDashboard = false)
     {
-        $this->guardHubView();
+        $roleDashboard ? $this->guardHubView() : $this->guardAdmin();
         $activeTab = $this->resolveAdminTab($request, $adminTab);
 
         // ── KPI Counts ─────────────────────────────────────────────────────────
