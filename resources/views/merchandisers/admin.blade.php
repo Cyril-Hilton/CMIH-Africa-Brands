@@ -839,7 +839,7 @@ function readPerfectStoreOverviewChartData() {
     }
 }
 
-window.adminChartDatasets = {
+window.adminChartDatasets = Object.assign({
     perfectStoreMetricRadarChart: {
         daily: [98.5, 96.0, 97.2, 99.0, 95.5, 93.0, 90.0],
         weekly: [92.0, 85.5, 90.0, 94.5, 88.0, 84.5, 82.0],
@@ -894,7 +894,7 @@ window.adminChartDatasets = {
         monthly: [28, 4, 2],
         yearly: [140, 15, 6]
     }
-};
+}, window.adminChartDatasets || {});
 
 window.switchAdminChartPeriod = function(chartId, period) {
     const canvas = document.getElementById(chartId);
