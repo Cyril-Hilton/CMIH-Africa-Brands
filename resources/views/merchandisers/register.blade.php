@@ -75,13 +75,17 @@
                 <p class="text-xs leading-5 text-brand-white/55">Choose the business whose outlets and field instructions you work on.</p>
                 <div class="grid gap-3 sm:grid-cols-2">
                     @foreach($merchandiserTenants as $tenant)
-                        <label class="group cursor-pointer rounded-xl border border-brand-white/10 bg-brand-white/5 p-4 transition hover:border-brand-red/45 hover:bg-brand-red/5">
+                        <label class="group cursor-pointer rounded-xl border border-brand-white/10 bg-brand-white/5 p-3.5 transition hover:border-brand-red/45 hover:bg-brand-red/5">
                             <input type="radio" name="merchandiser_tenant" value="{{ $tenant['code'] }}" class="sr-only peer" @checked(old('merchandiser_tenant', 'unilever') === $tenant['code']) required>
-                            <span class="flex items-center gap-3 peer-checked:text-brand-red">
-                                <img src="{{ asset($tenant['logo']) }}" alt="" class="h-10 w-10 object-contain" style="filter: {{ $tenant['logo_filter'] }}">
+                            <span class="flex items-center gap-3">
+                                <div class="h-11 w-11 shrink-0 rounded-xl bg-white p-1.5 flex items-center justify-center shadow-md">
+                                    <img src="{{ asset($tenant['code'] === 'unilever' ? 'storage/brands/unilever-light.png' : 'storage/brands/guinness-light.png') }}"
+                                         alt="{{ $tenant['name'] }}"
+                                         class="h-full w-full object-contain">
+                                </div>
                                 <span>
-                                    <span class="block text-sm font-bold">{{ $tenant['name'] }}</span>
-                                    <span class="mt-1 block text-[10px] uppercase tracking-[0.12em] opacity-60">Field merchandising team</span>
+                                    <span class="block text-sm font-bold text-white group-hover:text-white">{{ $tenant['name'] }}</span>
+                                    <span class="mt-0.5 block text-[10px] uppercase tracking-[0.12em] text-brand-ash">Field merchandising team</span>
                                 </span>
                             </span>
                         </label>

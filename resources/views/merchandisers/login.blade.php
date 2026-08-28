@@ -37,9 +37,11 @@
                             @click="activeTenant = '{{ $tenantKey }}'"
                             :class="activeTenant === '{{ $tenantKey }}' ? 'border-amber-400 bg-amber-400/10 ring-2 ring-amber-400/30' : 'border-brand-white/15 bg-brand-black/40 hover:border-brand-white/30'"
                             class="flex items-center gap-3 rounded-xl border p-3 text-left transition duration-200">
-                        <img src="{{ asset($tenantDef['logo']) }}"
-                             alt="{{ $tenantDef['name'] }}"
-                             class="h-10 w-10 object-contain shrink-0 rounded-lg p-1 bg-white/10">
+                        <div class="h-10 w-10 shrink-0 rounded-xl bg-white p-1.5 flex items-center justify-center shadow-sm">
+                            <img src="{{ asset($tenantDef['code'] === 'unilever' ? 'storage/brands/unilever-light.png' : 'storage/brands/guinness-light.png') }}"
+                                 alt="{{ $tenantDef['name'] }}"
+                                 class="h-full w-full object-contain">
+                        </div>
                         <div class="min-w-0">
                             <p class="text-xs font-bold text-brand-white truncate">{{ $tenantDef['name'] }}</p>
                             <p class="text-[10px] text-brand-ash truncate">{{ $tenantDef['code'] === 'unilever' ? 'Blue & White' : 'Black & Gold' }}</p>

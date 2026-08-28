@@ -74,32 +74,32 @@
                     </button>
                 </header>
 
-                <main class="grid flex-1 items-center gap-8 py-8 lg:grid-cols-[minmax(0,1fr)_minmax(360px,440px)] lg:gap-12">
-                    <section class="min-w-0 space-y-8">
+                <main class="grid flex-1 items-start gap-8 py-8 lg:grid-cols-[minmax(0,1fr)_minmax(360px,440px)] lg:gap-12">
+                    <section class="min-w-0 space-y-8 lg:sticky lg:top-8">
                         <div class="max-w-3xl space-y-4">
                             <p class="text-xs font-semibold uppercase tracking-[0.38em] text-brand-ash">We Make It Happen</p>
-                            <h1 class="text-4xl font-display leading-[0.9] text-brand-white sm:text-5xl lg:text-6xl">Inside the CMIH Operating Hub</h1>
+                            <h1 class="text-4xl font-display leading-[0.9] text-brand-white sm:text-5xl lg:text-6xl">Inside the CMIH Merchandising Hub</h1>
                             <p class="max-w-2xl text-sm leading-7 text-brand-white/70 sm:text-base">
-                                Track campaigns, coordinate teams, and keep every market activation moving in sync with speed, visibility, and accountability.
+                                Track field coverage, coordinate store visits, execute Perfect Store guidelines, and monitor real-time merchandising KPIs across all retail outlets.
                             </p>
                         </div>
 
                         <div class="grid max-w-3xl gap-4 sm:grid-cols-2">
                             <div class="glass-panel min-h-32 rounded-2xl p-5">
                                 <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-ash">Progress</p>
-                                <p class="mt-3 text-lg font-semibold leading-snug">Live dashboards for every activation.</p>
+                                <p class="mt-3 text-lg font-semibold leading-snug">Real-time coverage &amp; route tracking for every field team.</p>
                             </div>
                             <div class="glass-panel min-h-32 rounded-2xl p-5">
                                 <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-ash">Collaboration</p>
-                                <p class="mt-3 text-lg font-semibold leading-snug">Shared updates, tasks, and assets.</p>
+                                <p class="mt-3 text-lg font-semibold leading-snug">Shared PJP schedules, form surveys, &amp; image evidence.</p>
                             </div>
                             <div class="glass-panel min-h-32 rounded-2xl p-5">
                                 <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-ash">Performance</p>
-                                <p class="mt-3 text-lg font-semibold leading-snug">Visibility into wins and risks.</p>
+                                <p class="mt-3 text-lg font-semibold leading-snug">Instant visibility into OSA, NPD, MHS &amp; Share of Shelf.</p>
                             </div>
                             <div class="glass-panel min-h-32 rounded-2xl p-5">
                                 <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-ash">Governance</p>
-                                <p class="mt-3 text-lg font-semibold leading-snug">Admin control for approvals and roles.</p>
+                                <p class="mt-3 text-lg font-semibold leading-snug">Role-based workspace access for agents, supervisors &amp; clients.</p>
                             </div>
                         </div>
                     </section>

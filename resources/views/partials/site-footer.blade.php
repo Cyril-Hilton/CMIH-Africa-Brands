@@ -1,4 +1,4 @@
-﻿<footer class="border-t border-brand-white/10 bg-brand-black/80">
+<footer class="border-t border-brand-white/10 bg-brand-black/80">
     <div class="mx-auto grid gap-10 px-6 py-12 lg:px-10 md:grid-cols-4 max-w-7xl">
         <div class="space-y-4">
             <p class="text-sm uppercase tracking-[0.4em] text-brand-ash">CMIH Africa</p>
@@ -30,7 +30,6 @@
                 <a href="{{ route('about') }}" class="block hover:text-brand-white">About</a>
                 <a href="{{ route('news') }}" class="block hover:text-brand-white">News</a>
                 <a href="{{ route('contact') }}" class="block hover:text-brand-white">Contact</a>
-                <a href="{{ Route::has('login') ? route('login') : '#' }}" class="block hover:text-brand-white">Internal Portal Login</a>
             </div>
         </div>
 
@@ -91,7 +90,6 @@
                 <a href="{{ route('legal') }}" class="hover:text-brand-white">Legal Notice</a>
                 <a href="{{ route('disclaimer') }}" class="hover:text-brand-white">Disclaimer</a>
                 <a href="{{ route('terms') }}" class="hover:text-brand-white">Terms</a>
-                <a href="{{ Route::has('login') ? route('login') : '#' }}" class="hover:text-brand-white">Internal Portal Login</a>
                 <a href="#" class="hover:text-brand-white">Career Opportunities</a>
             </div>
             <p class="text-[0.65rem]">&copy; 2026 CMIH Africa. All Rights Reserved.</p>
