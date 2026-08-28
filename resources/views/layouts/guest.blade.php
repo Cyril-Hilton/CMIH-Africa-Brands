@@ -74,38 +74,38 @@
                     </button>
                 </header>
 
-                <main class="grid flex-1 items-start gap-8 py-8 lg:grid-cols-[minmax(0,1fr)_minmax(360px,440px)] lg:gap-12">
-                    <section class="min-w-0 space-y-8 lg:sticky lg:top-8">
-                        <div class="max-w-3xl space-y-4">
-                            <p class="text-xs font-semibold uppercase tracking-[0.38em] text-brand-ash">We Make It Happen</p>
-                            <h1 class="text-4xl font-display leading-[0.9] text-brand-white sm:text-5xl lg:text-6xl">Inside the CMIH Merchandising Hub</h1>
-                            <p class="max-w-2xl text-sm leading-7 text-brand-white/70 sm:text-base">
+                <main class="grid flex-1 items-start gap-6 sm:gap-8 py-4 sm:py-8 lg:grid-cols-[minmax(0,1fr)_minmax(360px,440px)] lg:gap-12">
+                    <section class="min-w-0 space-y-6 sm:space-y-8 lg:sticky lg:top-8">
+                        <div class="max-w-3xl space-y-3 sm:space-y-4">
+                            <p class="text-[10px] sm:text-xs font-semibold uppercase tracking-[0.3em] sm:tracking-[0.38em] text-brand-ash">We Make It Happen</p>
+                            <h1 class="text-3xl sm:text-5xl lg:text-6xl font-display leading-[0.95] sm:leading-[0.9] text-brand-white">Inside the CMIH Merchandising Hub</h1>
+                            <p class="max-w-2xl text-xs sm:text-base leading-6 sm:leading-7 text-brand-white/70">
                                 Track field coverage, coordinate store visits, execute Perfect Store guidelines, and monitor real-time merchandising KPIs across all retail outlets.
                             </p>
                         </div>
 
-                        <div class="grid max-w-3xl gap-4 sm:grid-cols-2">
-                            <div class="glass-panel min-h-32 rounded-2xl p-5">
+                        <div class="grid max-w-3xl gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
+                            <div class="glass-panel min-h-24 sm:min-h-32 rounded-2xl p-4 sm:p-5">
                                 <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-ash">Progress</p>
-                                <p class="mt-3 text-lg font-semibold leading-snug">Real-time coverage &amp; route tracking for every field team.</p>
+                                <p class="mt-2 sm:mt-3 text-sm sm:text-lg font-semibold leading-snug">Real-time coverage &amp; route tracking for every field team.</p>
                             </div>
-                            <div class="glass-panel min-h-32 rounded-2xl p-5">
+                            <div class="glass-panel min-h-24 sm:min-h-32 rounded-2xl p-4 sm:p-5">
                                 <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-ash">Collaboration</p>
-                                <p class="mt-3 text-lg font-semibold leading-snug">Shared PJP schedules, form surveys, &amp; image evidence.</p>
+                                <p class="mt-2 sm:mt-3 text-sm sm:text-lg font-semibold leading-snug">Shared PJP schedules, form surveys, &amp; image evidence.</p>
                             </div>
-                            <div class="glass-panel min-h-32 rounded-2xl p-5">
+                            <div class="glass-panel min-h-24 sm:min-h-32 rounded-2xl p-4 sm:p-5">
                                 <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-ash">Performance</p>
-                                <p class="mt-3 text-lg font-semibold leading-snug">Instant visibility into OSA, NPD, MHS &amp; Share of Shelf.</p>
+                                <p class="mt-2 sm:mt-3 text-sm sm:text-lg font-semibold leading-snug">Instant visibility into OSA, NPD, MHS &amp; Share of Shelf.</p>
                             </div>
-                            <div class="glass-panel min-h-32 rounded-2xl p-5">
+                            <div class="glass-panel min-h-24 sm:min-h-32 rounded-2xl p-4 sm:p-5">
                                 <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-brand-ash">Governance</p>
-                                <p class="mt-3 text-lg font-semibold leading-snug">Role-based workspace access for agents, supervisors &amp; clients.</p>
+                                <p class="mt-2 sm:mt-3 text-sm sm:text-lg font-semibold leading-snug">Role-based workspace access for agents, supervisors &amp; clients.</p>
                             </div>
                         </div>
                     </section>
 
                     <section class="w-full max-w-md justify-self-center lg:justify-self-end">
-                        <div class="rounded-2xl border border-brand-white/10 bg-brand-black/78 p-5 shadow-2xl shadow-black/50 backdrop-blur-xl sm:p-7 lg:p-8">
+                        <div class="rounded-2xl border border-brand-white/10 bg-brand-black/78 p-4 sm:p-7 lg:p-8 shadow-2xl shadow-black/50 backdrop-blur-xl">
                             {{ $slot }}
                         </div>
                     </section>

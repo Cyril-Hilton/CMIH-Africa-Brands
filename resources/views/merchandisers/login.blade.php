@@ -44,7 +44,6 @@
                         </div>
                         <div class="min-w-0">
                             <p class="text-xs font-bold text-brand-white truncate">{{ $tenantDef['name'] }}</p>
-                            <p class="text-[10px] text-brand-ash truncate">{{ $tenantDef['code'] === 'unilever' ? 'Blue & White' : 'Black & Gold' }}</p>
                         </div>
                     </button>
                 @endforeach
