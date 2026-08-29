@@ -231,7 +231,7 @@ class MerchandiserPortalTest extends TestCase
                 ->assertSee('data-merch-tenant="'.$tenant.'"', false)
                 ->assertSee(
                     $tenant === 'unilever'
-                        ? 'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/DARK%20THEME/Unilever%20white.png'
+                        ? 'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/DARK%20THEME/Unilever%20mark%20white.png'
                         : 'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/DARK%20THEME/Guinness%20mark%20light.png',
                     false
                 )
@@ -244,7 +244,7 @@ class MerchandiserPortalTest extends TestCase
     public function merchandiser_login_and_registration_use_public_brand_logo_assets()
     {
         $expectedLogos = [
-            'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/LIGHT%20THEME/Unilever%20black.png',
+            'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/LIGHT%20THEME/Unilever%20mark%20black.png',
             'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/LIGHT%20THEME/Guinness%20mark%20dark.png',
         ];
 

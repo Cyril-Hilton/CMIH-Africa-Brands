@@ -9,7 +9,7 @@ final class MerchandiserTenant
 {
     public const UNILEVER = 'unilever';
     public const GGBL = 'ggbl';
-    private const ASSET_VERSION = '20260828b';
+    private const ASSET_VERSION = '20260829';
 
     /**
      * @return array<string, array<string, string>>
@@ -33,8 +33,8 @@ final class MerchandiserTenant
                 'muted' => '#4D4D4D',
                 'sidebar' => '#0F0E9A',
                 'sidebar_ink' => '#FFFFFF',
-                'logo' => 'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/DARK%20THEME/Unilever%20white.png'.$assetVersion,
-                'workspace_logo' => 'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/LIGHT%20THEME/Unilever%20black.png'.$assetVersion,
+                'logo' => 'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/DARK%20THEME/Unilever%20mark%20white.png'.$assetVersion,
+                'workspace_logo' => 'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/LIGHT%20THEME/Unilever%20mark%20black.png'.$assetVersion,
                 'logo_filter' => 'none',
             ],
             self::GGBL => [
