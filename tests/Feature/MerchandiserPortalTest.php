@@ -232,7 +232,7 @@ class MerchandiserPortalTest extends TestCase
                 ->assertSee(
                     $tenant === 'unilever'
                         ? 'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/DARK%20THEME/Unilever%20white.png'
-                        : 'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/DARK%20THEME/Guinness%20light.png',
+                        : 'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/DARK%20THEME/Guinness%20mark%20light.png',
                     false
                 )
                 ->assertSee('data-no-fallback="true"', false)
@@ -245,7 +245,7 @@ class MerchandiserPortalTest extends TestCase
     {
         $expectedLogos = [
             'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/LIGHT%20THEME/Unilever%20black.png',
-            'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/LIGHT%20THEME/Guinness%20dark.png',
+            'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/LIGHT%20THEME/Guinness%20mark%20dark.png',
         ];
 
         foreach ([route('merchandisers.login'), route('merchandisers.register')] as $url) {

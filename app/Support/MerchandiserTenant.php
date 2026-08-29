@@ -9,7 +9,7 @@ final class MerchandiserTenant
 {
     public const UNILEVER = 'unilever';
     public const GGBL = 'ggbl';
-    private const ASSET_VERSION = '20260828';
+    private const ASSET_VERSION = '20260828b';
 
     /**
      * @return array<string, array<string, string>>
@@ -51,9 +51,9 @@ final class MerchandiserTenant
                 'muted' => '#A6A6A6',
                 'sidebar' => '#000000',
                 'sidebar_ink' => '#FDF9F2',
-                'logo' => 'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/DARK%20THEME/Guinness%20light.png'.$assetVersion,
-                'workspace_logo' => 'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/LIGHT%20THEME/Guinness%20dark.png'.$assetVersion,
-                'logo_filter' => 'none',
+                'logo' => 'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/DARK%20THEME/Guinness%20mark%20light.png'.$assetVersion,
+                'workspace_logo' => 'images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/LIGHT%20THEME/Guinness%20mark%20dark.png'.$assetVersion,
+                'logo_filter' => 'brightness(0) invert(1)',
             ],
         ];
     }
