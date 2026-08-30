@@ -886,6 +886,30 @@ class MerchandiserController extends Controller
         return false;
     }
 
+    private function routeAssignmentForVisit(
+        User $user,
+        Outlet $outlet,
+        Carbon $date,
+        MerchandiserRoutePlanner $routePlanner
+    ): array {
+        $todayAssignments = $routePlanner->assignmentsForDate($user, $date->copy());
+        $routeAssignment = $todayAssignments->firstWhere('outlet_id', (int) $outlet->id);
+
+        if (! $routeAssignment) {
+            $routeAssignment = MerchandiserOutletAssignment::where('user_id', $user->id)
+                ->where('outlet_id', $outlet->id)
+                ->whereDate('assigned_date', $date->toDateString())
+                ->first();
+        }
+
+        $hasAssignmentsForDay = $todayAssignments->isNotEmpty()
+            || MerchandiserOutletAssignment::where('user_id', $user->id)
+                ->whereDate('assigned_date', $date->toDateString())
+                ->exists();
+
+        return [$hasAssignmentsForDay, $routeAssignment];
+    }
+
     /**
      * Handle Clock-In
      */
@@ -922,10 +946,14 @@ class MerchandiserController extends Controller
         $localNow = Carbon::now($timezone);
         $clientRecordedAt = $this->clientRecordedAt($request, $timezone);
         $effectiveLocalTime = ($clientRecordedAt ?: $localNow)->copy()->timezone($timezone);
-        $todayAssignments = $routePlanner->assignmentsForDate($user, $effectiveLocalTime->copy());
-        $routeAssignment = $todayAssignments->firstWhere('outlet_id', (int) $outlet->id);
+        [$hasAssignmentsForDay, $routeAssignment] = $this->routeAssignmentForVisit(
+            $user,
+            $outlet,
+            $effectiveLocalTime->copy(),
+            $routePlanner
+        );
 
-        if ($todayAssignments->isNotEmpty() && ! $routeAssignment) {
+        if ($hasAssignmentsForDay && ! $routeAssignment) {
             abort(403, 'AccessDenied: This outlet is not on your assigned route for today.');
         }
 
@@ -1039,10 +1067,14 @@ class MerchandiserController extends Controller
         $localNow = Carbon::now($timezone);
         $clientRecordedAt = $this->clientRecordedAt($request, $timezone);
         $effectiveLocalTime = ($clientRecordedAt ?: $localNow)->copy()->timezone($timezone);
-        $todayAssignments = $routePlanner->assignmentsForDate($user, $effectiveLocalTime->copy());
-        $routeAssignment = $todayAssignments->firstWhere('outlet_id', (int) $outlet->id);
+        [$hasAssignmentsForDay, $routeAssignment] = $this->routeAssignmentForVisit(
+            $user,
+            $outlet,
+            $effectiveLocalTime->copy(),
+            $routePlanner
+        );
 
-        if ($todayAssignments->isNotEmpty() && ! $routeAssignment) {
+        if ($hasAssignmentsForDay && ! $routeAssignment) {
             abort(403, 'AccessDenied: This outlet is not on your assigned route for today.');
         }
 

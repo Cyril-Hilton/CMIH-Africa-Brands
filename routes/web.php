@@ -464,36 +464,39 @@ Route::prefix('merchandisers')->name('merchandisers.')->group(function () {
     Route::post('/register', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'register'])->name('register.store');
     
     Route::middleware(['auth', 'active', 'identity_docs'])->group(function () {
-        Route::get('/dashboard', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'dashboard'])->name('dashboard');
-        Route::post('/outlets', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'storeOutlet'])->name('outlets.store');
-        Route::patch('/outlets/{outlet}/coordinates', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'updateOutletCoordinates'])->name('outlets.coordinates.update');
-        Route::post('/pcm-clock-in', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'clockInPcm'])->name('pcm-clock-in');
-        Route::post('/clock-in', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'clockIn'])->name('clock-in');
-        Route::post('/clock-out', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'clockOut'])->name('clock-out');
-        Route::get('/visit/{outlet}', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'visit'])->name('visit');
-        Route::post('/visit/{outlet}/ai-detect', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'analyzeVisitShelf'])->name('visit.ai-detect');
-        Route::get('/visit/{outlet}/ai-detect/{token}', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'aiDetectionStatus'])->name('visit.ai-detect.status');
-        Route::post('/visit/{outlet}', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'storeVisit'])->name('visit.store');
-        Route::post('/location-ping', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'locationPing'])->name('location-ping');
         Route::post('/logout', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'logout'])->name('logout');
-        
-        // HRM & Financial sub-portal submissions
-        Route::patch('/profile/update', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'updateProfile'])->name('profile.update');
-        Route::post('/profile/photo', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'updateProfilePhoto'])->name('profile.photo.update');
-        Route::post('/leaves', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'submitLeave'])->name('leaves.store');
-        Route::post('/claims', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'submitClaim'])->name('claims.store');
-        Route::post('/loans', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'submitLoan'])->name('loans.store');
-        Route::post('/appraisals', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'submitAppraisal'])->name('appraisals.store');
-        Route::post('/inventory', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'submitInventory'])->name('inventory.store');
-        Route::post('/surveys', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'storeSurvey'])->name('surveys.store');
-        Route::post('/surveys/{survey}/respond', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'submitSurveyResponse'])->name('surveys.respond');
-        Route::post('/google-forms/{form}/complete', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'completeGoogleForm'])->name('google-forms.complete');
-        Route::get('/native-forms/{form}', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'showNativeForm'])->name('native-forms.show');
-        Route::post('/native-forms/{form}', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'submitNativeForm'])->name('native-forms.submit');
-        Route::post('/notifications/{notification}/read', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'markNotificationRead'])->name('notifications.read');
-        Route::get('/reports/{type}/download', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'downloadOwnReport'])
-            ->whereIn('type', ['coverage', 'kpis', 'visits', 'photos', 'summary'])
-            ->name('reports.download');
+
+        Route::middleware(['merchandiser_field'])->group(function () {
+            Route::get('/dashboard', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'dashboard'])->name('dashboard');
+            Route::post('/outlets', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'storeOutlet'])->name('outlets.store');
+            Route::patch('/outlets/{outlet}/coordinates', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'updateOutletCoordinates'])->name('outlets.coordinates.update');
+            Route::post('/pcm-clock-in', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'clockInPcm'])->name('pcm-clock-in');
+            Route::post('/clock-in', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'clockIn'])->name('clock-in');
+            Route::post('/clock-out', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'clockOut'])->name('clock-out');
+            Route::get('/visit/{outlet}', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'visit'])->name('visit');
+            Route::post('/visit/{outlet}/ai-detect', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'analyzeVisitShelf'])->name('visit.ai-detect');
+            Route::get('/visit/{outlet}/ai-detect/{token}', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'aiDetectionStatus'])->name('visit.ai-detect.status');
+            Route::post('/visit/{outlet}', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'storeVisit'])->name('visit.store');
+            Route::post('/location-ping', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'locationPing'])->name('location-ping');
+
+            // HRM & Financial sub-portal submissions
+            Route::patch('/profile/update', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'updateProfile'])->name('profile.update');
+            Route::post('/profile/photo', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'updateProfilePhoto'])->name('profile.photo.update');
+            Route::post('/leaves', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'submitLeave'])->name('leaves.store');
+            Route::post('/claims', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'submitClaim'])->name('claims.store');
+            Route::post('/loans', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'submitLoan'])->name('loans.store');
+            Route::post('/appraisals', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'submitAppraisal'])->name('appraisals.store');
+            Route::post('/inventory', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'submitInventory'])->name('inventory.store');
+            Route::post('/surveys', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'storeSurvey'])->name('surveys.store');
+            Route::post('/surveys/{survey}/respond', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'submitSurveyResponse'])->name('surveys.respond');
+            Route::post('/google-forms/{form}/complete', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'completeGoogleForm'])->name('google-forms.complete');
+            Route::get('/native-forms/{form}', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'showNativeForm'])->name('native-forms.show');
+            Route::post('/native-forms/{form}', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'submitNativeForm'])->name('native-forms.submit');
+            Route::post('/notifications/{notification}/read', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'markNotificationRead'])->name('notifications.read');
+            Route::get('/reports/{type}/download', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'downloadOwnReport'])
+                ->whereIn('type', ['coverage', 'kpis', 'visits', 'photos', 'summary'])
+                ->name('reports.download');
+        });
 
         // ── Merchandiser Supervisor Portal ─────────────────────
         Route::prefix('supervisor')->name('supervisor.')->group(function () {

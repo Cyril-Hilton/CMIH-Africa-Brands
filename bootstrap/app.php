@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role'   => \App\Http\Middleware\EnsureUserHasRole::class,
             'clocked_in' => \App\Http\Middleware\EnsureUserIsClockedIn::class,
             'identity_docs' => \App\Http\Middleware\EnsureIdentityDocumentComplete::class,
+            'merchandiser_field' => \App\Http\Middleware\EnsureMerchandiserFieldAgent::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

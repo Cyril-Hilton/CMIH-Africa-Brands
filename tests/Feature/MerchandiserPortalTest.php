@@ -563,6 +563,46 @@ class MerchandiserPortalTest extends TestCase
             ->get(route('merchandisers.client.dashboard'))
             ->assertOk();
     }
+
+    #[Test]
+    public function supervisors_are_blocked_from_field_agent_portal_routes()
+    {
+        $supervisor = User::create([
+            'name' => 'Field Blocked Supervisor',
+            'email' => 'field-blocked-supervisor@cmih.africa',
+            'contact_email' => 'field-blocked-supervisor@personal.com',
+            'phone' => '12345678',
+            'password' => Hash::make('Pass123'),
+            'access_role' => User::MERCHANDISER_SUPERVISOR_ROLE,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($supervisor)
+            ->get(route('merchandisers.dashboard'))
+            ->assertRedirect(route('merchandisers.supervisor.dashboard'));
+
+        $this->actingAs($supervisor)
+            ->post(route('merchandisers.clock-in'), [
+                'latitude' => 5.6037,
+                'longitude' => -0.1870,
+            ])
+            ->assertRedirect(route('merchandisers.supervisor.dashboard'));
+
+        $this->actingAs($supervisor)
+            ->postJson(route('merchandisers.location-ping'), [
+                'latitude' => 5.6037,
+                'longitude' => -0.1870,
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('merchandiser_attendances', [
+            'user_id' => $supervisor->id,
+        ]);
+        $this->assertDatabaseMissing('merchandiser_locations', [
+            'user_id' => $supervisor->id,
+        ]);
+    }
+
     #[Test]
     public function clock_in_window_boundaries_enforced()
     {
