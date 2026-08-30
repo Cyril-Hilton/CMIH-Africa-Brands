@@ -144,6 +144,14 @@ class MerchandiserController extends Controller
                 return back()->withErrors(['email' => 'Your account is suspended.']);
             }
 
+            if ($request->filled('portal_role')
+                && $user->isMerchandiserSupervisor()
+                && $selectedPortalRole !== MerchandiserPortalRole::SUPERVISOR) {
+                return back()
+                    ->withErrors(['email' => 'Supervisor accounts must use the Supervisor tab.'])
+                    ->withInput($request->except('password'));
+            }
+
             if ($user->isMerchandiserSupervisor()) {
                 // Route supervisor directly to supervisor portal
             } elseif ($user->isMerchandiserClient()) {

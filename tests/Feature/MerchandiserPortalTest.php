@@ -27,6 +27,7 @@ use App\Models\Sku;
 use App\Services\MerchandiserRoutePlanner;
 use App\Services\PerfectStoreFormTemplate;
 use App\Services\PerfectStoreKpiService;
+use App\Support\MerchandiserPortalRole;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
@@ -483,6 +484,39 @@ class MerchandiserPortalTest extends TestCase
         $response->assertRedirect(route('merchandisers.supervisor.dashboard'));
         $this->assertAuthenticatedAs($supervisor);
     }
+
+    #[Test]
+    public function supervisor_credentials_are_rejected_from_the_field_agent_login_tab()
+    {
+        User::create([
+            'name' => 'Wrong Tab Supervisor',
+            'email' => 'wrong-tab-supervisor@cmih.africa',
+            'contact_email' => 'wrong-tab-supervisor@personal.com',
+            'phone' => '12345678',
+            'password' => Hash::make('Pass123'),
+            'access_role' => User::MERCHANDISER_SUPERVISOR_ROLE,
+            'status' => 'active',
+        ]);
+
+        $this->from(route('merchandisers.login'))->post(route('merchandisers.login'), [
+            'email' => 'wrong-tab-supervisor@cmih.africa',
+            'password' => 'Pass123',
+            'portal_role' => MerchandiserPortalRole::FIELD,
+            'merchandiser_tenant' => 'unilever',
+        ])
+            ->assertRedirect(route('merchandisers.login'))
+            ->assertSessionHasErrors(['email' => 'Supervisor accounts must use the Supervisor tab.']);
+
+        $this->assertGuest();
+
+        $this->post(route('merchandisers.login'), [
+            'email' => 'wrong-tab-supervisor@cmih.africa',
+            'password' => 'Pass123',
+            'portal_role' => MerchandiserPortalRole::SUPERVISOR,
+            'merchandiser_tenant' => 'unilever',
+        ])->assertRedirect(route('merchandisers.supervisor.dashboard'));
+    }
+
     #[Test]
     public function new_merchandiser_registration_notifies_brands_team_admins()
     {
