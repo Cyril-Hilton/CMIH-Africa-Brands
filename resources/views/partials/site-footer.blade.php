@@ -36,7 +36,7 @@
         <div class="space-y-4">
             <div class="space-y-2">
                 <p class="text-xs uppercase tracking-[0.3em] text-brand-ash">Resources</p>
-                <a href="https://drive.google.com/file/d/1h-BkGAwojxbuDSLRFR8Ui3R_g2pHLlvN/view?usp=drive_link" target="_blank" rel="noreferrer" class="inline-flex items-center gap-2 text-sm text-brand-white hover:text-brand-ash">
+                <a href="https://drive.google.com/file/d/1gPAhRytk3oYYn6avE4dZBK9P4hhmaSu0/view?usp=drive_link" target="_blank" rel="noreferrer" class="inline-flex items-center gap-2 text-sm text-brand-white hover:text-brand-ash">
                     Download Company Profile (PDF)
                 </a>
             </div>
