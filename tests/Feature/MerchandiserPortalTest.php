@@ -4971,6 +4971,37 @@ class MerchandiserPortalTest extends TestCase
         $this->assertStringNotContainsString('[98.5,96.0,97.2,99.0,95.5,93.0,90.0]', $html);
         $this->assertStringNotContainsString('[14,18,22,16,12,20]', $html);
 
+        preg_match('/data-perfect-store-overview-charts>(.*?)<\/script>/s', $html, $payloadMatch);
+        $this->assertNotEmpty($payloadMatch[1] ?? null);
+        $payload = json_decode($payloadMatch[1], true, 512, JSON_THROW_ON_ERROR);
+        $expectedPeriods = ['daily', 'weekly', 'monthly', 'yearly'];
+        $expectedCharts = [
+            'perfectStoreMetricRadarChart',
+            'perfectStoreMerchChart',
+            'perfectStoreKdChart',
+            'kdVisitsChart',
+            'assetsChart',
+            'outletsRegionChart',
+            'outletsChannelChart',
+            'clockCoverageChart',
+            'attendanceChart',
+        ];
+
+        foreach ($expectedCharts as $chartId) {
+            $this->assertArrayHasKey($chartId, $payload['periods']);
+            foreach ($expectedPeriods as $period) {
+                $this->assertArrayHasKey($period, $payload['periods'][$chartId]);
+            }
+        }
+
+        foreach ($expectedPeriods as $period) {
+            $this->assertIsArray($payload['periods']['perfectStoreMetricRadarChart'][$period]['actual']);
+            $this->assertIsArray($payload['periods']['perfectStoreMetricRadarChart'][$period]['targets']);
+            $this->assertIsArray($payload['periods']['perfectStoreMerchChart'][$period]['data']);
+            $this->assertIsArray($payload['periods']['perfectStoreKdChart'][$period]['data']);
+            $this->assertIsArray($payload['periods']['attendanceChart'][$period]['values']);
+        }
+
         Carbon::setTestNow();
     }
 }

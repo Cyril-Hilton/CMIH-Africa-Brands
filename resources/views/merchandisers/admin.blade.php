@@ -891,6 +891,7 @@ function initPerfectStoreOverviewCharts() {
     // Refresh the global period store from the current region before rebuilding charts.
     if (payload.periods && typeof payload.periods === 'object') {
         window.adminChartDatasets = Object.assign({}, window.adminChartDatasets || {}, payload.periods);
+        window.attendancePeriodDatasets = window.adminChartDatasets.attendanceChart || {};
     }
 
     const radarWeekly = {
@@ -1085,9 +1086,9 @@ window.switchAttendancePeriod = function(period) {
 
     const data = window.attendancePeriodDatasets[period];
     if (!data) return;
-    chart.data.labels = data.labels;
-    chart.data.datasets[0].data = data.values;
-    chart.options.scales.y.max = data.max;
+    chart.data.labels = Array.isArray(data.labels) ? data.labels.slice() : [];
+    chart.data.datasets[0].data = Array.isArray(data.values) ? data.values.slice() : [];
+    chart.options.scales.y.max = Number.isFinite(data.max) ? data.max : 1;
     chart.update();
 };
 
