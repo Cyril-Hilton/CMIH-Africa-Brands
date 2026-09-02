@@ -1,4 +1,9 @@
 <x-guest-layout>
+    @push('head')
+        @foreach($merchandiserTenants as $tenantDef)
+            <link rel="preload" as="image" href="{{ asset($tenantDef['workspace_logo'] ?? $tenantDef['logo']) }}" fetchpriority="high">
+        @endforeach
+    @endpush
     <div class="space-y-5 sm:space-y-6 min-w-0 max-w-full">
         <!-- Header -->
         <div class="space-y-1.5 sm:space-y-2">

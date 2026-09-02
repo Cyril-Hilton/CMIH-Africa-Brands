@@ -3,7 +3,11 @@ const CORE_ASSETS = [
   '/manifest.json',
   '/images/logo/favicon.png',
   '/images/logo/icon-192.png',
-  '/images/logo/icon-512.png'
+  '/images/logo/icon-512.png',
+  '/images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/DARK%20THEME/Unilever%20mark%20white.png',
+  '/images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/LIGHT%20THEME/Unilever%20mark%20black.png',
+  '/images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/DARK%20THEME/Guinness%20mark%20light.png',
+  '/images/CMIH%20WEB%20ASSETS/BRAND%20LOGOS/LIGHT%20THEME/Guinness%20mark%20dark.png'
 ];
 
 const DEFAULT_NOTIFICATION_URL = self.location.hostname.startsWith('brands.')
@@ -59,23 +63,22 @@ const cacheResponse = async (request, response) => {
   await cache.put(request, response.clone());
 };
 
-const networkFirstAsset = async (request) => {
-  try {
-    const freshRequest = new Request(request, { cache: 'reload' });
-    const response = await fetch(freshRequest);
+const staleWhileRevalidateAsset = async (request, event) => {
+  const cachedResponse = await caches.match(request, { ignoreSearch: true });
+  const refresh = fetch(request).then(async (response) => {
     await cacheResponse(request, response).catch(() => null);
     return response;
-  } catch (error) {
-    const cachedResponse = await caches.match(request);
-    if (cachedResponse) {
-      return cachedResponse;
-    }
+  });
 
-    return new Response('Offline resource not available', {
-      status: 503,
-      statusText: 'Service Unavailable',
-    });
+  if (cachedResponse) {
+    event.waitUntil(refresh.catch(() => null));
+    return cachedResponse;
   }
+
+  return refresh.catch(() => new Response('Offline resource not available', {
+    status: 503,
+    statusText: 'Service Unavailable',
+  }));
 };
 
 self.addEventListener('install', (event) => {
@@ -124,7 +127,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (isImageRequest(event.request)) {
-    event.respondWith(networkFirstAsset(event.request));
+    event.respondWith(staleWhileRevalidateAsset(event.request, event));
     return;
   }
 

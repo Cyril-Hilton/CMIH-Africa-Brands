@@ -2,6 +2,11 @@
     @php
         $merchTenant = \App\Support\MerchandiserTenant::theme($activeTenant);
     @endphp
+    @push('head')
+        @foreach($merchandiserTenants as $tenantDef)
+            <link rel="preload" as="image" href="{{ asset($tenantDef['workspace_logo'] ?? $tenantDef['logo']) }}" fetchpriority="high">
+        @endforeach
+    @endpush
     <div class="space-y-6" x-data="{
         activeRole: @js($activeRole),
         activeTenant: @js($activeTenant),
