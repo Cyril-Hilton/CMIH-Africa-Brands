@@ -4886,6 +4886,34 @@ class MerchandiserPortalTest extends TestCase
             ->assertSee('KPI Chart Agent')
             ->assertSee('Chart KD');
 
+        $historicalActivityDate = Carbon::create(2026, 8, 23, 10, 0, 0, 'Africa/Accra');
+        $visit->forceFill([
+            'created_at' => $historicalActivityDate,
+            'updated_at' => $historicalActivityDate,
+        ])->saveQuietly();
+        MerchandiserOutletAssignment::where('visit_id', $visit->id)->update([
+            'assigned_date' => $historicalActivityDate->toDateString(),
+            'completed_at' => $historicalActivityDate,
+        ]);
+
+        $customRangeResponse = $this->actingAs($admin)->get(route('merchandisers.admin.tab', [
+            'adminTab' => 'overview',
+            'clock_from' => '2026-08-23',
+            'clock_to' => '2026-08-23',
+        ]));
+        $customRangeResponse->assertOk();
+        preg_match('/data-perfect-store-overview-charts>(.*?)<\/script>/s', $customRangeResponse->getContent(), $payloadMatch);
+        $this->assertNotEmpty($payloadMatch[1] ?? null);
+        $customPayload = json_decode($payloadMatch[1], true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame(
+            $customPayload['metrics']['actual'],
+            $customPayload['periods']['perfectStoreMetricRadarChart']['weekly']['actual']
+        );
+        $this->assertSame(
+            $customPayload['metrics']['targets'],
+            $customPayload['periods']['perfectStoreMetricRadarChart']['weekly']['targets']
+        );
+
         $this->actingAs($admin)
             ->get(route('merchandisers.admin.tab', ['adminTab' => 'supervisor-dashboard']))
             ->assertOk()

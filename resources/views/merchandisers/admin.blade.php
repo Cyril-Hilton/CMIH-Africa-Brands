@@ -845,13 +845,14 @@ window.adminChartDatasets = window.adminChartDatasets || {};
 function getAdminChartPeriodData(chartId, period, fallback = {}) {
     const source = window.adminChartDatasets?.[chartId]?.[period] || {};
     const legacyData = Array.isArray(source) ? source : source.data;
+    const copy = (value) => Array.isArray(value) ? value.slice() : [];
 
     return {
-        labels: Array.isArray(source.labels) ? source.labels : (fallback.labels || []),
-        data: Array.isArray(legacyData) ? legacyData : (fallback.data || []),
-        actual: Array.isArray(source.actual) ? source.actual : null,
-        targets: Array.isArray(source.targets) ? source.targets : null,
-        values: Array.isArray(source.values) ? source.values : (fallback.values || []),
+        labels: Array.isArray(source.labels) ? copy(source.labels) : copy(fallback.labels),
+        data: Array.isArray(legacyData) ? copy(legacyData) : copy(fallback.data),
+        actual: Array.isArray(source.actual) ? copy(source.actual) : null,
+        targets: Array.isArray(source.targets) ? copy(source.targets) : null,
+        values: Array.isArray(source.values) ? copy(source.values) : copy(fallback.values),
         max: Number.isFinite(source.max) ? source.max : (fallback.max || 1),
     };
 }
@@ -866,16 +867,16 @@ window.switchAdminChartPeriod = function(chartId, period) {
     if (!chartPeriods || !Object.prototype.hasOwnProperty.call(chartPeriods, period)) return;
 
     const dataset = getAdminChartPeriodData(chartId, period);
-    chart.data.labels = dataset.labels;
+    chart.data.labels = dataset.labels.slice();
     if (dataset.actual) {
-        chart.data.datasets[0].data = dataset.actual;
+        chart.data.datasets[0].data = dataset.actual.slice();
     } else if (dataset.data.length) {
-        chart.data.datasets[0].data = dataset.data;
+        chart.data.datasets[0].data = dataset.data.slice();
     } else {
         chart.data.datasets[0].data = [];
     }
     if (dataset.targets && chart.data.datasets[1]) {
-        chart.data.datasets[1].data = dataset.targets;
+        chart.data.datasets[1].data = dataset.targets.slice();
     }
     chart.update();
 };
@@ -886,6 +887,24 @@ function initPerfectStoreOverviewCharts() {
     const payload = readPerfectStoreOverviewChartData();
     if (!payload) return;
 
+    // The overview region can be replaced without re-executing its inline scripts.
+    // Refresh the global period store from the current region before rebuilding charts.
+    if (payload.periods && typeof payload.periods === 'object') {
+        window.adminChartDatasets = Object.assign({}, window.adminChartDatasets || {}, payload.periods);
+    }
+
+    const radarWeekly = {
+        labels: Array.isArray(payload.metrics?.labels) ? payload.metrics.labels.slice() : [],
+        actual: Array.isArray(payload.metrics?.actual) ? payload.metrics.actual.slice() : [],
+        targets: Array.isArray(payload.metrics?.targets) ? payload.metrics.targets.slice() : [],
+    };
+    window.adminChartDatasets = window.adminChartDatasets || {};
+    window.adminChartDatasets.perfectStoreMetricRadarChart = Object.assign(
+        {},
+        window.adminChartDatasets.perfectStoreMetricRadarChart || {},
+        { weekly: radarWeekly }
+    );
+
     const themeColors = getChartThemeColors();
 
     const perfectMetricRadarCtx = document.getElementById('perfectStoreMetricRadarChart');
@@ -894,11 +913,11 @@ function initPerfectStoreOverviewCharts() {
         new Chart(perfectMetricRadarCtx, {
             type: 'radar',
             data: {
-                labels: payload.metrics?.labels || [],
+                labels: radarWeekly.labels,
                 datasets: [
                     {
                         label: 'Actual',
-                        data: payload.metrics?.actual || [],
+                        data: radarWeekly.actual,
                         backgroundColor: 'rgba(239,68,68,0.2)',
                         borderColor: 'rgba(239,68,68,0.95)',
                         borderWidth: 2,
@@ -906,7 +925,7 @@ function initPerfectStoreOverviewCharts() {
                     },
                     {
                         label: 'Target',
-                        data: payload.metrics?.targets || [],
+                        data: radarWeekly.targets,
                         backgroundColor: 'rgba(34,197,94,0.1)',
                         borderColor: 'rgba(34,197,94,0.85)',
                         borderDash: [4, 4],

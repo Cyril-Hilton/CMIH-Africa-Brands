@@ -259,6 +259,23 @@
                             ],
                         ];
 
+                        // Keep the Weekly toggle aligned with the data rendered on first load,
+                        // including when the admin has supplied a custom date range.
+                        $realAdminChartDatasets['perfectStoreMetricRadarChart']['weekly'] = [
+                            'labels' => $perfectMetricLabels,
+                            'actual' => $perfectMetricValues,
+                            'targets' => $perfectTargetValues->values()->all(),
+                        ];
+                        $realAdminChartDatasets['perfectStoreMerchChart']['weekly'] = [
+                            'labels' => $perfectMerchChartLabels->values()->all(),
+                            'data' => $perfectMerchChartScores->values()->all(),
+                        ];
+                        $realAdminChartDatasets['perfectStoreKdChart']['weekly'] = [
+                            'labels' => $perfectKdChartLabels->values()->all(),
+                            'data' => $perfectKdChartScores->values()->all(),
+                        ];
+                        $perfectOverviewChartPayload['periods'] = $realAdminChartDatasets;
+
                         $execKpis = [
                             [
                                 'key'    => 'coverage',
