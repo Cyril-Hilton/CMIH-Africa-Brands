@@ -376,6 +376,30 @@ class MerchandiserPortalTest extends TestCase
     }
 
     #[Test]
+    public function merchandiser_admin_overview_shows_zero_state_kpis_instead_of_na_without_scored_visits()
+    {
+        $brandUser = User::create([
+            'name' => 'Zero State Admin',
+            'email' => 'zero-state-admin@cmih.africa',
+            'contact_email' => 'zero-state-admin.personal@example.com',
+            'phone' => '12345678',
+            'password' => Hash::make('Pass123'),
+            'access_role' => 'staff',
+            'job_level' => 'executive',
+            'department' => 'brands_marketing',
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($brandUser)
+            ->get(route('merchandisers.admin.dashboard', ['tab' => 'overview']))
+            ->assertOk()
+            ->assertSeeInOrder(['OSA', '0.0%', 'Target 95%'], false)
+            ->assertSeeInOrder(['NPD', '0.0%', 'All-or-nothing per store'], false)
+            ->assertSeeInOrder(['Share of Shelf', '0.0%'], false)
+            ->assertDontSee('N/A', false);
+    }
+
+    #[Test]
     public function brands_team_member_can_use_existing_cmih_credentials_for_merchandiser_admin()
     {
         $brandUser = User::create([

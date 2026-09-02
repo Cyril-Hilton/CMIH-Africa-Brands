@@ -242,7 +242,7 @@
 
                         $perfectOverview = $activeSummary['overview'] ?? [];
                         $perfectTargets = $activeSummary['targets'] ?? [];
-                        $metricLabel = fn ($value) => $value === null ? 'N/A' : number_format((float) $value, 1) . '%';
+                        $metricLabel = fn ($value) => number_format((float) ($value ?? 0), 1) . '%';
                         $perfectMetricLabels = ['Coverage', 'OSA', 'NPD', 'MHS', 'Planogram', 'Facing', 'SOS'];
                         $perfectMetricValues = $extractRadarMetrics($activeSummary);
                         $perfectTargetValues = collect(['coverage', 'osa', 'npd', 'mhs', 'planogram', 'facing', 'sos'])
