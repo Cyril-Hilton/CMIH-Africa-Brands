@@ -33,6 +33,7 @@ use App\Models\Announcement;
 use App\Models\Notification;
 use App\Services\NotificationService;
 use App\Services\MerchandiserRoutePlanner;
+use App\Services\PerfectStoreCalculator;
 use App\Services\PerfectStoreFormTemplate;
 use App\Services\PerfectStoreKpiService;
 use App\Support\MerchandiserClockWindows;
@@ -666,6 +667,7 @@ class MerchandiserController extends Controller
             $configuredKpiTargets['sos'] ?? null,
             null,
         ];
+        $homeChartDatasets = $this->homeChartDatasets($user, $timezone);
 
         return view('merchandisers.dashboard', compact(
             'outlets', 'attendances', 'leaves', 'claims', 'loans',
@@ -674,7 +676,7 @@ class MerchandiserController extends Controller
             'pendingOutletsToday', 'pcmClockinToday', 'todaysAssignments',
             'googleForms', 'googleFormCompletionIds', 'nativeFormCompletionIds',
             'selectedDay', 'dayLabels', 'dayOutletCounts', 'currentIsoDay', 'dailyPerformanceChart', 'scheduleLabel',
-            'merchTenant', 'merchKpiRadarValues', 'merchKpiRadarTargets', 'configuredKpiTargets', 'carriedOverCount', 'carriedOverAssignments'
+            'merchTenant', 'merchKpiRadarValues', 'merchKpiRadarTargets', 'configuredKpiTargets', 'homeChartDatasets', 'carriedOverCount', 'carriedOverAssignments'
         ));
     }
 
@@ -2455,6 +2457,155 @@ class MerchandiserController extends Controller
         $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
 
         return $earthRadius * $c;
+    }
+
+    private function homeChartDatasets(User $user, string $timezone): array
+    {
+        $now = Carbon::now($timezone);
+        $yearStart = $now->copy()->startOfYear()->startOfDay();
+        $yearEnd = $now->copy()->endOfYear()->endOfDay();
+        $visits = MerchandiserVisit::with('visitSkus.sku')
+            ->where('user_id', $user->id)
+            ->whereBetween('created_at', [$yearStart, $yearEnd])
+            ->get();
+        $assignments = MerchandiserOutletAssignment::where('user_id', $user->id)
+            ->whereDate('assigned_date', '>=', $yearStart->toDateString())
+            ->whereDate('assigned_date', '<=', $yearEnd->toDateString())
+            ->get();
+
+        $inRange = static function ($model, Carbon $from, Carbon $to, string $column): bool {
+            if (! $model->{$column}) {
+                return false;
+            }
+
+            $value = Carbon::parse($model->{$column});
+
+            return $value->gte($from) && $value->lte($to);
+        };
+
+        $periodRanges = [
+            'daily' => [$now->copy()->startOfDay(), $now->copy()->endOfDay()],
+            'weekly' => [$now->copy()->startOfWeek()->startOfDay(), $now->copy()->endOfWeek()->endOfDay()],
+            'monthly' => [$now->copy()->startOfMonth()->startOfDay(), $now->copy()->endOfMonth()->endOfDay()],
+            'yearly' => [$yearStart, $yearEnd],
+        ];
+
+        $kpiDatasets = [];
+        foreach ($periodRanges as $period => [$from, $to]) {
+            $periodVisits = $visits->filter(fn ($visit) => $inRange($visit, $from, $to, 'created_at'))->values();
+            $periodAssignments = $assignments
+                ->filter(fn ($assignment) => $inRange($assignment, $from, $to, 'assigned_date'))
+                ->values();
+            $latestVisitsByOutlet = $periodVisits
+                ->sortByDesc('created_at')
+                ->groupBy(fn ($visit) => (string) $visit->outlet_id);
+            $storeMetrics = PerfectStoreCalculator::computeMerchandiserMetrics($user, $latestVisitsByOutlet);
+            $visitSkus = $periodVisits->flatMap->visitSkus;
+            $osaCaptures = $visitSkus->filter(fn ($capture) => (bool) $capture->sku?->track_osa);
+            $npdCaptures = $visitSkus->filter(fn ($capture) => (bool) $capture->sku?->track_npd);
+            $mhsCaptures = $visitSkus->filter(fn ($capture) => (bool) $capture->sku?->track_mhs);
+
+            $kpiDatasets[$period] = [
+                'labels' => ['OSA', 'NPD', 'MHS', 'Planogram', 'Facing', 'SOS'],
+                'values' => [
+                    $this->boundedPercent(
+                        $osaCaptures->filter(fn ($capture) => (int) $capture->osa_quantity >= max(1, (int) $capture->sku?->osa_drop_size))->count(),
+                        $osaCaptures->count()
+                    ),
+                    $this->boundedPercent($npdCaptures->filter(fn ($capture) => (bool) $capture->npd_present)->count(), $npdCaptures->count()),
+                    $this->boundedPercent(
+                        $mhsCaptures->filter(fn ($capture) => (int) $capture->osa_quantity >= max(1, (int) $capture->sku?->mhs_drop_size))->count(),
+                        $mhsCaptures->count()
+                    ),
+                    (float) ($storeMetrics['planogram_pct'] ?? 0),
+                    (float) ($storeMetrics['facing_pct'] ?? 0),
+                    (float) ($storeMetrics['sos_pct'] ?? 0),
+                ],
+            ];
+        }
+
+        $trendPoint = function (Carbon $from, Carbon $to) use ($visits, $assignments, $inRange): array {
+            return [
+                'completed' => $visits->filter(fn ($visit) => $inRange($visit, $from, $to, 'created_at'))->count(),
+                'target' => $assignments->filter(fn ($assignment) => $inRange($assignment, $from, $to, 'assigned_date'))->count(),
+            ];
+        };
+
+        $trendDatasets = [];
+        [$dailyFrom, $dailyTo] = $periodRanges['daily'];
+        $dailyPoint = $trendPoint($dailyFrom, $dailyTo);
+        $trendDatasets['daily'] = [
+            'labels' => ['Today'],
+            'completed' => [$dailyPoint['completed']],
+            'target' => [$dailyPoint['target']],
+            'max' => max(1, $dailyPoint['completed'], $dailyPoint['target']),
+        ];
+
+        $weeklyLabels = [];
+        $weeklyCompleted = [];
+        $weeklyTarget = [];
+        $weekStart = $periodRanges['weekly'][0]->copy()->startOfDay();
+        for ($i = 0; $i < 7; $i++) {
+            $from = $weekStart->copy()->addDays($i)->startOfDay();
+            $to = $from->copy()->endOfDay();
+            $point = $trendPoint($from, $to);
+            $weeklyLabels[] = $from->format('D d');
+            $weeklyCompleted[] = $point['completed'];
+            $weeklyTarget[] = $point['target'];
+        }
+        $trendDatasets['weekly'] = [
+            'labels' => $weeklyLabels,
+            'completed' => $weeklyCompleted,
+            'target' => $weeklyTarget,
+            'max' => max(1, ...$weeklyCompleted, ...$weeklyTarget),
+        ];
+
+        $monthlyLabels = [];
+        $monthlyCompleted = [];
+        $monthlyTarget = [];
+        $monthStart = $periodRanges['monthly'][0]->copy()->startOfDay();
+        $monthEnd = $periodRanges['monthly'][1]->copy()->endOfDay();
+        $monthWeekCount = (int) ceil($monthStart->daysInMonth / 7);
+        for ($week = 0; $week < $monthWeekCount; $week++) {
+            $from = $monthStart->copy()->addDays($week * 7)->startOfDay();
+            $to = $from->copy()->addDays(6)->endOfDay();
+            if ($to->gt($monthEnd)) {
+                $to = $monthEnd->copy();
+            }
+            $point = $trendPoint($from, $to);
+            $monthlyLabels[] = 'Week '.($week + 1);
+            $monthlyCompleted[] = $point['completed'];
+            $monthlyTarget[] = $point['target'];
+        }
+        $trendDatasets['monthly'] = [
+            'labels' => $monthlyLabels,
+            'completed' => $monthlyCompleted,
+            'target' => $monthlyTarget,
+            'max' => max(1, ...$monthlyCompleted, ...$monthlyTarget),
+        ];
+
+        $yearlyLabels = [];
+        $yearlyCompleted = [];
+        $yearlyTarget = [];
+        for ($quarter = 0; $quarter < 4; $quarter++) {
+            $from = $yearStart->copy()->addMonths($quarter * 3)->startOfMonth();
+            $to = $from->copy()->addMonths(2)->endOfMonth();
+            $point = $trendPoint($from, $to);
+            $yearlyLabels[] = 'Q'.($quarter + 1);
+            $yearlyCompleted[] = $point['completed'];
+            $yearlyTarget[] = $point['target'];
+        }
+        $trendDatasets['yearly'] = [
+            'labels' => $yearlyLabels,
+            'completed' => $yearlyCompleted,
+            'target' => $yearlyTarget,
+            'max' => max(1, ...$yearlyCompleted, ...$yearlyTarget),
+        ];
+
+        return [
+            'trend' => $trendDatasets,
+            'kpi' => $kpiDatasets,
+        ];
     }
 
     private function boundedPercent(int|float $part, int|float $total): float

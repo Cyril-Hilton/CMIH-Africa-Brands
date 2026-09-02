@@ -376,6 +376,63 @@ class MerchandiserPortalTest extends TestCase
     }
 
     #[Test]
+    public function merchandiser_home_chart_periods_use_the_agents_real_activity(): void
+    {
+        Carbon::setTestNow(Carbon::create(2026, 8, 24, 10, 0, 0, 'Africa/Accra'));
+        $region = Region::create(['name' => 'Accra', 'timezone' => 'Africa/Accra']);
+        $kd = KeyDistributor::create(['name' => 'Home Chart KD', 'region_id' => $region->id]);
+        $outlet = Outlet::create([
+            'name' => 'Home Chart Outlet',
+            'code' => 'HOME-CHART-001',
+            'kd_id' => $kd->id,
+            'region_id' => $region->id,
+            'channel_type' => 'GT',
+            'address' => 'Accra',
+            'latitude' => 5.6037,
+            'longitude' => -0.1870,
+        ]);
+        $user = User::create([
+            'name' => 'Home Chart Agent',
+            'email' => 'home-chart-agent@cmih.africa',
+            'contact_email' => 'home-chart-agent@personal.com',
+            'phone' => '12345678',
+            'date_of_birth' => '1995-05-05',
+            'password' => Hash::make('Pass123'),
+            'access_role' => 'merchandiser',
+            'status' => 'active',
+            'kd_id' => $kd->id,
+            'region_id' => $region->id,
+        ]);
+
+        $todayAssignment = MerchandiserOutletAssignment::create([
+            'user_id' => $user->id,
+            'outlet_id' => $outlet->id,
+            'assigned_date' => '2026-08-24',
+            'status' => 'completed',
+        ]);
+        $oldAssignment = MerchandiserOutletAssignment::create([
+            'user_id' => $user->id,
+            'outlet_id' => $outlet->id,
+            'assigned_date' => '2026-06-20',
+            'status' => 'completed',
+        ]);
+
+        $todayVisit = MerchandiserVisit::create(['user_id' => $user->id, 'outlet_id' => $outlet->id]);
+        $todayVisit->forceFill(['created_at' => Carbon::now('Africa/Accra')->subHour()])->save();
+        $oldVisit = MerchandiserVisit::create(['user_id' => $user->id, 'outlet_id' => $outlet->id]);
+        $oldVisit->forceFill(['created_at' => Carbon::now('Africa/Accra')->subMonths(2)])->save();
+
+        $html = $this->actingAs($user)->get(route('merchandisers.dashboard'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('"daily":{"labels":["Today"],"completed":[1],"target":[1]', $html);
+        $this->assertStringContainsString('"yearly":{"labels":["Q1","Q2","Q3"', $html);
+        $this->assertStringContainsString('"completed":[0,1,1,0],"target":[0,1,1,0]', $html);
+        $this->assertStringNotContainsString('310,340,325,290', $html);
+
+        Carbon::setTestNow();
+    }
+
+    #[Test]
     public function merchandiser_admin_overview_shows_zero_state_kpis_instead_of_na_without_scored_visits()
     {
         $brandUser = User::create([
@@ -4836,6 +4893,55 @@ class MerchandiserPortalTest extends TestCase
             ->assertSee('KPI Chart Agent')
             ->assertSee('leaflet.min.js', false)
             ->assertSee("['tracking', 'supervisor-dashboard']", false);
+
+        Carbon::setTestNow();
+    }
+
+    #[Test]
+    public function overview_chart_periods_are_database_backed_and_do_not_use_static_fallbacks(): void
+    {
+        Carbon::setTestNow(Carbon::create(2026, 8, 24, 10, 0, 0, 'Africa/Accra'));
+
+        $admin = User::findOrFail(1);
+        $region = Region::create(['name' => 'Period Chart Region', 'timezone' => 'Africa/Accra']);
+        $kd = KeyDistributor::create(['name' => 'Period Chart KD', 'region_id' => $region->id]);
+        $outlet = Outlet::create([
+            'name' => 'Period Chart Outlet',
+            'code' => 'PERIOD-CHART-001',
+            'kd_id' => $kd->id,
+            'channel_type' => 'GT',
+        ]);
+        $merchandiser = User::create([
+            'name' => 'Period Chart Agent',
+            'email' => 'period-chart-agent@cmih.africa',
+            'contact_email' => 'period-chart-agent@cmih.africa',
+            'phone' => '0240000001',
+            'date_of_birth' => '1995-05-05',
+            'password' => Hash::make('Pass123'),
+            'access_role' => User::MERCHANDISER_ROLE,
+            'status' => 'active',
+        ]);
+
+        foreach ([now('Africa/Accra')->subHour(), now('Africa/Accra')->subMonths(2)] as $activityDate) {
+            $visit = MerchandiserVisit::create([
+                'user_id' => $merchandiser->id,
+                'outlet_id' => $outlet->id,
+            ]);
+            $visit->forceFill([
+                'created_at' => $activityDate,
+                'updated_at' => $activityDate,
+            ])->saveQuietly();
+        }
+
+        $html = $this->actingAs($admin)
+            ->get(route('merchandisers.admin.tab', ['adminTab' => 'overview']))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('"kdVisitsChart":{"daily":{"labels":["Period Chart KD"],"data":[1]}', $html);
+        $this->assertStringContainsString('"yearly":{"labels":["Period Chart KD"],"data":[2]}', $html);
+        $this->assertStringNotContainsString('[98.5,96.0,97.2,99.0,95.5,93.0,90.0]', $html);
+        $this->assertStringNotContainsString('[14,18,22,16,12,20]', $html);
 
         Carbon::setTestNow();
     }

@@ -198,43 +198,33 @@
                             return $kds->pluck('perfect_store_score')->map(fn ($v) => (float) $v)->values()->all();
                         };
 
-                        $extractCoveragePair = function(array $sum) {
-                            $cov = (float) ($sum['overview']['coverage'] ?? 0);
-                            return [round($cov, 1), round(max(0, 100 - $cov), 1)];
-                        };
+                        $metricKeys = ['coverage', 'osa', 'npd', 'mhs', 'planogram', 'facing', 'sos'];
+                        $perfectMetricLabels = ['Coverage', 'OSA', 'NPD', 'MHS', 'Planogram', 'Facing', 'SOS'];
+                        $realAdminChartDatasets = $adminChartDatasets ?? [];
 
-                        $realAdminChartDatasets = [
-                            'perfectStoreMetricRadarChart' => [
-                                'daily'   => $extractRadarMetrics($periodSummaries['daily']),
-                                'weekly'  => $extractRadarMetrics($periodSummaries['weekly']),
-                                'monthly' => $extractRadarMetrics($periodSummaries['monthly']),
-                                'yearly'  => $extractRadarMetrics($periodSummaries['yearly']),
-                            ],
-                            'perfectStoreMerchChart' => [
-                                'daily'   => $extractMerchScores($periodSummaries['daily']),
-                                'weekly'  => $extractMerchScores($periodSummaries['weekly']),
-                                'monthly' => $extractMerchScores($periodSummaries['monthly']),
-                                'yearly'  => $extractMerchScores($periodSummaries['yearly']),
-                            ],
-                            'perfectStoreKdChart' => [
-                                'daily'   => $extractKdScores($periodSummaries['daily']),
-                                'weekly'  => $extractKdScores($periodSummaries['weekly']),
-                                'monthly' => $extractKdScores($periodSummaries['monthly']),
-                                'yearly'  => $extractKdScores($periodSummaries['yearly']),
-                            ],
-                            'statusChart' => [
-                                'daily'   => [$activeMerchandisers ?? 0, $pendingMerchandisers ?? 0, $suspendedMerchandisers ?? 0],
-                                'weekly'  => [$activeMerchandisers ?? 0, $pendingMerchandisers ?? 0, $suspendedMerchandisers ?? 0],
-                                'monthly' => [$activeMerchandisers ?? 0, $pendingMerchandisers ?? 0, $suspendedMerchandisers ?? 0],
-                                'yearly'  => [$activeMerchandisers ?? 0, $pendingMerchandisers ?? 0, $suspendedMerchandisers ?? 0],
-                            ],
-                            'clockCoverageChart' => [
-                                'daily'   => $extractCoveragePair($periodSummaries['daily']),
-                                'weekly'  => $extractCoveragePair($periodSummaries['weekly']),
-                                'monthly' => $extractCoveragePair($periodSummaries['monthly']),
-                                'yearly'  => $extractCoveragePair($periodSummaries['yearly']),
-                            ],
-                        ];
+                        foreach (['daily', 'weekly', 'monthly', 'yearly'] as $period) {
+                            $summary = $periodSummaries[$period];
+                            $periodMerchandisers = collect($summary['merchandisers'] ?? [])->take(8);
+                            $periodKds = collect($summary['kds'] ?? [])->take(8);
+                            $periodTargets = $summary['targets'] ?? [];
+
+                            $realAdminChartDatasets['perfectStoreMetricRadarChart'][$period] = [
+                                'labels' => $perfectMetricLabels,
+                                'actual' => $extractRadarMetrics($summary),
+                                'targets' => collect($metricKeys)
+                                    ->map(fn ($metric) => (float) ($periodTargets[$metric] ?? 100))
+                                    ->values()
+                                    ->all(),
+                            ];
+                            $realAdminChartDatasets['perfectStoreMerchChart'][$period] = [
+                                'labels' => $periodMerchandisers->pluck('name')->values()->all(),
+                                'data' => $periodMerchandisers->pluck('perfect_store_score')->map(fn ($value) => (float) $value)->values()->all(),
+                            ];
+                            $realAdminChartDatasets['perfectStoreKdChart'][$period] = [
+                                'labels' => $periodKds->pluck('name')->values()->all(),
+                                'data' => $periodKds->pluck('perfect_store_score')->map(fn ($value) => (float) $value)->values()->all(),
+                            ];
+                        }
 
                         $activeSummary = (request()->filled('clock_from') || request()->filled('clock_to'))
                             ? $perfectStoreSummary
@@ -243,9 +233,8 @@
                         $perfectOverview = $activeSummary['overview'] ?? [];
                         $perfectTargets = $activeSummary['targets'] ?? [];
                         $metricLabel = fn ($value) => number_format((float) ($value ?? 0), 1) . '%';
-                        $perfectMetricLabels = ['Coverage', 'OSA', 'NPD', 'MHS', 'Planogram', 'Facing', 'SOS'];
                         $perfectMetricValues = $extractRadarMetrics($activeSummary);
-                        $perfectTargetValues = collect(['coverage', 'osa', 'npd', 'mhs', 'planogram', 'facing', 'sos'])
+                        $perfectTargetValues = collect($metricKeys)
                             ->map(fn ($metric) => (float) ($perfectTargets[$metric] ?? 100))
                             ->values();
                         $perfectMerchChart = collect($activeSummary['merchandisers'] ?? collect())->take(8);
@@ -470,23 +459,16 @@
                     </div>
 
                     <!-- Classy Executive Merchandiser Status Breakdown Section -->
-                    <div x-data="{ statusPeriod: 'weekly' }" class="merch-card rounded-2xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-md mb-6 space-y-6">
+                    <div class="merch-card rounded-2xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-md mb-6 space-y-6">
                         <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
                             <div>
                                 <h3 class="text-xs uppercase tracking-widest text-slate-900 dark:text-white font-extrabold flex items-center gap-2">
                                     <span class="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 text-xs inline-flex items-center justify-center"><i class="fa-solid fa-users text-sm"></i></span>
                                     Merchandiser Status Analytics & Field Readiness
                                 </h3>
-                                <p class="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">Live status breakdown across active, pending activation, and suspended field agents.</p>
+                                <p class="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">Current status breakdown across active, pending activation, and suspended field agents.</p>
                             </div>
                             <div class="flex items-center gap-3 flex-wrap">
-                                <!-- Period Filter Pills -->
-                                <div class="inline-flex shrink-0 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 p-0.5">
-                                    <button type="button" @click="statusPeriod = 'daily'; switchAdminChartPeriod('statusChart', 'daily')" :class="statusPeriod === 'daily' ? 'bg-[#0F0E9A] text-white shadow-xs font-black' : 'text-slate-600 dark:text-slate-400 font-bold hover:text-slate-900 dark:hover:text-white'" class="rounded-lg px-2 py-0.5 text-[9px] uppercase transition">Daily</button>
-                                    <button type="button" @click="statusPeriod = 'weekly'; switchAdminChartPeriod('statusChart', 'weekly')" :class="statusPeriod === 'weekly' ? 'bg-[#0F0E9A] text-white shadow-xs font-black' : 'text-slate-600 dark:text-slate-400 font-bold hover:text-slate-900 dark:hover:text-white'" class="rounded-lg px-2 py-0.5 text-[9px] uppercase transition">Weekly</button>
-                                    <button type="button" @click="statusPeriod = 'monthly'; switchAdminChartPeriod('statusChart', 'monthly')" :class="statusPeriod === 'monthly' ? 'bg-[#0F0E9A] text-white shadow-xs font-black' : 'text-slate-600 dark:text-slate-400 font-bold hover:text-slate-900 dark:hover:text-white'" class="rounded-lg px-2 py-0.5 text-[9px] uppercase transition">Monthly</button>
-                                    <button type="button" @click="statusPeriod = 'yearly'; switchAdminChartPeriod('statusChart', 'yearly')" :class="statusPeriod === 'yearly' ? 'bg-[#0F0E9A] text-white shadow-xs font-black' : 'text-slate-600 dark:text-slate-400 font-bold hover:text-slate-900 dark:hover:text-white'" class="rounded-lg px-2 py-0.5 text-[9px] uppercase transition">Yearly</button>
-                                </div>
                                 <div class="flex items-center gap-2">
                                     <span class="text-[10px] font-extrabold px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">Active: {{ $activeMerchandisers ?? 0 }}</span>
                                     <span class="text-[10px] font-extrabold px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">Pending: {{ $pendingMerchandisers ?? 0 }}</span>

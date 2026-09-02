@@ -528,6 +528,10 @@ class MerchandiserAdminHubController extends Controller
             ];
         }
 
+        $adminChartDatasets = $activeTab === 'overview'
+            ? $this->adminOverviewChartDatasets()
+            : [];
+
         // ── Recent Share Links ─────────────────────────────────────────────────
         $recentReports = $activeTab === 'overview'
             ? MerchandiserReport::where('created_by', auth()->id())
@@ -1130,6 +1134,7 @@ class MerchandiserAdminHubController extends Controller
             'recentReports',
             'visitsByKd', 'assetsByItem',
             'outletsByRegion', 'outletsByChannel', 'clockCoverageChart',
+            'adminChartDatasets',
             'clockSettings',
             'skus', 'skuCount', 'skuReferenceCount', 'skuCategories', 'skuAiConfigured',
             'coverageMonth', 'coverageWeek', 'coverageStart', 'coverageEnd',
@@ -2814,6 +2819,161 @@ class MerchandiserAdminHubController extends Controller
         }
 
         return $query;
+    }
+
+    /**
+     * Build the period payload used by every filterable chart on the admin overview.
+     * The client only changes chart state; all measurements remain server-calculated.
+     */
+    private function adminOverviewChartDatasets(): array
+    {
+        $timezone = 'Africa/Accra';
+        $now = Carbon::now($timezone);
+        $ranges = [
+            'daily' => [$now->copy()->startOfDay(), $now->copy()->endOfDay()],
+            'weekly' => [$now->copy()->startOfWeek()->startOfDay(), $now->copy()->endOfWeek()->endOfDay()],
+            'monthly' => [$now->copy()->startOfMonth()->startOfDay(), $now->copy()->endOfMonth()->endOfDay()],
+            'yearly' => [$now->copy()->startOfYear()->startOfDay(), $now->copy()->endOfYear()->endOfDay()],
+        ];
+
+        $datasets = [
+            'kdVisitsChart' => [],
+            'assetsChart' => [],
+            'outletsRegionChart' => [],
+            'outletsChannelChart' => [],
+            'clockCoverageChart' => [],
+            'attendanceChart' => [],
+        ];
+
+        $activeMerchandiserCount = User::merchandisers()->where('status', 'active')->count();
+
+        foreach ($ranges as $period => [$from, $to]) {
+            $visitsByKd = DB::table('merchandiser_visits as visits')
+                ->leftJoin('outlets', 'visits.outlet_id', '=', 'outlets.id')
+                ->leftJoin('key_distributors', 'outlets.kd_id', '=', 'key_distributors.id')
+                ->whereBetween('visits.created_at', [$from, $to])
+                ->selectRaw("coalesce(nullif(key_distributors.name, ''), 'Unassigned') as label, count(*) as total")
+                ->groupBy(DB::raw("coalesce(nullif(key_distributors.name, ''), 'Unassigned')"))
+                ->orderByDesc('total')
+                ->pluck('total', 'label')
+                ->map(fn ($total) => (int) $total)
+                ->toArray();
+
+            $assetsByItem = DB::table('posm_ledgers')
+                ->whereBetween('created_at', [$from, $to])
+                ->select('item_name', DB::raw('sum(quantity_out) as total_qty'))
+                ->groupBy('item_name')
+                ->orderByDesc('total_qty')
+                ->pluck('total_qty', 'item_name')
+                ->map(fn ($total) => (int) $total)
+                ->toArray();
+
+            $outletsByRegion = DB::table('merchandiser_visits as visits')
+                ->join('outlets', 'visits.outlet_id', '=', 'outlets.id')
+                ->leftJoin('key_distributors as kd', 'outlets.kd_id', '=', 'kd.id')
+                ->leftJoin('regions as regions', 'kd.region_id', '=', 'regions.id')
+                ->whereBetween('visits.created_at', [$from, $to])
+                ->selectRaw("coalesce(nullif(regions.name, ''), 'Unassigned') as label, count(distinct visits.outlet_id) as total")
+                ->groupBy(DB::raw("coalesce(nullif(regions.name, ''), 'Unassigned')"))
+                ->orderByDesc('total')
+                ->pluck('total', 'label')
+                ->map(fn ($total) => (int) $total)
+                ->toArray();
+
+            $outletsByChannel = DB::table('merchandiser_visits as visits')
+                ->join('outlets', 'visits.outlet_id', '=', 'outlets.id')
+                ->whereBetween('visits.created_at', [$from, $to])
+                ->selectRaw("coalesce(nullif(outlets.channel_type, ''), 'Unspecified') as label, count(distinct visits.outlet_id) as total")
+                ->groupBy(DB::raw("coalesce(nullif(outlets.channel_type, ''), 'Unspecified')"))
+                ->orderByDesc('total')
+                ->pluck('total', 'label')
+                ->map(fn ($total) => (int) $total)
+                ->toArray();
+
+            $clockedUserIds = collect()
+                ->merge(MerchandiserAttendance::whereBetween('clock_in_time', [$from, $to])->pluck('user_id'))
+                ->merge(MerchandiserPcmClockin::whereBetween('clocked_in_at', [$from, $to])->pluck('user_id'))
+                ->merge(MerchandiserPjpClockin::whereBetween('clocked_in_at', [$from, $to])->pluck('user_id'))
+                ->filter()
+                ->unique()
+                ->values();
+            $clockedMerchandiserCount = $clockedUserIds->isEmpty()
+                ? 0
+                : User::merchandisers()
+                    ->where('status', 'active')
+                    ->whereIn('id', $clockedUserIds)
+                    ->count();
+
+            $clockEvents = collect()
+                ->merge(MerchandiserAttendance::whereBetween('clock_in_time', [$from, $to])->pluck('clock_in_time'))
+                ->merge(MerchandiserPcmClockin::whereBetween('clocked_in_at', [$from, $to])->pluck('clocked_in_at'))
+                ->merge(MerchandiserPjpClockin::whereBetween('clocked_in_at', [$from, $to])->pluck('clocked_in_at'))
+                ->filter()
+                ->map(fn ($timestamp) => Carbon::parse($timestamp, $timezone));
+
+            $datasets['kdVisitsChart'][$period] = [
+                'labels' => array_keys($visitsByKd),
+                'data' => array_values($visitsByKd),
+            ];
+            $datasets['assetsChart'][$period] = [
+                'labels' => array_keys($assetsByItem),
+                'data' => array_values($assetsByItem),
+            ];
+            $datasets['outletsRegionChart'][$period] = [
+                'labels' => array_keys($outletsByRegion),
+                'data' => array_values($outletsByRegion),
+            ];
+            $datasets['outletsChannelChart'][$period] = [
+                'labels' => array_keys($outletsByChannel),
+                'data' => array_values($outletsByChannel),
+            ];
+            $datasets['clockCoverageChart'][$period] = [
+                'labels' => ['Clocked in', 'Not clocked'],
+                'data' => [$clockedMerchandiserCount, max($activeMerchandiserCount - $clockedMerchandiserCount, 0)],
+            ];
+            $datasets['attendanceChart'][$period] = $this->attendanceChartPeriod($period, $from, $to, $clockEvents, $timezone);
+        }
+
+        return $datasets;
+    }
+
+    private function attendanceChartPeriod(
+        string $period,
+        Carbon $from,
+        Carbon $to,
+        \Illuminate\Support\Collection $events,
+        string $timezone
+    ): array {
+        if ($period === 'daily') {
+            $labels = collect(range(0, 23))->map(fn ($hour) => Carbon::createFromTime($hour, 0, 0, $timezone)->format('H:00'))->all();
+            $values = collect(range(0, 23))->map(
+                fn ($hour) => $events->filter(fn (Carbon $event) => $event->hour === $hour)->count()
+            )->all();
+        } elseif ($period === 'weekly') {
+            $days = collect(range(0, 6))->map(fn ($offset) => $from->copy()->addDays($offset));
+            $labels = $days->map(fn (Carbon $day) => $day->format('D d'))->all();
+            $values = $days->map(
+                fn (Carbon $day) => $events->filter(fn (Carbon $event) => $event->isSameDay($day))->count()
+            )->all();
+        } elseif ($period === 'monthly') {
+            $weekCount = (int) ceil($from->daysInMonth / 7);
+            $labels = collect(range(0, $weekCount - 1))->map(fn ($week) => 'Week '.($week + 1))->all();
+            $values = collect(range(0, $weekCount - 1))->map(
+                fn ($week) => $events->filter(fn (Carbon $event) => $event->diffInDays($from) >= $week * 7 && $event->diffInDays($from) < ($week + 1) * 7)->count()
+            )->all();
+        } else {
+            $months = collect(range(1, 12));
+            $labels = $months->map(fn ($month) => Carbon::create($from->year, $month, 1, 0, 0, 0, $timezone)->format('M'))->all();
+            $values = $months->map(
+                fn ($month) => $events->filter(fn (Carbon $event) => $event->month === $month)->count()
+            )->all();
+        }
+
+        return [
+            'labels' => $labels,
+            'values' => $values,
+            'max' => max(1, (int) ceil(max($values ?: [0]) * 1.2)),
+        ];
     }
 
     private function routePlanningRange(Request $request, string $timezone): array

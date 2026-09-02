@@ -263,53 +263,14 @@
             var homeTrendChart = null;
             var homeKpiBarChart = null;
 
-            var trendDataSets = {
-                daily: {
-                    labels: ['8 AM', '10 AM', '12 PM', '2 PM', '4 PM', '6 PM'],
-                    completed: [1, 2, 3, {{ $merchMetrics['outlets_scored_today'] ?? 4 }}, 5, 5],
-                    target: [1, 2, 3, {{ $merchMetrics['assigned_outlets_today'] ?? 5 }}, 5, 5],
-                    max: 6
-                },
-                weekly: {
-                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                    completed: [4, 5, 5, {{ $merchMetrics['outlets_scored_today'] ?? 4 }}, 5, 2, 0],
-                    target: [5, 5, 5, {{ $merchMetrics['assigned_outlets_today'] ?? 5 }}, 5, 3, 0],
-                    max: 8
-                },
-                monthly: {
-                    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-                    completed: [24, 28, 26, {{ (($merchMetrics['outlets_scored_today'] ?? 4) * 5) }}],
-                    target: [25, 25, 25, 25],
-                    max: 32
-                },
-                yearly: {
-                    labels: ['Q1 (Jan-Mar)', 'Q2 (Apr-Jun)', 'Q3 (Jul-Sep)', 'Q4 (Oct-Dec)'],
-                    completed: [310, 340, 325, 290],
-                    target: [300, 320, 330, 310],
-                    max: 400
-                }
-            };
-
-            @php
-                $realKpiArray = [
-                    (float)($merchMetrics['osa_pct'] ?? 0),
-                    (float)($merchMetrics['npd_pct'] ?? 0),
-                    (float)($merchMetrics['mhs_pct'] ?? 0),
-                    (float)($merchMetrics['planogram_pct'] ?? 0),
-                    (float)($merchMetrics['facing_pct'] ?? 0),
-                    (float)($merchMetrics['sos_pct'] ?? 0),
-                ];
-            @endphp
-            var kpiDataSets = {
-                daily: @json($realKpiArray),
-                weekly: @json($realKpiArray),
-                monthly: @json($realKpiArray),
-                yearly: @json($realKpiArray)
-            };
+            var homeChartDatasets = @json($homeChartDatasets ?? ['trend' => [], 'kpi' => []]);
+            var trendDataSets = homeChartDatasets.trend || {};
+            var kpiDataSets = homeChartDatasets.kpi || {};
 
             function switchTrendPeriod(period) {
                 if (!homeTrendChart) return;
-                var data = trendDataSets[period] || trendDataSets.weekly;
+                var data = trendDataSets[period];
+                if (!data) return;
                 homeTrendChart.data.labels = data.labels;
                 homeTrendChart.data.datasets[0].data = data.completed;
                 homeTrendChart.data.datasets[1].data = data.target;
@@ -319,8 +280,10 @@
 
             function switchKpiPeriod(period) {
                 if (!homeKpiBarChart) return;
-                var data = kpiDataSets[period] || kpiDataSets.monthly;
-                homeKpiBarChart.data.datasets[0].data = data;
+                var data = kpiDataSets[period];
+                if (!data) return;
+                homeKpiBarChart.data.labels = data.labels || homeKpiBarChart.data.labels;
+                homeKpiBarChart.data.datasets[0].data = data.values || [];
                 homeKpiBarChart.update();
             }
 
@@ -337,11 +300,11 @@
                         homeTrendChart = new Chart(trendCtx.getContext('2d'), {
                             type: 'line',
                             data: {
-                                labels: trendDataSets.weekly.labels,
+                                labels: (trendDataSets.weekly || { labels: [] }).labels,
                                 datasets: [
                                     {
                                         label: 'Completed Visits',
-                                        data: trendDataSets.weekly.completed,
+                                        data: (trendDataSets.weekly || { completed: [] }).completed,
                                         borderColor: '#155EEF',
                                         backgroundColor: 'rgba(21, 94, 239, 0.12)',
                                         fill: true,
@@ -352,7 +315,7 @@
                                     },
                                     {
                                         label: 'PJP Planned Target',
-                                        data: trendDataSets.weekly.target,
+                                        data: (trendDataSets.weekly || { target: [] }).target,
                                         borderColor: '#94A3B8',
                                         borderDash: [4, 4],
                                         fill: false,
@@ -369,7 +332,7 @@
                                     legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11, weight: 'bold' } } }
                                 },
                                 scales: {
-                                    y: { beginAtZero: true, max: 8, ticks: { stepSize: 2 } },
+                                    y: { beginAtZero: true, max: (trendDataSets.weekly || { max: 1 }).max || 1, ticks: { stepSize: 2 } },
                                     x: { grid: { display: false } }
                                 }
                             }
@@ -386,7 +349,7 @@
                                 datasets: [
                                     {
                                         label: 'Actual Score (%)',
-                                        data: kpiDataSets.monthly,
+                                    data: (kpiDataSets.weekly || { values: [] }).values,
                                         backgroundColor: [
                                             '#10B981', // Emerald
                                             '#2563EB', // Royal Blue

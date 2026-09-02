@@ -839,62 +839,21 @@ function readPerfectStoreOverviewChartData() {
     }
 }
 
-window.adminChartDatasets = Object.assign({
-    perfectStoreMetricRadarChart: {
-        daily: [98.5, 96.0, 97.2, 99.0, 95.5, 93.0, 90.0],
-        weekly: [92.0, 85.5, 90.0, 94.5, 88.0, 84.5, 82.0],
-        monthly: [88.0, 82.0, 86.5, 91.0, 84.0, 79.5, 76.0],
-        yearly: [78.5, 72.0, 75.8, 82.0, 74.5, 70.0, 68.0]
-    },
-    perfectStoreMerchChart: {
-        daily: [99.0, 97.5, 96.0, 94.5, 93.0, 91.5, 90.0, 88.5],
-        weekly: [94.0, 92.5, 91.0, 89.5, 88.0, 86.5, 85.0, 83.5],
-        monthly: [90.0, 88.5, 87.0, 85.5, 84.0, 82.5, 81.0, 79.5],
-        yearly: [82.0, 80.5, 79.0, 77.5, 76.0, 74.5, 73.0, 71.5]
-    },
-    perfectStoreKdChart: {
-        daily: [98.0, 96.5, 95.0, 93.5, 92.0, 90.5, 89.0, 87.5],
-        weekly: [93.0, 91.5, 90.0, 88.5, 87.0, 85.5, 84.0, 82.5],
-        monthly: [88.0, 86.5, 85.0, 83.5, 82.0, 80.5, 79.0, 77.5],
-        yearly: [80.0, 78.5, 77.0, 75.5, 74.0, 72.5, 71.0, 69.5]
-    },
-    kdVisitsChart: {
-        daily: [14, 18, 22, 16, 12, 20],
-        weekly: [84, 108, 132, 96, 72, 120],
-        monthly: [360, 450, 520, 410, 310, 490],
-        yearly: [4200, 5400, 6100, 4800, 3900, 5800]
-    },
-    assetsChart: {
-        daily: [8, 5, 4, 3, 2],
-        weekly: [45, 32, 28, 18, 12],
-        monthly: [180, 140, 110, 75, 50],
-        yearly: [2100, 1600, 1250, 850, 600]
-    },
-    outletsRegionChart: {
-        daily: [12, 8, 6, 5],
-        weekly: [68, 48, 38, 28],
-        monthly: [280, 210, 160, 120],
-        yearly: [3200, 2400, 1800, 1400]
-    },
-    outletsChannelChart: {
-        daily: [45, 25, 15, 10, 3, 2],
-        weekly: [280, 160, 90, 60, 20, 10],
-        monthly: [1200, 700, 400, 250, 90, 50],
-        yearly: [14000, 8200, 4600, 2800, 1100, 600]
-    },
-    clockCoverageChart: {
-        daily: [82, 18],
-        weekly: [88, 12],
-        monthly: [92, 8],
-        yearly: [95, 5]
-    },
-    statusChart: {
-        daily: [7, 0, 0],
-        weekly: [12, 2, 1],
-        monthly: [28, 4, 2],
-        yearly: [140, 15, 6]
-    }
-}, window.adminChartDatasets || {});
+window.adminChartDatasets = window.adminChartDatasets || {};
+
+function getAdminChartPeriodData(chartId, period, fallback = {}) {
+    const source = window.adminChartDatasets?.[chartId]?.[period] || {};
+    const legacyData = Array.isArray(source) ? source : source.data;
+
+    return {
+        labels: Array.isArray(source.labels) ? source.labels : (fallback.labels || []),
+        data: Array.isArray(legacyData) ? legacyData : (fallback.data || []),
+        actual: Array.isArray(source.actual) ? source.actual : null,
+        targets: Array.isArray(source.targets) ? source.targets : null,
+        values: Array.isArray(source.values) ? source.values : (fallback.values || []),
+        max: Number.isFinite(source.max) ? source.max : (fallback.max || 1),
+    };
+}
 
 window.switchAdminChartPeriod = function(chartId, period) {
     const canvas = document.getElementById(chartId);
@@ -902,10 +861,21 @@ window.switchAdminChartPeriod = function(chartId, period) {
     const chart = Chart.getChart(canvas);
     if (!chart) return;
 
-    const dataset = window.adminChartDatasets[chartId] && window.adminChartDatasets[chartId][period];
-    if (!dataset) return;
+    const chartPeriods = window.adminChartDatasets?.[chartId];
+    if (!chartPeriods || !Object.prototype.hasOwnProperty.call(chartPeriods, period)) return;
 
-    chart.data.datasets[0].data = dataset;
+    const dataset = getAdminChartPeriodData(chartId, period);
+    chart.data.labels = dataset.labels;
+    if (dataset.actual) {
+        chart.data.datasets[0].data = dataset.actual;
+    } else if (dataset.data.length) {
+        chart.data.datasets[0].data = dataset.data;
+    } else {
+        chart.data.datasets[0].data = [];
+    }
+    if (dataset.targets && chart.data.datasets[1]) {
+        chart.data.datasets[1].data = dataset.targets;
+    }
     chart.update();
 };
 
@@ -1085,28 +1055,7 @@ if (routeStatusCtx && adminChartsAvailable) {
     });
 }
 
-window.attendancePeriodDatasets = {
-    daily: {
-        labels: ['8 AM', '10 AM', '12 PM', '2 PM', '4 PM', '6 PM'],
-        values: [2, 4, 7, 8, 8, 8],
-        max: 10
-    },
-    weekly: {
-        labels: ['Mon 24', 'Tue 25', 'Wed 26', 'Thu 27 (Today)', 'Fri 28', 'Sat 29', 'Sun 30'],
-        values: [6, 7, 8, 8, 7, 4, 0],
-        max: 10
-    },
-    monthly: {
-        labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-        values: [42, 46, 44, 48],
-        max: 55
-    },
-    yearly: {
-        labels: ['Q1 (Jan-Mar)', 'Q2 (Apr-Jun)', 'Q3 (Jul-Sep)', 'Q4 (Oct-Dec)'],
-        values: [520, 580, 560, 510],
-        max: 650
-    }
-};
+window.attendancePeriodDatasets = window.adminChartDatasets.attendanceChart || {};
 
 window.switchAttendancePeriod = function(period) {
     const attCtx = document.getElementById('attendanceChart');
@@ -1114,7 +1063,8 @@ window.switchAttendancePeriod = function(period) {
     const chart = Chart.getChart(attCtx);
     if (!chart) return;
 
-    const data = window.attendancePeriodDatasets[period] || window.attendancePeriodDatasets.weekly;
+    const data = window.attendancePeriodDatasets[period];
+    if (!data) return;
     chart.data.labels = data.labels;
     chart.data.datasets[0].data = data.values;
     chart.options.scales.y.max = data.max;
@@ -1128,15 +1078,13 @@ window.initMerchandiserAttendanceChart = function(root = document) {
         return;
     }
 
-    let rawLabels = JSON.parse(attCtx.dataset.chartLabels || '[]');
-    let rawValues = JSON.parse(attCtx.dataset.chartValues || '[]');
-
-    // Expand single-day data to full 7-day trend for a gorgeous, dynamic curve
-    if (rawLabels.length <= 1) {
-        rawLabels = ['Mon 24', 'Tue 25', 'Wed 26', 'Thu 27 (Today)', 'Fri 28', 'Sat 29', 'Sun 30'];
-        var todayVal = rawValues[0] || 8;
-        rawValues = [6, 7, 8, todayVal, 7, 4, 0];
-    }
+    const weeklyData = getAdminChartPeriodData('attendanceChart', 'weekly', {
+        labels: JSON.parse(attCtx.dataset.chartLabels || '[]'),
+        values: JSON.parse(attCtx.dataset.chartValues || '[]'),
+        max: 1,
+    });
+    const rawLabels = weeklyData.labels;
+    const rawValues = weeklyData.values;
 
     Chart.getChart(attCtx)?.destroy();
 
@@ -1184,7 +1132,7 @@ window.initMerchandiserAttendanceChart = function(root = document) {
             },
             scales: {
                 x: { grid: { color: getChartThemeColors().grid }, ticks: { color: getChartThemeColors().text, font: { size: 11, weight: 'bold' } } },
-                y: { grid: { color: getChartThemeColors().grid }, ticks: { color: getChartThemeColors().text, font: { size: 11, weight: 'bold' }, stepSize: 2 }, beginAtZero: true, max: 10 }
+                y: { grid: { color: getChartThemeColors().grid }, ticks: { color: getChartThemeColors().text, font: { size: 11, weight: 'bold' }, stepSize: 1 }, beginAtZero: true, max: weeklyData.max }
             }
         }
     });
@@ -1294,13 +1242,17 @@ window.initMerchandiserStatusChart = function(root = document) {
 // ── Visits by KD Chart ─────────────────────────────────────────────────────
 const kdCtx = document.getElementById('kdVisitsChart');
 if (kdCtx && adminChartsAvailable) {
+    const kdChartData = getAdminChartPeriodData('kdVisitsChart', 'weekly', {
+        labels: @json(array_keys($visitsByKd ?? [])),
+        data: @json(array_values($visitsByKd ?? [])),
+    });
     new Chart(kdCtx, {
         type: 'bar',
         data: {
-            labels: @json(array_keys($visitsByKd ?? [])),
+            labels: kdChartData.labels,
             datasets: [{
                 label: 'Visits',
-                data: @json(array_values($visitsByKd ?? [])),
+                data: kdChartData.data,
                 backgroundColor: 'rgba(59,130,246,0.75)',
                 borderColor: '#3b82f6',
                 borderWidth: 1.5,
@@ -1322,12 +1274,16 @@ if (kdCtx && adminChartsAvailable) {
 // ── POSM / Assets Distribution Chart ───────────────────────────────────────
 const assetsCtx = document.getElementById('assetsChart');
 if (assetsCtx && adminChartsAvailable) {
+    const assetsChartData = getAdminChartPeriodData('assetsChart', 'weekly', {
+        labels: @json(array_keys($assetsByItem ?? [])),
+        data: @json(array_values($assetsByItem ?? [])),
+    });
     new Chart(assetsCtx, {
         type: 'pie',
         data: {
-            labels: @json(array_keys($assetsByItem ?? [])),
+            labels: assetsChartData.labels,
             datasets: [{
-                data: @json(array_values($assetsByItem ?? [])),
+                data: assetsChartData.data,
                 backgroundColor: [
                     'rgba(168,85,247,0.75)',
                     'rgba(236,72,153,0.75)',
@@ -1354,13 +1310,17 @@ if (assetsCtx && adminChartsAvailable) {
 // ── Live Tracking Map (Google Maps) ───────────────────────────────────────
 const regionCtx = document.getElementById('outletsRegionChart');
 if (regionCtx && adminChartsAvailable) {
+    const regionChartData = getAdminChartPeriodData('outletsRegionChart', 'weekly', {
+        labels: @json(array_keys($outletsByRegion ?? [])),
+        data: @json(array_values($outletsByRegion ?? [])),
+    });
     new Chart(regionCtx, {
         type: 'bar',
         data: {
-            labels: @json(array_keys($outletsByRegion ?? [])),
+            labels: regionChartData.labels,
             datasets: [{
                 label: 'Outlets',
-                data: @json(array_values($outletsByRegion ?? [])),
+                data: regionChartData.data,
                 backgroundColor: 'rgba(14,165,233,0.75)',
                 borderColor: '#0ea5e9',
                 borderWidth: 1.5,
@@ -1382,12 +1342,16 @@ if (regionCtx && adminChartsAvailable) {
 
 const channelCtx = document.getElementById('outletsChannelChart');
 if (channelCtx && adminChartsAvailable) {
+    const channelChartData = getAdminChartPeriodData('outletsChannelChart', 'weekly', {
+        labels: @json(array_keys($outletsByChannel ?? [])),
+        data: @json(array_values($outletsByChannel ?? [])),
+    });
     new Chart(channelCtx, {
         type: 'doughnut',
         data: {
-            labels: @json(array_keys($outletsByChannel ?? [])),
+            labels: channelChartData.labels,
             datasets: [{
-                data: @json(array_values($outletsByChannel ?? [])),
+                data: channelChartData.data,
                 backgroundColor: ['#22c55e', '#38bdf8', '#f59e0b', '#a78bfa', '#ef4444', '#14b8a6'],
                 borderColor: getChartThemeColors().grid,
                 borderWidth: 1.5
@@ -1409,12 +1373,16 @@ if (channelCtx && adminChartsAvailable) {
 
 const clockCoverageCtx = document.getElementById('clockCoverageChart');
 if (clockCoverageCtx && adminChartsAvailable) {
+    const clockCoverageChartData = getAdminChartPeriodData('clockCoverageChart', 'weekly', {
+        labels: @json(array_keys($clockCoverageChart ?? [])),
+        data: @json(array_values($clockCoverageChart ?? [])),
+    });
     new Chart(clockCoverageCtx, {
         type: 'pie',
         data: {
-            labels: @json(array_keys($clockCoverageChart ?? [])),
+            labels: clockCoverageChartData.labels,
             datasets: [{
-                data: @json(array_values($clockCoverageChart ?? [])),
+                data: clockCoverageChartData.data,
                 backgroundColor: ['rgba(34,197,94,0.68)', 'rgba(239,68,68,0.58)'],
                 borderColor: ['#22c55e', '#ef4444'],
                 borderWidth: 1.5

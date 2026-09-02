@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cmih-portal-20260814-brands-workspaces';
+const CACHE_NAME = 'cmih-portal-20260902-image-refresh';
 const CORE_ASSETS = [
   '/manifest.json',
   '/images/logo/favicon.png',
@@ -29,6 +29,54 @@ const normalizeNotificationPayload = (payload = {}) => ({
   },
   renotify: payload.renotify !== false,
 });
+
+const cacheableAssetUrl = (url) => (
+  url.includes('tile.openstreetmap.org') ||
+  url.includes('fonts.gstatic.com') ||
+  url.includes('/build/assets/') ||
+  url.includes('/images/') ||
+  url.includes('/storage/')
+);
+
+const isImageRequest = (request) => {
+  if (request.destination === 'image') {
+    return true;
+  }
+
+  try {
+    return /\.(png|jpe?g|webp|gif|svg|ico)$/i.test(new URL(request.url).pathname);
+  } catch (error) {
+    return false;
+  }
+};
+
+const cacheResponse = async (request, response) => {
+  if (!response || response.status !== 200 || response.type === 'opaque') {
+    return;
+  }
+
+  const cache = await caches.open(CACHE_NAME);
+  await cache.put(request, response.clone());
+};
+
+const networkFirstAsset = async (request) => {
+  try {
+    const freshRequest = new Request(request, { cache: 'reload' });
+    const response = await fetch(freshRequest);
+    await cacheResponse(request, response).catch(() => null);
+    return response;
+  } catch (error) {
+    const cachedResponse = await caches.match(request);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+
+    return new Response('Offline resource not available', {
+      status: 503,
+      statusText: 'Service Unavailable',
+    });
+  }
+};
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -75,6 +123,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  if (isImageRequest(event.request)) {
+    event.respondWith(networkFirstAsset(event.request));
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
@@ -83,16 +136,8 @@ self.addEventListener('fetch', (event) => {
 
       return fetch(event.request)
         .then((response) => {
-          if (response.status === 200 && (
-            event.request.url.includes('tile.openstreetmap.org') ||
-            event.request.url.includes('fonts.gstatic.com') ||
-            event.request.url.includes('/build/assets/') ||
-            event.request.url.includes('/images/')
-          )) {
-            const responseClone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, responseClone);
-            });
+          if (cacheableAssetUrl(event.request.url)) {
+            cacheResponse(event.request, response).catch(() => null);
           }
           return response;
         })
