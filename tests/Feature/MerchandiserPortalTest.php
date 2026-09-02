@@ -226,7 +226,7 @@ class MerchandiserPortalTest extends TestCase
                 'merchandiser_tenant' => $tenant,
             ]);
 
-            $this->actingAs($user)
+            $response = $this->actingAs($user)
                 ->get(route('merchandisers.dashboard'))
                 ->assertOk()
                 ->assertSee('data-merch-tenant="'.$tenant.'"', false)
@@ -238,7 +238,66 @@ class MerchandiserPortalTest extends TestCase
                 )
                 ->assertSee('data-no-fallback="true"', false)
                 ->assertDontSee($tenant === 'unilever' ? 'storage/brands/unilever-light.png' : 'storage/brands/guinness-light.png', false);
+
+            if ($tenant === 'ggbl') {
+                $response
+                    ->assertSee('--merch-primary: #FECB00;', false)
+                    ->assertSee('--merch-accent-light: #F5F0DC;', false)
+                    ->assertSee('--merch-bg: #1A1A1A;', false)
+                    ->assertSee('--merch-surface: #242424;', false)
+                    ->assertSee('body[data-merch-tenant="ggbl"] .perfect-store-hero', false)
+                    ->assertDontSee('#C5A059', false);
+            }
         }
+    }
+
+    #[Test]
+    public function admin_guinness_workspace_does_not_show_unilever_records_when_no_guinness_merchandisers_exist()
+    {
+        $region = Region::create(['name' => 'Unilever-only Region']);
+        $kd = KeyDistributor::create([
+            'name' => 'Unilever-only Distributor',
+            'region_id' => $region->id,
+        ]);
+        $unileverAgent = User::create([
+            'name' => 'Unilever-only Agent',
+            'email' => 'unilever-only-agent@cmih.africa',
+            'contact_email' => 'unilever-only-agent@personal.com',
+            'phone' => '12345678',
+            'date_of_birth' => '1995-05-05',
+            'password' => Hash::make('Pass123'),
+            'access_role' => User::MERCHANDISER_ROLE,
+            'status' => 'active',
+            'kd_id' => $kd->id,
+            'region_id' => $region->id,
+            'merchandiser_tenant' => 'unilever',
+        ]);
+        $admin = User::create([
+            'name' => 'Guinness Workspace Admin',
+            'email' => 'guinness-workspace-admin@cmih.africa',
+            'contact_email' => 'guinness-workspace-admin@personal.com',
+            'phone' => '12345679',
+            'password' => Hash::make('Pass123'),
+            'access_role' => 'staff',
+            'job_level' => 'executive',
+            'department' => 'brands_marketing',
+            'status' => 'active',
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('merchandisers.admin.dashboard', [
+            'tab' => 'overview',
+            'tenant' => 'ggbl',
+        ]));
+
+        $response
+            ->assertOk()
+            ->assertSee('data-merch-tenant="ggbl"', false)
+            ->assertSee('--merch-bg: #1A1A1A;', false)
+            ->assertSee('--merch-primary: #FECB00;', false)
+            ->assertDontSee($unileverAgent->name, false)
+            ->assertDontSee($kd->name, false);
+
+        $this->assertSame(0, User::merchandisers()->forMerchandiserTenant('ggbl')->count());
     }
 
     #[Test]

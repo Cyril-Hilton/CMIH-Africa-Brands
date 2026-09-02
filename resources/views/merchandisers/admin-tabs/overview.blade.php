@@ -174,10 +174,10 @@
                         $svc = app(\App\Services\PerfectStoreKpiService::class);
                         $now = now();
                         $periodSummaries = [
-                            'daily'   => $svc->summary($now->copy()->startOfDay(), $now->copy()->endOfDay()),
-                            'weekly'  => $svc->summary($now->copy()->startOfWeek(), $now->copy()->endOfWeek()),
-                            'monthly' => $svc->summary($now->copy()->startOfMonth(), $now->copy()->endOfMonth()),
-                            'yearly'  => $svc->summary($now->copy()->startOfYear(), $now->copy()->endOfYear()),
+                            'daily'   => $svc->summary($now->copy()->startOfDay(), $now->copy()->endOfDay(), $merchTenant['code'] ?? null),
+                            'weekly'  => $svc->summary($now->copy()->startOfWeek(), $now->copy()->endOfWeek(), $merchTenant['code'] ?? null),
+                            'monthly' => $svc->summary($now->copy()->startOfMonth(), $now->copy()->endOfMonth(), $merchTenant['code'] ?? null),
+                            'yearly'  => $svc->summary($now->copy()->startOfYear(), $now->copy()->endOfYear(), $merchTenant['code'] ?? null),
                         ];
 
                         $extractRadarMetrics = function(array $sum) {

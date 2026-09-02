@@ -63,7 +63,7 @@
         }
         .stat-card:hover { transform: translateY(-3px); box-shadow: 0 16px 40px rgba(0,0,0,0.4); }
         .nav-item { transition: all 0.18s ease; }
-        .nav-item.active { background: rgba(255, 255, 255, 0.14) !important; border-left: 4px solid #38bdf8 !important; color: #ffffff !important; font-weight: 800 !important; backdrop-filter: blur(8px); }
+        .nav-item.active { background: color-mix(in srgb, var(--merch-primary) 18%, transparent) !important; border-left: 4px solid var(--merch-primary) !important; color: var(--merch-ink) !important; font-weight: 800 !important; backdrop-filter: blur(8px); }
         .nav-item:not(.active):hover { background: rgba(255, 255, 255, 0.08); color: #ffffff; }
         .kpi-glow-red   { box-shadow: 0 0 20px rgba(220,38,38,0.15); }
         .kpi-glow-green { box-shadow: 0 0 20px rgba(34,197,94,0.15); }
@@ -92,8 +92,8 @@
         .dark table th.sorting:hover,
         .dark table th.sorting_asc:hover,
         .dark table th.sorting_desc:hover {
-            background-color: rgba(56, 189, 248, 0.18) !important;
-            color: #38bdf8 !important;
+            background-color: color-mix(in srgb, var(--merch-primary) 18%, transparent) !important;
+            color: var(--merch-primary) !important;
         }
 
         .modal-overlay { backdrop-filter: blur(6px); }

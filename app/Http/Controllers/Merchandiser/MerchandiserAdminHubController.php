@@ -38,6 +38,7 @@ use App\Services\PerfectStoreCalculator;
 use App\Services\PerfectStoreKpiService;
 use App\Services\PerfectStoreFormTemplate;
 use App\Support\MerchandiserClockWindows;
+use App\Support\MerchandiserTenant;
 use App\Support\SimplePdf;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -115,11 +116,26 @@ class MerchandiserAdminHubController extends Controller
         }
 
         // ── KPI Counts ─────────────────────────────────────────────────────────
-        $totalMerchandisers   = User::merchandisers()->count();
-        $activeMerchandisers  = User::merchandisers()->where('status', 'active')->count();
-        $pendingMerchandisers = User::merchandisers()->where('status', 'pending')->count();
-        $totalKds             = KeyDistributor::count();
-        $totalOutlets         = Outlet::count();
+        // Admins can switch workspaces through the tenant query parameter.
+        $tenantCode = MerchandiserTenant::forUser($currentUser, $request);
+        $tenantMerchandiserIds = User::merchandisers()
+            ->forMerchandiserTenant($tenantCode)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->values();
+        $tenantKdIds = User::merchandisers()
+            ->forMerchandiserTenant($tenantCode)
+            ->whereNotNull('kd_id')
+            ->pluck('kd_id')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        $totalMerchandisers   = $tenantMerchandiserIds->count();
+        $activeMerchandisers  = User::whereIn('id', $tenantMerchandiserIds)->where('status', 'active')->count();
+        $pendingMerchandisers = User::whereIn('id', $tenantMerchandiserIds)->where('status', 'pending')->count();
+        $totalKds             = KeyDistributor::whereIn('id', $tenantKdIds)->count();
+        $totalOutlets         = Outlet::whereIn('kd_id', $tenantKdIds)->count();
 
         // Clock-in range for the dashboard KPI, chart, and PCM/PJP log review.
         $clockTimezone = 'Africa/Accra';
@@ -140,27 +156,29 @@ class MerchandiserAdminHubController extends Controller
 
         if ($activeTab === 'supervisors') {
             $todayPcmClockins = MerchandiserPcmClockin::with(['user', 'keyDistributor'])
+                ->whereIn('user_id', $tenantMerchandiserIds)
                 ->whereBetween('clocked_in_at', [$clockFrom, $clockTo])
                 ->latest('clocked_in_at')
                 ->take(25)
                 ->get();
             $todayPjpClockins = MerchandiserPjpClockin::with(['user', 'pjp'])
+                ->whereIn('user_id', $tenantMerchandiserIds)
                 ->whereBetween('clocked_in_at', [$clockFrom, $clockTo])
                 ->latest('clocked_in_at')
                 ->take(25)
                 ->get();
         }
-        $clockAttendanceCount = MerchandiserAttendance::whereBetween('clock_in_time', [$clockFrom, $clockTo])->count();
-        $clockPcmCount = MerchandiserPcmClockin::whereBetween('clocked_in_at', [$clockFrom, $clockTo])->count();
-        $clockPjpCount = MerchandiserPjpClockin::whereBetween('clocked_in_at', [$clockFrom, $clockTo])->count();
+        $clockAttendanceCount = MerchandiserAttendance::whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clock_in_time', [$clockFrom, $clockTo])->count();
+        $clockPcmCount = MerchandiserPcmClockin::whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clocked_in_at', [$clockFrom, $clockTo])->count();
+        $clockPjpCount = MerchandiserPjpClockin::whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clocked_in_at', [$clockFrom, $clockTo])->count();
         $todayClockins  = $clockAttendanceCount + $clockPcmCount + $clockPjpCount;
 
         // Pending approvals
-        $pendingLeaves  = LeaveApplication::where('status', 'pending')->whereHas('user', fn($q) => $q->merchandisers())->count();
-        $pendingClaims  = PettyCashClaim::where('status', 'pending')->whereHas('user', fn($q) => $q->merchandisers())->count();
-        $pendingLoans   = SalaryAdvance::where('status', 'pending')->whereHas('user', fn($q) => $q->merchandisers())->count();
+        $pendingLeaves  = LeaveApplication::where('status', 'pending')->whereIn('user_id', $tenantMerchandiserIds)->count();
+        $pendingClaims  = PettyCashClaim::where('status', 'pending')->whereIn('user_id', $tenantMerchandiserIds)->count();
+        $pendingLoans   = SalaryAdvance::where('status', 'pending')->whereIn('user_id', $tenantMerchandiserIds)->count();
         $totalPending = $pendingLeaves + $pendingClaims + $pendingLoans;
-        $liveLocationCount = MerchandiserLocation::query()->distinct()->count('user_id');
+        $liveLocationCount = MerchandiserLocation::query()->whereIn('user_id', $tenantMerchandiserIds)->distinct()->count('user_id');
 
         $attendanceChart = [];
         $topPerformers = collect();
@@ -175,7 +193,7 @@ class MerchandiserAdminHubController extends Controller
         if ($activeTab === 'overview') {
             $currentMonthStart = now()->startOfMonth();
             $currentMonthEnd = now()->endOfMonth();
-            $perfectStoreSummary = app(PerfectStoreKpiService::class)->summary($perfectStoreFrom, $perfectStoreTo);
+            $perfectStoreSummary = app(PerfectStoreKpiService::class)->summary($perfectStoreFrom, $perfectStoreTo, $tenantCode);
 
             $chartStart = $clockFrom->copy()->startOfDay();
             $chartEnd = $clockTo->copy()->startOfDay();
@@ -184,21 +202,22 @@ class MerchandiserAdminHubController extends Controller
             }
 
             for ($date = $chartStart->copy(); $date->lte($chartEnd); $date->addDay()) {
-                $attendanceChart[$date->format('D d')] = MerchandiserAttendance::whereDate('clock_in_time', $date)->count()
-                    + MerchandiserPcmClockin::whereDate('clocked_in_at', $date)->count()
-                    + MerchandiserPjpClockin::whereDate('clocked_in_at', $date)->count();
+                $attendanceChart[$date->format('D d')] = MerchandiserAttendance::whereIn('user_id', $tenantMerchandiserIds)->whereDate('clock_in_time', $date)->count()
+                    + MerchandiserPcmClockin::whereIn('user_id', $tenantMerchandiserIds)->whereDate('clocked_in_at', $date)->count()
+                    + MerchandiserPjpClockin::whereIn('user_id', $tenantMerchandiserIds)->whereDate('clocked_in_at', $date)->count();
             }
 
-            $topPerformers = User::merchandisers()
+            $topPerformers = User::whereIn('id', $tenantMerchandiserIds)
                 ->where('status', 'active')
                 ->withCount(['merchandiserVisits' => fn($q) => $q->whereBetween('created_at', [$currentMonthStart, $currentMonthEnd])])
                 ->orderByDesc('merchandiser_visits_count')
                 ->take(10)
                 ->get();
         } elseif (in_array($activeTab, ['perfect-store', 'supervisor-dashboard', 'regional-dashboard', 'client-dashboard'], true)) {
-            $perfectStoreSummary = app(PerfectStoreKpiService::class)->summary($perfectStoreFrom, $perfectStoreTo);
-            $allKds = KeyDistributor::orderBy('name')->get();
+            $perfectStoreSummary = app(PerfectStoreKpiService::class)->summary($perfectStoreFrom, $perfectStoreTo, $tenantCode);
+            $allKds = KeyDistributor::whereIn('id', $tenantKdIds)->orderBy('name')->get();
             $recentVisits = MerchandiserVisit::with(['outlet.keyDistributor', 'visitSkus.sku', 'user.supervisor', 'user.merchandiserKd'])
+                ->whereIn('user_id', $tenantMerchandiserIds)
                 ->whereBetween('created_at', [$perfectStoreFrom->copy()->startOfDay(), $perfectStoreTo->copy()->endOfDay()])
                 ->latest()
                 ->take(500)
@@ -211,7 +230,7 @@ class MerchandiserAdminHubController extends Controller
             })->sortByDesc('overall_score')->values();
 
             $visitsByUserId = $recentVisits->groupBy(fn($v) => (int) $v->user_id);
-            $activeMerchList = User::merchandisers()->where('status', 'active')->with(['supervisor', 'merchandiserKd'])->orderBy('name')->get();
+            $activeMerchList = User::whereIn('id', $tenantMerchandiserIds)->where('status', 'active')->with(['supervisor', 'merchandiserKd'])->orderBy('name')->get();
             $perfectStoreMerchandiserData = $activeMerchList->map(function (User $merch) use ($visitsByUserId) {
                 $userVisits = $visitsByUserId->get((int) $merch->id, collect());
                 $metrics = \App\Services\PerfectStoreCalculator::computeMerchandiserMetrics($merch, $userVisits);
@@ -240,9 +259,9 @@ class MerchandiserAdminHubController extends Controller
                 ];
             })->values();
         } elseif ($activeTab === 'category-kpi') {
-            $categorySosData = app(PerfectStoreKpiService::class)->categoryKpis($perfectStoreFrom, $perfectStoreTo);
+            $categorySosData = app(PerfectStoreKpiService::class)->categoryKpis($perfectStoreFrom, $perfectStoreTo, $tenantCode);
         } elseif (in_array($activeTab, ['executive', 'regional-dashboard', 'client-dashboard'], true)) {
-            $perfectStoreSummary = app(PerfectStoreKpiService::class)->summary($perfectStoreFrom, $perfectStoreTo);
+            $perfectStoreSummary = app(PerfectStoreKpiService::class)->summary($perfectStoreFrom, $perfectStoreTo, $tenantCode);
         }
 
         [$outletCreatedFrom, $outletCreatedTo] = $this->outletCreatedRange($request);
@@ -256,8 +275,9 @@ class MerchandiserAdminHubController extends Controller
         $assignableOutlets = collect();
 
         if (in_array($activeTab, ['kds', 'forms', 'merchandisers', 'supervisors'], true)) {
-            $kds = KeyDistributor::with(['region', 'outlets.registeredBy', 'outlets.assignedMerchandisers', 'merchandisers'])
-                ->withCount('merchandisers')
+            $kds = KeyDistributor::whereIn('id', $tenantKdIds)
+                ->with(['region', 'outlets.registeredBy', 'outlets.assignedMerchandisers', 'merchandisers'])
+                ->withCount(['merchandisers' => fn ($query) => $query->forMerchandiserTenant($tenantCode)])
                 ->orderBy('name')
                 ->get();
 
@@ -280,9 +300,9 @@ class MerchandiserAdminHubController extends Controller
         if (in_array($activeTab, ['tracking', 'supervisor-dashboard'], true)) {
         // ── Latest locations for live tracking ────────────────────────────────
             $clockedInMerchandiserIds = collect()
-            ->merge(MerchandiserAttendance::whereBetween('clock_in_time', [$clockFrom, $clockTo])->pluck('user_id'))
-            ->merge(MerchandiserPcmClockin::whereBetween('clocked_in_at', [$clockFrom, $clockTo])->pluck('user_id'))
-            ->merge(MerchandiserPjpClockin::whereBetween('clocked_in_at', [$clockFrom, $clockTo])->pluck('user_id'))
+            ->merge(MerchandiserAttendance::whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clock_in_time', [$clockFrom, $clockTo])->pluck('user_id'))
+            ->merge(MerchandiserPcmClockin::whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clocked_in_at', [$clockFrom, $clockTo])->pluck('user_id'))
+            ->merge(MerchandiserPjpClockin::whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clocked_in_at', [$clockFrom, $clockTo])->pluck('user_id'))
             ->map(fn ($id) => (int) $id)
             ->unique()
             ->flip()
@@ -296,6 +316,7 @@ class MerchandiserAdminHubController extends Controller
         ] as [$model, $column]) {
             $model::query()
                 ->select('user_id', DB::raw("MAX({$column}) as last_clocked_at"))
+                ->whereIn('user_id', $tenantMerchandiserIds)
                 ->whereBetween($column, [$clockFrom, $clockTo])
                 ->groupBy('user_id')
                 ->pluck('last_clocked_at', 'user_id')
@@ -317,6 +338,7 @@ class MerchandiserAdminHubController extends Controller
             ->joinSub(
                 MerchandiserLocation::query()
                     ->select('user_id', DB::raw('MAX(recorded_at) as latest_recorded_at'))
+                    ->whereIn('user_id', $tenantMerchandiserIds)
                     ->groupBy('user_id'),
                 'latest_locations',
                 function ($join) {
@@ -328,7 +350,7 @@ class MerchandiserAdminHubController extends Controller
             ->get()
             ->keyBy('user_id');
 
-        User::merchandisers()->where('status', 'active')->each(function ($m) use (&$merchandiserLocations, $clockedInMerchandiserIds, $latestClockInsByUser, $latestLocationsByUser) {
+        User::whereIn('id', $tenantMerchandiserIds)->where('status', 'active')->each(function ($m) use (&$merchandiserLocations, $clockedInMerchandiserIds, $latestClockInsByUser, $latestLocationsByUser) {
             $loc = $latestLocationsByUser->get($m->id);
             $latestClockIn = $latestClockInsByUser->get((int) $m->id);
             $merchandiserLocations[] = [
@@ -368,13 +390,14 @@ class MerchandiserAdminHubController extends Controller
 
             if ($activeTab === 'merchandisers') {
                 $coverageByUser = MerchandiserVisit::query()
+                    ->whereIn('user_id', $tenantMerchandiserIds)
                     ->select('user_id', DB::raw('count(distinct outlet_id) as covered_outlets'))
                     ->whereBetween('created_at', [$coverageStart, $coverageEnd])
                     ->groupBy('user_id')
                     ->pluck('covered_outlets', 'user_id');
             }
 
-            $allMerchandisersQuery = User::merchandisers()
+            $allMerchandisersQuery = User::whereIn('id', $tenantMerchandiserIds)
                 ->with(['merchandiserKd', 'merchandiserRegion'])
                 ->withCount('merchandiserVisits')
                 ->orderBy('name');
@@ -394,7 +417,7 @@ class MerchandiserAdminHubController extends Controller
         }
 
         if ($activeTab === 'routes') {
-            $outletAssignmentMerchandisers = User::merchandisers()
+            $outletAssignmentMerchandisers = User::whereIn('id', $tenantMerchandiserIds)
                 ->with(['merchandiserKd', 'merchandiserRegion', 'assignedMerchandiserOutlets.keyDistributor', 'assignedMerchandiserOutlets.registeredBy'])
                 ->where('status', 'active')
                 ->orderBy('name')
@@ -430,24 +453,26 @@ class MerchandiserAdminHubController extends Controller
         }
 
         // ── All POSM / Field Gear entries ──────────────────────────────────────
-        $allAssetsTotal = PosmLedger::count();
+        $allAssetsTotal = $tenantMerchandiserIds->isEmpty() ? 0 : PosmLedger::count();
         $allAssets = $activeTab === 'assets'
-            ? PosmLedger::with('createdBy')
+            ? PosmLedger::when($tenantMerchandiserIds->isEmpty(), fn ($query) => $query->whereRaw('1 = 0'))
+                ->with('createdBy')
                 ->orderByDesc('created_at')
                 ->paginate(50, ['*'], 'asset_page')
                 ->appends(array_merge($request->query(), ['tab' => 'assets']))
             : $this->emptyPaginator($request, 'asset_page', 50);
 
         // ── Regions ────────────────────────────────────────────────────────────
-        $regions = in_array($activeTab, ['overview', 'kds', 'merchandisers'], true)
-            ? Region::orderBy('name')->get()
+        $regions = in_array($activeTab, ['overview', 'kds', 'merchandisers'], true) && $tenantKdIds->isNotEmpty()
+            ? Region::whereIn('id', KeyDistributor::whereIn('id', $tenantKdIds)->whereNotNull('region_id')->pluck('region_id')->unique())
+                ->orderBy('name')->get()
             : collect();
 
         // ── Pending Approvals (for Notifications tab) ─────────────────────────
         $pendingLeavesList = $activeTab === 'notifications'
             ? LeaveApplication::with('user')
                 ->where('status', 'pending')
-                ->whereHas('user', fn($q) => $q->merchandisers())
+                ->whereIn('user_id', $tenantMerchandiserIds)
                 ->orderByDesc('created_at')
                 ->paginate(20, ['*'], 'leave_page')
                 ->appends(array_merge($request->query(), ['tab' => 'notifications']))
@@ -456,7 +481,7 @@ class MerchandiserAdminHubController extends Controller
         $pendingClaimsList = $activeTab === 'notifications'
             ? PettyCashClaim::with('user')
                 ->where('status', 'pending')
-                ->whereHas('user', fn($q) => $q->merchandisers())
+                ->whereIn('user_id', $tenantMerchandiserIds)
                 ->orderByDesc('created_at')
                 ->paginate(20, ['*'], 'claim_page')
                 ->appends(array_merge($request->query(), ['tab' => 'notifications']))
@@ -465,19 +490,20 @@ class MerchandiserAdminHubController extends Controller
         $pendingLoansList = $activeTab === 'notifications'
             ? SalaryAdvance::with('user')
                 ->where('status', 'pending')
-                ->whereHas('user', fn($q) => $q->merchandisers())
+                ->whereIn('user_id', $tenantMerchandiserIds)
                 ->orderByDesc('created_at')
                 ->paginate(20, ['*'], 'loan_page')
                 ->appends(array_merge($request->query(), ['tab' => 'notifications']))
             : $this->emptyPaginator($request, 'loan_page', 20);
 
-        $suspendedMerchandisers = User::merchandisers()->where('status', 'suspended')->count();
+        $suspendedMerchandisers = User::whereIn('id', $tenantMerchandiserIds)->where('status', 'suspended')->count();
 
         // ── Visits by Key Distributor ──────────────────────────────────────────
         $visitsByKd = $activeTab === 'overview'
             ? DB::table('merchandiser_visits')
                 ->join('outlets', 'merchandiser_visits.outlet_id', '=', 'outlets.id')
                 ->join('key_distributors', 'outlets.kd_id', '=', 'key_distributors.id')
+                ->whereIn('merchandiser_visits.user_id', $tenantMerchandiserIds)
                 ->select('key_distributors.name', DB::raw('count(*) as count'))
                 ->groupBy('key_distributors.name')
                 ->pluck('count', 'name')
@@ -488,6 +514,7 @@ class MerchandiserAdminHubController extends Controller
         $assetsByItem = $activeTab === 'overview'
             ? DB::table('posm_ledgers')
                 ->select('item_name', DB::raw('sum(quantity_out) as total_qty'))
+                ->when($tenantMerchandiserIds->isEmpty(), fn ($query) => $query->whereRaw('1 = 0'))
                 ->groupBy('item_name')
                 ->pluck('total_qty', 'item_name')
                 ->toArray()
@@ -496,6 +523,7 @@ class MerchandiserAdminHubController extends Controller
             ? DB::table('outlets')
                 ->leftJoin('key_distributors as kd', 'outlets.kd_id', '=', 'kd.id')
                 ->leftJoin('regions as r', 'kd.region_id', '=', 'r.id')
+                ->whereIn('outlets.kd_id', $tenantKdIds)
                 ->selectRaw("coalesce(r.name, 'Unassigned') as label, count(*) as total")
                 ->groupBy(DB::raw("coalesce(r.name, 'Unassigned')"))
                 ->orderByDesc('total')
@@ -505,6 +533,7 @@ class MerchandiserAdminHubController extends Controller
         $outletsByChannel = $activeTab === 'overview'
             ? DB::table('outlets')
                 ->selectRaw("coalesce(nullif(channel_type, ''), 'Unspecified') as label, count(*) as total")
+                ->whereIn('kd_id', $tenantKdIds)
                 ->groupBy(DB::raw("coalesce(nullif(channel_type, ''), 'Unspecified')"))
                 ->orderByDesc('total')
                 ->pluck('total', 'label')
@@ -513,15 +542,15 @@ class MerchandiserAdminHubController extends Controller
         $clockCoverageChart = ['Clocked in' => 0, 'Not clocked' => 0];
         if ($activeTab === 'overview') {
             $clockedUserIds = collect()
-                ->merge(MerchandiserAttendance::whereBetween('clock_in_time', [$clockFrom, $clockTo])->pluck('user_id'))
-                ->merge(MerchandiserPcmClockin::whereBetween('clocked_in_at', [$clockFrom, $clockTo])->pluck('user_id'))
-                ->merge(MerchandiserPjpClockin::whereBetween('clocked_in_at', [$clockFrom, $clockTo])->pluck('user_id'))
+                ->merge(MerchandiserAttendance::whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clock_in_time', [$clockFrom, $clockTo])->pluck('user_id'))
+                ->merge(MerchandiserPcmClockin::whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clocked_in_at', [$clockFrom, $clockTo])->pluck('user_id'))
+                ->merge(MerchandiserPjpClockin::whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clocked_in_at', [$clockFrom, $clockTo])->pluck('user_id'))
                 ->filter()
                 ->unique()
                 ->values();
             $activeClockedUsers = $clockedUserIds->isEmpty()
                 ? 0
-                : User::merchandisers()->where('status', 'active')->whereIn('id', $clockedUserIds)->count();
+                : User::whereIn('id', $tenantMerchandiserIds)->where('status', 'active')->whereIn('id', $clockedUserIds)->count();
             $clockCoverageChart = [
                 'Clocked in' => $activeClockedUsers,
                 'Not clocked' => max($activeMerchandisers - $activeClockedUsers, 0),
@@ -529,7 +558,7 @@ class MerchandiserAdminHubController extends Controller
         }
 
         $adminChartDatasets = $activeTab === 'overview'
-            ? $this->adminOverviewChartDatasets()
+            ? $this->adminOverviewChartDatasets($tenantCode)
             : [];
 
         // ── Recent Share Links ─────────────────────────────────────────────────
@@ -540,16 +569,16 @@ class MerchandiserAdminHubController extends Controller
                 ->get()
             : collect();
         $clockSettings = MerchandiserClockWindows::visitSettings();
-        $skuCount = Sku::count();
-        $skuReferenceCount = Sku::whereNotNull('reference_image_path')->count();
-        $skuCategories = $activeTab === 'skus'
+        $skuCount = $tenantMerchandiserIds->isEmpty() ? 0 : Sku::count();
+        $skuReferenceCount = $tenantMerchandiserIds->isEmpty() ? 0 : Sku::whereNotNull('reference_image_path')->count();
+        $skuCategories = $activeTab === 'skus' && $tenantMerchandiserIds->isNotEmpty()
             ? Sku::query()
                 ->whereNotNull('category')
                 ->distinct()
                 ->orderBy('category')
                 ->pluck('category')
             : collect();
-        $skus = $activeTab === 'skus'
+        $skus = $activeTab === 'skus' && $tenantMerchandiserIds->isNotEmpty()
             ? Sku::with('brand')
                 ->orderBy('category')
                 ->orderBy('name')
@@ -559,6 +588,7 @@ class MerchandiserAdminHubController extends Controller
         $skuAiConfigured = filled(config('services.openai.api_key')) || filled(config('services.gemini.api_key'));
 
         $supervisorCount = User::merchandiserSupervisors()
+            ->forMerchandiserTenant($tenantCode)
             ->where('status', 'active')
             ->count();
         $supervisorCandidates = collect();
@@ -574,10 +604,11 @@ class MerchandiserAdminHubController extends Controller
 
         if ($activeTab === 'supervisors') {
         $supervisorCandidates = User::merchandiserSupervisors()
+            ->forMerchandiserTenant($tenantCode)
             ->where('status', 'active')
             ->orderBy('name')
             ->get();
-        $supervisorManageMerchandisers = User::merchandisers()
+        $supervisorManageMerchandisers = User::whereIn('id', $tenantMerchandiserIds)
             ->with(['merchandiserKd', 'merchandiserRegion'])
             ->where('status', 'active')
             ->when($supervisorRoleSearch !== '', function ($query) use ($supervisorRoleSearch) {
@@ -601,8 +632,8 @@ class MerchandiserAdminHubController extends Controller
                 'supervisor_role_search' => $supervisorRoleSearch,
             ]);
         $supervisorIds = $supervisorCandidates->pluck('id')->map(fn ($id) => (int) $id)->all();
-        $supervisorStats = $supervisorCandidates->map(function (User $supervisor) use ($coverageStart, $coverageEnd) {
-            $assignedMerchandiserIds = User::merchandisers()
+        $supervisorStats = $supervisorCandidates->map(function (User $supervisor) use ($coverageStart, $coverageEnd, $tenantMerchandiserIds) {
+            $assignedMerchandiserIds = User::whereIn('id', $tenantMerchandiserIds)
                 ->where('supervisor_id', $supervisor->id)
                 ->pluck('id');
             $assignedKdIds = MerchandiserSupervisorAssignment::where('supervisor_id', $supervisor->id)
@@ -624,6 +655,7 @@ class MerchandiserAdminHubController extends Controller
             ];
         });
         $pjps = MerchandiserPjp::with(['supervisor', 'uploadedBy', 'clockins.user'])
+            ->whereHas('supervisor', fn ($query) => $query->forMerchandiserTenant($tenantCode))
             ->latest()
             ->take(40)
             ->get();
@@ -642,12 +674,14 @@ class MerchandiserAdminHubController extends Controller
                 ->first()
             : null;
         $complianceQueries = MerchandiserComplianceQuery::with(['user', 'sender'])
+            ->whereIn('user_id', $tenantMerchandiserIds)
             ->latest()
             ->take(30)
             ->get();
         }
         $todayForRoutes = Carbon::today($routeTimezone)->toDateString();
-        $routeSidebarPending = MerchandiserOutletAssignment::where('status', 'planned')
+        $routeSidebarPending = MerchandiserOutletAssignment::whereIn('user_id', $tenantMerchandiserIds)
+            ->where('status', 'planned')
             ->whereDate('assigned_date', '<=', $todayForRoutes)
             ->count();
         $routeAssignmentsTotal = 0;
@@ -668,7 +702,8 @@ class MerchandiserAdminHubController extends Controller
 
         if ($activeTab === 'routes') {
         $routeAssignmentsQuery = $this->constrainRouteAssignmentWindow(
-            MerchandiserOutletAssignment::with(['user.merchandiserKd', 'outlet.keyDistributor']),
+            MerchandiserOutletAssignment::whereIn('user_id', $tenantMerchandiserIds)
+                ->with(['user.merchandiserKd', 'outlet.keyDistributor']),
             $routeFrom,
             $routeTo
         );
@@ -749,25 +784,31 @@ class MerchandiserAdminHubController extends Controller
             ->take(10)
             ->get();
         }
-        $googleFormsCount = MerchandiserGoogleFormAssignment::count();
-        $planogramsCount = MerchandiserPlanogram::count();
+        $googleFormsCount = $tenantMerchandiserIds->isEmpty()
+            ? 0
+            : MerchandiserGoogleFormAssignment::count();
+        $planogramsCount = $tenantMerchandiserIds->isEmpty()
+            ? 0
+            : MerchandiserPlanogram::count();
         $googleForms = $activeTab === 'forms'
-            ? MerchandiserGoogleFormAssignment::with(['assignedUser', 'outlet', 'keyDistributor', 'brand', 'campaign'])
+            ? MerchandiserGoogleFormAssignment::when($tenantMerchandiserIds->isEmpty(), fn ($query) => $query->whereRaw('1 = 0'))
+                ->with(['assignedUser', 'outlet', 'keyDistributor', 'brand', 'campaign'])
                 ->withCount(['submissions', 'nativeSubmissions'])
                 ->latest()
                 ->paginate(20, ['*'], 'google_form_page')
                 ->appends(array_merge($request->query(), ['tab' => 'forms']))
             : $this->emptyPaginator($request, 'google_form_page', 20);
         $planograms = $activeTab === 'forms'
-            ? MerchandiserPlanogram::latest()
+            ? MerchandiserPlanogram::when($tenantMerchandiserIds->isEmpty(), fn ($query) => $query->whereRaw('1 = 0'))
+                ->latest()
                 ->paginate(20, ['*'], 'planogram_page')
                 ->appends(array_merge($request->query(), ['tab' => 'forms']))
             : $this->emptyPaginator($request, 'planogram_page', 20);
         $brandOptions = in_array($activeTab, ['forms', 'skus'], true)
-            ? Brand::orderBy('name')->get()
+            ? ($tenantMerchandiserIds->isEmpty() ? collect() : Brand::orderBy('name')->get())
             : collect();
         $campaignOptions = $activeTab === 'forms'
-            ? Campaign::orderBy('name')->get()
+            ? ($tenantMerchandiserIds->isEmpty() ? collect() : Campaign::orderBy('name')->get())
             : collect();
         $perfectStoreGuides = [
             'SSM & LMT' => ['Skin Care horizontal/vertical standards', 'Comfort vertical/horizontal', 'OMO vertical/horizontal', 'Sunlight DWL vertical/horizontal', 'Bars visibility'],
@@ -778,7 +819,11 @@ class MerchandiserAdminHubController extends Controller
         ];
 
         // ── ShelfWatch: Image Gallery ───────────────────────────────────────────
-        $totalImagesCount = DB::table('merchandiser_visit_skus')->whereNotNull('photo_path')->count();
+        $totalImagesCount = DB::table('merchandiser_visit_skus as vs')
+            ->join('merchandiser_visits as v', 'v.id', '=', 'vs.visit_id')
+            ->whereIn('v.user_id', $tenantMerchandiserIds)
+            ->whereNotNull('vs.photo_path')
+            ->count();
         $galleryImages    = collect();
         $galleryFilters   = [];
         if (in_array($activeTab, ['gallery', 'supervisor-dashboard'], true)) {
@@ -788,6 +833,7 @@ class MerchandiserAdminHubController extends Controller
                 ->join('key_distributors as kd', 'kd.id', '=', 'o.kd_id')
                 ->join('users as u', 'u.id', '=', 'v.user_id')
                 ->join('skus as s', 's.id', '=', 'vs.sku_id')
+                ->whereIn('v.user_id', $tenantMerchandiserIds)
                 ->whereNotNull('vs.photo_path')
                 ->select(
                     'vs.id', 'vs.photo_path', 'vs.created_at',
@@ -807,10 +853,12 @@ class MerchandiserAdminHubController extends Controller
             if ($activeTab === 'gallery') {
                 $galleryImages  = $galleryQ->paginate(40, ['*'], 'gallery_page')->appends($request->query());
                 $galleryFilters = [
-                    'users'      => User::merchandisers()->orderBy('name')->get(['id','name']),
-                    'kds'        => KeyDistributor::orderBy('name')->get(['id','name']),
-                    'outlets'    => Outlet::orderBy('name')->get(['id','name']),
-                    'categories' => Sku::whereNotNull('category')->distinct()->orderBy('category')->pluck('category'),
+                    'users'      => User::whereIn('id', $tenantMerchandiserIds)->orderBy('name')->get(['id','name']),
+                    'kds'        => KeyDistributor::whereIn('id', $tenantKdIds)->orderBy('name')->get(['id','name']),
+                    'outlets'    => Outlet::whereIn('kd_id', $tenantKdIds)->orderBy('name')->get(['id','name']),
+                    'categories' => $tenantMerchandiserIds->isEmpty()
+                        ? collect()
+                        : Sku::whereNotNull('category')->distinct()->orderBy('category')->pluck('category'),
                     'channels'   => ['SSM', 'LMT', 'GT'],
                 ];
             } else {
@@ -827,8 +875,10 @@ class MerchandiserAdminHubController extends Controller
         $execImageValidity = ['labels' => [], 'valid' => [], 'invalid' => []];
         $execSkuCount   = $skuCount;
         if (in_array($activeTab, ['executive', 'regional-dashboard', 'client-dashboard'], true)) {
-            $execScheduled  = MerchandiserOutletAssignment::whereDate('assigned_date', '>=', $coverageStart->toDateString())->whereDate('assigned_date', '<=', $coverageEnd->toDateString())->count();
-            $execActual     = MerchandiserOutletAssignment::whereDate('assigned_date', '>=', $coverageStart->toDateString())
+            $execScheduled  = MerchandiserOutletAssignment::whereIn('user_id', $tenantMerchandiserIds)
+                ->whereDate('assigned_date', '>=', $coverageStart->toDateString())->whereDate('assigned_date', '<=', $coverageEnd->toDateString())->count();
+            $execActual     = MerchandiserOutletAssignment::whereIn('user_id', $tenantMerchandiserIds)
+                ->whereDate('assigned_date', '>=', $coverageStart->toDateString())
                 ->whereDate('assigned_date', '<=', $coverageEnd->toDateString())
                 ->where(fn ($query) => $query
                     ->where('status', 'completed')
@@ -836,24 +886,24 @@ class MerchandiserAdminHubController extends Controller
                     ->orWhereNotNull('visit_id'))
                 ->count();
             $execCompliance = $this->boundedPercent($execActual, $execScheduled);
-            $totalMerch     = User::merchandisers()->where('status', 'active')->count();
+            $totalMerch     = User::whereIn('id', $tenantMerchandiserIds)->where('status', 'active')->count();
             $activeUserIds = collect()
-                ->merge(MerchandiserAttendance::whereBetween('clock_in_time', [$coverageStart, $coverageEnd])->pluck('user_id'))
-                ->merge(MerchandiserPcmClockin::whereBetween('clocked_in_at', [$coverageStart, $coverageEnd])->pluck('user_id'))
-                ->merge(MerchandiserPjpClockin::whereBetween('clocked_in_at', [$coverageStart, $coverageEnd])->pluck('user_id'))
+                ->merge(MerchandiserAttendance::whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clock_in_time', [$coverageStart, $coverageEnd])->pluck('user_id'))
+                ->merge(MerchandiserPcmClockin::whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clocked_in_at', [$coverageStart, $coverageEnd])->pluck('user_id'))
+                ->merge(MerchandiserPjpClockin::whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clocked_in_at', [$coverageStart, $coverageEnd])->pluck('user_id'))
                 ->filter()
                 ->unique()
                 ->values();
             $activeMerch = $activeUserIds->isEmpty()
                 ? 0
-                : User::merchandisers()->where('status', 'active')->whereIn('id', $activeUserIds)->count();
+                : User::whereIn('id', $tenantMerchandiserIds)->where('status', 'active')->whereIn('id', $activeUserIds)->count();
             $execActiveRate = $this->boundedPercent($activeMerch, $totalMerch);
             // 7-day visit trend
             for ($i = 6; $i >= 0; $i--) {
                 $day = now()->subDays($i);
                 $execVisitTrend['labels'][]    = $day->format('d M');
-                $execVisitTrend['scheduled'][] = MerchandiserOutletAssignment::whereDate('assigned_date', $day->toDateString())->count();
-                $execVisitTrend['actual'][]    = MerchandiserOutletAssignment::whereDate('assigned_date', $day->toDateString())
+                $execVisitTrend['scheduled'][] = MerchandiserOutletAssignment::whereIn('user_id', $tenantMerchandiserIds)->whereDate('assigned_date', $day->toDateString())->count();
+                $execVisitTrend['actual'][]    = MerchandiserOutletAssignment::whereIn('user_id', $tenantMerchandiserIds)->whereDate('assigned_date', $day->toDateString())
                     ->where(fn ($query) => $query
                         ->where('status', 'completed')
                         ->orWhereNotNull('completed_at')
@@ -864,8 +914,8 @@ class MerchandiserAdminHubController extends Controller
             for ($i = 6; $i >= 0; $i--) {
                 $day = now()->subDays($i);
                 $execImageValidity['labels'][]  = $day->format('d M');
-                $execImageValidity['valid'][]   = DB::table('merchandiser_visit_skus')->whereNotNull('photo_path')->whereDate('created_at', $day->toDateString())->count();
-                $execImageValidity['invalid'][] = DB::table('merchandiser_visit_skus')->whereNull('photo_path')->whereDate('created_at', $day->toDateString())->count();
+                $execImageValidity['valid'][]   = DB::table('merchandiser_visit_skus as vs')->join('merchandiser_visits as v', 'v.id', '=', 'vs.visit_id')->whereIn('v.user_id', $tenantMerchandiserIds)->whereNotNull('vs.photo_path')->whereDate('vs.created_at', $day->toDateString())->count();
+                $execImageValidity['invalid'][] = DB::table('merchandiser_visit_skus as vs')->join('merchandiser_visits as v', 'v.id', '=', 'vs.visit_id')->whereIn('v.user_id', $tenantMerchandiserIds)->whereNull('vs.photo_path')->whereDate('vs.created_at', $day->toDateString())->count();
             }
         }
 
@@ -874,7 +924,7 @@ class MerchandiserAdminHubController extends Controller
         $categoryTargets = collect();
         if (in_array($activeTab, ['category-kpi', 'regional-dashboard', 'client-dashboard'], true)) {
             $categoryTargets = PerfectStoreCategoryTarget::orderBy('category')->get()->keyBy('category');
-            $categoryKpis = app(PerfectStoreKpiService::class)->categoryKpis($coverageStart, $coverageEnd);
+            $categoryKpis = app(PerfectStoreKpiService::class)->categoryKpis($coverageStart, $coverageEnd, $tenantCode);
         }
 
         // ── Performance Command Center: Merchandisers & Supervisors (Daily, Weekly, Monthly, Yearly) ──
@@ -903,7 +953,7 @@ class MerchandiserAdminHubController extends Controller
 
         if (in_array($activeTab, ['user-performance', 'supervisors', 'supervisor-dashboard'], true)) {
             // 1. Merchandisers Performance Data
-            $merchandisersList = User::merchandisers()
+            $merchandisersList = User::whereIn('id', $tenantMerchandiserIds)
                 ->where('status', 'active')
                 ->with(['merchandiserKd', 'merchandiserRegion', 'supervisor'])
                 ->get();
@@ -947,6 +997,7 @@ class MerchandiserAdminHubController extends Controller
 
             // 2. Supervisor Accountability Performance Data
             $supervisorsList = User::merchandiserSupervisors()
+                ->forMerchandiserTenant($tenantCode)
                 ->where('status', 'active')
                 ->get();
 
@@ -1030,11 +1081,13 @@ class MerchandiserAdminHubController extends Controller
                     default   => 'Week ' . ($stepCount - $i),
                 };
 
-                $sched = MerchandiserOutletAssignment::whereDate('assigned_date', '>=', $periodSubStart->toDateString())
+                $sched = MerchandiserOutletAssignment::whereIn('user_id', $tenantMerchandiserIds)
+                    ->whereDate('assigned_date', '>=', $periodSubStart->toDateString())
                     ->whereDate('assigned_date', '<=', $periodSubEnd->toDateString())
                     ->count();
 
-                $comp = MerchandiserOutletAssignment::whereDate('assigned_date', '>=', $periodSubStart->toDateString())
+                $comp = MerchandiserOutletAssignment::whereIn('user_id', $tenantMerchandiserIds)
+                    ->whereDate('assigned_date', '>=', $periodSubStart->toDateString())
                     ->whereDate('assigned_date', '<=', $periodSubEnd->toDateString())
                     ->where(fn ($q) => $q->where('status', 'completed')->orWhereNotNull('completed_at')->orWhereNotNull('visit_id'))
                     ->count();
@@ -1042,6 +1095,7 @@ class MerchandiserAdminHubController extends Controller
                 $cov = $this->boundedPercent($comp, $sched);
 
                 $periodVisits = MerchandiserVisit::with(['visitSkus.sku', 'outlet.keyDistributor'])
+                    ->whereIn('user_id', $tenantMerchandiserIds)
                     ->whereBetween('created_at', [$periodSubStart, $periodSubEnd])
                     ->get();
 
@@ -1077,8 +1131,9 @@ class MerchandiserAdminHubController extends Controller
         $pricingCompliance = 0.0;
         if (in_array($activeTab, ['price-promo'], true)) {
             // POSM: visits that have at least one POSM photo = compliant
-            $totalVisitsPP = MerchandiserVisit::whereBetween('created_at', [$coverageStart, $coverageEnd])->count();
+            $totalVisitsPP = MerchandiserVisit::whereIn('user_id', $tenantMerchandiserIds)->whereBetween('created_at', [$coverageStart, $coverageEnd])->count();
             $withPosm = DB::table('merchandiser_visits as v')
+                ->whereIn('v.user_id', $tenantMerchandiserIds)
                 ->whereExists(fn($q) => $q->from('merchandiser_visit_skus as vs')->whereColumn('vs.visit_id', 'v.id')->whereNotNull('vs.photo_path'))
                 ->whereBetween('v.created_at', [$coverageStart, $coverageEnd])
                 ->count();
@@ -1086,11 +1141,13 @@ class MerchandiserAdminHubController extends Controller
             // Price compliance: visits where price was recorded
             $withPrice = DB::table('merchandiser_visit_skus as vs')
                 ->join('merchandiser_visits as v', 'v.id', '=', 'vs.visit_id')
+                ->whereIn('v.user_id', $tenantMerchandiserIds)
                 ->whereNotNull('vs.shelf_price')
                 ->whereBetween('v.created_at', [$coverageStart, $coverageEnd])
                 ->count();
             $totalSkuChecks = DB::table('merchandiser_visit_skus as vs')
                 ->join('merchandiser_visits as v', 'v.id', '=', 'vs.visit_id')
+                ->whereIn('v.user_id', $tenantMerchandiserIds)
                 ->whereBetween('v.created_at', [$coverageStart, $coverageEnd])
                 ->count();
             $pricingCompliance = $this->boundedPercent($withPrice, $totalSkuChecks);
@@ -1098,6 +1155,7 @@ class MerchandiserAdminHubController extends Controller
             $pricePromoData = DB::table('merchandiser_visits as v')
                 ->join('outlets as o', 'o.id', '=', 'v.outlet_id')
                 ->join('key_distributors as kd', 'kd.id', '=', 'o.kd_id')
+                ->whereIn('v.user_id', $tenantMerchandiserIds)
                 ->whereBetween('v.created_at', [$coverageStart, $coverageEnd])
                 ->select('kd.name as kd_name', DB::raw('count(*) as visits'),
                     DB::raw('sum(case when exists(select 1 from merchandiser_visit_skus vs where vs.visit_id = v.id and vs.photo_path is not null) then 1 else 0 end) as posm_visits'))
@@ -2145,6 +2203,10 @@ class MerchandiserAdminHubController extends Controller
     public function exportData(Request $request, string $type)
     {
         $this->guardAdmin();
+        $tenantCode = MerchandiserTenant::forUser($request->user(), $request);
+        $tenantMerchandiserIds = User::merchandisers()
+            ->forMerchandiserTenant($tenantCode)
+            ->pluck('id');
         $format = $request->query('format', 'csv'); // csv or excel
 
         $rows    = [];
@@ -2155,7 +2217,7 @@ class MerchandiserAdminHubController extends Controller
 
             case 'merchandisers':
                 $headers = ['Name', 'Email', 'Phone', 'Status', 'Key Distributor', 'Region', 'Joined', 'Total Visits', 'Salary (GHS)'];
-                $data = User::merchandisers()
+                $data = User::whereIn('id', $tenantMerchandiserIds)
                     ->with(['merchandiserKd', 'merchandiserRegion'])
                     ->withCount('merchandiserVisits')
                     ->orderBy('name')->get();
@@ -2174,7 +2236,8 @@ class MerchandiserAdminHubController extends Controller
 
             case 'attendance':
                 $headers = ['Date', 'Time', 'Type', 'Merchandiser', 'Outlet', 'KD', 'Status'];
-                $data = MerchandiserAttendance::with(['user', 'outlet'])
+                $data = MerchandiserAttendance::whereIn('user_id', $tenantMerchandiserIds)
+                    ->with(['user', 'outlet'])
                     ->orderByDesc('clock_in_time')->get();
                 foreach ($data as $a) {
                     $rows[] = [
@@ -2191,7 +2254,8 @@ class MerchandiserAdminHubController extends Controller
 
             case 'assets':
                 $headers = ['Date', 'Merchandiser', 'Item', 'Qty Out', 'Location', 'Notes'];
-                $data = PosmLedger::with('createdBy')->orderByDesc('created_at')->get();
+                $data = PosmLedger::when($tenantMerchandiserIds->isEmpty(), fn ($query) => $query->whereRaw('1 = 0'))
+                    ->with('createdBy')->orderByDesc('created_at')->get();
                 foreach ($data as $a) {
                     $rows[] = [
                         $a->created_at->format('Y-m-d'),
@@ -2207,7 +2271,7 @@ class MerchandiserAdminHubController extends Controller
             case 'leaves':
                 $headers = ['Merchandiser', 'Type', 'Start Date', 'End Date', 'Days', 'Status', 'Reason', 'Applied At'];
                 $data = LeaveApplication::with('user')
-                    ->whereHas('user', fn($q) => $q->merchandisers())
+                    ->whereIn('user_id', $tenantMerchandiserIds)
                     ->orderByDesc('created_at')->get();
                 foreach ($data as $l) {
                     $start = Carbon::parse($l->start_date);
@@ -2228,7 +2292,7 @@ class MerchandiserAdminHubController extends Controller
             case 'claims':
                 $headers = ['Merchandiser', 'Description', 'Amount (GHS)', 'Status', 'Submitted At'];
                 $data = PettyCashClaim::with('user')
-                    ->whereHas('user', fn($q) => $q->merchandisers())
+                    ->whereIn('user_id', $tenantMerchandiserIds)
                     ->orderByDesc('created_at')->get();
                 foreach ($data as $c) {
                     $rows[] = [
@@ -2244,7 +2308,7 @@ class MerchandiserAdminHubController extends Controller
             case 'loans':
                 $headers = ['Merchandiser', 'Amount (GHS)', 'Reason', 'Status', 'Submitted At'];
                 $data = SalaryAdvance::with('user')
-                    ->whereHas('user', fn($q) => $q->merchandisers())
+                    ->whereIn('user_id', $tenantMerchandiserIds)
                     ->orderByDesc('created_at')->get();
                 foreach ($data as $l) {
                     $rows[] = [
@@ -2261,7 +2325,7 @@ class MerchandiserAdminHubController extends Controller
                 $headers = ['Scope', 'Name', 'Scheduled', 'Scored', 'Coverage %', 'OSA %', 'NPD %', 'MHS %', 'Planogram %', 'Facings %', 'SOS %', 'Perfect Store Score %'];
                 $from = now('Africa/Accra')->startOfMonth();
                 $to = now('Africa/Accra')->endOfDay();
-                $summary = app(PerfectStoreKpiService::class)->summary($from, $to);
+                $summary = app(PerfectStoreKpiService::class)->summary($from, $to, $tenantCode);
                 foreach (['overview' => collect([$summary['overview'] ?? []]), 'brand' => collect($summary['brands'] ?? []), 'region' => collect($summary['regions'] ?? []), 'kd' => collect($summary['kds'] ?? [])] as $scope => $data) {
                     foreach ($data as $row) {
                         $rows[] = [
@@ -2825,7 +2889,7 @@ class MerchandiserAdminHubController extends Controller
      * Build the period payload used by every filterable chart on the admin overview.
      * The client only changes chart state; all measurements remain server-calculated.
      */
-    private function adminOverviewChartDatasets(): array
+    private function adminOverviewChartDatasets(string $tenantCode): array
     {
         $timezone = 'Africa/Accra';
         $now = Carbon::now($timezone);
@@ -2845,12 +2909,16 @@ class MerchandiserAdminHubController extends Controller
             'attendanceChart' => [],
         ];
 
-        $activeMerchandiserCount = User::merchandisers()->where('status', 'active')->count();
+        $tenantMerchandiserIds = User::merchandisers()
+            ->forMerchandiserTenant($tenantCode)
+            ->pluck('id');
+        $activeMerchandiserCount = User::whereIn('id', $tenantMerchandiserIds)->where('status', 'active')->count();
 
         foreach ($ranges as $period => [$from, $to]) {
             $visitsByKd = DB::table('merchandiser_visits as visits')
                 ->leftJoin('outlets', 'visits.outlet_id', '=', 'outlets.id')
                 ->leftJoin('key_distributors', 'outlets.kd_id', '=', 'key_distributors.id')
+                ->whereIn('visits.user_id', $tenantMerchandiserIds)
                 ->whereBetween('visits.created_at', [$from, $to])
                 ->selectRaw("coalesce(nullif(key_distributors.name, ''), 'Unassigned') as label, count(*) as total")
                 ->groupBy(DB::raw("coalesce(nullif(key_distributors.name, ''), 'Unassigned')"))
@@ -2860,6 +2928,7 @@ class MerchandiserAdminHubController extends Controller
                 ->toArray();
 
             $assetsByItem = DB::table('posm_ledgers')
+                ->when($tenantMerchandiserIds->isEmpty(), fn ($query) => $query->whereRaw('1 = 0'))
                 ->whereBetween('created_at', [$from, $to])
                 ->select('item_name', DB::raw('sum(quantity_out) as total_qty'))
                 ->groupBy('item_name')
@@ -2872,6 +2941,7 @@ class MerchandiserAdminHubController extends Controller
                 ->join('outlets', 'visits.outlet_id', '=', 'outlets.id')
                 ->leftJoin('key_distributors as kd', 'outlets.kd_id', '=', 'kd.id')
                 ->leftJoin('regions as regions', 'kd.region_id', '=', 'regions.id')
+                ->whereIn('visits.user_id', $tenantMerchandiserIds)
                 ->whereBetween('visits.created_at', [$from, $to])
                 ->selectRaw("coalesce(nullif(regions.name, ''), 'Unassigned') as label, count(distinct visits.outlet_id) as total")
                 ->groupBy(DB::raw("coalesce(nullif(regions.name, ''), 'Unassigned')"))
@@ -2882,6 +2952,7 @@ class MerchandiserAdminHubController extends Controller
 
             $outletsByChannel = DB::table('merchandiser_visits as visits')
                 ->join('outlets', 'visits.outlet_id', '=', 'outlets.id')
+                ->whereIn('visits.user_id', $tenantMerchandiserIds)
                 ->whereBetween('visits.created_at', [$from, $to])
                 ->selectRaw("coalesce(nullif(outlets.channel_type, ''), 'Unspecified') as label, count(distinct visits.outlet_id) as total")
                 ->groupBy(DB::raw("coalesce(nullif(outlets.channel_type, ''), 'Unspecified')"))
@@ -2891,23 +2962,23 @@ class MerchandiserAdminHubController extends Controller
                 ->toArray();
 
             $clockedUserIds = collect()
-                ->merge(MerchandiserAttendance::whereBetween('clock_in_time', [$from, $to])->pluck('user_id'))
-                ->merge(MerchandiserPcmClockin::whereBetween('clocked_in_at', [$from, $to])->pluck('user_id'))
-                ->merge(MerchandiserPjpClockin::whereBetween('clocked_in_at', [$from, $to])->pluck('user_id'))
+                ->merge(MerchandiserAttendance::whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clock_in_time', [$from, $to])->pluck('user_id'))
+                ->merge(MerchandiserPcmClockin::whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clocked_in_at', [$from, $to])->pluck('user_id'))
+                ->merge(MerchandiserPjpClockin::whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clocked_in_at', [$from, $to])->pluck('user_id'))
                 ->filter()
                 ->unique()
                 ->values();
             $clockedMerchandiserCount = $clockedUserIds->isEmpty()
                 ? 0
-                : User::merchandisers()
+                : User::whereIn('id', $tenantMerchandiserIds)
                     ->where('status', 'active')
                     ->whereIn('id', $clockedUserIds)
                     ->count();
 
             $clockEvents = collect()
-                ->merge(MerchandiserAttendance::whereBetween('clock_in_time', [$from, $to])->pluck('clock_in_time'))
-                ->merge(MerchandiserPcmClockin::whereBetween('clocked_in_at', [$from, $to])->pluck('clocked_in_at'))
-                ->merge(MerchandiserPjpClockin::whereBetween('clocked_in_at', [$from, $to])->pluck('clocked_in_at'))
+                ->merge(MerchandiserAttendance::whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clock_in_time', [$from, $to])->pluck('clock_in_time'))
+                ->merge(MerchandiserPcmClockin::whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clocked_in_at', [$from, $to])->pluck('clocked_in_at'))
+                ->merge(MerchandiserPjpClockin::whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clocked_in_at', [$from, $to])->pluck('clocked_in_at'))
                 ->filter()
                 ->map(fn ($timestamp) => Carbon::parse($timestamp, $timezone));
 

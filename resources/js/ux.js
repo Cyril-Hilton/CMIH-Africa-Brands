@@ -9,11 +9,11 @@ const initLoader = () => {
     loader.setAttribute('aria-busy', 'false');
     
     if (shouldShowOnLoad) {
-        loader.className = 'fixed inset-0 z-[100] flex items-center justify-center bg-brand-black/40 backdrop-blur-sm transition-opacity duration-300';
+        loader.className = 'fixed inset-0 z-[100] flex items-center justify-center transition-opacity duration-300';
         document.documentElement.classList.add('cmih-loader-active');
         loader.setAttribute('aria-busy', 'true');
     } else {
-        loader.className = 'fixed inset-0 z-[100] hidden flex items-center justify-center bg-brand-black/40 backdrop-blur-sm transition-opacity duration-300 opacity-0';
+        loader.className = 'fixed inset-0 z-[100] hidden flex items-center justify-center transition-opacity duration-300 opacity-0';
     }
     
     loader.innerHTML = `

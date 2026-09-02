@@ -7,6 +7,7 @@ use App\Models\MerchandiserVisit;
 use App\Models\MerchandiserVisitSku;
 use App\Models\PerfectStoreCategoryTarget;
 use App\Models\SiteContent;
+use App\Support\MerchandiserTenant;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -42,18 +43,25 @@ class PerfectStoreKpiService
         'sos' => 'Share of Shelf',
     ];
 
-    public function summary(Carbon $from, Carbon $to): array
+    public function summary(Carbon $from, Carbon $to, ?string $tenant = null): array
     {
         $weights = self::configuredWeights();
         $targets = self::configuredTargets();
+        $tenantCode = $tenant !== null ? MerchandiserTenant::normalize($tenant) : null;
 
         $assignments = MerchandiserOutletAssignment::with(['user', 'outlet.keyDistributor.region'])
             ->whereDate('assigned_date', '>=', $from->toDateString())
             ->whereDate('assigned_date', '<=', $to->toDateString())
+            ->when($tenantCode !== null, fn ($query) => $query->whereHas('user', fn ($userQuery) => $userQuery
+                ->merchandisers()
+                ->forMerchandiserTenant($tenantCode)))
             ->get();
 
         $visits = MerchandiserVisit::with(['user', 'outlet.keyDistributor.region', 'visitSkus.sku.brand'])
             ->whereBetween('created_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])
+            ->when($tenantCode !== null, fn ($query) => $query->whereHas('user', fn ($userQuery) => $userQuery
+                ->merchandisers()
+                ->forMerchandiserTenant($tenantCode)))
             ->get();
 
         $visitScores = $visits->map(fn (MerchandiserVisit $visit) => $this->scoreVisit($visit));
@@ -133,10 +141,16 @@ class PerfectStoreKpiService
         ];
     }
 
-    public function categoryKpis(Carbon $from, Carbon $to): Collection
+    public function categoryKpis(Carbon $from, Carbon $to, ?string $tenant = null): Collection
     {
+        $tenantCode = $tenant !== null ? MerchandiserTenant::normalize($tenant) : null;
         $rows = MerchandiserVisitSku::with('sku')
-            ->whereHas('visit', fn ($query) => $query->whereBetween('created_at', [$from, $to]))
+            ->whereHas('visit', function ($query) use ($from, $to, $tenantCode) {
+                $query->whereBetween('created_at', [$from, $to])
+                    ->when($tenantCode !== null, fn ($visitQuery) => $visitQuery->whereHas('user', fn ($userQuery) => $userQuery
+                        ->merchandisers()
+                        ->forMerchandiserTenant($tenantCode)));
+            })
             ->whereHas('sku', fn ($query) => $query->whereNotNull('category'))
             ->get();
 

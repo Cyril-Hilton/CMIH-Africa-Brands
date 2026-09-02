@@ -26,8 +26,8 @@
     /* ── BASE SHELL & BACKGROUNDS ────────────────────────────────── */
     body[data-merch-tenant="{{ $merchTenant['code'] }}"],
     .merch-tenant-shell {
-        background-color: {{ $isLight ? '#FFFFFF' : '#000000' }} !important;
-        color: {{ $isLight ? '#333333' : '#F8FAFC' }} !important;
+        background-color: {{ $isLight ? '#FFFFFF' : $merchTenant['background'] }} !important;
+        color: {{ $isLight ? '#333333' : $merchTenant['ink'] }} !important;
         font-family: 'Sora', system-ui, -apple-system, sans-serif;
     }
 
@@ -35,9 +35,9 @@
     #merchandiser-sidebar,
     #merchandiser-admin-sidebar,
     .merch-sidebar {
-        background: {{ $isLight ? $merchTenant['primary'] : '#0A0D18' }} !important;
-        border-right: 1px solid {{ $isLight ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.12)' }} !important;
-        color: #FFFFFF !important;
+        background: {{ $isLight ? $merchTenant['primary'] : $merchTenant['sidebar'] }} !important;
+        border-right: 1px solid {{ $isLight ? 'rgba(255,255,255,0.22)' : 'rgba(245,240,220,0.18)' }} !important;
+        color: {{ $merchTenant['sidebar_ink'] }} !important;
     }
 
     .merch-sidebar p,
@@ -78,38 +78,38 @@
         background: {{ $isLight ? '#FFFFFF' : $merchTenant['primary'] }} !important;
         border-radius: 0.625rem !important;
         font-weight: 700 !important;
-        box-shadow: {{ $isLight ? '0 4px 12px rgba(15, 14, 154, 0.22)' : '0 4px 12px rgba(212, 175, 55, 0.22)' }} !important;
+        box-shadow: {{ $isLight ? '0 4px 12px rgba(15, 14, 154, 0.22)' : '0 4px 12px rgba(254, 203, 0, 0.24)' }} !important;
     }
 
     /* ── WORKSPACE HEADER ────────────────────────────────────────── */
     .merch-workspace-header,
     header.sticky {
-        background: {{ $isLight ? '#FFFFFF' : '#111111' }} !important;
-        border-bottom: 1.5px solid {{ $isLight ? '#E5E7EB' : 'rgba(255,255,255,0.12)' }} !important;
-        color: {{ $isLight ? '#333333' : '#F8FAFC' }} !important;
+        background: {{ $isLight ? '#FFFFFF' : $merchTenant['surface'] }} !important;
+        border-bottom: 1.5px solid {{ $isLight ? '#E5E7EB' : 'rgba(245,240,220,0.16)' }} !important;
+        color: {{ $isLight ? '#333333' : $merchTenant['ink'] }} !important;
     }
 
     body[data-merch-tenant="{{ $merchTenant['code'] }}"] .merch-workspace-header h1,
     body[data-merch-tenant="{{ $merchTenant['code'] }}"] .merch-workspace-header h2,
     body[data-merch-tenant="{{ $merchTenant['code'] }}"] .merch-workspace-header span,
     body[data-merch-tenant="{{ $merchTenant['code'] }}"] .merch-workspace-header p {
-        color: {{ $isLight ? '#333333' : '#F8FAFC' }} !important;
+        color: {{ $isLight ? '#333333' : $merchTenant['ink'] }} !important;
     }
 
     .merch-welcome-banner {
-        background: {{ $isLight ? '#FFFFFF' : '#111111' }} !important;
-        border-color: {{ $isLight ? '#E0E7FF' : '#2A2A2A' }} !important;
-        color: {{ $isLight ? '#333333' : '#F8FAFC' }} !important;
+        background: {{ $isLight ? '#FFFFFF' : $merchTenant['surface'] }} !important;
+        border-color: {{ $isLight ? '#E0E7FF' : 'rgba(245,240,220,0.18)' }} !important;
+        color: {{ $isLight ? '#333333' : $merchTenant['ink'] }} !important;
     }
 
     .merch-welcome-banner h1,
     .merch-welcome-banner p,
     .merch-welcome-banner span {
-        color: {{ $isLight ? '#333333' : '#F8FAFC' }} !important;
+        color: {{ $isLight ? '#333333' : $merchTenant['ink'] }} !important;
     }
 
     .merch-welcome-banner p:first-child {
-        color: {{ $isLight ? $merchTenant['primary'] : '#FBBF24' }} !important;
+        color: {{ $isLight ? $merchTenant['primary'] : $merchTenant['accent'] }} !important;
     }
 
     /* ── CARDS, PANELS & UNIVERSAL TABLE BORDERS ─────────────────── */
@@ -119,9 +119,9 @@
     .perfect-store-chart-card,
     .perfect-store-table-card,
     article.merch-card {
-        background: {{ $isLight ? '#FFFFFF' : '#111111' }} !important;
-        border: 1.5px solid {{ $isLight ? '#E5E7EB' : '#2A2A2A' }} !important;
-        color: {{ $isLight ? '#333333' : '#F8FAFC' }} !important;
+        background: {{ $isLight ? '#FFFFFF' : $merchTenant['surface'] }} !important;
+        border: 1.5px solid {{ $isLight ? '#E5E7EB' : 'rgba(245,240,220,0.16)' }} !important;
+        color: {{ $isLight ? '#333333' : $merchTenant['ink'] }} !important;
         box-shadow: {{ $isLight ? '0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.06)' : '0 10px 30px rgba(0,0,0,0.35)' }} !important;
         border-radius: 0.875rem !important;
     }
@@ -179,45 +179,45 @@
 
     html[data-theme="dark"] table th,
     html[data-theme="dark"] th {
-        border-bottom: 2px solid #3A3A3A !important;
-        background-color: #111111 !important;
-        color: #FDF9F2 !important;
+        border-bottom: 2px solid color-mix(in srgb, var(--merch-ink) 22%, transparent) !important;
+        background-color: var(--merch-surface) !important;
+        color: var(--merch-ink) !important;
         font-weight: 800 !important;
     }
 
     html[data-theme="dark"] table td,
     html[data-theme="dark"] td {
-        border-bottom: 1px solid #2A2A2A !important;
-        color: #FDF9F2 !important;
+        border-bottom: 1px solid color-mix(in srgb, var(--merch-ink) 14%, transparent) !important;
+        color: var(--merch-ink) !important;
     }
 
     html[data-theme="dark"] table tr {
-        border-bottom: 1px solid #2A2A2A !important;
+        border-bottom: 1px solid color-mix(in srgb, var(--merch-ink) 14%, transparent) !important;
     }
 
     /* ── DYNAMIC LIGHT-BLUE TABLE FILTER TOOLS BAR ──────────────── */
     .app-table-tools {
-        background-color: {{ $isLight ? '#F8F9FF' : '#111111' }} !important;
-        border: 1.5px solid {{ $isLight ? '#E0E7FF' : '#2A2A2A' }} !important;
+        background-color: {{ $isLight ? '#F8F9FF' : $merchTenant['surface'] }} !important;
+        border: 1.5px solid {{ $isLight ? '#E0E7FF' : 'rgba(245,240,220,0.16)' }} !important;
         border-radius: 0.875rem !important;
         padding: 0.75rem 1rem !important;
     }
 
     .app-table-tools__label {
-        color: {{ $isLight ? $merchTenant['primary'] : '#38BDF8' }} !important;
+        color: {{ $isLight ? $merchTenant['primary'] : $merchTenant['accent'] }} !important;
     }
 
     .app-table-tools__label span:first-child {
-        color: {{ $isLight ? $merchTenant['primary'] : '#38BDF8' }} !important;
+        color: {{ $isLight ? $merchTenant['primary'] : $merchTenant['accent'] }} !important;
         font-weight: 800 !important;
         font-size: 0.7rem !important;
         letter-spacing: 0.1em !important;
     }
 
     .app-table-tools__label [data-table-filter-count] {
-        background-color: {{ $isLight ? '#EEF2FF' : 'rgba(56, 189, 248, 0.2)' }} !important;
-        color: {{ $isLight ? $merchTenant['primary'] : '#7DD3FC' }} !important;
-        border: 1px solid {{ $isLight ? '#C7D2FE' : 'rgba(56, 189, 248, 0.4)' }} !important;
+        background-color: {{ $isLight ? '#EEF2FF' : 'rgba(254, 203, 0, 0.14)' }} !important;
+        color: {{ $isLight ? $merchTenant['primary'] : $merchTenant['accent'] }} !important;
+        border: 1px solid {{ $isLight ? '#C7D2FE' : 'rgba(254, 203, 0, 0.38)' }} !important;
         font-weight: 800 !important;
         padding: 0.2rem 0.6rem !important;
         border-radius: 0.5rem !important;
@@ -225,15 +225,15 @@
 
     .app-table-tools__select,
     .app-table-tools__input {
-        background-color: {{ $isLight ? '#FFFFFF' : '#000000' }} !important;
-        color: {{ $isLight ? '#333333' : '#FDF9F2' }} !important;
-        border: 1.5px solid {{ $isLight ? '#C7D2FE' : '#3A3A3A' }} !important;
+        background-color: {{ $isLight ? '#FFFFFF' : $merchTenant['background'] }} !important;
+        color: {{ $isLight ? '#333333' : $merchTenant['ink'] }} !important;
+        border: 1.5px solid {{ $isLight ? '#C7D2FE' : 'rgba(245,240,220,0.22)' }} !important;
         font-weight: 700 !important;
         border-radius: 0.75rem !important;
     }
 
     .app-table-tools__input::placeholder {
-        color: {{ $isLight ? '#6B7280' : '#94A3B8' }} !important;
+        color: {{ $isLight ? '#6B7280' : $merchTenant['muted'] }} !important;
         font-weight: 600 !important;
     }
 
@@ -323,11 +323,11 @@
         /* Dark Mode High-Contrast Rules */
         main h1, main h2, main h3, main h4,
         .merch-card h1, .merch-card h2, .merch-card h3, .merch-card h4 {
-            color: #F8FAFC !important;
+            color: var(--merch-ink) !important;
         }
 
         main p, .merch-card p {
-            color: #D6D3CB !important;
+            color: var(--merch-muted) !important;
         }
 
         .merch-hero-banner,
@@ -338,8 +338,8 @@
         }
 
         .text-emerald-700, .text-emerald-600, .text-emerald-500, .text-emerald-400, .text-emerald-300 { color: #34D399 !important; }
-        .text-sky-700, .text-sky-600, .text-sky-500, .text-sky-400, .text-sky-300 { color: #E2C57B !important; }
-        .text-amber-700, .text-amber-600, .text-amber-500, .text-amber-400, .text-amber-300 { color: #FBBF24 !important; }
+        .text-sky-700, .text-sky-600, .text-sky-500, .text-sky-400, .text-sky-300 { color: var(--merch-accent) !important; }
+        .text-amber-700, .text-amber-600, .text-amber-500, .text-amber-400, .text-amber-300 { color: var(--merch-primary) !important; }
         .text-violet-700, .text-violet-600, .text-violet-500, .text-violet-400, .text-violet-300 { color: #C084FC !important; }
         .text-cyan-700, .text-cyan-600, .text-cyan-500, .text-cyan-400, .text-cyan-300 { color: #22D3EE !important; }
         .text-blue-700, .text-blue-600, .text-blue-500, .text-blue-400, .text-blue-300 { color: #60A5FA !important; }
@@ -350,14 +350,39 @@
     /* ── BUTTONS ─────────────────────────────────────────────────── */
     .merch-primary-button,
     button.bg-brand-red {
-        background-color: {{ $isLight ? $merchTenant['primary'] : '#D4AF37' }} !important;
+        background-color: {{ $merchTenant['primary'] }} !important;
         color: {{ $isLight ? '#FFFFFF' : '#000000' }} !important;
         font-weight: 700 !important;
     }
 
     .merch-primary-button:hover,
     button.bg-brand-red:hover {
-        background-color: {{ $isLight ? $merchTenant['primary_dark'] : '#B8952B' }} !important;
+        background-color: {{ $merchTenant['primary_dark'] }} !important;
+    }
+
+    /* Guinness surfaces stay grounded in stout black, with gold reserved for actions and focus. */
+    body[data-merch-tenant="ggbl"] .perfect-store-hero {
+        background: var(--merch-surface) !important;
+        border-color: color-mix(in srgb, var(--merch-primary) 34%, transparent) !important;
+    }
+
+    body[data-merch-tenant="ggbl"] .perfect-store-hero h1,
+    body[data-merch-tenant="ggbl"] .perfect-store-hero h2,
+    body[data-merch-tenant="ggbl"] .perfect-store-hero h3,
+    body[data-merch-tenant="ggbl"] .perfect-store-hero p {
+        color: var(--merch-ink) !important;
+    }
+
+    body[data-merch-tenant="ggbl"] .merch-sidebar .merch-nav-item.active,
+    body[data-merch-tenant="ggbl"] .merch-sidebar .nav-item.active {
+        background: var(--merch-primary) !important;
+        border-left-color: var(--merch-primary) !important;
+        color: #1A1A1A !important;
+    }
+
+    body[data-merch-tenant="ggbl"] .merch-sidebar .merch-nav-item.active *,
+    body[data-merch-tenant="ggbl"] .merch-sidebar .nav-item.active * {
+        color: #1A1A1A !important;
     }
 
     /* Unilever premium UI system. This keeps every Unilever role bright, branded and readable. */

@@ -914,7 +914,16 @@ class User extends Authenticatable
 
     public function scopeForMerchandiserTenant($query, ?string $tenant)
     {
-        return $query->where('merchandiser_tenant', \App\Support\MerchandiserTenant::normalize($tenant));
+        $tenantCode = \App\Support\MerchandiserTenant::normalize($tenant);
+
+        return $query->where(function ($tenantQuery) use ($tenantCode) {
+            $tenantQuery->where('merchandiser_tenant', $tenantCode);
+
+            // Accounts created before tenant separation belong to Unilever by default.
+            if ($tenantCode === \App\Support\MerchandiserTenant::UNILEVER) {
+                $tenantQuery->orWhereNull('merchandiser_tenant');
+            }
+        });
     }
 
     public function scopeMerchandiserSupervisors($query)
