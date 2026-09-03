@@ -16,12 +16,14 @@ use App\Models\MerchandiserGoogleFormAssignment;
 use App\Models\MerchandiserLocation;
 use App\Models\MerchandiserOutletAssignment;
 use App\Models\MerchandiserPcmClockin;
+use App\Models\MerchandiserPjpAudit;
 use App\Models\MerchandiserPjp;
 use App\Models\MerchandiserPjpClockin;
 use App\Models\MerchandiserPlanogram;
 use App\Models\MerchandiserReport;
 use App\Models\MerchandiserSupervisorAssignment;
 use App\Models\MerchandiserVisit;
+use App\Models\MerchandiserVisitCategoryImage;
 use App\Models\Notification;
 use App\Models\Outlet;
 use App\Models\PettyCashClaim;
@@ -44,8 +46,10 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class MerchandiserAdminHubController extends Controller
 {
@@ -130,6 +134,8 @@ class MerchandiserAdminHubController extends Controller
             ->map(fn ($id) => (int) $id)
             ->unique()
             ->values();
+        $performanceFilters = $this->resolvePerformanceFilters($request, $tenantMerchandiserIds, $tenantKdIds);
+        $performanceFilterOptions = $this->performanceFilterOptions($performanceFilters, $tenantMerchandiserIds, $tenantKdIds);
 
         $totalMerchandisers   = $tenantMerchandiserIds->count();
         $activeMerchandisers  = User::whereIn('id', $tenantMerchandiserIds)->where('status', 'active')->count();
@@ -193,7 +199,7 @@ class MerchandiserAdminHubController extends Controller
         if ($activeTab === 'overview') {
             $currentMonthStart = now()->startOfMonth();
             $currentMonthEnd = now()->endOfMonth();
-            $perfectStoreSummary = app(PerfectStoreKpiService::class)->summary($perfectStoreFrom, $perfectStoreTo, $tenantCode);
+            $perfectStoreSummary = app(PerfectStoreKpiService::class)->summary($perfectStoreFrom, $perfectStoreTo, $tenantCode, $performanceFilters);
 
             $chartStart = $clockFrom->copy()->startOfDay();
             $chartEnd = $clockTo->copy()->startOfDay();
@@ -213,12 +219,17 @@ class MerchandiserAdminHubController extends Controller
                 ->orderByDesc('merchandiser_visits_count')
                 ->take(10)
                 ->get();
-        } elseif (in_array($activeTab, ['perfect-store', 'supervisor-dashboard', 'regional-dashboard', 'client-dashboard'], true)) {
-            $perfectStoreSummary = app(PerfectStoreKpiService::class)->summary($perfectStoreFrom, $perfectStoreTo, $tenantCode);
-            $allKds = KeyDistributor::whereIn('id', $tenantKdIds)->orderBy('name')->get();
+        } elseif (in_array($activeTab, ['perfect-store', 'supervisor-dashboard', 'client-dashboard'], true)) {
+            $perfectStoreSummary = app(PerfectStoreKpiService::class)->summary($perfectStoreFrom, $perfectStoreTo, $tenantCode, $performanceFilters);
+            $allKds = KeyDistributor::whereIn('id', $tenantKdIds)
+                ->when(filled($performanceFilters['region_id'] ?? null), fn ($query) => $query->where('region_id', (int) $performanceFilters['region_id']))
+                ->when(filled($performanceFilters['kd_id'] ?? null), fn ($query) => $query->whereKey((int) $performanceFilters['kd_id']))
+                ->orderBy('name')
+                ->get();
             $recentVisits = MerchandiserVisit::with(['outlet.keyDistributor', 'visitSkus.sku', 'user.supervisor', 'user.merchandiserKd'])
                 ->whereIn('user_id', $tenantMerchandiserIds)
                 ->whereBetween('created_at', [$perfectStoreFrom->copy()->startOfDay(), $perfectStoreTo->copy()->endOfDay()])
+                ->tap(fn ($query) => $this->applyPerformanceVisitFilters($query, $performanceFilters))
                 ->latest()
                 ->take(500)
                 ->get();
@@ -230,7 +241,12 @@ class MerchandiserAdminHubController extends Controller
             })->sortByDesc('overall_score')->values();
 
             $visitsByUserId = $recentVisits->groupBy(fn($v) => (int) $v->user_id);
-            $activeMerchList = User::whereIn('id', $tenantMerchandiserIds)->where('status', 'active')->with(['supervisor', 'merchandiserKd'])->orderBy('name')->get();
+            $activeMerchList = User::whereIn('id', $tenantMerchandiserIds)
+                ->where('status', 'active')
+                ->with(['supervisor', 'merchandiserKd'])
+                ->tap(fn ($query) => $this->applyPerformanceUserFilters($query, $performanceFilters))
+                ->orderBy('name')
+                ->get();
             $perfectStoreMerchandiserData = $activeMerchList->map(function (User $merch) use ($visitsByUserId) {
                 $userVisits = $visitsByUserId->get((int) $merch->id, collect());
                 $metrics = \App\Services\PerfectStoreCalculator::computeMerchandiserMetrics($merch, $userVisits);
@@ -259,9 +275,9 @@ class MerchandiserAdminHubController extends Controller
                 ];
             })->values();
         } elseif ($activeTab === 'category-kpi') {
-            $categorySosData = app(PerfectStoreKpiService::class)->categoryKpis($perfectStoreFrom, $perfectStoreTo, $tenantCode);
-        } elseif (in_array($activeTab, ['executive', 'regional-dashboard', 'client-dashboard'], true)) {
-            $perfectStoreSummary = app(PerfectStoreKpiService::class)->summary($perfectStoreFrom, $perfectStoreTo, $tenantCode);
+            $categorySosData = app(PerfectStoreKpiService::class)->categoryKpis($perfectStoreFrom, $perfectStoreTo, $tenantCode, $performanceFilters);
+        } elseif (in_array($activeTab, ['executive', 'client-dashboard'], true)) {
+            $perfectStoreSummary = app(PerfectStoreKpiService::class)->summary($perfectStoreFrom, $perfectStoreTo, $tenantCode, $performanceFilters);
         }
 
         [$outletCreatedFrom, $outletCreatedTo] = $this->outletCreatedRange($request);
@@ -681,7 +697,7 @@ class MerchandiserAdminHubController extends Controller
         }
         $todayForRoutes = Carbon::today($routeTimezone)->toDateString();
         $routeSidebarPending = MerchandiserOutletAssignment::whereIn('user_id', $tenantMerchandiserIds)
-            ->where('status', 'planned')
+            ->whereIn('status', [MerchandiserOutletAssignment::STATUS_PLANNED, MerchandiserOutletAssignment::STATUS_IN_PROGRESS, MerchandiserOutletAssignment::STATUS_INCOMPLETE])
             ->whereDate('assigned_date', '<=', $todayForRoutes)
             ->count();
         $routeAssignmentsTotal = 0;
@@ -692,13 +708,16 @@ class MerchandiserAdminHubController extends Controller
             'pending_today' => 0,
             'future_planned' => 0,
             'overdue' => 0,
+            'collapsed' => 0,
+            'carry_over' => 0,
             'pending' => $routeSidebarPending,
             'completion_rate' => 0,
         ];
         $routeDailyChart = ['labels' => [], 'total' => [], 'completed' => [], 'planned' => []];
-        $routeStatusChart = ['labels' => ['Completed', 'Due Today', 'Future Planned', 'Missed/Overdue'], 'data' => [0, 0, 0, 0]];
+        $routeStatusChart = ['labels' => ['Completed', 'Due Today', 'Future Planned', 'Missed/Overdue', 'Collapsed', 'Carry-over'], 'data' => [0, 0, 0, 0, 0, 0]];
         $routeMerchandiserStats = collect();
         $routeKdStats = collect();
+        $pjpCollapseReasons = config('merchandiser.pjp_collapse_reasons', []);
 
         if ($activeTab === 'routes') {
         $routeAssignmentsQuery = $this->constrainRouteAssignmentWindow(
@@ -708,19 +727,38 @@ class MerchandiserAdminHubController extends Controller
             $routeTo
         );
         $routeAssignmentsTotal = (clone $routeAssignmentsQuery)->count();
-        $completedRouteCount = (clone $routeAssignmentsQuery)->where('status', 'completed')->count();
+        $completedRouteCount = (clone $routeAssignmentsQuery)
+            ->where(fn ($query) => $query
+                ->where('status', MerchandiserOutletAssignment::STATUS_COMPLETED)
+                ->orWhereNotNull('completed_at')
+                ->orWhereNotNull('visit_id'))
+            ->count();
         $pendingTodayRouteCount = (clone $routeAssignmentsQuery)
-            ->where('status', 'planned')
+            ->whereIn('status', [MerchandiserOutletAssignment::STATUS_PLANNED, MerchandiserOutletAssignment::STATUS_IN_PROGRESS])
             ->whereDate('assigned_date', $todayForRoutes)
             ->count();
         $futureRouteCount = (clone $routeAssignmentsQuery)
-            ->where('status', 'planned')
+            ->where('status', MerchandiserOutletAssignment::STATUS_PLANNED)
             ->whereDate('assigned_date', '>', $todayForRoutes)
             ->count();
         $overdueRouteCount = (clone $routeAssignmentsQuery)
-            ->where('status', 'planned')
+            ->where(function ($query) {
+                $query->whereNull('status')
+                    ->orWhereIn('status', [
+                        MerchandiserOutletAssignment::STATUS_PLANNED,
+                        MerchandiserOutletAssignment::STATUS_IN_PROGRESS,
+                        MerchandiserOutletAssignment::STATUS_INCOMPLETE,
+                    ]);
+            })
             ->whereDate('assigned_date', '<', $todayForRoutes)
             ->count();
+        $collapsedRouteCount = (clone $routeAssignmentsQuery)
+            ->where('status', MerchandiserOutletAssignment::STATUS_COLLAPSED)
+            ->count();
+        $carryOverRouteCount = (clone $routeAssignmentsQuery)
+            ->whereIn('status', [MerchandiserOutletAssignment::STATUS_CARRY_OVER, 'carried_over'])
+            ->count();
+        $accountableRouteTotal = max($routeAssignmentsTotal - $collapsedRouteCount - $carryOverRouteCount, 0);
         $routeAssignments = $routeAssignmentsQuery
             ->orderBy('assigned_date')
             ->orderBy('sequence')
@@ -732,15 +770,21 @@ class MerchandiserAdminHubController extends Controller
             'pending_today' => $pendingTodayRouteCount,
             'future_planned' => $futureRouteCount,
             'overdue' => $overdueRouteCount,
+            'collapsed' => $collapsedRouteCount,
+            'carry_over' => $carryOverRouteCount,
             'pending' => $pendingTodayRouteCount + $overdueRouteCount,
-            'completion_rate' => $this->boundedPercent($completedRouteCount, $routeAssignmentsTotal),
+            'completion_rate' => $this->boundedPercent($completedRouteCount, $accountableRouteTotal),
         ];
-        $routeDailyStats = $this->constrainRouteAssignmentWindow(DB::table('merchandiser_outlet_assignments'), $routeFrom, $routeTo)
+        $routeDailyStats = $this->constrainRouteAssignmentWindow(
+            DB::table('merchandiser_outlet_assignments')->whereIn('user_id', $tenantMerchandiserIds),
+            $routeFrom,
+            $routeTo
+        )
             ->select(
                 'assigned_date',
                 DB::raw('count(*) as total'),
                 DB::raw("sum(case when status = 'completed' then 1 else 0 end) as completed"),
-                DB::raw("sum(case when status = 'planned' then 1 else 0 end) as planned")
+                DB::raw("sum(case when status in ('planned', 'in_progress') then 1 else 0 end) as planned")
             )
             ->groupBy('assigned_date')
             ->orderBy('assigned_date')
@@ -752,32 +796,42 @@ class MerchandiserAdminHubController extends Controller
             'planned' => $routeDailyStats->pluck('planned')->map(fn ($value) => (int) $value)->all(),
         ];
         $routeStatusChart = [
-            'labels' => ['Completed', 'Due Today', 'Future Planned', 'Missed/Overdue'],
+            'labels' => ['Completed', 'Due Today', 'Future Planned', 'Missed/Overdue', 'Collapsed', 'Carry-over'],
             'data' => [
                 $completedRouteCount,
                 $pendingTodayRouteCount,
                 $futureRouteCount,
                 $overdueRouteCount,
+                $collapsedRouteCount,
+                $carryOverRouteCount,
             ],
         ];
-        $routeMerchandiserStats = $this->constrainRouteAssignmentWindow(DB::table('merchandiser_outlet_assignments'), $routeFrom, $routeTo)
+        $routeMerchandiserStats = $this->constrainRouteAssignmentWindow(
+            DB::table('merchandiser_outlet_assignments')->whereIn('user_id', $tenantMerchandiserIds),
+            $routeFrom,
+            $routeTo
+        )
             ->join('users', 'merchandiser_outlet_assignments.user_id', '=', 'users.id')
             ->select('users.name')
             ->selectRaw('count(*) as total')
             ->selectRaw("sum(case when merchandiser_outlet_assignments.status = 'completed' then 1 else 0 end) as completed")
-            ->selectRaw("sum(case when merchandiser_outlet_assignments.status = 'planned' and merchandiser_outlet_assignments.assigned_date < ? then 1 else 0 end) as overdue", [$todayForRoutes])
+            ->selectRaw("sum(case when merchandiser_outlet_assignments.status in ('planned', 'in_progress', 'incomplete') and merchandiser_outlet_assignments.assigned_date < ? then 1 else 0 end) as overdue", [$todayForRoutes])
             ->groupBy('users.id', 'users.name')
             ->orderByDesc('total')
             ->take(10)
             ->get();
-        $routeKdStats = $this->constrainRouteAssignmentWindow(DB::table('merchandiser_outlet_assignments'), $routeFrom, $routeTo)
+        $routeKdStats = $this->constrainRouteAssignmentWindow(
+            DB::table('merchandiser_outlet_assignments')->whereIn('user_id', $tenantMerchandiserIds),
+            $routeFrom,
+            $routeTo
+        )
             ->join('outlets', 'merchandiser_outlet_assignments.outlet_id', '=', 'outlets.id')
             ->join('key_distributors', 'outlets.kd_id', '=', 'key_distributors.id')
             ->select(
                 'key_distributors.name',
                 DB::raw('count(*) as total'),
                 DB::raw("sum(case when merchandiser_outlet_assignments.status = 'completed' then 1 else 0 end) as completed"),
-                DB::raw("sum(case when merchandiser_outlet_assignments.status = 'planned' then 1 else 0 end) as planned")
+                DB::raw("sum(case when merchandiser_outlet_assignments.status in ('planned', 'in_progress') then 1 else 0 end) as planned")
             )
             ->groupBy('key_distributors.id', 'key_distributors.name')
             ->orderByDesc('total')
@@ -819,11 +873,18 @@ class MerchandiserAdminHubController extends Controller
         ];
 
         // ── ShelfWatch: Image Gallery ───────────────────────────────────────────
+        $hasCategoryImageTable = Schema::hasTable('merchandiser_visit_category_images');
         $totalImagesCount = DB::table('merchandiser_visit_skus as vs')
             ->join('merchandiser_visits as v', 'v.id', '=', 'vs.visit_id')
             ->whereIn('v.user_id', $tenantMerchandiserIds)
             ->whereNotNull('vs.photo_path')
             ->count();
+        if ($hasCategoryImageTable) {
+            $totalImagesCount += DB::table('merchandiser_visit_category_images as ci')
+                ->whereIn('ci.user_id', $tenantMerchandiserIds)
+                ->whereNotNull('ci.image_path')
+                ->count();
+        }
         $galleryImages    = collect();
         $galleryFilters   = [];
         if (in_array($activeTab, ['gallery', 'supervisor-dashboard'], true)) {
@@ -840,7 +901,11 @@ class MerchandiserAdminHubController extends Controller
                     'o.name as outlet_name', 'o.channel_type',
                     'kd.name as kd_name',
                     'u.name as user_name', 'u.id as user_id',
-                    's.name as sku_name', 's.category'
+                    's.name as sku_name', 's.category',
+                    DB::raw("'sku_photo' as source_type"),
+                    DB::raw('null as capture_status'),
+                    DB::raw('null as ai_message'),
+                    DB::raw('null as ai_confidence')
                 )
                 ->when($request->filled('filter_user'), fn($q) => $q->where('u.id', $request->filter_user))
                 ->when($request->filled('filter_kd'), fn($q) => $q->where('kd.id', $request->filter_kd))
@@ -848,8 +913,40 @@ class MerchandiserAdminHubController extends Controller
                 ->when($request->filled('filter_category'), fn($q) => $q->where('s.category', $request->filter_category))
                 ->when($request->filled('filter_channel'), fn($q) => $q->where('o.channel_type', $request->filter_channel))
                 ->when($request->filled('date_from'), fn($q) => $q->whereDate('vs.created_at', '>=', $request->date_from))
-                ->when($request->filled('date_to'), fn($q) => $q->whereDate('vs.created_at', '<=', $request->date_to))
-                ->orderByDesc('vs.created_at');
+                ->when($request->filled('date_to'), fn($q) => $q->whereDate('vs.created_at', '<=', $request->date_to));
+            if ($hasCategoryImageTable) {
+                $categoryGalleryQ = DB::table('merchandiser_visit_category_images as ci')
+                    ->join('merchandiser_visits as v', 'v.id', '=', 'ci.visit_id')
+                    ->join('outlets as o', 'o.id', '=', 'ci.outlet_id')
+                    ->join('key_distributors as kd', 'kd.id', '=', 'ci.kd_id')
+                    ->join('users as u', 'u.id', '=', 'ci.user_id')
+                    ->whereIn('ci.user_id', $tenantMerchandiserIds)
+                    ->whereNotNull('ci.image_path')
+                    ->select(
+                        'ci.id', 'ci.image_path as photo_path', 'ci.created_at',
+                        'o.name as outlet_name', 'o.channel_type',
+                        'kd.name as kd_name',
+                        'u.name as user_name', 'u.id as user_id',
+                        'ci.category as sku_name', 'ci.category',
+                        DB::raw("'category_ai' as source_type"),
+                        'ci.status as capture_status',
+                        'ci.ai_message',
+                        'ci.ai_confidence'
+                    )
+                    ->when($request->filled('filter_user'), fn($q) => $q->where('u.id', $request->filter_user))
+                    ->when($request->filled('filter_kd'), fn($q) => $q->where('kd.id', $request->filter_kd))
+                    ->when($request->filled('filter_outlet'), fn($q) => $q->where('o.id', $request->filter_outlet))
+                    ->when($request->filled('filter_category'), fn($q) => $q->where('ci.category', $request->filter_category))
+                    ->when($request->filled('filter_channel'), fn($q) => $q->where('o.channel_type', $request->filter_channel))
+                    ->when($request->filled('date_from'), fn($q) => $q->whereDate('ci.created_at', '>=', $request->date_from))
+                    ->when($request->filled('date_to'), fn($q) => $q->whereDate('ci.created_at', '<=', $request->date_to));
+
+                $galleryQ = DB::query()
+                    ->fromSub($galleryQ->unionAll($categoryGalleryQ), 'gallery_images')
+                    ->orderByDesc('created_at');
+            } else {
+                $galleryQ->orderByDesc('vs.created_at');
+            }
             if ($activeTab === 'gallery') {
                 $galleryImages  = $galleryQ->paginate(40, ['*'], 'gallery_page')->appends($request->query());
                 $galleryFilters = [
@@ -858,7 +955,12 @@ class MerchandiserAdminHubController extends Controller
                     'outlets'    => Outlet::whereIn('kd_id', $tenantKdIds)->orderBy('name')->get(['id','name']),
                     'categories' => $tenantMerchandiserIds->isEmpty()
                         ? collect()
-                        : Sku::whereNotNull('category')->distinct()->orderBy('category')->pluck('category'),
+                        : Sku::whereNotNull('category')->distinct()->orderBy('category')->pluck('category')
+                            ->merge(config('merchandiser.ai_capture_categories', []))
+                            ->filter()
+                            ->unique()
+                            ->sort()
+                            ->values(),
                     'channels'   => ['SSM', 'LMT', 'GT'],
                 ];
             } else {
@@ -874,7 +976,7 @@ class MerchandiserAdminHubController extends Controller
         $execVisitTrend = ['labels' => [], 'scheduled' => [], 'actual' => []];
         $execImageValidity = ['labels' => [], 'valid' => [], 'invalid' => []];
         $execSkuCount   = $skuCount;
-        if (in_array($activeTab, ['executive', 'regional-dashboard', 'client-dashboard'], true)) {
+        if (in_array($activeTab, ['executive', 'client-dashboard'], true)) {
             $execScheduled  = MerchandiserOutletAssignment::whereIn('user_id', $tenantMerchandiserIds)
                 ->whereDate('assigned_date', '>=', $coverageStart->toDateString())->whereDate('assigned_date', '<=', $coverageEnd->toDateString())->count();
             $execActual     = MerchandiserOutletAssignment::whereIn('user_id', $tenantMerchandiserIds)
@@ -922,9 +1024,9 @@ class MerchandiserAdminHubController extends Controller
         // ── ShelfWatch: Category Level KPIs ───────────────────────────────────
         $categoryKpis = collect();
         $categoryTargets = collect();
-        if (in_array($activeTab, ['category-kpi', 'regional-dashboard', 'client-dashboard'], true)) {
+        if (in_array($activeTab, ['category-kpi', 'client-dashboard'], true)) {
             $categoryTargets = PerfectStoreCategoryTarget::orderBy('category')->get()->keyBy('category');
-            $categoryKpis = app(PerfectStoreKpiService::class)->categoryKpis($coverageStart, $coverageEnd, $tenantCode);
+            $categoryKpis = app(PerfectStoreKpiService::class)->categoryKpis($coverageStart, $coverageEnd, $tenantCode, $performanceFilters);
         }
 
         // ── Performance Command Center: Merchandisers & Supervisors (Daily, Weekly, Monthly, Yearly) ──
@@ -956,23 +1058,35 @@ class MerchandiserAdminHubController extends Controller
             $merchandisersList = User::whereIn('id', $tenantMerchandiserIds)
                 ->where('status', 'active')
                 ->with(['merchandiserKd', 'merchandiserRegion', 'supervisor'])
+                ->tap(fn ($query) => $this->applyPerformanceUserFilters($query, $performanceFilters))
                 ->get();
 
-            $userPerformance = $merchandisersList->map(function ($merch) use ($perfStart, $perfEnd) {
+            $userPerformance = $merchandisersList->map(function ($merch) use ($perfStart, $perfEnd, $performanceFilters) {
                 $scheduled = MerchandiserOutletAssignment::where('user_id', $merch->id)
                     ->whereDate('assigned_date', '>=', $perfStart->toDateString())
                     ->whereDate('assigned_date', '<=', $perfEnd->toDateString())
+                    ->whereNotIn('status', [
+                        MerchandiserOutletAssignment::STATUS_COLLAPSED,
+                        MerchandiserOutletAssignment::STATUS_CARRY_OVER,
+                        'carried_over',
+                    ])
                     ->count();
 
                 $completed = MerchandiserOutletAssignment::where('user_id', $merch->id)
                     ->whereDate('assigned_date', '>=', $perfStart->toDateString())
                     ->whereDate('assigned_date', '<=', $perfEnd->toDateString())
+                    ->whereNotIn('status', [
+                        MerchandiserOutletAssignment::STATUS_COLLAPSED,
+                        MerchandiserOutletAssignment::STATUS_CARRY_OVER,
+                        'carried_over',
+                    ])
                     ->where(fn ($q) => $q->where('status', 'completed')->orWhereNotNull('completed_at')->orWhereNotNull('visit_id'))
                     ->count();
 
                 $visits = MerchandiserVisit::with(['visitSkus.sku', 'outlet.keyDistributor'])
                     ->where('user_id', $merch->id)
                     ->whereBetween('created_at', [$perfStart, $perfEnd])
+                    ->tap(fn ($query) => $this->applyPerformanceVisitFilters($query, $performanceFilters))
                     ->get();
 
                 $metrics = PerfectStoreCalculator::computeMerchandiserMetrics($merch, $visits->groupBy('outlet_id'));
@@ -1081,47 +1195,14 @@ class MerchandiserAdminHubController extends Controller
                     default   => 'Week ' . ($stepCount - $i),
                 };
 
-                $sched = MerchandiserOutletAssignment::whereIn('user_id', $tenantMerchandiserIds)
-                    ->whereDate('assigned_date', '>=', $periodSubStart->toDateString())
-                    ->whereDate('assigned_date', '<=', $periodSubEnd->toDateString())
-                    ->count();
-
-                $comp = MerchandiserOutletAssignment::whereIn('user_id', $tenantMerchandiserIds)
-                    ->whereDate('assigned_date', '>=', $periodSubStart->toDateString())
-                    ->whereDate('assigned_date', '<=', $periodSubEnd->toDateString())
-                    ->where(fn ($q) => $q->where('status', 'completed')->orWhereNotNull('completed_at')->orWhereNotNull('visit_id'))
-                    ->count();
-
-                $cov = $this->boundedPercent($comp, $sched);
-
-                $periodVisits = MerchandiserVisit::with(['visitSkus.sku', 'outlet.keyDistributor'])
-                    ->whereIn('user_id', $tenantMerchandiserIds)
-                    ->whereBetween('created_at', [$periodSubStart, $periodSubEnd])
-                    ->get();
-
-                $facingArr = [];
-                $planoArr  = [];
-                $overallArr = [];
-
-                foreach ($periodVisits->groupBy('outlet_id') as $group) {
-                    $v = $group->first();
-                    if ($v) {
-                        $m = PerfectStoreCalculator::computeStoreVisitMetrics($v);
-                        $facingArr[]  = $m['facing_pct'];
-                        $planoArr[]   = $m['planogram_pct'];
-                        $overallArr[] = $m['overall_score'];
-                    }
-                }
-
-                $avgF = count($facingArr) ? round(array_sum($facingArr) / count($facingArr), 1) : 0.0;
-                $avgP = count($planoArr) ? round(array_sum($planoArr) / count($planoArr), 1) : 0.0;
-                $avgO = count($overallArr) ? round(array_sum($overallArr) / count($overallArr), 1) : 0.0;
+                $periodSummary = app(PerfectStoreKpiService::class)->summary($periodSubStart, $periodSubEnd, $tenantCode, $performanceFilters);
+                $periodOverview = $periodSummary['overview'] ?? [];
 
                 $perfTrendChart['labels'][]   = $label;
-                $perfTrendChart['coverage'][] = $cov;
-                $perfTrendChart['facing'][]   = $avgF;
-                $perfTrendChart['planogram'][]= $avgP;
-                $perfTrendChart['overall'][]  = $avgO;
+                $perfTrendChart['coverage'][] = (float) ($periodOverview['coverage'] ?? 0);
+                $perfTrendChart['facing'][]   = (float) ($periodOverview['facing'] ?? 0);
+                $perfTrendChart['planogram'][]= (float) ($periodOverview['planogram'] ?? 0);
+                $perfTrendChart['overall'][]  = (float) ($periodOverview['perfect_store_score'] ?? 0);
             }
         }
 
@@ -1179,6 +1260,7 @@ class MerchandiserAdminHubController extends Controller
             'attendanceChart', 'topPerformers',
             'clockFromInput', 'clockToInput', 'clockRangeLabel',
             'perfectStoreSummary', 'perfectStoreRangeLabel',
+            'performanceFilters', 'performanceFilterOptions',
             'perfectStoreTargets', 'perfectStoreWeights',
             'clockAttendanceCount', 'clockPcmCount', 'clockPjpCount',
             'kds', 'regions',
@@ -1203,7 +1285,7 @@ class MerchandiserAdminHubController extends Controller
             'currentUserCanUploadPjp', 'complianceQueries',
             'routeAssignments', 'routeAssignmentsTotal', 'routeSummary',
             'routeFrom', 'routeTo', 'routeFromInput', 'routeToInput',
-            'routeDailyChart', 'routeStatusChart', 'routeMerchandiserStats', 'routeKdStats',
+            'routeDailyChart', 'routeStatusChart', 'routeMerchandiserStats', 'routeKdStats', 'pjpCollapseReasons',
             'googleForms', 'planograms', 'googleFormsCount', 'planogramsCount',
             'brandOptions', 'campaignOptions',
             'perfectStoreGuides',
@@ -1239,12 +1321,164 @@ class MerchandiserAdminHubController extends Controller
             'overview', 'perfect-store', 'tracking', 'kds', 'routes', 'skus', 'forms',
             'merchandisers', 'supervisors', 'assets', 'notifications', 'settings',
             'gallery', 'executive', 'category-kpi', 'user-performance', 'price-promo',
-            'supervisor-dashboard', 'regional-dashboard', 'client-dashboard', 'profile',
+            'supervisor-dashboard', 'client-dashboard', 'profile',
         ];
 
         $candidate = $adminTab ?: (string) $request->query('tab', 'overview');
+        if ($candidate === 'regional-dashboard') {
+            return 'overview';
+        }
 
         return in_array($candidate, $tabs, true) ? $candidate : 'overview';
+    }
+
+    private function resolvePerformanceFilters(Request $request, $tenantMerchandiserIds, $tenantKdIds): array
+    {
+        $filters = [
+            'region_id' => $request->integer('performance_region_id') ?: null,
+            'kd_id' => $request->integer('performance_kd_id') ?: null,
+            'supervisor_id' => $request->integer('performance_supervisor_id') ?: null,
+            'merchandiser_id' => $request->integer('performance_merchandiser_id') ?: null,
+            'outlet_id' => $request->integer('performance_outlet_id') ?: null,
+            'channel' => trim((string) $request->query('performance_channel', '')) ?: null,
+            'category' => trim((string) $request->query('performance_category', '')) ?: null,
+        ];
+
+        $tenantKdIds = collect($tenantKdIds)->map(fn ($id) => (int) $id)->all();
+        $tenantMerchandiserIds = collect($tenantMerchandiserIds)->map(fn ($id) => (int) $id)->all();
+
+        if ($filters['kd_id'] && ! in_array((int) $filters['kd_id'], $tenantKdIds, true)) {
+            $filters['kd_id'] = null;
+        }
+
+        if ($filters['region_id']) {
+            $regionKdIds = KeyDistributor::whereIn('id', $tenantKdIds)
+                ->where('region_id', (int) $filters['region_id'])
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+
+            if ($filters['kd_id'] && ! in_array((int) $filters['kd_id'], $regionKdIds, true)) {
+                $filters['kd_id'] = null;
+            }
+        }
+
+        if ($filters['supervisor_id']
+            && ! User::whereKey((int) $filters['supervisor_id'])->where('status', 'active')->whereIn('access_role', [User::MERCHANDISER_SUPERVISOR_ROLE])->exists()) {
+            $filters['supervisor_id'] = null;
+        }
+
+        if ($filters['merchandiser_id'] && ! in_array((int) $filters['merchandiser_id'], $tenantMerchandiserIds, true)) {
+            $filters['merchandiser_id'] = null;
+        }
+
+        if ($filters['outlet_id']
+            && ! Outlet::whereKey((int) $filters['outlet_id'])->whereIn('kd_id', $tenantKdIds)->exists()) {
+            $filters['outlet_id'] = null;
+        }
+
+        if ($filters['channel'] && ! in_array($filters['channel'], ['SSM', 'LMT', 'GT'], true)) {
+            $filters['channel'] = null;
+        }
+
+        $knownCategories = Sku::whereNotNull('category')->distinct()->pluck('category')
+            ->merge(config('merchandiser.ai_capture_categories', []))
+            ->filter()
+            ->unique()
+            ->all();
+        if ($filters['category'] && ! in_array($filters['category'], $knownCategories, true)) {
+            $filters['category'] = null;
+        }
+
+        return array_filter($filters, fn ($value) => $value !== null && $value !== '');
+    }
+
+    private function performanceFilterOptions(array $filters, $tenantMerchandiserIds, $tenantKdIds): array
+    {
+        $tenantKdIds = collect($tenantKdIds)->map(fn ($id) => (int) $id)->values();
+        $tenantMerchandiserIds = collect($tenantMerchandiserIds)->map(fn ($id) => (int) $id)->values();
+        $regionIds = KeyDistributor::whereIn('id', $tenantKdIds)
+            ->whereNotNull('region_id')
+            ->pluck('region_id')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        $kdQuery = KeyDistributor::whereIn('id', $tenantKdIds)->with('region');
+        if (filled($filters['region_id'] ?? null)) {
+            $kdQuery->where('region_id', (int) $filters['region_id']);
+        }
+
+        $userQuery = User::whereIn('id', $tenantMerchandiserIds)
+            ->where('status', 'active')
+            ->with(['supervisor', 'merchandiserKd']);
+        $this->applyPerformanceUserFilters($userQuery, $filters, skipMerchandiser: true);
+
+        $outletQuery = Outlet::whereIn('kd_id', $tenantKdIds);
+        if (filled($filters['region_id'] ?? null)) {
+            $outletQuery->whereHas('keyDistributor', fn ($query) => $query->where('region_id', (int) $filters['region_id']));
+        }
+        if (filled($filters['kd_id'] ?? null)) {
+            $outletQuery->where('kd_id', (int) $filters['kd_id']);
+        }
+        $filteredUsers = (clone $userQuery)->orderBy('name')->get(['id', 'name', 'kd_id', 'supervisor_id']);
+        $channelQuery = clone $outletQuery;
+        $outlets = (clone $outletQuery)->orderBy('name')->get(['id', 'name', 'kd_id', 'channel_type']);
+
+        return [
+            'regions' => $regionIds->isEmpty()
+                ? collect()
+                : Region::whereIn('id', $regionIds)->orderBy('name')->get(['id', 'name']),
+            'kds' => $kdQuery->orderBy('name')->get(['id', 'name', 'region_id']),
+            'supervisors' => User::whereIn('id', $filteredUsers->pluck('supervisor_id')->filter()->unique())
+                ->orderBy('name')
+                ->get(['id', 'name']),
+            'merchandisers' => $filteredUsers,
+            'outlets' => $outlets,
+            'channels' => $channelQuery
+                ->select('channel_type')
+                ->whereNotNull('channel_type')
+                ->distinct()
+                ->orderBy('channel_type')
+                ->pluck('channel_type'),
+            'categories' => Sku::whereNotNull('category')->distinct()->orderBy('category')->pluck('category')
+                ->merge(config('merchandiser.ai_capture_categories', []))
+                ->filter()
+                ->unique()
+                ->sort()
+                ->values(),
+        ];
+    }
+
+    private function applyPerformanceVisitFilters($query, array $filters): void
+    {
+        $query
+            ->when(filled($filters['region_id'] ?? null), fn ($builder) => $builder
+                ->whereHas('outlet.keyDistributor', fn ($kdQuery) => $kdQuery->where('region_id', (int) $filters['region_id'])))
+            ->when(filled($filters['kd_id'] ?? null), fn ($builder) => $builder
+                ->whereHas('outlet', fn ($outletQuery) => $outletQuery->where('kd_id', (int) $filters['kd_id'])))
+            ->when(filled($filters['supervisor_id'] ?? null), fn ($builder) => $builder
+                ->whereHas('user', fn ($userQuery) => $userQuery->where('supervisor_id', (int) $filters['supervisor_id'])))
+            ->when(filled($filters['merchandiser_id'] ?? null), fn ($builder) => $builder
+                ->where('user_id', (int) $filters['merchandiser_id']))
+            ->when(filled($filters['outlet_id'] ?? null), fn ($builder) => $builder
+                ->where('outlet_id', (int) $filters['outlet_id']))
+            ->when(filled($filters['channel'] ?? null), fn ($builder) => $builder
+                ->whereHas('outlet', fn ($outletQuery) => $outletQuery->where('channel_type', $filters['channel'])))
+            ->when(filled($filters['category'] ?? null), fn ($builder) => $builder
+                ->whereHas('visitSkus.sku', fn ($skuQuery) => $skuQuery->where('category', $filters['category'])));
+    }
+
+    private function applyPerformanceUserFilters($query, array $filters, bool $skipMerchandiser = false): void
+    {
+        $query
+            ->when(filled($filters['region_id'] ?? null), fn ($builder) => $builder->where('region_id', (int) $filters['region_id']))
+            ->when(filled($filters['kd_id'] ?? null), fn ($builder) => $builder->where('kd_id', (int) $filters['kd_id']))
+            ->when(filled($filters['supervisor_id'] ?? null), fn ($builder) => $builder->where('supervisor_id', (int) $filters['supervisor_id']));
+
+        if (! $skipMerchandiser && filled($filters['merchandiser_id'] ?? null)) {
+            $query->whereKey((int) $filters['merchandiser_id']);
+        }
     }
 
     private function emptyPaginator(Request $request, string $pageName, int $perPage): LengthAwarePaginator
@@ -1758,7 +1992,7 @@ class MerchandiserAdminHubController extends Controller
             'outlet_id' => ['nullable', 'integer', 'exists:outlets,id'],
             'outlet_ids' => ['nullable', 'array'],
             'outlet_ids.*' => ['integer', 'exists:outlets,id'],
-            'visit_days' => ['nullable', 'array'],
+            'visit_days' => ['required', 'array', 'min:1'],
             'visit_days.*' => ['integer', 'between:1,7'],
         ]);
 
@@ -1783,16 +2017,14 @@ class MerchandiserAdminHubController extends Controller
             return back()->withErrors(['outlet_ids' => 'Every selected outlet must belong to the merchandiser assigned KD.'])->withInput();
         }
 
-        $visitDays = ! empty($validated['visit_days']) ? array_map('intval', $validated['visit_days']) : null;
+        $visitDays = collect($validated['visit_days'])->map(fn ($day) => (int) $day)->unique()->values()->all();
 
         foreach ($outlets as $outlet) {
             $pivotData = [
                 'assigned_by' => auth()->id(),
                 'assigned_at' => now(),
             ];
-            if ($visitDays !== null) {
-                $pivotData['visit_days'] = json_encode($visitDays);
-            }
+            $pivotData['visit_days'] = json_encode($visitDays);
 
             $outlet->assignedMerchandisers()->syncWithoutDetaching([
                 $user->id => $pivotData,
@@ -1800,6 +2032,100 @@ class MerchandiserAdminHubController extends Controller
         }
 
         return back()->with('success', "{$outlets->count()} outlet(s) assigned to {$user->name}.");
+    }
+
+    public function collapsePjp(Request $request)
+    {
+        $this->guardAdmin();
+
+        $reasonTypes = array_keys(config('merchandiser.pjp_collapse_reasons', []));
+        $validated = $request->validate([
+            'user_id' => ['required', 'integer', 'exists:users,id'],
+            'assigned_date' => ['required', 'date'],
+            'reason_type' => ['required', 'string', Rule::in($reasonTypes)],
+            'reason' => ['required', 'string', 'max:2000'],
+        ]);
+
+        $merchandiser = User::merchandisers()->whereKey($validated['user_id'])->firstOrFail();
+        $date = Carbon::parse($validated['assigned_date'])->startOfDay();
+        $assignments = MerchandiserOutletAssignment::with(['outlet.keyDistributor', 'user'])
+            ->where('user_id', $merchandiser->id)
+            ->whereDate('assigned_date', $date->toDateString())
+            ->where(function ($query) {
+                $query->whereNull('status')
+                    ->orWhereNotIn('status', [
+                        MerchandiserOutletAssignment::STATUS_COMPLETED,
+                        MerchandiserOutletAssignment::STATUS_VISITED,
+                        MerchandiserOutletAssignment::STATUS_COLLAPSED,
+                    ]);
+            })
+            ->orderBy('sequence')
+            ->get();
+
+        if ($assignments->isEmpty()) {
+            return back()
+                ->withInput()
+                ->withErrors(['assigned_date' => 'No schedulable PJP rows were found for that merchandiser and date. Completed, visited, or already-collapsed rows are not changed.']);
+        }
+
+        DB::transaction(function () use ($assignments, $validated, $merchandiser, $date) {
+            foreach ($assignments as $assignment) {
+                $fromStatus = $assignment->status ?: MerchandiserOutletAssignment::STATUS_PLANNED;
+
+                $assignment->update([
+                    'status' => MerchandiserOutletAssignment::STATUS_COLLAPSED,
+                    'collapse_reason_type' => $validated['reason_type'],
+                    'collapse_reason' => $validated['reason'],
+                    'collapsed_at' => now(),
+                    'collapsed_by' => auth()->id(),
+                    'notes' => trim(($assignment->notes ? $assignment->notes.PHP_EOL : '')
+                        .'PJP collapsed on '.now()->format('Y-m-d H:i').' by '.(auth()->user()?->name ?? 'Admin').'. Reason: '.$validated['reason']),
+                ]);
+
+                MerchandiserPjpAudit::create([
+                    'assignment_id' => $assignment->id,
+                    'user_id' => $assignment->user_id,
+                    'supervisor_id' => $merchandiser->supervisor_id,
+                    'kd_id' => $assignment->outlet?->kd_id ?? $merchandiser->kd_id,
+                    'outlet_id' => $assignment->outlet_id,
+                    'assigned_date' => $date->toDateString(),
+                    'action' => 'collapsed',
+                    'from_status' => $fromStatus,
+                    'to_status' => MerchandiserOutletAssignment::STATUS_COLLAPSED,
+                    'reason_type' => $validated['reason_type'],
+                    'reason' => $validated['reason'],
+                    'route_snapshot' => [
+                        'merchandiser' => $merchandiser->only(['id', 'name', 'email', 'kd_id', 'region_id', 'supervisor_id']),
+                        'outlet' => $assignment->outlet?->only(['id', 'name', 'code', 'kd_id', 'channel_type']),
+                        'sequence' => $assignment->sequence,
+                        'assigned_start_at' => $assignment->assigned_start_at?->toDateTimeString(),
+                        'assigned_end_at' => $assignment->assigned_end_at?->toDateTimeString(),
+                    ],
+                    'performed_by' => auth()->id(),
+                    'performed_at' => now(),
+                ]);
+            }
+        });
+
+        return back()->with('success', "Collapsed {$assignments->count()} PJP stop(s) for {$merchandiser->name} on ".$date->format('d M Y').'.');
+    }
+
+    public function markCategoryImageNotApplicable(Request $request, MerchandiserVisitCategoryImage $categoryImage)
+    {
+        $this->guardAdmin();
+
+        $validated = $request->validate([
+            'reason' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $categoryImage->update([
+            'status' => MerchandiserVisitCategoryImage::STATUS_NOT_APPLICABLE,
+            'ai_message' => trim((string) ($validated['reason'] ?? '')) ?: 'Marked not applicable by admin.',
+            'marked_not_applicable_by' => $request->user()?->id,
+            'marked_not_applicable_at' => now(),
+        ]);
+
+        return back()->with('success', $categoryImage->category.' marked as Not Applicable for this visit.');
     }
 
     public function assignRegisteredOutlets(Request $request)
@@ -1828,6 +2154,7 @@ class MerchandiserAdminHubController extends Controller
                         $registeredBy->id => [
                             'assigned_by' => auth()->id(),
                             'assigned_at' => now(),
+                            'visit_days' => json_encode([(int) ($outlet->created_at?->isoWeekday() ?: now()->isoWeekday())]),
                         ],
                     ]);
                     $assigned++;
@@ -2721,11 +3048,13 @@ class MerchandiserAdminHubController extends Controller
 
     private function syncOutletMerchandisers(Outlet $outlet, \Illuminate\Support\Collection $userIds): void
     {
+        $visitDays = json_encode([(int) ($outlet->created_at?->isoWeekday() ?: now()->isoWeekday())]);
         $syncPayload = $userIds
             ->mapWithKeys(fn (int $userId) => [
                 $userId => [
                     'assigned_by' => auth()->id(),
                     'assigned_at' => now(),
+                    'visit_days' => $visitDays,
                 ],
             ])
             ->all();

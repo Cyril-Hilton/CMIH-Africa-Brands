@@ -18,7 +18,12 @@ class AnalyzeMerchandiserShelfPhoto implements ShouldQueue
     public int $tries = 2;
     public int $timeout = 120;
 
-    public function __construct(public string $token, public string $photoPath, public int $userId)
+    public function __construct(
+        public string $token,
+        public string $photoPath,
+        public int $userId,
+        public ?string $category = null
+    )
     {
         $this->onConnection(config('performance.background_jobs.connection', 'deferred'));
         $this->onQueue('ai');
@@ -31,6 +36,7 @@ class AnalyzeMerchandiserShelfPhoto implements ShouldQueue
             'job_status' => 'processing',
             'status' => 'queued',
             'message' => 'AI shelf detection is running.',
+            'category' => $this->category,
             'detections' => [],
         ], now()->addMinutes(30));
 
@@ -48,7 +54,7 @@ class AnalyzeMerchandiserShelfPhoto implements ShouldQueue
                 true
             );
 
-            $result = $analyzer->analyze($photo, Sku::with('brand')->orderBy('name')->get());
+            $result = $analyzer->analyze($photo, Sku::with('brand')->orderBy('name')->get(), $this->category);
 
             Cache::put($key, ['job_status' => 'completed'] + $result, now()->addMinutes(30));
         } catch (\Throwable $exception) {
@@ -61,6 +67,7 @@ class AnalyzeMerchandiserShelfPhoto implements ShouldQueue
                 'job_status' => 'failed',
                 'status' => 'manual_fallback',
                 'message' => 'AI detection could not complete. Continue with manual SKU entry.',
+                'category' => $this->category,
                 'provider' => 'manual',
                 'model' => null,
                 'detections' => [],

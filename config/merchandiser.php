@@ -16,4 +16,22 @@ return [
         'trim',
         explode(',', env('MERCHANDISER_PUBLIC_HOLIDAYS', ''))
     ))),
+
+    'pjp_collapse_reasons' => [
+        'promo' => 'Promo',
+        'leave' => 'Leave',
+        'training' => 'Training',
+        'official_assignment' => 'Official Assignment',
+        'public_holiday' => 'Public Holiday',
+        'other' => 'Other',
+    ],
+
+    'ai_capture_categories' => [
+        'Orals',
+        'Skin Cleansing',
+        'Nutrition',
+        'Homecare - Dishwash',
+        'Homecare - Laundry Bars',
+        'Homecare - Powders',
+    ],
 ];

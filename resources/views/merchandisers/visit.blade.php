@@ -87,7 +87,7 @@
     <main class="max-w-4xl mx-auto px-4 py-6">
         
         <form method="POST" action="{{ route('merchandisers.visit.store', $outlet) }}" enctype="multipart/form-data" class="space-y-6" data-offline-sync-form="perfect_store_visit"
-            x-data="skuAiVisitForm('{{ route('merchandisers.visit.ai-detect', $outlet) }}', '{{ old('sku_entry_mode', 'manual') }}')">
+            x-data="skuAiVisitForm('{{ route('merchandisers.visit.ai-detect', $outlet) }}', '{{ old('sku_entry_mode', 'manual') }}', @js($aiCaptureCategories ?? []))">
             @csrf
             <input type="hidden" name="client_recorded_at" value="{{ old('client_recorded_at') }}">
             <input type="hidden" name="sync_token" value="{{ old('sync_token') }}">
@@ -292,34 +292,68 @@
                             @click="skuEntryMode = 'ai'"
                             :class="skuEntryMode === 'ai' ? 'border-sky-400 bg-sky-500/15 text-sky-300' : 'border-brand-white/10 bg-brand-white/5 text-brand-white/60 hover:text-brand-white'"
                             class="flex-1 rounded-xl border px-4 py-3 text-left transition-all">
-                            <span class="block text-xs font-bold uppercase tracking-[0.2em]">AI Shelf Detection (Pilot)</span>
-                            <span class="mt-1 block text-[11px] opacity-70">Upload shelf photo first; use manual fallback if detection is not ready.</span>
+                            <span class="block text-xs font-bold uppercase tracking-[0.2em]">AI Category Detection</span>
+                            <span class="mt-1 block text-[11px] opacity-70">Capture each shelf category separately and validate before submitting.</span>
                         </button>
                     </div>
 
                     <div x-show="skuEntryMode === 'ai'" x-transition class="rounded-xl border border-sky-400/20 bg-sky-500/10 p-4 space-y-3">
-                        <div>
+                        <div class="hidden">
                             <label for="ai_shelf_photo" class="block text-[10px] uppercase tracking-[0.25em] text-sky-200/80 mb-2">Shelf Photo for AI Detection</label>
-                            <input id="ai_shelf_photo" name="ai_shelf_photo" type="file" accept="image/*" capture="environment" :required="skuEntryMode === 'ai'"
+                            <input id="ai_shelf_photo" name="ai_shelf_photo" type="file" accept="image/*" capture="environment"
                                 x-ref="aiShelfPhoto" @change="aiDetectionResult = null; aiDetectionError = null"
                                 class="w-full rounded-xl border border-brand-white/10 bg-brand-black/50 px-3 py-2 text-xs text-brand-white file:mr-3 file:rounded-lg file:border-0 file:bg-sky-500 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-white">
                         </div>
                         <textarea name="ai_detection_notes" rows="2" class="w-full rounded-xl border border-brand-white/10 bg-brand-black/50 px-3 py-2 text-xs text-brand-white placeholder-brand-white/30 focus:border-sky-400 focus:ring-0" placeholder="Optional notes: shelf angle, poor lighting, products hidden behind other items...">{{ old('ai_detection_notes') }}</textarea>
                         <div class="rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-200 leading-relaxed">
-                            Pilot mode keeps manual fallback active. Until auto-detect is fully trained, confirm or correct the SKU quantities in the table below before submitting.
+                            AI mode requires each category image to validate against the selected category. Confirm or correct the SKU quantities in the table below before submitting.
+                        </div>
+                        <div class="grid gap-3">
+                            @foreach($aiCaptureCategories ?? [] as $category)
+                                @php $categoryKey = \Illuminate\Support\Str::slug(str_replace(['–', '—'], '-', $category), '_'); @endphp
+                                <div class="rounded-xl border border-brand-white/10 bg-brand-black/35 p-3">
+                                    <input type="hidden" name="category_images[{{ $categoryKey }}][category]" value="{{ $category }}">
+                                    <input type="hidden" name="category_ai_predictions_json[{{ $categoryKey }}]" :value="categoryResults['{{ $categoryKey }}'] ? JSON.stringify(categoryResults['{{ $categoryKey }}']) : ''">
+                                    <div class="flex flex-col gap-3 md:flex-row md:items-center">
+                                        <div class="min-w-0 flex-1">
+                                            <p class="text-sm font-bold text-brand-white">{{ $category }}</p>
+                                            <p class="mt-1 text-[11px] text-brand-ash" x-text="categoryStatusText('{{ $categoryKey }}')"></p>
+                                        </div>
+                                        <span class="w-fit rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider"
+                                            :class="categoryStatusClass('{{ $categoryKey }}')"
+                                            x-text="categoryStatusLabel('{{ $categoryKey }}')"></span>
+                                    </div>
+                                    <div class="mt-3 grid gap-2 md:grid-cols-[1fr_auto] md:items-center">
+                                        <input name="category_images[{{ $categoryKey }}][image]" type="file" accept="image/*" capture="environment" data-ai-category-file="{{ $categoryKey }}" :required="skuEntryMode === 'ai'"
+                                            @change="resetCategoryResult('{{ $categoryKey }}')"
+                                            class="w-full rounded-xl border border-brand-white/10 bg-brand-black/50 px-3 py-2 text-xs text-brand-white file:mr-3 file:rounded-lg file:border-0 file:bg-sky-500 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-white">
+                                        <button type="button" @click="runAiDetection('{{ $category }}', '{{ $categoryKey }}')" :disabled="isCategoryDetecting('{{ $categoryKey }}')"
+                                            class="rounded-xl bg-sky-500 px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.2em] text-white transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-50">
+                                            <span x-show="!isCategoryDetecting('{{ $categoryKey }}')">Run AI</span>
+                                            <span x-show="isCategoryDetecting('{{ $categoryKey }}')">Processing</span>
+                                        </button>
+                                    </div>
+                                    <div x-show="categoryErrors['{{ $categoryKey }}']" x-cloak class="mt-2 rounded-lg border border-brand-red/30 bg-brand-red/10 px-3 py-2 text-[11px] text-red-200" x-text="categoryErrors['{{ $categoryKey }}']"></div>
+                                    <template x-if="categoryResults['{{ $categoryKey }}']?.detections?.length">
+                                        <p class="mt-2 text-[11px] text-sky-100">
+                                            <span x-text="categoryResults['{{ $categoryKey }}'].detections.length"></span> SKU detection(s) applied to the table.
+                                        </p>
+                                    </template>
+                                </div>
+                            @endforeach
                         </div>
                         <button type="button" @click="skuEntryMode = 'manual'" class="text-[10px] uppercase tracking-[0.2em] text-sky-200 hover:text-white">
                             Switch back to manual
                         </button>
                         <button type="button" @click="runAiDetection()" :disabled="aiDetecting"
-                            class="w-full rounded-xl bg-sky-500 px-4 py-3 text-xs font-bold uppercase tracking-[0.2em] text-white transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-50">
+                            class="hidden w-full rounded-xl bg-sky-500 px-4 py-3 text-xs font-bold uppercase tracking-[0.2em] text-white transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-50">
                             <span x-show="!aiDetecting">Run AI Detection & Prefill Table</span>
                             <span x-show="aiDetecting">Analyzing shelf photo…</span>
                         </button>
 
                         <div x-show="aiDetectionError" x-cloak class="rounded-xl border border-brand-red/30 bg-brand-red/10 px-3 py-2 text-xs text-red-200" x-text="aiDetectionError"></div>
 
-                        <div x-show="aiDetectionResult" x-cloak class="rounded-xl border border-sky-400/20 bg-brand-black/40 p-3 text-xs text-brand-white/80">
+                        <div x-show="aiDetectionResult" x-cloak class="hidden rounded-xl border border-sky-400/20 bg-brand-black/40 p-3 text-xs text-brand-white/80">
                             <div class="flex flex-wrap items-center gap-2">
                                 <span class="font-bold text-sky-200" x-text="aiDetectionResult?.message || 'AI result received. Review before submitting.'"></span>
                                 <span x-show="aiDetectionResult?.average_confidence !== undefined" class="rounded-full border border-sky-400/25 bg-sky-500/10 px-2 py-0.5 text-[10px] text-sky-200">
@@ -496,27 +530,90 @@
     </main>
 
     <script>
-        function skuAiVisitForm(aiDetectUrl, initialMode) {
+        function skuAiVisitForm(aiDetectUrl, initialMode, categories) {
             return {
                 skuEntryMode: initialMode || 'manual',
                 aiDetecting: false,
                 aiDetectionResult: null,
                 aiDetectionError: null,
+                categories: categories || [],
+                categoryResults: {},
+                categoryErrors: {},
+                categoryDetecting: {},
 
-                async runAiDetection() {
-                    this.aiDetectionError = null;
+                categoryStatusLabel(key) {
+                    const status = this.categoryResults[key]?.status;
+                    if (this.categoryDetecting[key]) return 'AI Processing';
+                    if (status === 'completed' || status === 'no_detection') return 'Captured & Validated';
+                    if (status === 'wrong_category') return 'Wrong Category';
+                    if (this.categoryResults[key]) return 'Manual Review';
+                    return 'Not Captured';
+                },
+
+                categoryStatusText(key) {
+                    return this.categoryResults[key]?.message || 'Capture image, then run AI validation.';
+                },
+
+                categoryStatusClass(key) {
+                    const status = this.categoryResults[key]?.status;
+                    if (this.categoryDetecting[key]) return 'border-amber-400/40 bg-amber-500/15 text-amber-200';
+                    if (status === 'completed' || status === 'no_detection') return 'border-emerald-400/40 bg-emerald-500/15 text-emerald-200';
+                    if (status === 'wrong_category') return 'border-brand-red/40 bg-brand-red/15 text-red-200';
+                    if (this.categoryResults[key]) return 'border-sky-400/40 bg-sky-500/15 text-sky-200';
+                    return 'border-brand-white/10 bg-brand-white/5 text-brand-ash';
+                },
+
+                isCategoryDetecting(key) {
+                    return !!this.categoryDetecting[key];
+                },
+
+                resetCategoryResult(key) {
+                    delete this.categoryResults[key];
+                    delete this.categoryErrors[key];
+                    this.categoryResults = { ...this.categoryResults };
+                    this.categoryErrors = { ...this.categoryErrors };
                     this.aiDetectionResult = null;
+                    this.aiDetectionError = null;
+                },
 
-                    const file = this.$refs.aiShelfPhoto?.files?.[0];
+                async runAiDetection(category = null, categoryKey = null) {
+                    this.aiDetectionError = null;
+                    if (categoryKey) {
+                        delete this.categoryErrors[categoryKey];
+                        delete this.categoryResults[categoryKey];
+                        this.categoryErrors = { ...this.categoryErrors };
+                        this.categoryResults = { ...this.categoryResults };
+                    } else {
+                        this.aiDetectionResult = null;
+                    }
+
+                    const fileInput = categoryKey
+                        ? this.$el.querySelector(`[data-ai-category-file="${categoryKey}"]`)
+                        : this.$refs.aiShelfPhoto;
+                    const file = fileInput?.files?.[0];
                     if (!file) {
-                        this.aiDetectionError = 'Please take or upload a shelf photo first.';
+                        const message = category ? `Please take or upload the ${category} shelf image first.` : 'Please take or upload a shelf photo first.';
+                        if (categoryKey) {
+                            this.categoryErrors[categoryKey] = message;
+                            this.categoryErrors = { ...this.categoryErrors };
+                        } else {
+                            this.aiDetectionError = message;
+                        }
                         return;
                     }
 
                     const formData = new FormData();
                     formData.append('ai_shelf_photo', file);
+                    if (category) {
+                        formData.append('category', category);
+                    }
 
-                    this.aiDetecting = true;
+                    if (categoryKey) {
+                        this.categoryDetecting[categoryKey] = true;
+                        this.categoryDetecting = { ...this.categoryDetecting };
+                    } else {
+                        this.aiDetecting = true;
+                    }
                     try {
                         const response = await fetch(aiDetectUrl, {
                             method: 'POST',
@@ -529,32 +626,64 @@
 
                         const data = await response.json();
                         if (!response.ok) {
-                            this.aiDetectionError = data.message || 'AI detection failed. Please continue manually.';
+                            const message = data.message || 'AI detection failed. Please continue manually.';
+                            if (categoryKey) {
+                                this.categoryErrors[categoryKey] = message;
+                                this.categoryErrors = { ...this.categoryErrors };
+                            } else {
+                                this.aiDetectionError = message;
+                            }
                             return;
                         }
 
                         if (response.status === 202 || ['queued', 'processing'].includes(data.job_status)) {
-                            this.aiDetectionResult = data;
-                            await this.pollAiDetection(data.poll_url);
+                            if (categoryKey) {
+                                this.categoryResults[categoryKey] = data;
+                                this.categoryResults = { ...this.categoryResults };
+                            } else {
+                                this.aiDetectionResult = data;
+                            }
+                            await this.pollAiDetection(data.poll_url, categoryKey);
                             return;
                         }
 
-                        this.aiDetectionResult = data;
-                        this.applyAiDetections(data.detections || []);
+                        this.receiveAiResult(data, categoryKey);
 
-                        if (data.status === 'not_configured') {
-                            this.aiDetectionError = data.message;
+                        if (data.status === 'not_configured' || data.status === 'manual_fallback') {
+                            if (categoryKey) {
+                                this.categoryErrors[categoryKey] = data.message;
+                                this.categoryErrors = { ...this.categoryErrors };
+                            } else {
+                                this.aiDetectionError = data.message;
+                            }
                         }
                     } catch (error) {
-                        this.aiDetectionError = 'AI detection could not run. Please continue manually.';
+                        const message = 'AI detection could not run. Please continue manually.';
+                        if (categoryKey) {
+                            this.categoryErrors[categoryKey] = message;
+                            this.categoryErrors = { ...this.categoryErrors };
+                        } else {
+                            this.aiDetectionError = message;
+                        }
                     } finally {
-                        this.aiDetecting = false;
+                        if (categoryKey) {
+                            delete this.categoryDetecting[categoryKey];
+                            this.categoryDetecting = { ...this.categoryDetecting };
+                        } else {
+                            this.aiDetecting = false;
+                        }
                     }
                 },
 
-                async pollAiDetection(pollUrl) {
+                async pollAiDetection(pollUrl, categoryKey = null) {
                     if (!pollUrl) {
-                        this.aiDetectionError = 'AI detection started, but no result link was returned. Please continue manually.';
+                        const message = 'AI detection started, but no result link was returned. Please continue manually.';
+                        if (categoryKey) {
+                            this.categoryErrors[categoryKey] = message;
+                            this.categoryErrors = { ...this.categoryErrors };
+                        } else {
+                            this.aiDetectionError = message;
+                        }
                         return;
                     }
 
@@ -567,27 +696,65 @@
                             headers: { 'Accept': 'application/json' },
                         });
                         const data = await response.json();
-                        this.aiDetectionResult = data;
+                        if (categoryKey) {
+                            this.categoryResults[categoryKey] = data;
+                            this.categoryResults = { ...this.categoryResults };
+                        } else {
+                            this.aiDetectionResult = data;
+                        }
 
                         if (['queued', 'processing'].includes(data.job_status)) {
                             continue;
                         }
 
                         if (data.job_status === 'completed') {
-                            this.applyAiDetections(data.detections || []);
+                            this.receiveAiResult(data, categoryKey);
 
-                            if (data.status === 'not_configured') {
-                                this.aiDetectionError = data.message;
+                            if (data.status === 'not_configured' || data.status === 'manual_fallback') {
+                                if (categoryKey) {
+                                    this.categoryErrors[categoryKey] = data.message;
+                                    this.categoryErrors = { ...this.categoryErrors };
+                                } else {
+                                    this.aiDetectionError = data.message;
+                                }
                             }
 
                             return;
                         }
 
-                        this.aiDetectionError = data.message || 'AI detection could not complete. Please continue manually.';
+                        const message = data.message || 'AI detection could not complete. Please continue manually.';
+                        if (categoryKey) {
+                            this.categoryErrors[categoryKey] = message;
+                            this.categoryErrors = { ...this.categoryErrors };
+                        } else {
+                            this.aiDetectionError = message;
+                        }
                         return;
                     }
 
-                    this.aiDetectionError = 'AI detection is taking longer than expected. Please continue manually; results may still finish in the background.';
+                    const message = 'AI detection is taking longer than expected. Please continue manually; results may still finish in the background.';
+                    if (categoryKey) {
+                        this.categoryErrors[categoryKey] = message;
+                        this.categoryErrors = { ...this.categoryErrors };
+                    } else {
+                        this.aiDetectionError = message;
+                    }
+                },
+
+                receiveAiResult(data, categoryKey = null) {
+                    if (categoryKey) {
+                        this.categoryResults[categoryKey] = data;
+                        this.categoryResults = { ...this.categoryResults };
+                        if (data.status === 'wrong_category') {
+                            this.categoryErrors[categoryKey] = data.message || 'Wrong category image.';
+                            this.categoryErrors = { ...this.categoryErrors };
+                            return;
+                        }
+                    } else {
+                        this.aiDetectionResult = data;
+                    }
+
+                    this.applyAiDetections(data.detections || []);
                 },
 
                 applyAiDetections(detections) {

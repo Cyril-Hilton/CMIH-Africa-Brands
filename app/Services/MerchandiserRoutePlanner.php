@@ -6,6 +6,7 @@ use App\Models\MerchandiserOutletAssignment;
 use App\Models\MerchandiserVisit;
 use App\Models\Outlet;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -69,8 +70,10 @@ class MerchandiserRoutePlanner
         }
 
         $publicHolidays = $this->publicHolidayDates();
+        $workingDays = $this->workingDays($user);
         $activeDays = $periodDays
             ->reject(fn (Carbon $date) => in_array($date->toDateString(), $publicHolidays, true))
+            ->filter(fn (Carbon $date) => in_array($date->isoWeekday(), $workingDays, true))
             ->values();
 
         if ($activeDays->isEmpty()) {
@@ -121,7 +124,7 @@ class MerchandiserRoutePlanner
     }
 
     /**
-     * Carry over incomplete past outlet assignments to today's route.
+     * Mark incomplete past assignments as carry-over without copying them into a new day's PJP.
      */
     public function processOutstandingCarryOver(User $user, ?Carbon $asOfDate = null): Collection
     {
@@ -131,32 +134,31 @@ class MerchandiserRoutePlanner
         $pastIncomplete = MerchandiserOutletAssignment::with('outlet')
             ->where('user_id', $user->id)
             ->where('assigned_date', '<', $today->toDateString())
-            ->whereNotIn('status', ['completed', 'visited'])
+            ->whereNull('visit_id')
+            ->whereNull('completed_at')
+            ->where(function ($query) {
+                $query->whereNull('status')
+                    ->orWhereNotIn('status', [
+                        MerchandiserOutletAssignment::STATUS_COMPLETED,
+                        MerchandiserOutletAssignment::STATUS_VISITED,
+                        MerchandiserOutletAssignment::STATUS_COLLAPSED,
+                        MerchandiserOutletAssignment::STATUS_CARRY_OVER,
+                        'carried_over',
+                    ]);
+            })
             ->get();
 
-        $carriedOver = collect();
+        $pastIncomplete->each(function (MerchandiserOutletAssignment $assignment) use ($today) {
+            $assignment->update([
+                'status' => MerchandiserOutletAssignment::STATUS_CARRY_OVER,
+                'carry_over_marked_at' => now(),
+                'notes' => trim(($assignment->notes ? $assignment->notes.PHP_EOL : '')
+                    .'Marked as carry-over on '.$today->toDateString().'; original PJP day remains '
+                    .($assignment->assigned_date?->toDateString() ?? 'unknown').'.'),
+            ]);
+        });
 
-        foreach ($pastIncomplete as $past) {
-            $alreadyToday = MerchandiserOutletAssignment::where('user_id', $user->id)
-                ->where('outlet_id', $past->outlet_id)
-                ->whereDate('assigned_date', $today->toDateString())
-                ->exists();
-
-            if (! $alreadyToday) {
-                $newAssignment = MerchandiserOutletAssignment::create([
-                    'user_id' => $user->id,
-                    'outlet_id' => $past->outlet_id,
-                    'assigned_date' => $today->toDateString(),
-                    'sequence' => 999,
-                    'status' => 'carried_over',
-                    'source' => 'carry_over',
-                    'notes' => 'Carried over from incomplete visit on ' . ($past->assigned_date ? $past->assigned_date->format('Y-m-d') : 'previous day'),
-                ]);
-                $carriedOver->push($newAssignment);
-            }
-        }
-
-        return $carriedOver;
+        return $pastIncomplete;
     }
 
     public function assignmentsForDate(User $user, Carbon $date): EloquentCollection
@@ -208,8 +210,16 @@ class MerchandiserRoutePlanner
             return null;
         }
 
+        if (in_array($assignment->status, [
+            MerchandiserOutletAssignment::STATUS_COLLAPSED,
+            MerchandiserOutletAssignment::STATUS_CARRY_OVER,
+            'carried_over',
+        ], true)) {
+            return $assignment;
+        }
+
         $assignment->update([
-            'status' => 'completed',
+            'status' => MerchandiserOutletAssignment::STATUS_COMPLETED,
             'visit_id' => $visitId ?: $assignment->visit_id,
             'completed_at' => now(),
         ]);
@@ -220,6 +230,7 @@ class MerchandiserRoutePlanner
     public function routeableOutletsFor(User $user): EloquentCollection
     {
         return Outlet::with('registeredBy')
+            ->with(['assignedMerchandisers' => fn ($query) => $query->where('users.id', $user->id)])
             ->where('kd_id', $user->kd_id)
             ->where(function ($query) use ($user) {
                 $query
@@ -253,6 +264,23 @@ class MerchandiserRoutePlanner
             ->orderBy('last_assigned_date')
             ->orderBy('outlets.id')
             ->get();
+    }
+
+    public function outletIsScheduledForDate(User $user, Outlet $outlet, Carbon $date): bool
+    {
+        if ((int) $outlet->kd_id !== (int) $user->kd_id) {
+            return false;
+        }
+
+        if (! in_array($date->isoWeekday(), $this->workingDays($user), true)) {
+            return false;
+        }
+
+        if (in_array($date->toDateString(), $this->publicHolidayDates(), true)) {
+            return false;
+        }
+
+        return $this->outletMatchesAssignedDay($user, $outlet, $date);
     }
 
     public function workingDays(User $user): array
@@ -308,18 +336,53 @@ class MerchandiserRoutePlanner
             ->all();
 
         return $outlets
-            ->filter(fn (Outlet $outlet) => $this->outletWasCreatedOnDate($outlet, $date))
+            ->filter(fn (Outlet $outlet) => $this->outletMatchesAssignedDay($user, $outlet, $date))
             ->reject(fn (Outlet $outlet) => in_array((int) $outlet->id, $existingOutletIds, true))
             ->values();
     }
 
-    private function outletWasCreatedOnDate(Outlet $outlet, Carbon $date): bool
+    private function outletMatchesAssignedDay(User $user, Outlet $outlet, Carbon $date): bool
     {
-        if (! $outlet->created_at) {
-            return false;
+        $targetDay = (int) $date->isoWeekday();
+        $visitDays = $this->assignedVisitDays($user, $outlet);
+
+        if (! empty($visitDays)) {
+            return in_array($targetDay, $visitDays, true);
         }
 
-        return $outlet->created_at->toDateString() === $date->toDateString();
+        if ($outlet->created_at) {
+            return (int) $outlet->created_at->isoWeekday() === $targetDay;
+        }
+
+        return false;
+    }
+
+    private function assignedVisitDays(User $user, Outlet $outlet): array
+    {
+        $pivotDays = null;
+
+        if ($outlet->relationLoaded('assignedMerchandisers')) {
+            $assigned = $outlet->assignedMerchandisers->firstWhere('id', $user->id);
+            $pivotDays = $assigned?->pivot?->visit_days;
+        }
+
+        if ($pivotDays === null) {
+            $pivotDays = DB::table('merchandiser_outlet_user')
+                ->where('user_id', $user->id)
+                ->where('outlet_id', $outlet->id)
+                ->value('visit_days');
+        }
+
+        if (is_string($pivotDays)) {
+            $pivotDays = json_decode($pivotDays, true);
+        }
+
+        return collect(is_array($pivotDays) ? $pivotDays : [])
+            ->map(fn ($day) => (int) $day)
+            ->filter(fn (int $day) => $day >= 1 && $day <= 7)
+            ->unique()
+            ->values()
+            ->all();
     }
 
     private function assignmentWindowForDate(Carbon $date, Carbon $periodStart, Carbon $periodEnd): array

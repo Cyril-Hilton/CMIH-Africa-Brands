@@ -10,6 +10,7 @@ use App\Models\SiteContent;
 use App\Support\MerchandiserTenant;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 class PerfectStoreKpiService
 {
@@ -43,26 +44,30 @@ class PerfectStoreKpiService
         'sos' => 'Share of Shelf',
     ];
 
-    public function summary(Carbon $from, Carbon $to, ?string $tenant = null): array
+    public function summary(Carbon $from, Carbon $to, ?string $tenant = null, array $filters = []): array
     {
         $weights = self::configuredWeights();
         $targets = self::configuredTargets();
         $tenantCode = $tenant !== null ? MerchandiserTenant::normalize($tenant) : null;
+        $filters = $this->cleanFilters($filters);
 
-        $assignments = MerchandiserOutletAssignment::with(['user', 'outlet.keyDistributor.region'])
+        $assignments = MerchandiserOutletAssignment::with(['user.supervisor', 'outlet.keyDistributor.region'])
             ->whereDate('assigned_date', '>=', $from->toDateString())
             ->whereDate('assigned_date', '<=', $to->toDateString())
             ->when($tenantCode !== null, fn ($query) => $query->whereHas('user', fn ($userQuery) => $userQuery
                 ->merchandisers()
                 ->forMerchandiserTenant($tenantCode)))
+            ->tap(fn ($query) => $this->applyAssignmentFilters($query, $filters))
             ->get();
 
-        $visits = MerchandiserVisit::with(['user', 'outlet.keyDistributor.region', 'visitSkus.sku.brand'])
+        $visits = MerchandiserVisit::with(['user.supervisor', 'outlet.keyDistributor.region', 'visitSkus.sku.brand'])
             ->whereBetween('created_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])
             ->when($tenantCode !== null, fn ($query) => $query->whereHas('user', fn ($userQuery) => $userQuery
                 ->merchandisers()
                 ->forMerchandiserTenant($tenantCode)))
+            ->tap(fn ($query) => $this->applyVisitFilters($query, $filters))
             ->get();
+        $visits = $this->filterVisitRowsByCategory($visits, $filters);
 
         $visitScores = $visits->map(fn (MerchandiserVisit $visit) => $this->scoreVisit($visit));
         $brandScores = $this->scoreVisitsByBrand($visits);
@@ -89,11 +94,26 @@ class PerfectStoreKpiService
             fn ($score) => (int) ($score['region_id'] ?? 0),
             fn ($assignment, $key) => $assignment?->outlet?->keyDistributor?->region?->name ?: 'Region #'.$key
         );
+        $supervisorRollups = $this->rollupsBy(
+            $assignments,
+            $visitScores,
+            fn ($assignment) => (int) ($assignment->user?->supervisor_id ?? 0),
+            fn ($score) => (int) ($score['supervisor_id'] ?? 0),
+            fn ($assignment, $key) => $assignment?->user?->supervisor?->name ?: 'Supervisor #'.$key
+        );
+        $outletRollups = $this->rollupsBy(
+            $assignments,
+            $visitScores,
+            fn ($assignment) => (int) ($assignment->outlet_id ?? 0),
+            fn ($score) => (int) ($score['outlet_id'] ?? 0),
+            fn ($assignment, $key) => $assignment?->outlet?->name ?: 'Outlet #'.$key
+        );
         $brandRollups = $this->rollupsByScores(
             $brandScores,
             fn ($score) => (int) ($score['brand_id'] ?? 0),
             fn ($score, $key) => $score['brand_name'] ?: 'Brand #'.$key
         );
+        $categoryRollups = $this->categoryRollups($visits);
         $configuredSosTarget = $this->configuredSosTarget($visits);
         if ($configuredSosTarget !== null) {
             $targets['sos'] = $configuredSosTarget;
@@ -106,6 +126,9 @@ class PerfectStoreKpiService
             'merchandisers' => $merchandiserRollups,
             'kds' => $kdRollups,
             'regions' => $regionRollups,
+            'supervisors' => $supervisorRollups,
+            'outlets' => $outletRollups,
+            'categories' => $categoryRollups,
             'brands' => $brandRollups,
             'alerts' => $this->alerts($overview, $merchandiserRollups, $kdRollups, $targets),
             'coaching' => $this->coaching($merchandiserRollups),
@@ -117,6 +140,8 @@ class PerfectStoreKpiService
         $emptyRollup = [
             'scheduled' => 0,
             'scored' => 0,
+            'collapsed' => 0,
+            'carry_over' => 0,
             'coverage' => 0,
             'osa' => null,
             'npd' => null,
@@ -135,15 +160,19 @@ class PerfectStoreKpiService
             'merchandisers' => collect(),
             'kds' => collect(),
             'regions' => collect(),
+            'supervisors' => collect(),
+            'outlets' => collect(),
+            'categories' => collect(),
             'brands' => collect(),
             'alerts' => collect(),
             'coaching' => collect(),
         ];
     }
 
-    public function categoryKpis(Carbon $from, Carbon $to, ?string $tenant = null): Collection
+    public function categoryKpis(Carbon $from, Carbon $to, ?string $tenant = null, array $filters = []): Collection
     {
         $tenantCode = $tenant !== null ? MerchandiserTenant::normalize($tenant) : null;
+        $filters = $this->cleanFilters($filters);
         $rows = MerchandiserVisitSku::with('sku')
             ->whereHas('visit', function ($query) use ($from, $to, $tenantCode) {
                 $query->whereBetween('created_at', [$from, $to])
@@ -151,6 +180,8 @@ class PerfectStoreKpiService
                         ->merchandisers()
                         ->forMerchandiserTenant($tenantCode)));
             })
+            ->whereHas('visit', fn ($query) => $this->applyVisitFilters($query, $filters))
+            ->when(filled($filters['category'] ?? null), fn ($query) => $query->whereHas('sku', fn ($skuQuery) => $skuQuery->where('category', $filters['category'])))
             ->whereHas('sku', fn ($query) => $query->whereNotNull('category'))
             ->get();
 
@@ -232,6 +263,114 @@ class PerfectStoreKpiService
             ->values();
     }
 
+    private function cleanFilters(array $filters): array
+    {
+        return collect($filters)
+            ->mapWithKeys(fn ($value, $key) => [$key => is_string($value) ? trim($value) : $value])
+            ->filter(fn ($value) => $value !== null && $value !== '')
+            ->all();
+    }
+
+    private function applyAssignmentFilters($query, array $filters): void
+    {
+        $query
+            ->when(filled($filters['region_id'] ?? null), fn ($builder) => $builder
+                ->whereHas('outlet.keyDistributor', fn ($kdQuery) => $kdQuery->where('region_id', (int) $filters['region_id'])))
+            ->when(filled($filters['kd_id'] ?? null), fn ($builder) => $builder
+                ->whereHas('outlet', fn ($outletQuery) => $outletQuery->where('kd_id', (int) $filters['kd_id'])))
+            ->when(filled($filters['supervisor_id'] ?? null), fn ($builder) => $builder
+                ->whereHas('user', fn ($userQuery) => $userQuery->where('supervisor_id', (int) $filters['supervisor_id'])))
+            ->when(filled($filters['merchandiser_id'] ?? null), fn ($builder) => $builder
+                ->where('user_id', (int) $filters['merchandiser_id']))
+            ->when(filled($filters['outlet_id'] ?? null), fn ($builder) => $builder
+                ->where('outlet_id', (int) $filters['outlet_id']))
+            ->when(filled($filters['channel'] ?? null), fn ($builder) => $builder
+                ->whereHas('outlet', fn ($outletQuery) => $outletQuery->where('channel_type', $filters['channel'])));
+    }
+
+    private function applyVisitFilters($query, array $filters): void
+    {
+        $query
+            ->when(filled($filters['region_id'] ?? null), fn ($builder) => $builder
+                ->whereHas('outlet.keyDistributor', fn ($kdQuery) => $kdQuery->where('region_id', (int) $filters['region_id'])))
+            ->when(filled($filters['kd_id'] ?? null), fn ($builder) => $builder
+                ->whereHas('outlet', fn ($outletQuery) => $outletQuery->where('kd_id', (int) $filters['kd_id'])))
+            ->when(filled($filters['supervisor_id'] ?? null), fn ($builder) => $builder
+                ->whereHas('user', fn ($userQuery) => $userQuery->where('supervisor_id', (int) $filters['supervisor_id'])))
+            ->when(filled($filters['merchandiser_id'] ?? null), fn ($builder) => $builder
+                ->where('user_id', (int) $filters['merchandiser_id']))
+            ->when(filled($filters['outlet_id'] ?? null), fn ($builder) => $builder
+                ->where('outlet_id', (int) $filters['outlet_id']))
+            ->when(filled($filters['channel'] ?? null), fn ($builder) => $builder
+                ->whereHas('outlet', fn ($outletQuery) => $outletQuery->where('channel_type', $filters['channel'])));
+    }
+
+    private function filterVisitRowsByCategory(Collection $visits, array $filters): Collection
+    {
+        if (! filled($filters['category'] ?? null)) {
+            return $visits;
+        }
+
+        return $visits
+            ->map(function (MerchandiserVisit $visit) use ($filters) {
+                $visit->setRelation(
+                    'visitSkus',
+                    $visit->visitSkus
+                        ->filter(fn (MerchandiserVisitSku $row) => (string) ($row->sku?->category ?? '') === (string) $filters['category'])
+                        ->values()
+                );
+
+                return $visit;
+            })
+            ->filter(fn (MerchandiserVisit $visit) => $visit->visitSkus->isNotEmpty())
+            ->values();
+    }
+
+    private function categoryRollups(Collection $visits): Collection
+    {
+        return $visits
+            ->flatMap(fn (MerchandiserVisit $visit) => $visit->visitSkus
+                ->groupBy(fn (MerchandiserVisitSku $row) => $row->sku?->category ?: 'Uncategorized')
+                ->map(function (Collection $rows, string $category) use ($visit) {
+                    $metrics = $this->scoreRows($rows);
+
+                    return [
+                        'id' => Str::slug($category, '_'),
+                        'name' => $category,
+                        'visit_id' => $visit->id,
+                        'visits' => 1,
+                        ...$metrics,
+                        'perfect_store_score' => $this->weightedScore($metrics),
+                    ];
+                }))
+            ->groupBy('name')
+            ->map(function (Collection $rows, string $category) {
+                $metrics = [
+                    'coverage' => null,
+                    'osa' => $this->averageMetric($rows, 'osa'),
+                    'npd' => $this->averageMetric($rows, 'npd'),
+                    'mhs' => $this->averageMetric($rows, 'mhs'),
+                    'planogram' => $this->averageMetric($rows, 'planogram'),
+                    'facing' => $this->averageMetric($rows, 'facing'),
+                    'sos' => $this->averageMetric($rows, 'sos'),
+                ];
+
+                return [
+                    'id' => Str::slug($category, '_'),
+                    'name' => $category,
+                    'scheduled' => 0,
+                    'scored' => 0,
+                    'collapsed' => 0,
+                    'carry_over' => 0,
+                    'visits' => $rows->pluck('visit_id')->unique()->count(),
+                    ...$metrics,
+                    'perfect_store_score' => $this->weightedScore($metrics),
+                ];
+            })
+            ->sortByDesc('perfect_store_score')
+            ->values();
+    }
+
     private function scoreVisit(MerchandiserVisit $visit): array
     {
         $metrics = $this->scoreRows($visit->visitSkus);
@@ -241,9 +380,11 @@ class PerfectStoreKpiService
         return [
             'visit_id' => $visit->id,
             'user_id' => $visit->user_id,
+            'supervisor_id' => $visit->user?->supervisor_id,
             'outlet_id' => $visit->outlet_id,
             'kd_id' => $kd?->id ?? $visit->outlet?->kd_id,
             'region_id' => $kd?->region_id,
+            'channel' => $visit->outlet?->channel_type,
             ...$metrics,
             'perfect_store_score' => $this->weightedScore($metrics),
         ];
@@ -465,11 +606,27 @@ class PerfectStoreKpiService
 
     private function rollup(Collection $assignments, Collection $visitScores, ?string $name, bool $includeCoverage = true): array
     {
-        $scheduled = $assignments->count();
-        $scored = $assignments
+        $collapsedStatuses = [
+            MerchandiserOutletAssignment::STATUS_COLLAPSED,
+        ];
+        $carryOverStatuses = [
+            MerchandiserOutletAssignment::STATUS_CARRY_OVER,
+            'carried_over',
+        ];
+        $accountableAssignments = $assignments
+            ->reject(fn ($assignment) => in_array(strtolower((string) $assignment->status), array_merge($collapsedStatuses, $carryOverStatuses), true))
+            ->values();
+        $scheduled = $accountableAssignments->count();
+        $scored = $accountableAssignments
             ->filter(fn ($assignment) => $assignment->visit_id || $assignment->completed_at || strtolower((string) $assignment->status) === 'completed')
             ->count();
         $coverage = $scheduled > 0 ? $this->percent($scored, $scheduled) : ($includeCoverage ? 0.0 : null);
+        $collapsed = $assignments
+            ->filter(fn ($assignment) => in_array(strtolower((string) $assignment->status), $collapsedStatuses, true))
+            ->count();
+        $carryOver = $assignments
+            ->filter(fn ($assignment) => in_array(strtolower((string) $assignment->status), $carryOverStatuses, true))
+            ->count();
 
         $metrics = [
             'coverage' => $coverage,
@@ -485,6 +642,8 @@ class PerfectStoreKpiService
             'name' => $name,
             'scheduled' => $scheduled,
             'scored' => $scored,
+            'collapsed' => $collapsed,
+            'carry_over' => $carryOver,
             'visits' => $visitScores->count(),
             ...$metrics,
             'perfect_store_score' => $this->weightedScore($metrics),

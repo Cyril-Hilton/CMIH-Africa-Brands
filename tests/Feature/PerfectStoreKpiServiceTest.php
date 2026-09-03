@@ -274,4 +274,47 @@ class PerfectStoreKpiServiceTest extends TestCase
         $this->assertSame(100.0, $summary['merchandisers']->first()['sos']);
         $this->assertSame(100.0, $summary['kds']->first()['sos']);
     }
+
+    public function test_collapsed_pjps_are_visible_but_excluded_from_coverage_denominator(): void
+    {
+        $date = Carbon::parse('2026-08-14 10:00:00');
+        $merchandiser = User::factory()->create([
+            'access_role' => User::MERCHANDISER_ROLE,
+            'status' => 'active',
+        ]);
+        $region = Region::create(['name' => 'Volta', 'timezone' => 'Africa/Accra']);
+        $kd = KeyDistributor::create(['name' => 'Ho KD', 'region_id' => $region->id]);
+        $completedOutlet = Outlet::create(['name' => 'Outlet F', 'code' => 'OUT-F', 'kd_id' => $kd->id]);
+        $collapsedOutlet = Outlet::create(['name' => 'Outlet G', 'code' => 'OUT-G', 'kd_id' => $kd->id]);
+
+        $visit = MerchandiserVisit::create([
+            'user_id' => $merchandiser->id,
+            'outlet_id' => $completedOutlet->id,
+        ]);
+        $visit->forceFill(['created_at' => $date, 'updated_at' => $date])->save();
+
+        MerchandiserOutletAssignment::create([
+            'user_id' => $merchandiser->id,
+            'outlet_id' => $completedOutlet->id,
+            'visit_id' => $visit->id,
+            'assigned_date' => $date->toDateString(),
+            'status' => MerchandiserOutletAssignment::STATUS_COMPLETED,
+            'completed_at' => $date,
+        ]);
+        MerchandiserOutletAssignment::create([
+            'user_id' => $merchandiser->id,
+            'outlet_id' => $collapsedOutlet->id,
+            'assigned_date' => $date->toDateString(),
+            'status' => MerchandiserOutletAssignment::STATUS_COLLAPSED,
+            'collapse_reason_type' => 'promo',
+            'collapse_reason' => 'Promo activation.',
+            'collapsed_at' => $date,
+        ]);
+
+        $summary = app(PerfectStoreKpiService::class)->summary($date->copy()->startOfDay(), $date->copy()->endOfDay());
+
+        $this->assertSame(1, $summary['overview']['scheduled']);
+        $this->assertSame(1, $summary['overview']['collapsed']);
+        $this->assertSame(100.0, $summary['overview']['coverage']);
+    }
 }

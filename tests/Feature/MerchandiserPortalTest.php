@@ -22,6 +22,7 @@ use App\Models\MerchandiserPjpClockin;
 use App\Models\MerchandiserPlanogram;
 use App\Models\MerchandiserSupervisorAssignment;
 use App\Models\MerchandiserVisit;
+use App\Models\MerchandiserVisitCategoryImage;
 use App\Models\MerchandiserVisitSku;
 use App\Models\Sku;
 use App\Services\MerchandiserRoutePlanner;
@@ -89,6 +90,36 @@ class MerchandiserPortalTest extends TestCase
             'distance_from_outlet' => 0,
             'status' => 'on-time',
         ]);
+    }
+
+    private function assignOutletForToday(User $user, Outlet $outlet): void
+    {
+        $today = Carbon::now('Africa/Accra');
+        $day = (int) $today->isoWeekday();
+
+        $user->forceFill(['merchandiser_working_days' => [$day]])->save();
+        $outlet->assignedMerchandisers()->syncWithoutDetaching([
+            $user->id => [
+                'assigned_by' => 1,
+                'assigned_at' => now(),
+                'visit_days' => json_encode([$day]),
+            ],
+        ]);
+
+        MerchandiserOutletAssignment::firstOrCreate(
+            [
+                'user_id' => $user->id,
+                'outlet_id' => $outlet->id,
+                'assigned_date' => $today->toDateString(),
+            ],
+            [
+                'sequence' => 1,
+                'status' => MerchandiserOutletAssignment::STATUS_PLANNED,
+                'source' => 'test',
+                'assigned_start_at' => $today->copy()->setTime(8, 0),
+                'assigned_end_at' => $today->copy()->setTime(17, 0),
+            ]
+        );
     }
 
     #[Test]
@@ -1495,6 +1526,7 @@ class MerchandiserPortalTest extends TestCase
             'status' => 'active',
             'kd_id' => $kd->id,
             'region_id' => $region->id,
+            'merchandiser_working_days' => [1],
         ]);
         $outlet = Outlet::create([
             'name' => 'Form Route Outlet',
@@ -1523,6 +1555,11 @@ class MerchandiserPortalTest extends TestCase
             'sequence' => 1,
             'status' => 'planned',
             'source' => 'auto',
+        ]);
+        $outlet->assignedMerchandisers()->attach($user->id, [
+            'assigned_by' => 1,
+            'assigned_at' => now(),
+            'visit_days' => json_encode([1]),
         ]);
 
         Carbon::setTestNow(Carbon::create(2026, 7, 20, 12, 0, 0, 'Africa/Accra'));
@@ -1571,10 +1608,12 @@ class MerchandiserPortalTest extends TestCase
             'status' => 'active',
             'kd_id' => $kd->id,
             'region_id' => $region->id,
+            'merchandiser_working_days' => [1],
         ]);
         $outlet->assignedMerchandisers()->attach($user->id, [
             'assigned_by' => 1,
             'assigned_at' => now(),
+            'visit_days' => json_encode([1]),
         ]);
         MerchandiserOutletAssignment::create([
             'user_id' => $user->id,
@@ -1655,13 +1694,7 @@ class MerchandiserPortalTest extends TestCase
             'status' => 'active',
             'created_by' => 1,
         ]);
-        MerchandiserOutletAssignment::create([
-            'user_id' => $user->id,
-            'outlet_id' => $outlet->id,
-            'assigned_date' => now('Africa/Accra')->toDateString(),
-            'sequence' => 1,
-            'status' => 'planned',
-        ]);
+        $this->assignOutletForToday($user, $outlet);
 
         $visitPage = $this->actingAs($user)->get(route('merchandisers.visit', $outlet));
         $visitPage->assertOk();
@@ -1733,13 +1766,7 @@ class MerchandiserPortalTest extends TestCase
             'kd_id' => $kd->id,
             'region_id' => $region->id,
         ]);
-        MerchandiserOutletAssignment::create([
-            'user_id' => $user->id,
-            'outlet_id' => $outlet->id,
-            'assigned_date' => now('Africa/Accra')->toDateString(),
-            'sequence' => 1,
-            'status' => 'planned',
-        ]);
+        $this->assignOutletForToday($user, $outlet);
 
         $form = MerchandiserGoogleFormAssignment::where('native_template_key', PerfectStoreFormTemplate::KEY)->firstOrFail();
         $template = app(PerfectStoreFormTemplate::class);
@@ -2609,11 +2636,13 @@ class MerchandiserPortalTest extends TestCase
         $this->actingAs($admin)->post(route('merchandisers.admin.outlet-assignments.store'), [
             'user_id' => $merchandiser->id,
             'outlet_id' => $outletOne->id,
+            'visit_days' => [1],
         ])->assertRedirect();
 
         $this->actingAs($admin)->post(route('merchandisers.admin.outlet-assignments.store'), [
             'user_id' => $merchandiser->id,
             'outlet_ids' => [$outletTwo->id],
+            'visit_days' => [2],
         ])->assertRedirect();
 
         $this->assertDatabaseHas('merchandiser_outlet_user', [
@@ -2625,6 +2654,116 @@ class MerchandiserPortalTest extends TestCase
             'outlet_id' => $outletTwo->id,
         ]);
     }
+
+    #[Test]
+    public function route_planner_respects_assigned_pjp_weekdays_without_mixing_days()
+    {
+        $region = Region::create(['name' => 'PJP DAY INTEGRITY', 'timezone' => 'Africa/Accra']);
+        $kd = KeyDistributor::create(['name' => 'PJP Day KD', 'region_id' => $region->id]);
+        $merchandiser = User::factory()->create([
+            'access_role' => 'merchandiser',
+            'status' => 'active',
+            'kd_id' => $kd->id,
+            'region_id' => $region->id,
+            'merchandiser_working_days' => [1, 2],
+            'merchandiser_outlet_frequency' => 'daily',
+        ]);
+        $mondayOutlet = Outlet::create(['name' => 'Monday Only Outlet', 'code' => 'PJP-MON', 'kd_id' => $kd->id]);
+        $tuesdayOutlet = Outlet::create(['name' => 'Tuesday Only Outlet', 'code' => 'PJP-TUE', 'kd_id' => $kd->id]);
+
+        $mondayOutlet->assignedMerchandisers()->attach($merchandiser->id, [
+            'assigned_by' => 1,
+            'assigned_at' => now(),
+            'visit_days' => json_encode([1]),
+        ]);
+        $tuesdayOutlet->assignedMerchandisers()->attach($merchandiser->id, [
+            'assigned_by' => 1,
+            'assigned_at' => now(),
+            'visit_days' => json_encode([2]),
+        ]);
+
+        app(MerchandiserRoutePlanner::class)->ensurePeriod(
+            $merchandiser,
+            Carbon::create(2026, 7, 20, 8, 0, 0, 'Africa/Accra'),
+            Carbon::create(2026, 7, 21, 18, 0, 0, 'Africa/Accra')
+        );
+
+        $this->assertDatabaseHas('merchandiser_outlet_assignments', [
+            'user_id' => $merchandiser->id,
+            'outlet_id' => $mondayOutlet->id,
+            'assigned_date' => '2026-07-20 00:00:00',
+        ]);
+        $this->assertDatabaseMissing('merchandiser_outlet_assignments', [
+            'user_id' => $merchandiser->id,
+            'outlet_id' => $tuesdayOutlet->id,
+            'assigned_date' => '2026-07-20 00:00:00',
+        ]);
+        $this->assertDatabaseHas('merchandiser_outlet_assignments', [
+            'user_id' => $merchandiser->id,
+            'outlet_id' => $tuesdayOutlet->id,
+            'assigned_date' => '2026-07-21 00:00:00',
+        ]);
+    }
+
+    #[Test]
+    public function admin_can_collapse_a_daily_pjp_with_mandatory_reason_and_audit_trail()
+    {
+        $admin = User::findOrFail(1);
+        $region = Region::create(['name' => 'PJP COLLAPSE REGION', 'timezone' => 'Africa/Accra']);
+        $kd = KeyDistributor::create(['name' => 'PJP Collapse KD', 'region_id' => $region->id]);
+        $supervisor = User::factory()->create([
+            'access_role' => 'merchandiser_supervisor',
+            'status' => 'active',
+            'kd_id' => $kd->id,
+            'region_id' => $region->id,
+        ]);
+        $merchandiser = User::factory()->create([
+            'access_role' => 'merchandiser',
+            'status' => 'active',
+            'kd_id' => $kd->id,
+            'region_id' => $region->id,
+            'supervisor_id' => $supervisor->id,
+        ]);
+        $outlet = Outlet::create(['name' => 'Collapse Outlet', 'code' => 'COL-001', 'kd_id' => $kd->id]);
+
+        MerchandiserOutletAssignment::create([
+            'user_id' => $merchandiser->id,
+            'outlet_id' => $outlet->id,
+            'assigned_date' => '2026-07-20',
+            'sequence' => 1,
+            'status' => MerchandiserOutletAssignment::STATUS_PLANNED,
+            'source' => 'auto',
+        ]);
+
+        $this->actingAs($admin)->from(route('merchandisers.admin.tab', ['adminTab' => 'routes']))
+            ->post(route('merchandisers.admin.routes.collapse'), [
+                'user_id' => $merchandiser->id,
+                'assigned_date' => '2026-07-20',
+                'reason_type' => 'promo',
+                'reason' => 'Promo activation outside normal route.',
+            ])
+            ->assertRedirect(route('merchandisers.admin.tab', ['adminTab' => 'routes']));
+
+        $this->assertDatabaseHas('merchandiser_outlet_assignments', [
+            'user_id' => $merchandiser->id,
+            'outlet_id' => $outlet->id,
+            'assigned_date' => '2026-07-20 00:00:00',
+            'status' => MerchandiserOutletAssignment::STATUS_COLLAPSED,
+            'collapse_reason_type' => 'promo',
+            'collapsed_by' => $admin->id,
+        ]);
+        $this->assertDatabaseHas('merchandiser_pjp_audits', [
+            'user_id' => $merchandiser->id,
+            'supervisor_id' => $supervisor->id,
+            'kd_id' => $kd->id,
+            'outlet_id' => $outlet->id,
+            'action' => 'collapsed',
+            'to_status' => MerchandiserOutletAssignment::STATUS_COLLAPSED,
+            'reason_type' => 'promo',
+            'performed_by' => $admin->id,
+        ]);
+    }
+
     #[Test]
     public function route_planning_assignment_requires_at_least_one_outlet()
     {
@@ -2640,6 +2779,7 @@ class MerchandiserPortalTest extends TestCase
 
         $this->actingAs($admin)->post(route('merchandisers.admin.outlet-assignments.store'), [
             'user_id' => $merchandiser->id,
+            'visit_days' => [1],
         ])->assertSessionHasErrors('outlet_ids');
     }
     #[Test]
@@ -2712,14 +2852,16 @@ class MerchandiserPortalTest extends TestCase
         ]);
         Sku::create(['name' => 'Guinness Smooth 330ml']);
 
+        $this->assignOutletForToday($user, $outlet);
+
         $response = $this->actingAs($user)->get(route('merchandisers.visit', $outlet));
 
         $response->assertOk();
         $response->assertSee('Manual Entry');
-        $response->assertSee('AI Shelf Detection (Pilot)');
+        $response->assertSee('AI Category Detection');
         $response->assertSee('name="sku_entry_mode"', false);
         $response->assertSee('capture="environment"', false);
-        $response->assertSee('Pilot mode keeps manual fallback active');
+        $response->assertSee('AI mode requires each category image to validate against the selected category');
     }
     #[Test]
     public function manual_sku_entry_stores_visit_without_ai_photo()
@@ -2753,6 +2895,7 @@ class MerchandiserPortalTest extends TestCase
         ]);
         $sku = Sku::create(['name' => 'Guinness Smooth 330ml']);
 
+        $this->assignOutletForToday($user, $outlet);
         $this->recordOutletClockIn($user, $outlet);
 
         $response = $this->actingAs($user)->post(route('merchandisers.visit.store', $outlet), [
@@ -2821,6 +2964,7 @@ class MerchandiserPortalTest extends TestCase
             'sos_target' => 60,
         ]);
 
+        $this->assignOutletForToday($user, $outlet);
         $this->recordOutletClockIn($user, $outlet);
 
         $response = $this->actingAs($user)
@@ -2891,6 +3035,7 @@ class MerchandiserPortalTest extends TestCase
             'facing_target' => 3,
         ]);
 
+        $this->assignOutletForToday($user, $outlet);
         $this->recordOutletClockIn($user, $outlet);
 
         $response = $this->actingAs($user)->post(route('merchandisers.visit.store', $outlet), [
@@ -2942,6 +3087,7 @@ class MerchandiserPortalTest extends TestCase
     public function ai_sku_entry_mode_captures_shelf_photo_and_keeps_manual_metrics()
     {
         Storage::fake('public');
+        Config::set('merchandiser.ai_capture_categories', ['Orals']);
 
         $region = Region::create(['name' => 'ACCRA', 'timezone' => 'Africa/Accra']);
         $kd = KeyDistributor::create([
@@ -2972,14 +3118,31 @@ class MerchandiserPortalTest extends TestCase
         ]);
         $sku = Sku::create(['name' => 'Guinness Foreign Extra Stout']);
 
+        $this->assignOutletForToday($user, $outlet);
         $this->recordOutletClockIn($user, $outlet);
 
         $response = $this->actingAs($user)->post(route('merchandisers.visit.store', $outlet), [
             'branded_shelf_available' => 1,
             'hangers_available' => 0,
             'sku_entry_mode' => 'ai',
-            'ai_shelf_photo' => UploadedFile::fake()->create('shelf.jpg', 256, 'image/jpeg'),
             'ai_detection_notes' => 'Photo taken from left shelf angle; merchandiser confirmed the counts manually.',
+            'category_images' => [
+                'orals' => [
+                    'category' => 'Orals',
+                    'image' => UploadedFile::fake()->create('orals.jpg', 256, 'image/jpeg'),
+                ],
+            ],
+            'category_ai_predictions_json' => [
+                'orals' => json_encode([
+                    'category' => 'Orals',
+                    'category_key' => 'orals',
+                    'status' => 'completed',
+                    'provider' => 'manual',
+                    'average_confidence' => 0.9,
+                    'category_validation' => ['matches_expected_category' => true],
+                    'detections' => [],
+                ]),
+            ],
             'skus' => [
                 $sku->id => [
                     'osa_quantity' => 8,
@@ -2995,12 +3158,13 @@ class MerchandiserPortalTest extends TestCase
 
         $visit = MerchandiserVisit::firstOrFail();
         $this->assertSame('ai', $visit->sku_entry_mode);
-        $this->assertSame('pilot_photo_captured', $visit->ai_detection_status);
-        $this->assertNotNull($visit->ai_shelf_photo_path);
-        Storage::disk('public')->assertExists($visit->ai_shelf_photo_path);
-        $this->assertSame('pilot_photo_upload', $visit->ai_detection_payload['source']);
-        $this->assertFalse($visit->ai_detection_payload['auto_detection_completed']);
-        $this->assertTrue($visit->ai_detection_payload['manual_fallback_available']);
+        $this->assertSame('no_detection', $visit->ai_detection_status);
+        $this->assertTrue($visit->ai_detection_payload['auto_detection_completed']);
+        $this->assertSame('manual_shelf_analysis', $visit->ai_detection_payload['source']);
+        $categoryImage = MerchandiserVisitCategoryImage::firstOrFail();
+        $this->assertSame('Orals', $categoryImage->category);
+        $this->assertSame(MerchandiserVisitCategoryImage::STATUS_CAPTURED_VALIDATED, $categoryImage->status);
+        Storage::disk('public')->assertExists($categoryImage->image_path);
         $this->assertDatabaseHas('merchandiser_visit_skus', [
             'visit_id' => $visit->id,
             'sku_id' => $sku->id,
@@ -3011,6 +3175,8 @@ class MerchandiserPortalTest extends TestCase
     #[Test]
     public function ai_sku_entry_requires_a_shelf_photo()
     {
+        Config::set('merchandiser.ai_capture_categories', ['Orals']);
+
         $region = Region::create(['name' => 'ACCRA', 'timezone' => 'Africa/Accra']);
         $kd = KeyDistributor::create([
             'name' => 'AI Required KD',
@@ -3040,6 +3206,8 @@ class MerchandiserPortalTest extends TestCase
         ]);
         $sku = Sku::create(['name' => 'Malta Guinness']);
 
+        $this->assignOutletForToday($user, $outlet);
+
         $response = $this->actingAs($user)->from(route('merchandisers.visit', $outlet))->post(route('merchandisers.visit.store', $outlet), [
             'branded_shelf_available' => 1,
             'hangers_available' => 1,
@@ -3056,7 +3224,7 @@ class MerchandiserPortalTest extends TestCase
         ]);
 
         $response->assertRedirect(route('merchandisers.visit', $outlet));
-        $response->assertSessionHasErrors('ai_shelf_photo');
+        $response->assertSessionHasErrors('category_images.orals.image');
         $this->assertDatabaseCount('merchandiser_visits', 0);
     }
     #[Test]
@@ -3097,8 +3265,11 @@ class MerchandiserPortalTest extends TestCase
         ]);
         Sku::create(['name' => 'Guinness Smooth 330ml']);
 
+        $this->assignOutletForToday($user, $outlet);
+
         $response = $this->actingAs($user)->postJson(route('merchandisers.visit.ai-detect', $outlet), [
             'ai_shelf_photo' => UploadedFile::fake()->create('shelf.jpg', 256, 'image/jpeg'),
+            'category' => 'Orals',
         ]);
 
         $response->assertOk();
@@ -3106,15 +3277,25 @@ class MerchandiserPortalTest extends TestCase
             'status' => 'manual_fallback',
             'provider' => 'manual',
             'review_required' => true,
+            'category' => 'Orals',
         ]);
+        $response->assertJsonPath('category_validation.matches_expected_category', false);
     }
     #[Test]
     public function ai_detection_prefills_and_visit_submission_stores_predictions_with_corrections()
     {
         Storage::fake('public');
+        Config::set('merchandiser.ai_capture_categories', ['Orals']);
         Http::fake([
             'api.openai.com/*' => Http::response([
                 'output_text' => json_encode([
+                    'category_validation' => [
+                        'expected_category' => 'Orals',
+                        'detected_category' => 'Orals',
+                        'matches_expected_category' => true,
+                        'confidence' => 0.92,
+                        'notes' => 'Visible oral care shelf.',
+                    ],
                     'detections' => [
                         [
                             'sku_id' => 1,
@@ -3173,14 +3354,17 @@ class MerchandiserPortalTest extends TestCase
         $sku = Sku::create([
             'id' => 1,
             'name' => 'Guinness Smooth 330ml',
+            'category' => 'Orals',
             'reference_image_path' => 'sku-reference-images/guinness-smooth.jpg',
             'aliases' => ['Smooth', 'Guinness Smooth'],
         ]);
 
+        $this->assignOutletForToday($user, $outlet);
         $this->recordOutletClockIn($user, $outlet);
 
         $detectResponse = $this->actingAs($user)->postJson(route('merchandisers.visit.ai-detect', $outlet), [
             'ai_shelf_photo' => UploadedFile::fake()->create('shelf.jpg', 256, 'image/jpeg'),
+            'category' => 'Orals',
         ]);
 
         $detectResponse->assertAccepted();
@@ -3198,8 +3382,15 @@ class MerchandiserPortalTest extends TestCase
             'branded_shelf_available' => 1,
             'hangers_available' => 1,
             'sku_entry_mode' => 'ai',
-            'ai_shelf_photo' => UploadedFile::fake()->create('confirmed-shelf.jpg', 256, 'image/jpeg'),
-            'ai_predictions_json' => json_encode($predictions),
+            'category_images' => [
+                'orals' => [
+                    'category' => 'Orals',
+                    'image' => UploadedFile::fake()->create('confirmed-orals.jpg', 256, 'image/jpeg'),
+                ],
+            ],
+            'category_ai_predictions_json' => [
+                'orals' => json_encode($predictions),
+            ],
             'ai_detection_notes' => 'Corrected quantity from 11 to 12 after checking the rear row.',
             'skus' => [
                 $sku->id => [
@@ -3229,7 +3420,57 @@ class MerchandiserPortalTest extends TestCase
             'ai_predicted_quantity' => 11,
             'ai_predicted_facing' => 5,
         ]);
+        $this->assertDatabaseHas('merchandiser_visit_category_images', [
+            'visit_id' => $visit->id,
+            'category' => 'Orals',
+            'status' => MerchandiserVisitCategoryImage::STATUS_CAPTURED_VALIDATED,
+            'ai_provider' => 'openai',
+        ]);
     }
+
+    #[Test]
+    public function admin_can_mark_ai_category_image_as_not_applicable()
+    {
+        $admin = User::findOrFail(1);
+        $region = Region::create(['name' => 'AI N/A REGION', 'timezone' => 'Africa/Accra']);
+        $kd = KeyDistributor::create(['name' => 'AI N/A KD', 'region_id' => $region->id]);
+        $outlet = Outlet::create(['name' => 'AI N/A Outlet', 'code' => 'AI-NA-001', 'kd_id' => $kd->id]);
+        $merchandiser = User::factory()->create([
+            'access_role' => 'merchandiser',
+            'status' => 'active',
+            'kd_id' => $kd->id,
+            'region_id' => $region->id,
+        ]);
+        $visit = MerchandiserVisit::create([
+            'user_id' => $merchandiser->id,
+            'outlet_id' => $outlet->id,
+        ]);
+        $categoryImage = MerchandiserVisitCategoryImage::create([
+            'visit_id' => $visit->id,
+            'user_id' => $merchandiser->id,
+            'kd_id' => $kd->id,
+            'region_id' => $region->id,
+            'outlet_id' => $outlet->id,
+            'category' => 'Nutrition',
+            'image_path' => 'merchandiser-ai-category-photos/nutrition/photo.jpg',
+            'status' => MerchandiserVisitCategoryImage::STATUS_CAPTURED_VALIDATED,
+        ]);
+
+        $this->actingAs($admin)
+            ->from(route('merchandisers.admin.tab', ['adminTab' => 'gallery']))
+            ->post(route('merchandisers.admin.category-images.not-applicable', $categoryImage), [
+                'reason' => 'Outlet does not stock this category.',
+            ])
+            ->assertRedirect(route('merchandisers.admin.tab', ['adminTab' => 'gallery']));
+
+        $this->assertDatabaseHas('merchandiser_visit_category_images', [
+            'id' => $categoryImage->id,
+            'status' => MerchandiserVisitCategoryImage::STATUS_NOT_APPLICABLE,
+            'marked_not_applicable_by' => $admin->id,
+            'ai_message' => 'Outlet does not stock this category.',
+        ]);
+    }
+
     #[Test]
     public function ai_detection_uses_gemini_when_openai_fails()
     {
@@ -3242,7 +3483,14 @@ class MerchandiserPortalTest extends TestCase
                         'content' => [
                             'parts' => [
                                 [
-                                    'text' => json_encode([
+                                     'text' => json_encode([
+                                        'category_validation' => [
+                                            'expected_category' => 'Nutrition',
+                                            'detected_category' => 'Nutrition',
+                                            'matches_expected_category' => true,
+                                            'confidence' => 0.86,
+                                            'notes' => 'Visible nutrition shelf.',
+                                        ],
                                         'detections' => [
                                             [
                                                 'sku_id' => 1,
@@ -3306,10 +3554,14 @@ class MerchandiserPortalTest extends TestCase
         Sku::create([
             'id' => 1,
             'name' => 'Malta Guinness Bottle 330ml',
+            'category' => 'Nutrition',
         ]);
+
+        $this->assignOutletForToday($user, $outlet);
 
         $response = $this->actingAs($user)->postJson(route('merchandisers.visit.ai-detect', $outlet), [
             'ai_shelf_photo' => UploadedFile::fake()->create('shelf.jpg', 256, 'image/jpeg'),
+            'category' => 'Nutrition',
         ]);
 
         $response->assertAccepted();
@@ -4676,13 +4928,7 @@ class MerchandiserPortalTest extends TestCase
             'facing_target' => 4,
             'track_planogram' => true,
         ]);
-        MerchandiserOutletAssignment::create([
-            'user_id' => $user->id,
-            'outlet_id' => $outlet->id,
-            'assigned_date' => now('Africa/Accra')->toDateString(),
-            'sequence' => 1,
-            'status' => 'planned',
-        ]);
+        $this->assignOutletForToday($user, $outlet);
         $this->recordOutletClockIn($user, $outlet);
 
         $payload = [
@@ -4820,23 +5066,21 @@ class MerchandiserPortalTest extends TestCase
 
         $this->assertDatabaseCount('merchandiser_kpi_alert_events', 1);
         $this->assertSame(1, \App\Models\Notification::where('user_id', $user->id)
-            ->where('title', 'Outstanding outlets carried forward')
+            ->where('title', 'Outstanding outlets marked carry-over')
             ->count());
         $this->assertSame(1, \App\Models\Notification::where('user_id', $admin->id)
-            ->where('title', 'Outstanding visits carried forward')
+            ->where('title', 'Outstanding visits marked carry-over')
             ->count());
-        $this->assertDatabaseHas('merchandiser_outlet_assignments', [
+        $this->assertDatabaseMissing('merchandiser_outlet_assignments', [
             'user_id' => $user->id,
             'outlet_id' => $outlet->id,
             'assigned_date' => '2026-07-21 00:00:00',
-            'source' => 'carryover',
-            'status' => 'planned',
         ]);
         $this->assertDatabaseHas('merchandiser_outlet_assignments', [
             'user_id' => $user->id,
             'outlet_id' => $outlet->id,
             'assigned_date' => '2026-07-20 00:00:00',
-            'status' => 'carried_over',
+            'status' => MerchandiserOutletAssignment::STATUS_CARRY_OVER,
         ]);
 
         Carbon::setTestNow();
@@ -4856,8 +5100,7 @@ class MerchandiserPortalTest extends TestCase
         $this->actingAs($admin)
             ->get(route('merchandisers.admin.tab', ['adminTab' => 'regional-dashboard']))
             ->assertOk()
-            ->assertSee('Zone Score Aggregation')
-            ->assertSee('No regional score data for this range.');
+            ->assertDontSee('Zone Score Aggregation');
 
         $this->actingAs($admin)
             ->get(route('merchandisers.admin.tab', ['adminTab' => 'client-dashboard']))

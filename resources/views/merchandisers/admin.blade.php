@@ -27,7 +27,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @include('merchandisers.partials.tenant-theme')
-    @if(in_array($activeAdminTab, ['overview', 'perfect-store', 'routes', 'executive', 'category-kpi', 'user-performance', 'price-promo', 'supervisor-dashboard', 'regional-dashboard', 'client-dashboard'], true))
+    @if(in_array($activeAdminTab, ['overview', 'perfect-store', 'routes', 'executive', 'category-kpi', 'user-performance', 'price-promo', 'supervisor-dashboard', 'client-dashboard'], true))
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     @endif
     @if(in_array($activeAdminTab, ['tracking', 'supervisor-dashboard'], true))
@@ -573,13 +573,6 @@
                         <span class="truncate">Supervisor Dashboard</span>
                     </button>
 
-                    <button @click="window.location.href = @js($adminTabUrl('regional-dashboard')); sidebarOpen = false"
-                        :class="activeTab === 'regional-dashboard' ? 'active bg-white/15 text-white font-extrabold border-l-4 border-sky-400 shadow-md backdrop-blur-md' : 'text-slate-300 hover:bg-white/10 hover:text-white font-semibold'"
-                        class="nav-item group w-full text-left px-3.5 py-2.5 rounded-xl flex items-center gap-3 text-xs transition-all duration-200">
-                        <svg class="w-5 h-5 shrink-0 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 002 2h1.5a2.5 2.5 0 002.5-2.5V7a2 2 0 00-2-2h-1c-.601 0-1.16-.242-1.57-.648L13.5 3.5"/></svg>
-                        <span class="truncate">Regional Dashboard</span>
-                    </button>
-
                     <button @click="window.location.href = @js($adminTabUrl('client-dashboard')); sidebarOpen = false"
                         :class="activeTab === 'client-dashboard' ? 'active bg-white/15 text-white font-extrabold border-l-4 border-sky-400 shadow-md backdrop-blur-md' : 'text-slate-300 hover:bg-white/10 hover:text-white font-semibold'"
                         class="nav-item group w-full text-left px-3.5 py-2.5 rounded-xl flex items-center gap-3 text-xs transition-all duration-200">
@@ -684,7 +677,6 @@
                             'user-performance': 'User Performance Command Center',
                             'price-promo': 'Price & Promo Intelligence',
                             'supervisor-dashboard': 'Supervisor Command Workspace',
-                            'regional-dashboard': 'Regional Field Operations Center',
                             'client-dashboard': 'Client & Trade Marketing Portal'
                         }[activeTab] || activeTab.replaceAll('-', ' ').toUpperCase()"></h1>
                     </div>
@@ -703,6 +695,8 @@
                         </ul>
                     </div>
                 @endif
+
+                @include('merchandisers.admin-tabs.performance_filters')
 
                 <!-- ═══════════════════════════════════════════════════════════
                      TAB: PERFECT STORE KPI COMMAND CENTER
@@ -778,7 +772,7 @@
                     @include('merchandisers.admin-tabs.price_promo')
                 @endif
 
-                                @if(in_array($activeAdminTab, ['supervisor-dashboard', 'regional-dashboard', 'client-dashboard'], true))
+                                @if(in_array($activeAdminTab, ['supervisor-dashboard', 'client-dashboard'], true))
                     @include('merchandisers.admin-tabs.role_dashboards')
                 @endif
 
@@ -1953,53 +1947,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 maintainAspectRatio: false,
                 plugins: { legend: { display: true, position: 'bottom', labels: { color: getChartThemeColors().legendText, font: { size: 10 } } } }
             }
-        });
-    }
-})();
-</script>
-@endif
-
-@if($activeAdminTab === 'regional-dashboard')
-<script>
-(function() {
-    const payload = JSON.parse(document.querySelector('[data-regional-dashboard-json]')?.textContent || '{"regions":[],"kds":[]}');
-    const chartOptions = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { labels: { color: getChartThemeColors().legendText } } },
-        scales: {
-            x: { grid: { color: getChartThemeColors().grid }, ticks: { color: getChartThemeColors().text } },
-            y: { beginAtZero: true, max: 100, grid: { color: getChartThemeColors().grid }, ticks: { color: getChartThemeColors().text, callback: value => value + '%' } }
-        }
-    };
-
-    const regionCanvas = document.getElementById('regionalScoreChart');
-    if (regionCanvas && payload.regions.length) {
-        new Chart(regionCanvas, {
-            type: 'bar',
-            data: {
-                labels: payload.regions.map(row => row.name),
-                datasets: [
-                    { label: 'Score', data: payload.regions.map(row => row.perfect_store_score || 0), backgroundColor: 'rgba(239,68,68,.72)', borderRadius: 6 },
-                    { label: 'Coverage', data: payload.regions.map(row => row.coverage || 0), backgroundColor: 'rgba(16,185,129,.72)', borderRadius: 6 }
-                ]
-            },
-            options: chartOptions
-        });
-    }
-
-    const kdCanvas = document.getElementById('regionalKdChart');
-    if (kdCanvas && payload.kds.length) {
-        new Chart(kdCanvas, {
-            type: 'bar',
-            data: {
-                labels: payload.kds.slice(0, 12).map(row => row.name),
-                datasets: [
-                    { label: 'Facings', data: payload.kds.slice(0, 12).map(row => row.facing || 0), backgroundColor: 'rgba(132,204,22,.72)', borderRadius: 6 },
-                    { label: 'Planogram', data: payload.kds.slice(0, 12).map(row => row.planogram || 0), backgroundColor: 'rgba(6,182,212,.72)', borderRadius: 6 }
-                ]
-            },
-            options: chartOptions
         });
     }
 })();

@@ -18,6 +18,7 @@ use App\Models\MerchandiserOutletAssignment;
 use App\Models\MerchandiserPcmClockin;
 use App\Models\MerchandiserPlanogram;
 use App\Models\MerchandiserVisit;
+use App\Models\MerchandiserVisitCategoryImage;
 use App\Models\MerchandiserVisitSku;
 use App\Models\MerchandiserOrder;
 use App\Models\MerchandiserOrderItem;
@@ -352,9 +353,9 @@ class MerchandiserController extends Controller
 
         $allOutlets = $routePlanner->routeableOutletsFor($user);
 
-        // Day of week selector support: 'today', '1'..'7', or 'all'
+        // Day of week selector support: 'today' or '1'..'7'. PJP days do not mix.
         $requestedDay = (string) $request->query('day', 'today');
-        $validDays = ['today', 'all', '1', '2', '3', '4', '5', '6', '7'];
+        $validDays = ['today', '1', '2', '3', '4', '5', '6', '7'];
         $selectedDay = in_array($requestedDay, $validDays, true) ? $requestedDay : 'today';
 
         $weekStart = Carbon::now($timezone)->startOfWeek();
@@ -362,19 +363,15 @@ class MerchandiserController extends Controller
         // Calculate schedule date for requested day filter
         if ($selectedDay === 'today') {
             $scheduleDate = Carbon::today($timezone);
-        } elseif ($selectedDay === 'all') {
-            $scheduleDate = Carbon::today($timezone);
         } else {
             $dayOffset = (int) $selectedDay - 1;
             $scheduleDate = $weekStart->copy()->addDays($dayOffset);
         }
         $activityStart = $scheduleDate->copy()->startOfDay();
         $activityEnd = $scheduleDate->copy()->endOfDay();
-        $scheduleLabel = $selectedDay === 'all'
-            ? 'All Outlets'
-            : ($selectedDay === 'today'
-                ? 'Today, '.$scheduleDate->format('d M Y')
-                : $scheduleDate->format('l, d M Y'));
+        $scheduleLabel = $selectedDay === 'today'
+            ? 'Today, '.$scheduleDate->format('d M Y')
+            : $scheduleDate->format('l, d M Y');
 
         $carriedOverAssignments = $routePlanner->processOutstandingCarryOver($user, Carbon::today($timezone));
         $carriedOverCount = $carriedOverAssignments->count();
@@ -384,7 +381,14 @@ class MerchandiserController extends Controller
             $weekStart->copy()->startOfDay(),
             $weekStart->copy()->endOfWeek()->endOfDay()
         );
-        $assignmentsByDate = $weekAssignments->groupBy(
+        $activeWeekAssignments = $weekAssignments
+            ->reject(fn (MerchandiserOutletAssignment $assignment) => in_array($assignment->status, [
+                MerchandiserOutletAssignment::STATUS_COLLAPSED,
+                MerchandiserOutletAssignment::STATUS_CARRY_OVER,
+                'carried_over',
+            ], true))
+            ->values();
+        $assignmentsByDate = $activeWeekAssignments->groupBy(
             fn (MerchandiserOutletAssignment $assignment) => $assignment->assigned_date?->toDateString()
         );
         $todaysAssignments = new \Illuminate\Database\Eloquent\Collection(
@@ -392,11 +396,7 @@ class MerchandiserController extends Controller
         );
         $scheduledOutlets = $todaysAssignments->pluck('outlet')->filter()->values();
 
-        if ($selectedDay === 'all') {
-            $outlets = $allOutlets;
-        } else {
-            $outlets = $scheduledOutlets;
-        }
+        $outlets = $scheduledOutlets;
         $selectedOutletIds = $outlets
             ->pluck('id')
             ->filter()
@@ -409,8 +409,6 @@ class MerchandiserController extends Controller
             $dDate = $weekStart->copy()->addDays($d - 1);
             $dayOutletCounts[(string) $d] = $assignmentsByDate->get($dDate->toDateString(), collect())->count();
         }
-        $dayOutletCounts['all'] = $allOutlets->count();
-
         $dayLabels = [
             'today' => 'Today (' . Carbon::today($timezone)->format('D') . ')',
             '1' => 'Monday',
@@ -420,7 +418,6 @@ class MerchandiserController extends Controller
             '5' => 'Friday',
             '6' => 'Saturday',
             '7' => 'Sunday',
-            'all' => 'All Outlets',
         ];
 
         $attendances = MerchandiserAttendance::where('user_id', $user->id)
@@ -828,6 +825,7 @@ class MerchandiserController extends Controller
                 $user->id => [
                     'assigned_by' => $user->id,
                     'assigned_at' => now(),
+                    'visit_days' => json_encode([(int) Carbon::now($user->merchandiserRegion->timezone ?? 'Africa/Accra')->isoWeekday()]),
                 ],
             ]);
         });
@@ -902,6 +900,10 @@ class MerchandiserController extends Controller
         Carbon $date,
         MerchandiserRoutePlanner $routePlanner
     ): array {
+        if (! $routePlanner->outletIsScheduledForDate($user, $outlet, $date->copy())) {
+            return [true, null];
+        }
+
         $todayAssignments = $routePlanner->assignmentsForDate($user, $date->copy());
         $routeAssignment = $todayAssignments->firstWhere('outlet_id', (int) $outlet->id);
 
@@ -918,6 +920,19 @@ class MerchandiserController extends Controller
                 ->exists();
 
         return [$hasAssignmentsForDay, $routeAssignment];
+    }
+
+    private function abortIfRouteAssignmentBlocked(?MerchandiserOutletAssignment $assignment): void
+    {
+        $status = $assignment?->status;
+
+        if ($status === MerchandiserOutletAssignment::STATUS_COLLAPSED) {
+            abort(403, 'AccessDenied: This PJP has been collapsed by Admin and is not available for field execution.');
+        }
+
+        if (in_array($status, [MerchandiserOutletAssignment::STATUS_CARRY_OVER, 'carried_over'], true)) {
+            abort(403, 'AccessDenied: This outlet remains on its original PJP day as carry-over. It cannot be executed under a different day route.');
+        }
     }
 
     /**
@@ -966,6 +981,7 @@ class MerchandiserController extends Controller
         if ($hasAssignmentsForDay && ! $routeAssignment) {
             abort(403, 'AccessDenied: This outlet is not on your assigned route for today.');
         }
+        $this->abortIfRouteAssignmentBlocked($routeAssignment);
 
         $visitWindow = MerchandiserClockWindows::visitWindow($timezone, $effectiveLocalTime->copy());
 
@@ -1039,8 +1055,8 @@ class MerchandiserController extends Controller
             'status' => $effectiveLocalTime->gt($visitWindow['late_start_at']) ? 'late-start' : 'on-time',
         ]);
 
-        if ($routeAssignment && $routeAssignment->status === 'planned') {
-            $routeAssignment->update(['status' => 'in_progress']);
+        if ($routeAssignment && $routeAssignment->status === MerchandiserOutletAssignment::STATUS_PLANNED) {
+            $routeAssignment->update(['status' => MerchandiserOutletAssignment::STATUS_IN_PROGRESS]);
         }
 
         // Log location for real-time tracking
@@ -1087,6 +1103,7 @@ class MerchandiserController extends Controller
         if ($hasAssignmentsForDay && ! $routeAssignment) {
             abort(403, 'AccessDenied: This outlet is not on your assigned route for today.');
         }
+        $this->abortIfRouteAssignmentBlocked($routeAssignment);
 
         $attendance = MerchandiserAttendance::where('user_id', $user->id)
             ->where('outlet_id', $outlet->id)
@@ -1145,8 +1162,8 @@ class MerchandiserController extends Controller
             'status' => $attendance->status === 'late-start' ? 'late-start' : 'completed',
         ]);
 
-        if ($routeAssignment && $routeAssignment->status !== 'completed') {
-            $routeAssignment->update(['status' => 'visited']);
+        if ($routeAssignment && $routeAssignment->status !== MerchandiserOutletAssignment::STATUS_COMPLETED) {
+            $routeAssignment->update(['status' => MerchandiserOutletAssignment::STATUS_VISITED]);
         }
 
         MerchandiserLocation::create([
@@ -1259,17 +1276,18 @@ class MerchandiserController extends Controller
     public function visit(Outlet $outlet, MerchandiserRoutePlanner $routePlanner)
     {
         $user = Auth::user();
-        if ($user->kd_id !== $outlet->kd_id) {
-            abort(403, 'AccessDenied: This outlet is not under your assigned Key Distributor.');
+        if (! $this->canServiceOutlet($user, $outlet)) {
+            abort(403, 'AccessDenied: This outlet is not assigned to you.');
         }
 
         $timezone = $user->merchandiserRegion->timezone ?? 'Africa/Accra';
         $today = Carbon::today($timezone);
-        $todayAssignments = $routePlanner->assignmentsForDate($user, $today->copy());
+        [$hasAssignmentsForDay, $routeAssignment] = $this->routeAssignmentForVisit($user, $outlet, $today->copy(), $routePlanner);
 
-        if ($todayAssignments->isNotEmpty() && ! $todayAssignments->pluck('outlet_id')->contains((int) $outlet->id)) {
+        if ($hasAssignmentsForDay && ! $routeAssignment) {
             abort(403, 'AccessDenied: This outlet is not on your assigned route for today.');
         }
+        $this->abortIfRouteAssignmentBlocked($routeAssignment);
 
         $skus = Sku::with('brand')->orderBy('name')->get();
         $googleForms = $this->googleFormsForUser($user, $outlet, $today->copy());
@@ -1291,6 +1309,7 @@ class MerchandiserController extends Controller
             ->orderBy('title')
             ->get();
         $perfectStoreGuide = $this->perfectStoreGuideForChannel($outlet->channel_type);
+        $aiCaptureCategories = $this->requiredAiCaptureCategories();
 
         return view('merchandisers.visit', compact(
             'outlet',
@@ -1299,29 +1318,48 @@ class MerchandiserController extends Controller
             'googleFormCompletionIds',
             'nativeFormCompletionIds',
             'planograms',
-            'perfectStoreGuide'
+            'perfectStoreGuide',
+            'aiCaptureCategories'
         ));
     }
 
     /**
      * Analyze a shelf photo and return AI-prefill SKU metrics.
      */
-    public function analyzeVisitShelf(Request $request, Outlet $outlet)
+    public function analyzeVisitShelf(Request $request, Outlet $outlet, MerchandiserRoutePlanner $routePlanner)
     {
         $user = $request->user();
-        if ($user->kd_id !== $outlet->kd_id) {
+        if (! $this->canServiceOutlet($user, $outlet)) {
             abort(403);
         }
 
+        $timezone = $user->merchandiserRegion->timezone ?? 'Africa/Accra';
+        [$hasAssignmentsForDay, $routeAssignment] = $this->routeAssignmentForVisit($user, $outlet, Carbon::today($timezone), $routePlanner);
+        if ($hasAssignmentsForDay && ! $routeAssignment) {
+            abort(403, 'This outlet is not on your assigned route for today.');
+        }
+        $this->abortIfRouteAssignmentBlocked($routeAssignment);
+
         $request->validate([
             'ai_shelf_photo' => ['required', 'image', 'mimes:jpg,jpeg,png,webp,avif', 'max:8192'],
+            'category' => ['required', 'string', Rule::in($this->requiredAiCaptureCategories())],
         ]);
+        $category = $this->normalizedAiCaptureCategory($request->input('category'));
 
         if (! filled(config('services.openai.api_key')) && ! filled(config('services.gemini.api_key'))) {
             return response()->json([
                 'job_status' => 'skipped',
                 'status' => 'manual_fallback',
                 'message' => 'AI detection is not configured. Continue with manual SKU entry.',
+                'category' => $category,
+                'category_key' => $this->aiCategoryKey($category),
+                'category_validation' => [
+                    'expected_category' => $category,
+                    'detected_category' => null,
+                    'matches_expected_category' => false,
+                    'confidence' => 0.0,
+                    'notes' => 'No AI provider is configured for category validation.',
+                ],
                 'provider' => 'manual',
                 'model' => null,
                 'detections' => [],
@@ -1335,10 +1373,12 @@ class MerchandiserController extends Controller
             'job_status' => 'queued',
             'status' => 'queued',
             'message' => 'AI shelf detection has started. Results will appear shortly.',
+            'category' => $category,
+            'category_key' => $this->aiCategoryKey($category),
             'detections' => [],
         ], now()->addMinutes(30));
 
-        AnalyzeMerchandiserShelfPhoto::dispatch($token, $photoPath, (int) $user->id);
+        AnalyzeMerchandiserShelfPhoto::dispatch($token, $photoPath, (int) $user->id, $category);
 
         return response()->json([
             'job_status' => 'queued',
@@ -1346,16 +1386,25 @@ class MerchandiserController extends Controller
             'token' => $token,
             'poll_url' => route('merchandisers.visit.ai-detect.status', ['outlet' => $outlet, 'token' => $token]),
             'message' => 'AI shelf detection is running. You can continue filling the form while it works.',
+            'category' => $category,
+            'category_key' => $this->aiCategoryKey($category),
             'detections' => [],
         ], 202);
     }
 
-    public function aiDetectionStatus(Request $request, Outlet $outlet, string $token)
+    public function aiDetectionStatus(Request $request, Outlet $outlet, MerchandiserRoutePlanner $routePlanner, string $token)
     {
         $user = $request->user();
-        if ($user->kd_id !== $outlet->kd_id) {
+        if (! $this->canServiceOutlet($user, $outlet)) {
             abort(403);
         }
+
+        $timezone = $user->merchandiserRegion->timezone ?? 'Africa/Accra';
+        [$hasAssignmentsForDay, $routeAssignment] = $this->routeAssignmentForVisit($user, $outlet, Carbon::today($timezone), $routePlanner);
+        if ($hasAssignmentsForDay && ! $routeAssignment) {
+            abort(403, 'This outlet is not on your assigned route for today.');
+        }
+        $this->abortIfRouteAssignmentBlocked($routeAssignment);
 
         $result = Cache::get(AnalyzeMerchandiserShelfPhoto::cacheKey($token));
 
@@ -1378,7 +1427,7 @@ class MerchandiserController extends Controller
     public function storeVisit(Request $request, Outlet $outlet, MerchandiserRoutePlanner $routePlanner)
     {
         $user = $request->user();
-        if ($user->kd_id !== $outlet->kd_id) {
+        if (! $this->canServiceOutlet($user, $outlet)) {
             abort(403);
         }
 
@@ -1397,8 +1446,13 @@ class MerchandiserController extends Controller
             'planogram_notes' => ['nullable', 'string', 'max:2000'],
             'planogram_photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,avif', 'max:8192'],
             'sku_entry_mode' => ['required', 'string', 'in:manual,ai'],
-            'ai_shelf_photo' => ['nullable', 'required_if:sku_entry_mode,ai', 'image', 'mimes:jpg,jpeg,png,webp,avif', 'max:8192'],
+            'ai_shelf_photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,avif', 'max:8192'],
             'ai_predictions_json' => ['nullable', 'json'],
+            'category_images' => ['nullable', 'array'],
+            'category_images.*.category' => ['required_with:category_images', 'string', Rule::in($this->requiredAiCaptureCategories())],
+            'category_images.*.image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,avif', 'max:8192'],
+            'category_ai_predictions_json' => ['nullable', 'array'],
+            'category_ai_predictions_json.*' => ['nullable', 'json'],
             'ai_detection_notes' => ['nullable', 'string', 'max:1000'],
             'category_sos' => ['nullable', 'array'],
             'category_sos.*.category' => ['required_with:category_sos', 'string', 'max:255'],
@@ -1450,12 +1504,41 @@ class MerchandiserController extends Controller
         }
 
         $skuEntryMode = $request->input('sku_entry_mode', 'manual');
-        $aiPredictions = $this->decodedAiPredictions($request->input('ai_predictions_json'));
+        $categoryPredictions = $this->decodedCategoryAiPredictions($request->input('category_ai_predictions_json', []));
+        $categoryCaptureErrors = $this->validateRequiredCategoryCaptures($request, $categoryPredictions);
+        if ($skuEntryMode === 'ai' && $categoryCaptureErrors !== []) {
+            return back()->withInput()->withErrors($categoryCaptureErrors);
+        }
+
+        $aiPredictions = $skuEntryMode === 'ai'
+            ? $this->combinedCategoryAiPredictions($categoryPredictions)
+            : $this->decodedAiPredictions($request->input('ai_predictions_json'));
         $predictionsBySku = collect($aiPredictions['detections'] ?? [])->keyBy(fn ($detection) => (int) ($detection['sku_id'] ?? 0));
         $aiDetectionStatus = $skuEntryMode === 'ai'
-            ? ($aiPredictions['status'] ?? 'pilot_photo_captured')
+            ? ($aiPredictions['status'] ?? 'category_images_captured')
             : null;
         $aiDetectionCompleted = $skuEntryMode === 'ai' && in_array($aiDetectionStatus, ['completed', 'no_detection'], true);
+        $timezone = $user->merchandiserRegion->timezone ?? 'Africa/Accra';
+        $clientRecordedAt = $this->parseClientRecordedAt($request, $timezone);
+        $visitDate = ($clientRecordedAt ?: Carbon::now($timezone))->copy()->timezone($timezone);
+        [$hasAssignmentsForDay, $routeAssignment] = $this->routeAssignmentForVisit($user, $outlet, $visitDate->copy(), $routePlanner);
+
+        if ($hasAssignmentsForDay && ! $routeAssignment) {
+            abort(403, 'AccessDenied: This outlet is not on your assigned route for '.$visitDate->format('l').'.');
+        }
+        $this->abortIfRouteAssignmentBlocked($routeAssignment);
+
+        $hasOutletClockIn = MerchandiserAttendance::where('user_id', $user->id)
+            ->where('outlet_id', $outlet->id)
+            ->whereBetween('clock_in_time', [$visitDate->copy()->startOfDay(), $visitDate->copy()->endOfDay()])
+            ->exists();
+
+        if (! $hasOutletClockIn) {
+            return redirect()
+                ->route('merchandisers.dashboard')
+                ->withErrors(['outlet_id' => 'Clock in at this outlet before submitting the Perfect Store data entry.']);
+        }
+
         $aiShelfPhotoPath = null;
         if ($request->hasFile('ai_shelf_photo')) {
             $aiShelfPhotoPath = $request->file('ai_shelf_photo')->store('merchandiser-ai-shelf-photos', 'public');
@@ -1463,24 +1546,6 @@ class MerchandiserController extends Controller
         $planogramPhotoPath = null;
         if ($request->hasFile('planogram_photo')) {
             $planogramPhotoPath = $request->file('planogram_photo')->store('merchandiser-planogram-photos', 'public');
-        }
-        $timezone = $user->merchandiserRegion->timezone ?? 'Africa/Accra';
-        $clientRecordedAt = $this->parseClientRecordedAt($request, $timezone);
-        $today = Carbon::today($timezone);
-        $routeAssignment = MerchandiserOutletAssignment::where('user_id', $user->id)
-            ->where('outlet_id', $outlet->id)
-            ->whereDate('assigned_date', $today->toDateString())
-            ->first();
-
-        $hasOutletClockIn = MerchandiserAttendance::where('user_id', $user->id)
-            ->where('outlet_id', $outlet->id)
-            ->whereBetween('clock_in_time', [$today->copy()->startOfDay(), $today->copy()->endOfDay()])
-            ->exists();
-
-        if (! $hasOutletClockIn) {
-            return redirect()
-                ->route('merchandisers.dashboard')
-                ->withErrors(['outlet_id' => 'Clock in at this outlet before submitting the Perfect Store data entry.']);
         }
 
         $visit = MerchandiserVisit::create([
@@ -1506,6 +1571,7 @@ class MerchandiserController extends Controller
                 'detections' => $aiPredictions['detections'] ?? [],
                 'message' => $aiPredictions['message'] ?? null,
                 'attempts' => $aiPredictions['attempts'] ?? [],
+                'categories' => $aiPredictions['categories'] ?? [],
             ] : null,
             'ai_detection_notes' => $request->input('ai_detection_notes'),
             'ai_detection_review_required' => $skuEntryMode === 'ai' ? (bool) ($aiPredictions['review_required'] ?? true) : false,
@@ -1616,7 +1682,9 @@ class MerchandiserController extends Controller
             }
         }
 
-        $routePlanner->markCompleted($user, $outlet->id, $today->copy(), $visit->id);
+        $this->storeVisitCategoryImages($request, $visit, $outlet, $user, $categoryPredictions, $skuEntryMode);
+
+        $routePlanner->markCompleted($user, $outlet->id, $visitDate->copy(), $visit->id);
 
         return redirect()->route('merchandisers.dashboard')->with('status', 'Visit report and orders for ' . $outlet->name . ' submitted successfully!');
     }
@@ -1637,9 +1705,16 @@ class MerchandiserController extends Controller
         $outlet = null;
         if (! empty($validated['outlet_id'])) {
             $outlet = Outlet::findOrFail($validated['outlet_id']);
-            if ((int) $outlet->kd_id !== (int) $user->kd_id) {
+            if (! $this->canServiceOutlet($user, $outlet)) {
                 abort(403);
             }
+
+            $timezone = $user->merchandiserRegion->timezone ?? 'Africa/Accra';
+            [$hasAssignmentsForDay, $routeAssignment] = $this->routeAssignmentForVisit($user, $outlet, Carbon::today($timezone), $routePlanner);
+            if ($hasAssignmentsForDay && ! $routeAssignment) {
+                abort(403, 'This outlet is not assigned to your PJP for today.');
+            }
+            $this->abortIfRouteAssignmentBlocked($routeAssignment);
         }
 
         $matchingForms = $this->googleFormsForUser($user, $outlet, Carbon::today($user->merchandiserRegion->timezone ?? 'Africa/Accra'));
@@ -1685,17 +1760,20 @@ class MerchandiserController extends Controller
         $todaysAssignments = $routePlanner->assignmentsForDate($user, Carbon::today($timezone));
         $todaysOutlets = $todaysAssignments->pluck('outlet')->filter()->values();
 
-        if ($todaysOutlets->isNotEmpty()) {
-            $todaysOutlets = Outlet::with('keyDistributor')
+        if ($outlet) {
+            [$hasAssignmentsForDay, $routeAssignment] = $this->routeAssignmentForVisit($user, $outlet, Carbon::today($timezone), $routePlanner);
+            if ($hasAssignmentsForDay && ! $routeAssignment) {
+                abort(403, 'This outlet is not assigned to your PJP for today.');
+            }
+            $this->abortIfRouteAssignmentBlocked($routeAssignment);
+        }
+
+        $todaysOutlets = $todaysOutlets->isNotEmpty()
+            ? Outlet::with('keyDistributor')
                 ->whereIn('id', $todaysOutlets->pluck('id')->all())
                 ->orderBy('name')
-                ->get();
-        } else {
-            $todaysOutlets = Outlet::with('keyDistributor')
-                ->where('kd_id', $user->kd_id)
-                ->orderBy('name')
-                ->get();
-        }
+                ->get()
+            : collect();
 
         $existingSubmission = MerchandiserNativeFormSubmission::where('form_assignment_id', $form->id)
             ->where('user_id', $user->id)
@@ -1733,6 +1811,14 @@ class MerchandiserController extends Controller
         $user = $request->user();
         $outlet = $this->nativeFormOutlet($request, $user);
         $this->authorizeNativeForm($user, $form, $outlet);
+        if ($outlet) {
+            $timezone = $user->merchandiserRegion->timezone ?? 'Africa/Accra';
+            [$hasAssignmentsForDay, $routeAssignment] = $this->routeAssignmentForVisit($user, $outlet, Carbon::today($timezone), $routePlanner);
+            if ($hasAssignmentsForDay && ! $routeAssignment) {
+                abort(403, 'This outlet is not assigned to your PJP for today.');
+            }
+            $this->abortIfRouteAssignmentBlocked($routeAssignment);
+        }
 
         $syncToken = $this->normalizedSyncToken($request);
         if ($syncToken && MerchandiserNativeFormSubmission::where('user_id', $user->id)->where('sync_token', $syncToken)->exists()) {
@@ -1807,6 +1893,186 @@ class MerchandiserController extends Controller
         $decoded = json_decode($json, true);
 
         return is_array($decoded) ? $decoded : [];
+    }
+
+    private function requiredAiCaptureCategories(): array
+    {
+        return collect(config('merchandiser.ai_capture_categories', []))
+            ->map(fn ($category) => Str::of((string) $category)->replace('–', '-')->squish()->toString())
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function aiCategoryKey(string $category): string
+    {
+        return Str::slug(Str::of($category)->replace('–', '-')->squish()->toString(), '_');
+    }
+
+    private function normalizedAiCaptureCategory(?string $category): string
+    {
+        $requested = Str::of((string) $category)->replace('–', '-')->squish()->toString();
+        $byKey = collect($this->requiredAiCaptureCategories())
+            ->keyBy(fn (string $configured) => $this->aiCategoryKey($configured));
+
+        return $byKey->get($this->aiCategoryKey($requested), $requested);
+    }
+
+    private function decodedCategoryAiPredictions(array $payload): array
+    {
+        return collect($payload)
+            ->mapWithKeys(function ($json, $key) {
+                if (! is_string($json) || trim($json) === '') {
+                    return [];
+                }
+
+                $decoded = json_decode($json, true);
+                if (! is_array($decoded)) {
+                    return [];
+                }
+
+                $category = $this->normalizedAiCaptureCategory($decoded['category'] ?? $key);
+                $categoryKey = $decoded['category_key'] ?? $this->aiCategoryKey($category);
+                $decoded['category'] = $category;
+                $decoded['category_key'] = $categoryKey;
+
+                return [$categoryKey => $decoded];
+            })
+            ->all();
+    }
+
+    private function combinedCategoryAiPredictions(array $categoryPredictions): array
+    {
+        $payloads = collect($categoryPredictions);
+        $detections = $payloads
+            ->flatMap(fn (array $payload) => collect($payload['detections'] ?? []))
+            ->values()
+            ->all();
+        $confidenceScores = $payloads
+            ->pluck('average_confidence')
+            ->filter(fn ($score) => $score !== null)
+            ->map(fn ($score) => (float) $score);
+        $statuses = $payloads->pluck('status')->filter()->values();
+        $allCompleted = $statuses->isNotEmpty()
+            && $statuses->every(fn ($status) => in_array($status, ['completed', 'no_detection'], true));
+
+        return [
+            'status' => $allCompleted ? (empty($detections) ? 'no_detection' : 'completed') : 'category_validation_pending',
+            'message' => $allCompleted
+                ? 'Category image validation completed. Review SKU prefill values before submitting.'
+                : 'Category image validation is not complete.',
+            'provider' => $payloads->pluck('provider')->filter()->first(),
+            'model' => $payloads->pluck('model')->filter()->first(),
+            'average_confidence' => $confidenceScores->isNotEmpty() ? round((float) $confidenceScores->avg(), 2) : null,
+            'detections' => $detections,
+            'review_required' => $payloads->contains(fn (array $payload) => (bool) ($payload['review_required'] ?? false)),
+            'categories' => $payloads->values()->all(),
+            'attempts' => $payloads->flatMap(fn (array $payload) => $payload['attempts'] ?? [])->values()->all(),
+        ];
+    }
+
+    private function validateRequiredCategoryCaptures(Request $request, array $categoryPredictions): array
+    {
+        $errors = [];
+
+        foreach ($this->requiredAiCaptureCategories() as $category) {
+            $key = $this->aiCategoryKey($category);
+            $imageField = "category_images.{$key}.image";
+
+            if (! $request->hasFile($imageField)) {
+                $errors[$imageField] = "Capture the {$category} shelf image before submitting AI mode.";
+                continue;
+            }
+
+            $result = $categoryPredictions[$key] ?? null;
+            if (! $result) {
+                $errors["category_ai_predictions_json.{$key}"] = "Run AI category validation for {$category} before submitting.";
+                continue;
+            }
+
+            $status = (string) ($result['status'] ?? '');
+            $matchesExpected = $result['category_validation']['matches_expected_category'] ?? null;
+            if ($status === MerchandiserVisitCategoryImage::STATUS_WRONG_CATEGORY || $matchesExpected === false) {
+                $errors[$imageField] = "Wrong Category Image. Please capture the {$category} section.";
+                continue;
+            }
+
+            if (! in_array($status, ['completed', 'no_detection'], true)) {
+                $errors["category_ai_predictions_json.{$key}"] = "AI category validation for {$category} has not completed successfully.";
+            }
+        }
+
+        return $errors;
+    }
+
+    private function storeVisitCategoryImages(
+        Request $request,
+        MerchandiserVisit $visit,
+        Outlet $outlet,
+        User $user,
+        array $categoryPredictions,
+        string $skuEntryMode
+    ): void {
+        if ($skuEntryMode !== 'ai') {
+            return;
+        }
+
+        $outlet->loadMissing('keyDistributor.region');
+
+        foreach ($this->requiredAiCaptureCategories() as $category) {
+            $key = $this->aiCategoryKey($category);
+            $file = $request->file("category_images.{$key}.image");
+            $result = $categoryPredictions[$key] ?? [];
+            $path = $file
+                ? $file->store('merchandiser-ai-category-photos/'.$key, 'public')
+                : null;
+
+            MerchandiserVisitCategoryImage::create([
+                'visit_id' => $visit->id,
+                'user_id' => $user->id,
+                'supervisor_id' => $user->supervisor_id,
+                'kd_id' => $outlet->kd_id,
+                'region_id' => $outlet->keyDistributor?->region_id ?? $user->region_id,
+                'outlet_id' => $outlet->id,
+                'category' => $category,
+                'image_path' => $path,
+                'status' => $this->categoryCaptureStatus($result, $path !== null),
+                'ai_provider' => $result['provider'] ?? null,
+                'ai_model' => $result['model'] ?? null,
+                'ai_confidence' => isset($result['average_confidence']) ? round(((float) $result['average_confidence']) * 100, 2) : null,
+                'ai_message' => $result['message'] ?? null,
+                'ai_payload' => $result ?: null,
+                'validated_at' => in_array($this->categoryCaptureStatus($result, $path !== null), [
+                    MerchandiserVisitCategoryImage::STATUS_CAPTURED_VALIDATED,
+                    MerchandiserVisitCategoryImage::STATUS_WRONG_CATEGORY,
+                ], true) ? now() : null,
+            ]);
+        }
+    }
+
+    private function categoryCaptureStatus(array $result, bool $hasFile): string
+    {
+        if (! $hasFile) {
+            return MerchandiserVisitCategoryImage::STATUS_NOT_CAPTURED;
+        }
+
+        $status = (string) ($result['status'] ?? '');
+        $matchesExpected = $result['category_validation']['matches_expected_category'] ?? null;
+
+        if ($status === MerchandiserVisitCategoryImage::STATUS_WRONG_CATEGORY || $matchesExpected === false) {
+            return MerchandiserVisitCategoryImage::STATUS_WRONG_CATEGORY;
+        }
+
+        if (in_array($status, ['completed', 'no_detection'], true)) {
+            return MerchandiserVisitCategoryImage::STATUS_CAPTURED_VALIDATED;
+        }
+
+        if (in_array($status, ['queued', 'processing'], true)) {
+            return MerchandiserVisitCategoryImage::STATUS_AI_PROCESSING;
+        }
+
+        return MerchandiserVisitCategoryImage::STATUS_MANUAL_REVIEW;
     }
 
     private function normalizedSyncToken(Request $request): ?string
@@ -1906,8 +2172,8 @@ class MerchandiserController extends Controller
         }
 
         $outlet = Outlet::findOrFail($request->integer('outlet_id'));
-        if ((int) $outlet->kd_id !== (int) $user->kd_id) {
-            abort(403, 'This outlet is not assigned to your Key Distributor.');
+        if (! $this->canServiceOutlet($user, $outlet)) {
+            abort(403, 'This outlet is not assigned to you.');
         }
 
         return $outlet;

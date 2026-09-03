@@ -1,4 +1,8 @@
                 <div x-show="activeTab === 'routes'" x-cloak x-transition class="space-y-6">
+                    @php
+                        $visitDayNameMap = [1 => 'Mon', 2 => 'Tue', 3 => 'Wed', 4 => 'Thu', 5 => 'Fri', 6 => 'Sat', 7 => 'Sun'];
+                        $collapseReasons = $pjpCollapseReasons ?? config('merchandiser.pjp_collapse_reasons', []);
+                    @endphp
                     <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
                         <form method="GET" action="{{ route('merchandisers.admin.dashboard') }}" class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
                             <input type="hidden" name="tab" value="routes">
@@ -31,6 +35,44 @@
                             <button type="submit" class="mt-3 w-full rounded-xl bg-brand-red px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-white hover:bg-red-700 transition shadow-sm">Generate</button>
                         </form>
                     </div>
+
+                    <form method="POST" action="{{ route('merchandisers.admin.routes.collapse') }}" class="merch-card rounded-2xl border border-amber-300 dark:border-amber-900/60 bg-amber-50 dark:bg-amber-950/20 p-5 shadow-sm">
+                        @csrf
+                        <div class="flex flex-col gap-3 xl:flex-row xl:items-end">
+                            <div class="min-w-0 flex-1">
+                                <p class="text-[10px] uppercase tracking-widest text-amber-900 dark:text-amber-200 font-extrabold">Collapse PJP</p>
+                                <p class="mt-1 text-xs text-amber-900/75 dark:text-amber-200/70 font-semibold">Collapse one merchandiser route for one date without deleting the original PJP or counting it as missed.</p>
+                            </div>
+                            <label class="space-y-1 xl:w-64">
+                                <span class="text-[10px] uppercase tracking-widest text-amber-900 dark:text-amber-200 font-bold">Merchandiser</span>
+                                <select name="user_id" required class="w-full rounded-xl border border-amber-300 dark:border-amber-800 bg-white dark:bg-slate-950 px-3 py-2 text-xs text-slate-900 dark:text-white font-semibold">
+                                    <option value="">Select merchandiser</option>
+                                    @foreach($outletAssignmentMerchandisers as $merchandiser)
+                                        <option value="{{ $merchandiser->id }}" @selected((int) old('user_id') === (int) $merchandiser->id)>{{ $merchandiser->name }}</option>
+                                    @endforeach
+                                </select>
+                            </label>
+                            <label class="space-y-1 xl:w-44">
+                                <span class="text-[10px] uppercase tracking-widest text-amber-900 dark:text-amber-200 font-bold">Date</span>
+                                <input type="date" name="assigned_date" value="{{ old('assigned_date', now()->toDateString()) }}" required class="w-full rounded-xl border border-amber-300 dark:border-amber-800 bg-white dark:bg-slate-950 px-3 py-2 text-xs text-slate-900 dark:text-white font-semibold">
+                            </label>
+                            <label class="space-y-1 xl:w-52">
+                                <span class="text-[10px] uppercase tracking-widest text-amber-900 dark:text-amber-200 font-bold">Reason Type</span>
+                                <select name="reason_type" required class="w-full rounded-xl border border-amber-300 dark:border-amber-800 bg-white dark:bg-slate-950 px-3 py-2 text-xs text-slate-900 dark:text-white font-semibold">
+                                    @foreach($collapseReasons as $reasonValue => $reasonLabel)
+                                        <option value="{{ $reasonValue }}" @selected(old('reason_type') === $reasonValue)>{{ $reasonLabel }}</option>
+                                    @endforeach
+                                </select>
+                            </label>
+                        </div>
+                        <div class="mt-3 grid gap-3 xl:grid-cols-[1fr_auto] xl:items-end">
+                            <label class="space-y-1">
+                                <span class="text-[10px] uppercase tracking-widest text-amber-900 dark:text-amber-200 font-bold">Reason for PJP Collapse</span>
+                                <textarea name="reason" rows="2" required placeholder="Type the approved operational reason here" class="w-full rounded-xl border border-amber-300 dark:border-amber-800 bg-white dark:bg-slate-950 px-3 py-2 text-xs text-slate-900 dark:text-white font-semibold placeholder:text-slate-400 focus:border-amber-500 focus:ring-0">{{ old('reason') }}</textarea>
+                            </label>
+                            <button type="submit" class="rounded-xl bg-amber-600 px-5 py-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-amber-700 transition">Collapse PJP</button>
+                        </div>
+                    </form>
 
                     <div class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
                         <div class="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
@@ -96,10 +138,19 @@
                                             <td class="px-5 py-4">
                                                 <div class="flex flex-wrap gap-2">
                                                     @forelse($merchandiser->assignedMerchandiserOutlets as $assignedOutlet)
+                                                        @php
+                                                            $visitDays = collect(json_decode((string) ($assignedOutlet->pivot?->visit_days ?? ''), true) ?: [])
+                                                                ->map(fn ($day) => (int) $day)
+                                                                ->filter(fn ($day) => isset($visitDayNameMap[$day]))
+                                                                ->values();
+                                                            if ($visitDays->isEmpty() && $assignedOutlet->created_at) {
+                                                                $visitDays = collect([(int) $assignedOutlet->created_at->isoWeekday()]);
+                                                            }
+                                                        @endphp
                                                         <span class="inline-flex max-w-[260px] items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 px-3 py-2">
                                                             <span class="min-w-0">
                                                                 <span class="block truncate text-xs font-bold text-slate-900 dark:text-white">{{ $assignedOutlet->name }}</span>
-                                                                <span class="block text-[10px] text-slate-600 dark:text-slate-400 font-semibold">{{ $assignedOutlet->created_at?->format('D, d M Y') ?? 'No date' }} · {{ $assignedOutlet->registeredBy?->name ?? 'Admin/System' }}</span>
+                                                                <span class="block text-[10px] text-slate-600 dark:text-slate-400 font-semibold">{{ $visitDays->map(fn ($day) => $visitDayNameMap[$day] ?? null)->filter()->implode(', ') ?: 'No PJP day' }} - {{ $assignedOutlet->registeredBy?->name ?? 'Admin/System' }}</span>
                                                             </span>
                                                             <form method="POST" action="{{ route('merchandisers.admin.outlet-assignments.destroy', ['outlet' => $assignedOutlet, 'user' => $merchandiser]) }}" onsubmit="return confirm('Remove this outlet from {{ $merchandiser->name }}?')">
                                                                 @csrf
@@ -128,7 +179,18 @@
                                                                 </label>
                                                             @endforeach
                                                         </div>
-                                                        <p class="text-[10px] leading-relaxed text-slate-600 dark:text-slate-400 font-semibold">Tick one or more outlets, then assign. Use Assign All Shown for the current day filter.</p>
+                                                        <div class="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-2">
+                                                            <p class="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">PJP Day(s)</p>
+                                                            <div class="grid grid-cols-4 gap-1.5 sm:grid-cols-7">
+                                                                @foreach($visitDayNameMap as $dayValue => $dayLabel)
+                                                                    <label class="flex items-center justify-center gap-1 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-2 py-1.5 text-[10px] font-bold text-slate-700 dark:text-slate-300">
+                                                                        <input type="checkbox" name="visit_days[]" value="{{ $dayValue }}" class="rounded border-slate-300 text-brand-red focus:ring-brand-red">
+                                                                        <span>{{ $dayLabel }}</span>
+                                                                    </label>
+                                                                @endforeach
+                                                            </div>
+                                                        </div>
+                                                        <p class="text-[10px] leading-relaxed text-slate-600 dark:text-slate-400 font-semibold">Tick one or more outlets and at least one PJP weekday. Outlets only appear on the selected day(s).</p>
                                                         <div class="grid grid-cols-2 gap-2">
                                                             <button type="submit" class="rounded-xl border border-emerald-400/40 bg-emerald-100 dark:bg-emerald-500/20 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-200 hover:bg-emerald-200 transition">Assign Checked</button>
                                                             <button type="submit" onclick="this.form.querySelectorAll('input[name=&quot;outlet_ids[]&quot;]').forEach((input) => input.checked = true)" class="rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition">Assign All Shown</button>
@@ -154,7 +216,7 @@
                         @endif
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-8 gap-4">
                         <div class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
                             <p class="text-[10px] uppercase tracking-widest text-slate-900 dark:text-white font-extrabold">Total Assignments</p>
                             <p class="mt-2 text-3xl font-bold text-slate-900 dark:text-white">{{ $routeSummary['total'] }}</p>
@@ -174,6 +236,14 @@
                         <div class="merch-card rounded-2xl border border-red-400/40 bg-red-50 dark:bg-red-500/10 p-5 shadow-sm">
                             <p class="text-[10px] uppercase tracking-widest text-red-800 dark:text-red-200 font-extrabold">Missed / Overdue</p>
                             <p class="mt-2 text-3xl font-bold text-red-800 dark:text-red-200">{{ $routeSummary['overdue'] }}</p>
+                        </div>
+                        <div class="merch-card rounded-2xl border border-amber-400/40 bg-amber-50 dark:bg-amber-500/10 p-5 shadow-sm">
+                            <p class="text-[10px] uppercase tracking-widest text-amber-900 dark:text-amber-200 font-extrabold">Collapsed</p>
+                            <p class="mt-2 text-3xl font-bold text-amber-900 dark:text-amber-200">{{ $routeSummary['collapsed'] ?? 0 }}</p>
+                        </div>
+                        <div class="merch-card rounded-2xl border border-purple-400/40 bg-purple-50 dark:bg-purple-500/10 p-5 shadow-sm">
+                            <p class="text-[10px] uppercase tracking-widest text-purple-900 dark:text-purple-200 font-extrabold">Carry-over</p>
+                            <p class="mt-2 text-3xl font-bold text-purple-900 dark:text-purple-200">{{ $routeSummary['carry_over'] ?? 0 }}</p>
                         </div>
                         <div class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
                             <p class="text-[10px] uppercase tracking-widest text-slate-900 dark:text-white font-extrabold">Completion Rate</p>
@@ -266,7 +336,7 @@
                             <a href="{{ route('merchandisers.admin.dashboard', ['tab' => 'merchandisers']) }}" class="rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition">Edit Targets</a>
                         </div>
                         <div class="overflow-x-auto">
-                            <table class="w-full text-sm min-w-[900px]">
+                            <table class="w-full text-sm min-w-[1020px]">
                                 <thead class="bg-slate-50 dark:bg-slate-800/50">
                                     <tr class="border-b border-slate-200 dark:border-slate-800">
                                         <th class="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-slate-900 dark:text-slate-100 font-extrabold">Date</th>
@@ -275,6 +345,7 @@
                                         <th class="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-slate-900 dark:text-slate-100 font-extrabold">KD</th>
                                         <th class="px-5 py-3 text-center text-[10px] uppercase tracking-widest text-slate-900 dark:text-slate-100 font-extrabold">Seq</th>
                                         <th class="px-5 py-3 text-center text-[10px] uppercase tracking-widest text-slate-900 dark:text-slate-100 font-extrabold">Status</th>
+                                        <th class="px-5 py-3 text-left text-[10px] uppercase tracking-widest text-slate-900 dark:text-slate-100 font-extrabold">Audit Reason</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
@@ -300,11 +371,30 @@
                                             <td class="px-5 py-3 text-xs text-slate-700 dark:text-slate-300 font-medium">{{ $assignment->outlet?->keyDistributor?->name ?? 'N/A' }}</td>
                                             <td class="px-5 py-3 text-center text-xs font-bold text-slate-900 dark:text-white">{{ $assignment->sequence }}</td>
                                             <td class="px-5 py-3 text-center">
-                                                <span class="rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider {{ $assignment->status === 'completed' ? 'border-emerald-400/40 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-200' : 'border-amber-400/40 bg-amber-100 dark:bg-amber-500/20 text-amber-900 dark:text-amber-200' }}">{{ $assignment->status }}</span>
+                                                @php
+                                                    $statusClass = match($assignment->status) {
+                                                        'completed', 'visited' => 'border-emerald-400/40 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-200',
+                                                        'collapsed' => 'border-amber-400/40 bg-amber-100 dark:bg-amber-500/20 text-amber-900 dark:text-amber-200',
+                                                        'carry_over', 'carried_over' => 'border-purple-400/40 bg-purple-100 dark:bg-purple-500/20 text-purple-900 dark:text-purple-200',
+                                                        default => 'border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200',
+                                                    };
+                                                @endphp
+                                                <span class="rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider {{ $statusClass }}">{{ str_replace('_', ' ', $assignment->status ?? 'planned') }}</span>
+                                            </td>
+                                            <td class="px-5 py-3 text-xs text-slate-600 dark:text-slate-400 font-semibold">
+                                                @if($assignment->status === 'collapsed')
+                                                    <p class="font-bold text-amber-800 dark:text-amber-200">{{ $assignment->collapse_reason_type ? ($collapseReasons[$assignment->collapse_reason_type] ?? $assignment->collapse_reason_type) : 'Collapsed' }}</p>
+                                                    <p class="mt-0.5">{{ $assignment->collapse_reason }}</p>
+                                                @elseif(in_array($assignment->status, ['carry_over', 'carried_over'], true))
+                                                    <p class="font-bold text-purple-800 dark:text-purple-200">Carry-over on original PJP day</p>
+                                                    <p class="mt-0.5">{{ $assignment->notes }}</p>
+                                                @else
+                                                    <span>N/A</span>
+                                                @endif
                                             </td>
                                         </tr>
                                     @empty
-                                        <tr><td colspan="6" class="px-5 py-10 text-center text-sm text-slate-600 dark:text-slate-400 font-semibold">No route assignments for this period yet. Generate routes to prepare the plan.</td></tr>
+                                        <tr><td colspan="7" class="px-5 py-10 text-center text-sm text-slate-600 dark:text-slate-400 font-semibold">No route assignments for this period yet. Generate routes to prepare the plan.</td></tr>
                                     @endforelse
                                 </tbody>
                             </table>

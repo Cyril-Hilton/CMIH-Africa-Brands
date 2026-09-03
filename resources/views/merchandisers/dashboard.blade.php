@@ -517,7 +517,7 @@
 
                                         <!-- Day Schedule Filter Bar (High-Contrast Theme Guaranteed) -->
                                         <div class="flex flex-wrap items-center gap-2 p-2.5 rounded-2xl bg-[#E0F2FE] dark:bg-slate-900 border border-sky-200 dark:border-slate-800">
-                                            @foreach(['today' => $dayLabels['today'], '1' => 'Mon', '2' => 'Tue', '3' => 'Wed', '4' => 'Thu', '5' => 'Fri', '6' => 'Sat', '7' => 'Sun', 'all' => 'All Outlets'] as $dayKey => $dayName)
+                                            @foreach(['today' => $dayLabels['today'], '1' => 'Mon', '2' => 'Tue', '3' => 'Wed', '4' => 'Thu', '5' => 'Fri', '6' => 'Sat', '7' => 'Sun'] as $dayKey => $dayName)
                                                 @php
                                                     $isCurrentDayTab = ($dayKey === 'today' && $selectedDay === 'today') || ($selectedDay === $dayKey);
                                                     $count = $dayOutletCounts[$dayKey === 'today' ? $currentIsoDay : $dayKey] ?? 0;

@@ -518,7 +518,7 @@ Route::prefix('merchandisers')->name('merchandisers.')->group(function () {
         Route::middleware(['role:admin,super_admin,merchandiser_supervisor,merchandiser_client'])->prefix('admin')->name('admin.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'dashboard'])->name('dashboard');
             Route::get('/hub/{adminTab}', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'dashboard'])
-                ->whereIn('adminTab', ['overview', 'tracking', 'kds', 'routes', 'skus', 'forms', 'merchandisers', 'supervisors', 'assets', 'notifications', 'settings', 'gallery', 'executive', 'perfect-store', 'category-kpi', 'user-performance', 'price-promo', 'supervisor-dashboard', 'regional-dashboard', 'client-dashboard'])
+                ->whereIn('adminTab', ['overview', 'tracking', 'kds', 'routes', 'skus', 'forms', 'merchandisers', 'supervisors', 'assets', 'notifications', 'settings', 'gallery', 'executive', 'perfect-store', 'category-kpi', 'user-performance', 'price-promo', 'supervisor-dashboard', 'client-dashboard', 'regional-dashboard'])
                 ->name('tab');
             Route::get('/merchandisers', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'merchandisers'])->name('merchandisers');
             Route::post('/merchandisers/{user}/suspend', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'suspendMerchandiser'])->name('merchandisers.suspend');
@@ -546,6 +546,8 @@ Route::prefix('merchandisers')->name('merchandisers.')->group(function () {
             Route::post('/kpi-settings', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'updateKpiSettings'])->name('kpi-settings.update');
             Route::post('/pairings/{user}', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'pairMerchandiser'])->name('pairings.pair');
             Route::post('/routes/generate', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'generateRoutes'])->name('routes.generate');
+            Route::post('/routes/collapse', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'collapsePjp'])->name('routes.collapse');
+            Route::post('/category-images/{categoryImage}/not-applicable', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'markCategoryImageNotApplicable'])->name('category-images.not-applicable');
             Route::post('/merchandisers/{user}/route-settings', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'updateRouteSettings'])->name('merchandisers.route-settings');
             Route::post('/google-forms', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'storeGoogleForm'])->name('google-forms.store');
             Route::delete('/google-forms/{form}', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'destroyGoogleForm'])->name('google-forms.destroy');

@@ -70,4 +70,9 @@ class MerchandiserVisit extends Model
     {
         return $this->hasMany(MerchandiserVisitSku::class, 'visit_id');
     }
+
+    public function categoryImages(): HasMany
+    {
+        return $this->hasMany(MerchandiserVisitCategoryImage::class, 'visit_id');
+    }
 }

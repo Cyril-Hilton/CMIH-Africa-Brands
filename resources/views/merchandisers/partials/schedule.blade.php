@@ -58,7 +58,7 @@
 
                 <!-- Status & Action -->
                 <div class="flex items-center gap-3 shrink-0">
-                    @if($assignment?->status === 'carried_over' || $assignment?->source === 'carry_over')
+                    @if(in_array($assignment?->status, ['carry_over', 'carried_over'], true) || $assignment?->source === 'carry_over')
                         <span class="rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-0.5 text-[10px] font-bold">Carried Over</span>
                     @endif
                     <span class="{{ $status === 'Completed' ? 'merch-status-completed' : ($status === 'In progress' ? 'merch-status-progress' : 'merch-status-warning') }} rounded-full px-3 py-1 text-[10px] font-bold">
