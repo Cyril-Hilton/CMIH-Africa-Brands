@@ -45,6 +45,7 @@ use App\Support\SimplePdf;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -122,21 +123,38 @@ class MerchandiserAdminHubController extends Controller
         // ── KPI Counts ─────────────────────────────────────────────────────────
         // Admins can switch workspaces through the tenant query parameter.
         $tenantCode = MerchandiserTenant::forUser($currentUser, $request);
-        $tenantUsers = User::merchandisers()
-            ->forMerchandiserTenant($tenantCode)
-            ->get(['id', 'kd_id', 'status']);
+        $tenantUsers = $this->speedCache(
+            "merch:tenant-users:v1:{$tenantCode}",
+            15,
+            fn () => User::merchandisers()
+                ->forMerchandiserTenant($tenantCode)
+                ->get(['id', 'kd_id', 'status'])
+        );
 
         $tenantMerchandiserIds = $tenantUsers->pluck('id')->map(fn ($id) => (int) $id)->values();
         $tenantKdIds = $tenantUsers->pluck('kd_id')->filter()->map(fn ($id) => (int) $id)->unique()->values();
 
         $performanceFilters = $this->resolvePerformanceFilters($request, $tenantMerchandiserIds, $tenantKdIds);
-        $performanceFilterOptions = $this->performanceFilterOptions($performanceFilters, $tenantMerchandiserIds, $tenantKdIds);
+        $performanceFilterOptions = $this->speedCache(
+            'merch:performance-filter-options:v2:'.$this->cacheDigest([
+                'tenant' => $tenantCode,
+                'filters' => $performanceFilters,
+                'merchandisers' => $tenantMerchandiserIds->all(),
+                'kds' => $tenantKdIds->all(),
+            ]),
+            45,
+            fn () => $this->performanceFilterOptions($performanceFilters, $tenantMerchandiserIds, $tenantKdIds)
+        );
 
         $totalMerchandisers   = $tenantMerchandiserIds->count();
         $activeMerchandisers  = $tenantUsers->where('status', 'active')->count();
         $pendingMerchandisers = $tenantUsers->where('status', 'pending')->count();
         $totalKds             = $tenantKdIds->count();
-        $totalOutlets         = $tenantKdIds->isEmpty() ? 0 : Outlet::whereIn('kd_id', $tenantKdIds)->count();
+        $totalOutlets         = $tenantKdIds->isEmpty() ? 0 : $this->speedCache(
+            'merch:tenant-outlet-count:v1:'.$this->cacheDigest(['tenant' => $tenantCode, 'kds' => $tenantKdIds->all()]),
+            60,
+            fn () => Outlet::whereIn('kd_id', $tenantKdIds)->count()
+        );
 
         // Clock-in range for the dashboard KPI, chart, and PCM/PJP log review.
         $clockTimezone = 'Africa/Accra';
@@ -169,17 +187,50 @@ class MerchandiserAdminHubController extends Controller
                 ->take(25)
                 ->get();
         }
-        $clockAttendanceCount = MerchandiserAttendance::whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clock_in_time', [$clockFrom, $clockTo])->count();
-        $clockPcmCount = MerchandiserPcmClockin::whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clocked_in_at', [$clockFrom, $clockTo])->count();
-        $clockPjpCount = MerchandiserPjpClockin::whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clocked_in_at', [$clockFrom, $clockTo])->count();
+        [$clockAttendanceCount, $clockPcmCount, $clockPjpCount] = $tenantMerchandiserIds->isEmpty()
+            ? [0, 0, 0]
+            : $this->speedCache(
+                'merch:clock-counts:v1:'.$this->cacheDigest([
+                    'tenant' => $tenantCode,
+                    'from' => $clockFrom->toDateTimeString(),
+                    'to' => $clockTo->toDateTimeString(),
+                    'merchandisers' => $tenantMerchandiserIds->all(),
+                ]),
+                10,
+                fn () => [
+                    MerchandiserAttendance::whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clock_in_time', [$clockFrom, $clockTo])->count(),
+                    MerchandiserPcmClockin::whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clocked_in_at', [$clockFrom, $clockTo])->count(),
+                    MerchandiserPjpClockin::whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clocked_in_at', [$clockFrom, $clockTo])->count(),
+                ]
+            );
         $todayClockins  = $clockAttendanceCount + $clockPcmCount + $clockPjpCount;
 
         // Pending approvals
-        $pendingLeaves  = LeaveApplication::where('status', 'pending')->whereIn('user_id', $tenantMerchandiserIds)->count();
-        $pendingClaims  = PettyCashClaim::where('status', 'pending')->whereIn('user_id', $tenantMerchandiserIds)->count();
-        $pendingLoans   = SalaryAdvance::where('status', 'pending')->whereIn('user_id', $tenantMerchandiserIds)->count();
+        [$pendingLeaves, $pendingClaims, $pendingLoans] = $tenantMerchandiserIds->isEmpty()
+            ? [0, 0, 0]
+            : $this->speedCache(
+                'merch:pending-approvals:v1:'.$this->cacheDigest([
+                    'tenant' => $tenantCode,
+                    'merchandisers' => $tenantMerchandiserIds->all(),
+                ]),
+                10,
+                fn () => [
+                    LeaveApplication::where('status', 'pending')->whereIn('user_id', $tenantMerchandiserIds)->count(),
+                    PettyCashClaim::where('status', 'pending')->whereIn('user_id', $tenantMerchandiserIds)->count(),
+                    SalaryAdvance::where('status', 'pending')->whereIn('user_id', $tenantMerchandiserIds)->count(),
+                ]
+            );
         $totalPending = $pendingLeaves + $pendingClaims + $pendingLoans;
-        $liveLocationCount = MerchandiserLocation::query()->whereIn('user_id', $tenantMerchandiserIds)->distinct()->count('user_id');
+        $liveLocationCount = $tenantMerchandiserIds->isEmpty()
+            ? 0
+            : $this->speedCache(
+                'merch:live-location-count:v1:'.$this->cacheDigest([
+                    'tenant' => $tenantCode,
+                    'merchandisers' => $tenantMerchandiserIds->all(),
+                ]),
+                10,
+                fn () => MerchandiserLocation::query()->whereIn('user_id', $tenantMerchandiserIds)->distinct()->count('user_id')
+            );
 
         $attendanceChart = [];
         $topPerformers = collect();
@@ -194,7 +245,7 @@ class MerchandiserAdminHubController extends Controller
         if ($activeTab === 'overview') {
             $currentMonthStart = now()->startOfMonth();
             $currentMonthEnd = now()->endOfMonth();
-            $perfectStoreSummary = app(PerfectStoreKpiService::class)->summary($perfectStoreFrom, $perfectStoreTo, $tenantCode, $performanceFilters);
+            $perfectStoreSummary = $this->cachedPerfectStoreSummary($perfectStoreFrom, $perfectStoreTo, $tenantCode, $performanceFilters);
 
             $chartStart = $clockFrom->copy()->startOfDay();
             $chartEnd = $clockTo->copy()->startOfDay();
@@ -235,7 +286,7 @@ class MerchandiserAdminHubController extends Controller
                 ->take(10)
                 ->get();
         } elseif (in_array($activeTab, ['perfect-store', 'supervisor-dashboard', 'client-dashboard'], true)) {
-            $perfectStoreSummary = app(PerfectStoreKpiService::class)->summary($perfectStoreFrom, $perfectStoreTo, $tenantCode, $performanceFilters);
+            $perfectStoreSummary = $this->cachedPerfectStoreSummary($perfectStoreFrom, $perfectStoreTo, $tenantCode, $performanceFilters);
             $allKds = KeyDistributor::whereIn('id', $tenantKdIds)
                 ->when(filled($performanceFilters['region_id'] ?? null), fn ($query) => $query->where('region_id', (int) $performanceFilters['region_id']))
                 ->when(filled($performanceFilters['kd_id'] ?? null), fn ($query) => $query->whereKey((int) $performanceFilters['kd_id']))
@@ -292,7 +343,7 @@ class MerchandiserAdminHubController extends Controller
         } elseif ($activeTab === 'category-kpi') {
             $categorySosData = app(PerfectStoreKpiService::class)->categoryKpis($perfectStoreFrom, $perfectStoreTo, $tenantCode, $performanceFilters);
         } elseif (in_array($activeTab, ['executive', 'client-dashboard'], true)) {
-            $perfectStoreSummary = app(PerfectStoreKpiService::class)->summary($perfectStoreFrom, $perfectStoreTo, $tenantCode, $performanceFilters);
+            $perfectStoreSummary = $this->cachedPerfectStoreSummary($perfectStoreFrom, $perfectStoreTo, $tenantCode, $performanceFilters);
         }
 
         [$outletCreatedFrom, $outletCreatedTo] = $this->outletCreatedRange($request);
@@ -589,7 +640,7 @@ class MerchandiserAdminHubController extends Controller
         }
 
         $adminChartDatasets = $activeTab === 'overview'
-            ? $this->adminOverviewChartDatasets($tenantCode, null, $performanceFilters, false)
+            ? $this->adminOverviewChartDatasets($tenantCode, ['weekly'], $performanceFilters, false)
             : [];
 
         // ── Recent Share Links ─────────────────────────────────────────────────
@@ -618,10 +669,14 @@ class MerchandiserAdminHubController extends Controller
             : $this->emptyPaginator($request, 'sku_page', 30);
         $skuAiConfigured = filled(config('services.openai.api_key')) || filled(config('services.gemini.api_key'));
 
-        $supervisorCount = User::merchandiserSupervisors()
-            ->forMerchandiserTenant($tenantCode)
-            ->where('status', 'active')
-            ->count();
+        $supervisorCount = $this->speedCache(
+            "merch:supervisor-count:v1:{$tenantCode}",
+            30,
+            fn () => User::merchandiserSupervisors()
+                ->forMerchandiserTenant($tenantCode)
+                ->where('status', 'active')
+                ->count()
+        );
         $supervisorCandidates = collect();
         $supervisorRoleSearch = trim((string) $request->query('supervisor_role_search', ''));
         $supervisorManageMerchandisers = $this->emptyPaginator($request, 'supervisor_role_page', 8);
@@ -711,10 +766,20 @@ class MerchandiserAdminHubController extends Controller
             ->get();
         }
         $todayForRoutes = Carbon::today($routeTimezone)->toDateString();
-        $routeSidebarPending = MerchandiserOutletAssignment::whereIn('user_id', $tenantMerchandiserIds)
-            ->whereIn('status', [MerchandiserOutletAssignment::STATUS_PLANNED, MerchandiserOutletAssignment::STATUS_IN_PROGRESS, MerchandiserOutletAssignment::STATUS_INCOMPLETE])
-            ->whereDate('assigned_date', '<=', $todayForRoutes)
-            ->count();
+        $routeSidebarPending = $tenantMerchandiserIds->isEmpty()
+            ? 0
+            : $this->speedCache(
+                'merch:route-sidebar-pending:v1:'.$this->cacheDigest([
+                    'tenant' => $tenantCode,
+                    'today' => $todayForRoutes,
+                    'merchandisers' => $tenantMerchandiserIds->all(),
+                ]),
+                10,
+                fn () => MerchandiserOutletAssignment::whereIn('user_id', $tenantMerchandiserIds)
+                    ->whereIn('status', [MerchandiserOutletAssignment::STATUS_PLANNED, MerchandiserOutletAssignment::STATUS_IN_PROGRESS, MerchandiserOutletAssignment::STATUS_INCOMPLETE])
+                    ->whereDate('assigned_date', '<=', $todayForRoutes)
+                    ->count()
+            );
         $routeAssignmentsTotal = 0;
         $routeAssignments = $this->emptyPaginator($request, 'route_page', 25);
         $routeSummary = [
@@ -855,10 +920,10 @@ class MerchandiserAdminHubController extends Controller
         }
         $googleFormsCount = $tenantMerchandiserIds->isEmpty()
             ? 0
-            : MerchandiserGoogleFormAssignment::count();
+            : $this->speedCache('merch:google-form-count:v1', 60, fn () => MerchandiserGoogleFormAssignment::count());
         $planogramsCount = $tenantMerchandiserIds->isEmpty()
             ? 0
-            : MerchandiserPlanogram::count();
+            : $this->speedCache('merch:planogram-count:v1', 60, fn () => MerchandiserPlanogram::count());
         $googleForms = $activeTab === 'forms'
             ? MerchandiserGoogleFormAssignment::when($tenantMerchandiserIds->isEmpty(), fn ($query) => $query->whereRaw('1 = 0'))
                 ->with(['assignedUser', 'outlet', 'keyDistributor', 'brand', 'campaign'])
@@ -889,16 +954,33 @@ class MerchandiserAdminHubController extends Controller
 
         // ── ShelfWatch: Image Gallery ───────────────────────────────────────────
         $hasCategoryImageTable = Schema::hasTable('merchandiser_visit_category_images');
-        $totalImagesCount = DB::table('merchandiser_visit_skus as vs')
-            ->join('merchandiser_visits as v', 'v.id', '=', 'vs.visit_id')
-            ->whereIn('v.user_id', $tenantMerchandiserIds)
-            ->whereNotNull('vs.photo_path')
-            ->count();
-        if ($hasCategoryImageTable) {
-            $totalImagesCount += DB::table('merchandiser_visit_category_images as ci')
-                ->whereIn('ci.user_id', $tenantMerchandiserIds)
-                ->whereNotNull('ci.image_path')
-                ->count();
+        $needsImageTotals = in_array($activeTab, ['gallery', 'supervisor-dashboard', 'client-dashboard', 'executive', 'price-promo'], true);
+        $totalImagesCount = 0;
+        if ($needsImageTotals && $tenantMerchandiserIds->isNotEmpty()) {
+            $totalImagesCount = $this->speedCache(
+                'merch:total-image-count:v1:'.$this->cacheDigest([
+                    'tenant' => $tenantCode,
+                    'has_category_images' => $hasCategoryImageTable,
+                    'merchandisers' => $tenantMerchandiserIds->all(),
+                ]),
+                30,
+                function () use ($tenantMerchandiserIds, $hasCategoryImageTable) {
+                    $count = DB::table('merchandiser_visit_skus as vs')
+                        ->join('merchandiser_visits as v', 'v.id', '=', 'vs.visit_id')
+                        ->whereIn('v.user_id', $tenantMerchandiserIds)
+                        ->whereNotNull('vs.photo_path')
+                        ->count();
+
+                    if ($hasCategoryImageTable) {
+                        $count += DB::table('merchandiser_visit_category_images as ci')
+                            ->whereIn('ci.user_id', $tenantMerchandiserIds)
+                            ->whereNotNull('ci.image_path')
+                            ->count();
+                    }
+
+                    return $count;
+                }
+            );
         }
         $galleryImages    = collect();
         $galleryFilters   = [];
@@ -1245,7 +1327,7 @@ class MerchandiserAdminHubController extends Controller
                     default   => 'Week ' . ($stepCount - $i),
                 };
 
-                $periodSummary = app(PerfectStoreKpiService::class)->summary($periodSubStart, $periodSubEnd, $tenantCode, $performanceFilters);
+                $periodSummary = $this->cachedPerfectStoreSummary($periodSubStart, $periodSubEnd, $tenantCode, $performanceFilters);
                 $periodOverview = $periodSummary['overview'] ?? [];
 
                 $perfTrendChart['labels'][]   = $label;
@@ -1392,6 +1474,34 @@ class MerchandiserAdminHubController extends Controller
         ]);
     }
 
+    private function speedCache(string $key, int $seconds, callable $callback): mixed
+    {
+        if (app()->environment('testing')) {
+            return $callback();
+        }
+
+        return Cache::remember($key, $seconds, $callback);
+    }
+
+    private function cacheDigest(array $parts): string
+    {
+        return md5((string) json_encode($parts, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+    }
+
+    private function cachedPerfectStoreSummary(Carbon $from, Carbon $to, ?string $tenantCode, array $performanceFilters = []): array
+    {
+        return $this->speedCache(
+            'merch:perfect-store-summary:v1:'.$this->cacheDigest([
+                'tenant' => $tenantCode,
+                'from' => $from->toDateTimeString(),
+                'to' => $to->toDateTimeString(),
+                'filters' => $performanceFilters,
+            ]),
+            20,
+            fn () => app(PerfectStoreKpiService::class)->summary($from, $to, $tenantCode, $performanceFilters)
+        );
+    }
+
     private function resolveAdminTab(Request $request, ?string $adminTab): string
     {
         $tabs = [
@@ -1514,8 +1624,30 @@ class MerchandiserAdminHubController extends Controller
             $outletQuery->where('kd_id', (int) $filters['kd_id']);
         }
         $filteredUsers = (clone $userQuery)->orderBy('name')->get(['id', 'name', 'kd_id', 'supervisor_id']);
+        if (filled($filters['supervisor_id'] ?? null) || filled($filters['merchandiser_id'] ?? null)) {
+            $filteredKdIds = $filteredUsers->pluck('kd_id')->filter()->map(fn ($id) => (int) $id)->unique()->values();
+            $filteredKdIds->isEmpty()
+                ? $outletQuery->whereRaw('1 = 0')
+                : $outletQuery->whereIn('kd_id', $filteredKdIds);
+        }
         $channelQuery = clone $outletQuery;
-        $outlets = (clone $outletQuery)->orderBy('name')->take(500)->get(['id', 'name', 'kd_id', 'channel_type']);
+        $shouldLoadOutlets = filled($filters['outlet_id'] ?? null)
+            || filled($filters['kd_id'] ?? null)
+            || filled($filters['supervisor_id'] ?? null)
+            || filled($filters['merchandiser_id'] ?? null);
+        $outlets = $shouldLoadOutlets
+            ? (clone $outletQuery)->orderBy('name')->take(250)->get(['id', 'name', 'kd_id', 'channel_type'])
+            : collect();
+
+        if (filled($filters['outlet_id'] ?? null) && ! $outlets->contains('id', (int) $filters['outlet_id'])) {
+            $selectedOutlet = Outlet::whereKey((int) $filters['outlet_id'])
+                ->whereIn('kd_id', $tenantKdIds)
+                ->first(['id', 'name', 'kd_id', 'channel_type']);
+
+            if ($selectedOutlet) {
+                $outlets = $outlets->prepend($selectedOutlet)->unique('id')->values();
+            }
+        }
 
         return [
             'regions' => $regionIds->isEmpty()
@@ -3436,7 +3568,7 @@ class MerchandiserAdminHubController extends Controller
 
             if ($includePerfectStoreCharts) {
                 $perfectStoreCharts = $this->perfectStoreOverviewChartPeriod(
-                    app(PerfectStoreKpiService::class)->summary($from, $to, $tenantCode, $performanceFilters)
+                    $this->cachedPerfectStoreSummary($from, $to, $tenantCode, $performanceFilters)
                 );
 
                 foreach ($perfectStoreCharts as $chartId => $chartData) {

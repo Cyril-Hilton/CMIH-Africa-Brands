@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cmih-portal-20260902-image-refresh';
+const CACHE_NAME = 'cmih-portal-20260905-speed-cache';
 const CORE_ASSETS = [
   '/manifest.json',
   '/images/logo/favicon.png',
@@ -36,6 +36,9 @@ const normalizeNotificationPayload = (payload = {}) => ({
 
 const cacheableAssetUrl = (url) => (
   url.includes('tile.openstreetmap.org') ||
+  url.includes('cdn.jsdelivr.net') ||
+  url.includes('cdnjs.cloudflare.com') ||
+  url.includes('fonts.googleapis.com') ||
   url.includes('fonts.gstatic.com') ||
   url.includes('/build/assets/') ||
   url.includes('/images/') ||
@@ -115,13 +118,18 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseClone);
-          });
+          if (response.ok) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseClone);
+            }).catch(() => null);
+          }
           return response;
         })
-        .catch(() => caches.match(event.request))
+        .catch(() => caches.match(event.request).then((cachedResponse) => cachedResponse || new Response('Offline page not available', {
+          status: 503,
+          statusText: 'Service Unavailable',
+        })))
     );
     return;
   }

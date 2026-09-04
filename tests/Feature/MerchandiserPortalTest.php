@@ -5268,37 +5268,25 @@ class MerchandiserPortalTest extends TestCase
             ->assertOk()
             ->getContent();
 
-        $this->assertStringContainsString('"kdVisitsChart":{"daily":{"labels":["Period Chart KD"],"data":[1]}', $html);
-        $this->assertStringContainsString('"yearly":{"labels":["Period Chart KD"],"data":[2]}', $html);
         $this->assertStringNotContainsString('[98.5,96.0,97.2,99.0,95.5,93.0,90.0]', $html);
         $this->assertStringNotContainsString('[14,18,22,16,12,20]', $html);
 
         preg_match('/data-perfect-store-overview-charts>(.*?)<\/script>/s', $html, $payloadMatch);
         $this->assertNotEmpty($payloadMatch[1] ?? null);
         $payload = json_decode($payloadMatch[1], true, 512, JSON_THROW_ON_ERROR);
-        $expectedPeriods = ['daily', 'weekly', 'monthly', 'yearly'];
-        $preloadedCharts = [
+        $expectedCharts = [
             'kdVisitsChart',
             'assetsChart',
             'outletsRegionChart',
             'outletsChannelChart',
             'clockCoverageChart',
             'attendanceChart',
-        ];
-        $lazyPerfectStoreCharts = [
             'perfectStoreMetricRadarChart',
             'perfectStoreMerchChart',
             'perfectStoreKdChart',
         ];
 
-        foreach ($preloadedCharts as $chartId) {
-            $this->assertArrayHasKey($chartId, $payload['periods']);
-            foreach ($expectedPeriods as $period) {
-                $this->assertArrayHasKey($period, $payload['periods'][$chartId]);
-            }
-        }
-
-        foreach ($lazyPerfectStoreCharts as $chartId) {
+        foreach ($expectedCharts as $chartId) {
             $this->assertArrayHasKey($chartId, $payload['periods']);
             $this->assertArrayHasKey('weekly', $payload['periods'][$chartId]);
             $this->assertArrayNotHasKey('daily', $payload['periods'][$chartId]);
@@ -5306,28 +5294,42 @@ class MerchandiserPortalTest extends TestCase
             $this->assertArrayNotHasKey('yearly', $payload['periods'][$chartId]);
         }
 
+        $this->assertSame(['Period Chart KD'], $payload['periods']['kdVisitsChart']['weekly']['labels']);
+        $this->assertSame([1], $payload['periods']['kdVisitsChart']['weekly']['data']);
         $this->assertIsString($payload['periodEndpoint'] ?? null);
         $this->assertIsArray($payload['periods']['perfectStoreMetricRadarChart']['weekly']['actual']);
         $this->assertIsArray($payload['periods']['perfectStoreMetricRadarChart']['weekly']['targets']);
         $this->assertIsArray($payload['periods']['perfectStoreMerchChart']['weekly']['data']);
         $this->assertIsArray($payload['periods']['perfectStoreKdChart']['weekly']['data']);
 
+        $dailyResponse = $this->actingAs($admin)
+            ->getJson(route('merchandisers.admin.overview-charts', ['period' => 'daily']));
+        $dailyResponse->assertOk()->assertJsonPath('period', 'daily');
+        $dailyPayload = $dailyResponse->json('periods');
+        foreach ($expectedCharts as $chartId) {
+            $this->assertArrayHasKey($chartId, $dailyPayload);
+            $this->assertArrayHasKey('daily', $dailyPayload[$chartId]);
+        }
+        $this->assertSame(['Period Chart KD'], $dailyPayload['kdVisitsChart']['daily']['labels']);
+        $this->assertSame([1], $dailyPayload['kdVisitsChart']['daily']['data']);
+
         $periodResponse = $this->actingAs($admin)
             ->getJson(route('merchandisers.admin.overview-charts', ['period' => 'yearly']));
         $periodResponse->assertOk()->assertJsonPath('period', 'yearly');
         $periodPayload = $periodResponse->json('periods');
-        $expectedCharts = array_merge($lazyPerfectStoreCharts, $preloadedCharts);
 
         foreach ($expectedCharts as $chartId) {
             $this->assertArrayHasKey($chartId, $periodPayload);
             $this->assertArrayHasKey('yearly', $periodPayload[$chartId]);
         }
 
+        $this->assertSame(['Period Chart KD'], $periodPayload['kdVisitsChart']['yearly']['labels']);
+        $this->assertSame([2], $periodPayload['kdVisitsChart']['yearly']['data']);
         $this->assertIsArray($periodPayload['perfectStoreMetricRadarChart']['yearly']['actual']);
         $this->assertIsArray($periodPayload['perfectStoreMetricRadarChart']['yearly']['targets']);
         $this->assertIsArray($periodPayload['perfectStoreMerchChart']['yearly']['data']);
         $this->assertIsArray($periodPayload['perfectStoreKdChart']['yearly']['data']);
-        $this->assertIsArray($payload['periods']['attendanceChart']['yearly']['values']);
+        $this->assertIsArray($periodPayload['attendanceChart']['yearly']['values']);
 
         Carbon::setTestNow();
     }

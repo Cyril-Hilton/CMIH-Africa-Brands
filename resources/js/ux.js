@@ -1,7 +1,17 @@
 
 const initLoader = () => {
-    const shouldShowOnLoad = sessionStorage.getItem('show-loader') === 'true';
+    const clearLoaderIntent = () => {
+        try {
+            sessionStorage.removeItem('show-loader');
+        } catch (error) {
+            // Storage can be blocked in strict browser/privacy modes.
+        }
+    };
+
+    clearLoaderIntent();
+    const shouldShowOnLoad = false;
     let hideTimer = null;
+    let safetyTimer = null;
 
     const loader = document.createElement('div');
     loader.id = 'global-loader';
@@ -30,16 +40,25 @@ const initLoader = () => {
             hideTimer = null;
         }
 
-        sessionStorage.setItem('show-loader', 'true');
+        if (safetyTimer) {
+            clearTimeout(safetyTimer);
+        }
+
         document.documentElement.classList.add('cmih-loader-active');
         loader.setAttribute('aria-busy', 'true');
         loader.classList.remove('hidden');
         void loader.offsetWidth;
         loader.classList.remove('opacity-0');
+        safetyTimer = setTimeout(hideLoader, 8000);
     };
 
     const hideLoader = () => {
-        sessionStorage.removeItem('show-loader');
+        clearLoaderIntent();
+        if (safetyTimer) {
+            clearTimeout(safetyTimer);
+            safetyTimer = null;
+        }
+
         loader.setAttribute('aria-busy', 'false');
         loader.classList.add('opacity-0');
         hideTimer = setTimeout(() => {
@@ -181,8 +200,22 @@ const initImageFallbacks = () => {
     }, { once: true });
 };
 
+const initServiceWorker = () => {
+    if (!('serviceWorker' in navigator) || !window.isSecureContext || window.cmihServiceWorkerRegistrationStarted) {
+        return;
+    }
+
+    window.cmihServiceWorkerRegistrationStarted = true;
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch((error) => {
+            console.warn('CMIH service worker registration failed:', error);
+        });
+    }, { once: true });
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     initLoader();
     initPrefetch();
     initImageFallbacks();
+    initServiceWorker();
 });

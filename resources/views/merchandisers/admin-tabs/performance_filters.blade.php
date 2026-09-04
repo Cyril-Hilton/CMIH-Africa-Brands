@@ -92,6 +92,9 @@
                 <span class="text-[10px] uppercase tracking-widest text-slate-600 dark:text-slate-400 font-bold">Outlet</span>
                 <select name="performance_outlet_id" class="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-xs text-slate-900 dark:text-white font-semibold">
                     <option value="">All</option>
+                    @if(collect($options['outlets'] ?? [])->isEmpty())
+                        <option value="" disabled>Narrow team first</option>
+                    @endif
                     @foreach(collect($options['outlets'] ?? []) as $outlet)
                         <option value="{{ $outlet->id }}" @selected((int) ($filters['outlet_id'] ?? 0) === (int) $outlet->id)>{{ $outlet->name }}</option>
                     @endforeach

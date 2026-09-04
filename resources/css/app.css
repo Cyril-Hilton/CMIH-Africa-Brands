@@ -573,15 +573,38 @@
     }
 
     #global-loader {
-        background: rgba(0, 0, 0, 0.42) !important;
-        -webkit-backdrop-filter: blur(3px);
-        backdrop-filter: blur(3px);
+        background: transparent !important;
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
         color: #ffffff;
         pointer-events: auto;
     }
 
+    #global-loader.hidden {
+        display: none;
+    }
+
+    #global-loader:not(.hidden) {
+        display: flex;
+    }
+
+    #global-loader > div {
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    #global-loader .border-brand-white\/10 {
+        border-color: rgba(15, 23, 42, 0.16) !important;
+    }
+
     #global-loader .border-t-brand-red {
         border-top-color: var(--merch-primary, #e21c1e) !important;
+    }
+
+    #global-loader p {
+        color: var(--merch-primary, #e21c1e) !important;
+        text-shadow: 0 1px 2px rgba(255, 255, 255, 0.85);
     }
 
     .cmih-silent-loading {
