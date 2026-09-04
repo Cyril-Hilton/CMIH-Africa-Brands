@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -915,6 +916,15 @@ class User extends Authenticatable
     public function scopeForMerchandiserTenant($query, ?string $tenant)
     {
         $tenantCode = \App\Support\MerchandiserTenant::normalize($tenant);
+        static $hasTenantColumn = null;
+
+        $hasTenantColumn ??= Schema::hasColumn('users', 'merchandiser_tenant');
+
+        if (! $hasTenantColumn) {
+            return $tenantCode === \App\Support\MerchandiserTenant::GGBL
+                ? $query->whereRaw('1 = 0')
+                : $query;
+        }
 
         return $query->where(function ($tenantQuery) use ($tenantCode) {
             $tenantQuery->where('merchandiser_tenant', $tenantCode);
