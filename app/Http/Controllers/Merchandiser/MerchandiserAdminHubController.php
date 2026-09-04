@@ -207,10 +207,30 @@ class MerchandiserAdminHubController extends Controller
                 $chartStart = $chartEnd->copy()->subDays(30);
             }
 
+            $dtExp = DB::getDriverName() === 'sqlite' ? 'date(%s)' : 'DATE(%s)';
+            $attDt = sprintf($dtExp, 'clock_in_time');
+            $pcmDt = sprintf($dtExp, 'clocked_in_at');
+            $pjpDt = sprintf($dtExp, 'clocked_in_at');
+
+            $attByDate = MerchandiserAttendance::whereIn('user_id', $tenantMerchandiserIds)
+                ->whereBetween('clock_in_time', [$chartStart->copy()->startOfDay(), $chartEnd->copy()->endOfDay()])
+                ->selectRaw("{$attDt} as dt, COUNT(*) as total")
+                ->groupBy(DB::raw($attDt))
+                ->pluck('total', 'dt');
+            $pcmByDate = MerchandiserPcmClockin::whereIn('user_id', $tenantMerchandiserIds)
+                ->whereBetween('clocked_in_at', [$chartStart->copy()->startOfDay(), $chartEnd->copy()->endOfDay()])
+                ->selectRaw("{$pcmDt} as dt, COUNT(*) as total")
+                ->groupBy(DB::raw($pcmDt))
+                ->pluck('total', 'dt');
+            $pjpByDate = MerchandiserPjpClockin::whereIn('user_id', $tenantMerchandiserIds)
+                ->whereBetween('clocked_in_at', [$chartStart->copy()->startOfDay(), $chartEnd->copy()->endOfDay()])
+                ->selectRaw("{$pjpDt} as dt, COUNT(*) as total")
+                ->groupBy(DB::raw($pjpDt))
+                ->pluck('total', 'dt');
+
             for ($date = $chartStart->copy(); $date->lte($chartEnd); $date->addDay()) {
-                $attendanceChart[$date->format('D d')] = MerchandiserAttendance::whereIn('user_id', $tenantMerchandiserIds)->whereDate('clock_in_time', $date)->count()
-                    + MerchandiserPcmClockin::whereIn('user_id', $tenantMerchandiserIds)->whereDate('clocked_in_at', $date)->count()
-                    + MerchandiserPjpClockin::whereIn('user_id', $tenantMerchandiserIds)->whereDate('clocked_in_at', $date)->count();
+                $dStr = $date->toDateString();
+                $attendanceChart[$date->format('D d')] = ($attByDate[$dStr] ?? 0) + ($pcmByDate[$dStr] ?? 0) + ($pjpByDate[$dStr] ?? 0);
             }
 
             $topPerformers = User::whereIn('id', $tenantMerchandiserIds)
@@ -1000,24 +1020,59 @@ class MerchandiserAdminHubController extends Controller
                 ? 0
                 : User::whereIn('id', $tenantMerchandiserIds)->where('status', 'active')->whereIn('id', $activeUserIds)->count();
             $execActiveRate = $this->boundedPercent($activeMerch, $totalMerch);
-            // 7-day visit trend
+            $trendStart = now()->subDays(6)->startOfDay();
+            $trendEnd = now()->endOfDay();
+
+            $schedByDay = MerchandiserOutletAssignment::whereIn('user_id', $tenantMerchandiserIds)
+                ->whereBetween('assigned_date', [$trendStart->toDateString(), $trendEnd->toDateString()])
+                ->selectRaw('assigned_date as dt, COUNT(*) as total')
+                ->groupBy('assigned_date')
+                ->pluck('total', 'dt');
+
+            $actualByDay = MerchandiserOutletAssignment::whereIn('user_id', $tenantMerchandiserIds)
+                ->whereBetween('assigned_date', [$trendStart->toDateString(), $trendEnd->toDateString()])
+                ->where(fn ($query) => $query
+                    ->where('status', 'completed')
+                    ->orWhereNotNull('completed_at')
+                    ->orWhereNotNull('visit_id'))
+                ->selectRaw('assigned_date as dt, COUNT(*) as total')
+                ->groupBy('assigned_date')
+                ->pluck('total', 'dt');
+
             for ($i = 6; $i >= 0; $i--) {
                 $day = now()->subDays($i);
+                $dStr = $day->toDateString();
                 $execVisitTrend['labels'][]    = $day->format('d M');
-                $execVisitTrend['scheduled'][] = MerchandiserOutletAssignment::whereIn('user_id', $tenantMerchandiserIds)->whereDate('assigned_date', $day->toDateString())->count();
-                $execVisitTrend['actual'][]    = MerchandiserOutletAssignment::whereIn('user_id', $tenantMerchandiserIds)->whereDate('assigned_date', $day->toDateString())
-                    ->where(fn ($query) => $query
-                        ->where('status', 'completed')
-                        ->orWhereNotNull('completed_at')
-                        ->orWhereNotNull('visit_id'))
-                    ->count();
+                $execVisitTrend['scheduled'][] = (int) ($schedByDay[$dStr] ?? 0);
+                $execVisitTrend['actual'][]    = (int) ($actualByDay[$dStr] ?? 0);
             }
-            // Image validity by day
+
+            $createdDt = sprintf(DB::getDriverName() === 'sqlite' ? 'date(%s)' : 'DATE(%s)', 'vs.created_at');
+
+            $validPhotosByDay = DB::table('merchandiser_visit_skus as vs')
+                ->join('merchandiser_visits as v', 'v.id', '=', 'vs.visit_id')
+                ->whereIn('v.user_id', $tenantMerchandiserIds)
+                ->whereBetween('vs.created_at', [$trendStart, $trendEnd])
+                ->whereNotNull('vs.photo_path')
+                ->selectRaw("{$createdDt} as dt, COUNT(*) as total")
+                ->groupBy(DB::raw($createdDt))
+                ->pluck('total', 'dt');
+
+            $invalidPhotosByDay = DB::table('merchandiser_visit_skus as vs')
+                ->join('merchandiser_visits as v', 'v.id', '=', 'vs.visit_id')
+                ->whereIn('v.user_id', $tenantMerchandiserIds)
+                ->whereBetween('vs.created_at', [$trendStart, $trendEnd])
+                ->whereNull('vs.photo_path')
+                ->selectRaw("{$createdDt} as dt, COUNT(*) as total")
+                ->groupBy(DB::raw($createdDt))
+                ->pluck('total', 'dt');
+
             for ($i = 6; $i >= 0; $i--) {
                 $day = now()->subDays($i);
+                $dStr = $day->toDateString();
                 $execImageValidity['labels'][]  = $day->format('d M');
-                $execImageValidity['valid'][]   = DB::table('merchandiser_visit_skus as vs')->join('merchandiser_visits as v', 'v.id', '=', 'vs.visit_id')->whereIn('v.user_id', $tenantMerchandiserIds)->whereNotNull('vs.photo_path')->whereDate('vs.created_at', $day->toDateString())->count();
-                $execImageValidity['invalid'][] = DB::table('merchandiser_visit_skus as vs')->join('merchandiser_visits as v', 'v.id', '=', 'vs.visit_id')->whereIn('v.user_id', $tenantMerchandiserIds)->whereNull('vs.photo_path')->whereDate('vs.created_at', $day->toDateString())->count();
+                $execImageValidity['valid'][]   = (int) ($validPhotosByDay[$dStr] ?? 0);
+                $execImageValidity['invalid'][] = (int) ($invalidPhotosByDay[$dStr] ?? 0);
             }
         }
 
@@ -3304,13 +3359,6 @@ class MerchandiserAdminHubController extends Controller
                     ->whereIn('id', $clockedUserIds)
                     ->count();
 
-            $clockEvents = collect()
-                ->merge(MerchandiserAttendance::whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clock_in_time', [$from, $to])->pluck('clock_in_time'))
-                ->merge(MerchandiserPcmClockin::whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clocked_in_at', [$from, $to])->pluck('clocked_in_at'))
-                ->merge(MerchandiserPjpClockin::whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clocked_in_at', [$from, $to])->pluck('clocked_in_at'))
-                ->filter()
-                ->map(fn ($timestamp) => Carbon::parse($timestamp, $timezone));
-
             $datasets['kdVisitsChart'][$period] = [
                 'labels' => array_keys($visitsByKd),
                 'data' => array_values($visitsByKd),
@@ -3331,7 +3379,7 @@ class MerchandiserAdminHubController extends Controller
                 'labels' => ['Clocked in', 'Not clocked'],
                 'data' => [$clockedMerchandiserCount, max($activeMerchandiserCount - $clockedMerchandiserCount, 0)],
             ];
-            $datasets['attendanceChart'][$period] = $this->attendanceChartPeriod($period, $from, $to, $clockEvents, $timezone);
+            $datasets['attendanceChart'][$period] = $this->attendanceChartPeriod($period, $from, $to, $tenantMerchandiserIds, $timezone);
         }
 
         return $datasets;
@@ -3341,32 +3389,77 @@ class MerchandiserAdminHubController extends Controller
         string $period,
         Carbon $from,
         Carbon $to,
-        \Illuminate\Support\Collection $events,
+        \Illuminate\Support\Collection $tenantMerchandiserIds,
         string $timezone
     ): array {
+        if ($tenantMerchandiserIds->isEmpty()) {
+            return ['labels' => [], 'values' => [], 'max' => 1];
+        }
+
+        $driver = DB::getDriverName();
+        $hrExp = $driver === 'sqlite' ? "cast(strftime('%%H', %s) as integer)" : 'HOUR(%s)';
+        $dtExp = $driver === 'sqlite' ? 'date(%s)' : 'DATE(%s)';
+        $mnExp = $driver === 'sqlite' ? "cast(strftime('%%m', %s) as integer)" : 'MONTH(%s)';
+
         if ($period === 'daily') {
+            $attHr = sprintf($hrExp, 'clock_in_time');
+            $pcmHr = sprintf($hrExp, 'clocked_in_at');
+            $pjpHr = sprintf($hrExp, 'clocked_in_at');
+
+            $attByHr = DB::table('merchandiser_attendances')->whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clock_in_time', [$from, $to])->selectRaw("{$attHr} as hr, count(*) as cnt")->groupBy(DB::raw($attHr))->pluck('cnt', 'hr');
+            $pcmByHr = DB::table('merchandiser_pcm_clockins')->whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clocked_in_at', [$from, $to])->selectRaw("{$pcmHr} as hr, count(*) as cnt")->groupBy(DB::raw($pcmHr))->pluck('cnt', 'hr');
+            $pjpByHr = DB::table('merchandiser_pjp_clockins')->whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clocked_in_at', [$from, $to])->selectRaw("{$pjpHr} as hr, count(*) as cnt")->groupBy(DB::raw($pjpHr))->pluck('cnt', 'hr');
+
             $labels = collect(range(0, 23))->map(fn ($hour) => Carbon::createFromTime($hour, 0, 0, $timezone)->format('H:00'))->all();
-            $values = collect(range(0, 23))->map(
-                fn ($hour) => $events->filter(fn (Carbon $event) => $event->hour === $hour)->count()
-            )->all();
+            $values = collect(range(0, 23))->map(fn ($hour) => (int) ($attByHr[$hour] ?? 0) + (int) ($pcmByHr[$hour] ?? 0) + (int) ($pjpByHr[$hour] ?? 0))->all();
         } elseif ($period === 'weekly') {
+            $attDt = sprintf($dtExp, 'clock_in_time');
+            $pcmDt = sprintf($dtExp, 'clocked_in_at');
+            $pjpDt = sprintf($dtExp, 'clocked_in_at');
+
+            $attByDt = DB::table('merchandiser_attendances')->whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clock_in_time', [$from, $to])->selectRaw("{$attDt} as dt, count(*) as cnt")->groupBy(DB::raw($attDt))->pluck('cnt', 'dt');
+            $pcmByDt = DB::table('merchandiser_pcm_clockins')->whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clocked_in_at', [$from, $to])->selectRaw("{$pcmDt} as dt, count(*) as cnt")->groupBy(DB::raw($pcmDt))->pluck('cnt', 'dt');
+            $pjpByDt = DB::table('merchandiser_pjp_clockins')->whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clocked_in_at', [$from, $to])->selectRaw("{$pjpDt} as dt, count(*) as cnt")->groupBy(DB::raw($pjpDt))->pluck('cnt', 'dt');
+
             $days = collect(range(0, 6))->map(fn ($offset) => $from->copy()->addDays($offset));
             $labels = $days->map(fn (Carbon $day) => $day->format('D d'))->all();
-            $values = $days->map(
-                fn (Carbon $day) => $events->filter(fn (Carbon $event) => $event->isSameDay($day))->count()
-            )->all();
+            $values = $days->map(function (Carbon $day) use ($attByDt, $pcmByDt, $pjpByDt) {
+                $dStr = $day->toDateString();
+                return (int) ($attByDt[$dStr] ?? 0) + (int) ($pcmByDt[$dStr] ?? 0) + (int) ($pjpByDt[$dStr] ?? 0);
+            })->all();
         } elseif ($period === 'monthly') {
+            $attDt = sprintf($dtExp, 'clock_in_time');
+            $pcmDt = sprintf($dtExp, 'clocked_in_at');
+            $pjpDt = sprintf($dtExp, 'clocked_in_at');
+
+            $attByDt = DB::table('merchandiser_attendances')->whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clock_in_time', [$from, $to])->selectRaw("{$attDt} as dt, count(*) as cnt")->groupBy(DB::raw($attDt))->pluck('cnt', 'dt');
+            $pcmByDt = DB::table('merchandiser_pcm_clockins')->whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clocked_in_at', [$from, $to])->selectRaw("{$pcmDt} as dt, count(*) as cnt")->groupBy(DB::raw($pcmDt))->pluck('cnt', 'dt');
+            $pjpByDt = DB::table('merchandiser_pjp_clockins')->whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clocked_in_at', [$from, $to])->selectRaw("{$pjpDt} as dt, count(*) as cnt")->groupBy(DB::raw($pjpDt))->pluck('cnt', 'dt');
+
             $weekCount = (int) ceil($from->daysInMonth / 7);
             $labels = collect(range(0, $weekCount - 1))->map(fn ($week) => 'Week '.($week + 1))->all();
-            $values = collect(range(0, $weekCount - 1))->map(
-                fn ($week) => $events->filter(fn (Carbon $event) => $event->diffInDays($from) >= $week * 7 && $event->diffInDays($from) < ($week + 1) * 7)->count()
-            )->all();
+            $values = collect(range(0, $weekCount - 1))->map(function ($week) use ($from, $attByDt, $pcmByDt, $pjpByDt) {
+                $wStart = $from->copy()->addDays($week * 7);
+                $wEnd = $week === 3 ? $from->copy()->endOfMonth() : $wStart->copy()->addDays(6);
+                $sum = 0;
+                for ($d = $wStart->copy(); $d->lte($wEnd); $d->addDay()) {
+                    $dStr = $d->toDateString();
+                    $sum += (int) ($attByDt[$dStr] ?? 0) + (int) ($pcmByDt[$dStr] ?? 0) + (int) ($pjpByDt[$dStr] ?? 0);
+                }
+                return $sum;
+            })->all();
         } else {
+            $attMn = sprintf($mnExp, 'clock_in_time');
+            $pcmMn = sprintf($mnExp, 'clocked_in_at');
+            $pjpMn = sprintf($mnExp, 'clocked_in_at');
+
+            $attByMn = DB::table('merchandiser_attendances')->whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clock_in_time', [$from, $to])->selectRaw("{$attMn} as mn, count(*) as cnt")->groupBy(DB::raw($attMn))->pluck('cnt', 'mn');
+            $pcmByMn = DB::table('merchandiser_pcm_clockins')->whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clocked_in_at', [$from, $to])->selectRaw("{$pcmMn} as mn, count(*) as cnt")->groupBy(DB::raw($pcmMn))->pluck('cnt', 'mn');
+            $pjpByMn = DB::table('merchandiser_pjp_clockins')->whereIn('user_id', $tenantMerchandiserIds)->whereBetween('clocked_in_at', [$from, $to])->selectRaw("{$pjpMn} as mn, count(*) as cnt")->groupBy(DB::raw($pjpMn))->pluck('cnt', 'mn');
+
             $months = collect(range(1, 12));
             $labels = $months->map(fn ($month) => Carbon::create($from->year, $month, 1, 0, 0, 0, $timezone)->format('M'))->all();
-            $values = $months->map(
-                fn ($month) => $events->filter(fn (Carbon $event) => $event->month === $month)->count()
-            )->all();
+            $values = $months->map(fn ($month) => (int) ($attByMn[$month] ?? 0) + (int) ($pcmByMn[$month] ?? 0) + (int) ($pjpByMn[$month] ?? 0))->all();
         }
 
         return [
