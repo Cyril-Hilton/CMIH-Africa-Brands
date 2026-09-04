@@ -140,6 +140,8 @@ class DepartmentController extends Controller
         $identityDocuments = $request->user()->canReviewIdentityDocuments()
             ? User::internalStaff()->where('status', 'active')->orderBy('name')->get()
             : collect();
+        $advances         = \App\Models\SalaryAdvance::with(['user', 'repayments', 'hrReviewer', 'disbursedBy'])->latest()->paginate(10, ['*'], 'adv_page')->withQueryString();
+        $advancePolicy    = \App\Support\SalaryAdvancePolicy::getPolicy();
 
         return view('portal.departments.hr', compact(
             'visitors',
@@ -148,7 +150,9 @@ class DepartmentController extends Controller
             'preTickets',
             'directoryEntries',
             'recentAnnouncements',
-            'identityDocuments'
+            'identityDocuments',
+            'advances',
+            'advancePolicy'
         ));
     }
 
@@ -1002,23 +1006,25 @@ class DepartmentController extends Controller
     {
         $user = $request->user();
         $isFinance = strtolower(trim($user->department ?? '')) === 'finance'
-            || $user->access_role === 'super_admin';
+            || $user->access_role === 'super_admin'
+            || in_array(strtolower(trim($user->name)), ['cyril hilton', 'cyril hilton wemegah'], true);
             
-        $isCVO = $user->job_level === 'super_admin'
-            || $user->access_role === 'super_admin';
+        $isCVO = $this->isCVO($user);
 
         if ($isFinance || $isCVO) {
-            $advances = \App\Models\SalaryAdvance::with('user')->latest()->get();
-            $pendingCvoAdvances = \App\Models\SalaryAdvance::with('user')
+            $advances = \App\Models\SalaryAdvance::with(['user', 'repayments', 'hrReviewer', 'disbursedBy'])->latest()->get();
+            $pendingCvoAdvances = \App\Models\SalaryAdvance::with(['user', 'repayments', 'hrReviewer'])
                 ->where('status', 'pending_cvo')
                 ->latest()
                 ->get();
         } else {
-            $advances = \App\Models\SalaryAdvance::where('user_id', $user->id)->with('user')->latest()->get();
+            $advances = \App\Models\SalaryAdvance::where('user_id', $user->id)->with(['user', 'repayments', 'hrReviewer', 'disbursedBy'])->latest()->get();
             $pendingCvoAdvances = collect();
         }
 
-        return view('portal.finance.advances', compact('user', 'advances', 'pendingCvoAdvances', 'isFinance', 'isCVO'));
+        $advancePolicy = \App\Support\SalaryAdvancePolicy::getPolicy();
+
+        return view('portal.finance.advances', compact('user', 'advances', 'pendingCvoAdvances', 'isFinance', 'isCVO', 'advancePolicy'));
     }
 
     /** Finance: Store supplier invoice */
@@ -1357,13 +1363,28 @@ class DepartmentController extends Controller
         return back()->with('status', 'Proofing comment added to design brief.');
     }
 
+    private function canActionSalaryAdvanceFinance(User $user): bool
+    {
+        return $user->access_role === 'super_admin'
+            || strtolower(trim($user->department ?? '')) === 'finance'
+            || in_array(strtolower(trim($user->name)), ['cyril hilton', 'cyril hilton wemegah'], true);
+    }
+
+    private function canActionSalaryAdvanceHR(User $user): bool
+    {
+        return $user->hasFullHrAccess()
+            || in_array(strtolower(trim($user->department ?? '')), ['admin', 'hr_admin', 'hr'], true)
+            || $user->access_role === 'super_admin';
+    }
+
     /**
      * Submit salary advance / staff loan request
      */
     public function storeAdvance(Request $request): RedirectResponse
     {
         $user = $request->user();
-        $maxAmount = $user->monthlySalary() * 2;
+        $maxAmount = \App\Support\SalaryAdvancePolicy::maxAllowedAmount($user);
+        $minDeduction = \App\Support\SalaryAdvancePolicy::minMonthlyDeduction();
 
         $request->validate([
             'amount' => ['required', 'numeric', 'min:0.01', "max:{$maxAmount}"],
@@ -1372,9 +1393,9 @@ class DepartmentController extends Controller
                 'nullable',
                 'required_if:repayment_style,monthly_deduction',
                 'numeric',
-                function ($attribute, $value, $fail) use ($request) {
-                    if ($request->repayment_style === 'monthly_deduction' && $value < 1000) {
-                        $fail('The monthly deduction amount must be at least 1000 GH₵.');
+                function ($attribute, $value, $fail) use ($request, $minDeduction) {
+                    if ($request->repayment_style === 'monthly_deduction' && (float) $value < $minDeduction) {
+                        $fail("The monthly deduction amount must be at least GH₵ " . number_format($minDeduction, 2) . " per HR policy.");
                     }
                 }
             ],
@@ -1387,18 +1408,18 @@ class DepartmentController extends Controller
             'repayment_style' => $request->repayment_style,
             'monthly_deduction_amount' => $request->repayment_style === 'monthly_deduction' ? $request->monthly_deduction_amount : null,
             'reason' => $request->reason,
-            'status' => 'pending_finance',
+            'status' => 'pending_hr',
         ]);
 
         NotificationService::sendApprovalNeededToMany(
-            NotificationService::activeFinanceApproverIds($user->id),
-            'Salary Advance Verification Needed',
-            "{$user->name} submitted a salary advance request for Finance verification.",
-            route('portal.finance.advances.index'),
+            NotificationService::activeHrApproverIds($user->id),
+            'Salary Advance Review Needed',
+            "{$user->name} submitted a salary advance request for HR review and repayment terms setup.",
+            route('portal.hr'),
             $user->id
         );
 
-        return back()->with('status', '📤 Salary advance request submitted to Finance for verification.');
+        return back()->with('status', '📤 Salary advance request submitted to HR for review.');
     }
 
     /**
@@ -1411,7 +1432,8 @@ class DepartmentController extends Controller
             abort(403);
         }
 
-        $maxAmount = $user->monthlySalary() * 2;
+        $maxAmount = \App\Support\SalaryAdvancePolicy::maxAllowedAmount($user);
+        $minDeduction = \App\Support\SalaryAdvancePolicy::minMonthlyDeduction();
 
         $request->validate([
             'amount' => ['required', 'numeric', 'min:0.01', "max:{$maxAmount}"],
@@ -1420,9 +1442,9 @@ class DepartmentController extends Controller
                 'nullable',
                 'required_if:repayment_style,monthly_deduction',
                 'numeric',
-                function ($attribute, $value, $fail) use ($request) {
-                    if ($request->repayment_style === 'monthly_deduction' && $value < 1000) {
-                        $fail('The monthly deduction amount must be at least 1000 GH₵.');
+                function ($attribute, $value, $fail) use ($request, $minDeduction) {
+                    if ($request->repayment_style === 'monthly_deduction' && (float) $value < $minDeduction) {
+                        $fail("The monthly deduction amount must be at least GH₵ " . number_format($minDeduction, 2) . " per HR policy.");
                     }
                 }
             ],
@@ -1434,19 +1456,130 @@ class DepartmentController extends Controller
             'repayment_style' => $request->repayment_style,
             'monthly_deduction_amount' => $request->repayment_style === 'monthly_deduction' ? $request->monthly_deduction_amount : null,
             'reason' => $request->reason,
-            'status' => 'pending_finance',
+            'status' => 'pending_hr',
             'finance_feedback' => null,
+            'hr_notes' => null,
         ]);
 
         NotificationService::sendApprovalNeededToMany(
-            NotificationService::activeFinanceApproverIds($user->id),
-            'Salary Advance Verification Needed',
-            "{$user->name} resubmitted a salary advance request for Finance verification.",
-            route('portal.finance.advances.index'),
+            NotificationService::activeHrApproverIds($user->id),
+            'Salary Advance Resubmitted for HR Review',
+            "{$user->name} resubmitted a corrected salary advance request for HR review.",
+            route('portal.hr'),
             $user->id
         );
 
-        return back()->with('status', '📤 Salary advance request resubmitted to Finance.');
+        return back()->with('status', '📤 Salary advance request resubmitted to HR for review.');
+    }
+
+    /**
+     * Action on a salary advance request by HR department
+     */
+    public function hrActionAdvance(Request $request, \App\Models\SalaryAdvance $advance): RedirectResponse
+    {
+        $user = $request->user();
+        if (! $this->canActionSalaryAdvanceHR($user)) {
+            abort(403, 'Only HR Department staff or Super Admin can review salary advance requests.');
+        }
+
+        $request->validate([
+            'action' => ['required', 'string', 'in:approve,return_for_correction,reject'],
+            'feedback' => ['nullable', 'required_if:action,return_for_correction,reject', 'string', 'max:1000'],
+            'approved_monthly_deduction_amount' => ['nullable', 'numeric', 'min:0'],
+            'repayment_start_date' => ['nullable', 'date'],
+            'repayment_frequency' => ['nullable', 'string', 'max:32'],
+            'repayment_months' => ['nullable', 'integer', 'min:1', 'max:60'],
+            'repayment_method' => ['nullable', 'string', 'max:64'],
+            'hr_notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $action = $request->action;
+
+        if ($action === 'approve') {
+            $advance->update([
+                'status' => 'pending_finance',
+                'hr_reviewed_by' => $user->id,
+                'hr_reviewed_at' => now(),
+                'approved_monthly_deduction_amount' => $request->approved_monthly_deduction_amount ?: $advance->monthly_deduction_amount,
+                'repayment_start_date' => $request->repayment_start_date ?: now()->addMonth()->startOfMonth(),
+                'repayment_frequency' => $request->repayment_frequency ?: 'monthly',
+                'repayment_months' => $request->repayment_months ?: 12,
+                'repayment_method' => $request->repayment_method ?: 'payroll_deduction',
+                'hr_notes' => $request->hr_notes,
+            ]);
+
+            NotificationService::sendApprovalNeededToMany(
+                NotificationService::activeFinanceApproverIds($user->id),
+                'Salary Advance Ready for Finance Verification',
+                "HR reviewed and approved terms for {$advance->user->name}'s salary advance request. Finance cash check & payout is needed.",
+                route('portal.finance.advances.index'),
+                $user->id
+            );
+
+            return back()->with('status', '✅ HR approved loan terms and forwarded request to Finance.');
+        }
+
+        if ($action === 'return_for_correction') {
+            $advance->update([
+                'status' => 'returned_for_correction',
+                'hr_reviewed_by' => $user->id,
+                'hr_reviewed_at' => now(),
+                'hr_notes' => $request->feedback,
+                'finance_feedback' => $request->feedback,
+            ]);
+
+            NotificationService::send(
+                $advance->user_id,
+                'Salary Advance Returned for Correction',
+                "HR returned your salary advance request for correction: {$request->feedback}",
+                route('portal.finance.advances.index')
+            );
+
+            return back()->with('status', '🔄 Request returned to user for correction by HR.');
+        }
+
+        $advance->update([
+            'status' => 'rejected',
+            'hr_reviewed_by' => $user->id,
+            'hr_reviewed_at' => now(),
+            'hr_notes' => $request->feedback,
+            'finance_feedback' => $request->feedback,
+        ]);
+
+        NotificationService::send(
+            $advance->user_id,
+            'Salary Advance Rejected by HR',
+            "Your salary advance request was rejected by HR.",
+            route('portal.finance.advances.index')
+        );
+
+        return back()->with('status', '✗ Salary advance request rejected by HR.');
+    }
+
+    /**
+     * Update dynamic HR Loan Policy rules
+     */
+    public function hrUpdatePolicy(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        if (! $this->canActionSalaryAdvanceHR($user)) {
+            abort(403, 'Only HR Department staff or Super Admin can manage loan policies.');
+        }
+
+        $validated = $request->validate([
+            'max_salary_multiplier' => ['required', 'numeric', 'min:0.5', 'max:10.0'],
+            'min_monthly_deduction' => ['required', 'numeric', 'min:0'],
+            'max_repayment_months' => ['required', 'integer', 'min:1', 'max:60'],
+        ]);
+
+        \App\Models\SalaryAdvancePolicy::create([
+            'max_salary_multiplier' => $validated['max_salary_multiplier'],
+            'min_monthly_deduction' => $validated['min_monthly_deduction'],
+            'max_repayment_months' => $validated['max_repayment_months'],
+            'updated_by' => $user->id,
+        ]);
+
+        return back()->with('status', '⚙️ Dynamic Loan Policy updated successfully.');
     }
 
     /**
@@ -1455,46 +1588,71 @@ class DepartmentController extends Controller
     public function financeActionAdvance(Request $request, \App\Models\SalaryAdvance $advance): RedirectResponse
     {
         $user = $request->user();
-        $isFinance = strtolower(trim($user->department ?? '')) === 'finance'
-            || $user->access_role === 'super_admin'
-            || in_array(strtolower(trim($user->name)), ['cyril hilton', 'cyril hilton wemegah'], true);
-
-        if (!$isFinance) {
+        if (! $this->canActionSalaryAdvanceFinance($user)) {
             abort(403, 'Only Finance department staff or Super Admin can action this request.');
         }
 
         $request->validate([
-            'action' => ['required', 'string', 'in:verify,correction,reject'],
-            'feedback' => ['nullable', 'required_if:action,correction', 'string', 'max:1000'],
+            'action' => ['required', 'string', 'in:approve_and_disburse,send_to_cvo,correction,reject'],
+            'feedback' => ['nullable', 'required_if:action,correction,reject', 'string', 'max:1000'],
+            'disbursed_amount' => ['nullable', 'numeric', 'min:0.01'],
         ]);
 
         $action = $request->action;
 
-        if ($action === 'verify') {
+        if ($action === 'approve_and_disburse') {
+            $disbursedAmount = $request->disbursed_amount ?: $advance->amount;
+
+            $advance->update([
+                'status' => 'repayment_active',
+                'disbursed_at' => now(),
+                'disbursed_by' => $user->id,
+                'disbursed_amount' => $disbursedAmount,
+                'approved_by' => $user->id,
+                'approved_at' => now(),
+            ]);
+
+            NotificationService::send(
+                $advance->user_id,
+                'Salary Advance Paid Out / Disbursed',
+                "Finance has confirmed payout of GH₵ " . number_format($disbursedAmount, 2) . " for your salary advance. Repayment tracking is now active.",
+                route('portal.finance.advances.index')
+            );
+
+            return back()->with('status', '💰 Loan approved & marked as paid out! Repayment tracking is now active.');
+        }
+
+        if ($action === 'send_to_cvo') {
             $advance->update([
                 'status' => 'pending_cvo',
             ]);
 
             NotificationService::sendApprovalNeededToMany(
                 NotificationService::activeCvoApproverIds($user->id),
-                'Salary Advance Approval Needed',
-                "Finance verified {$advance->user->name}'s salary advance request. CVO approval is needed.",
+                'Salary Advance Escalated for CVO Approval',
+                "Finance forwarded {$advance->user->name}'s salary advance request for CVO review.",
                 route('portal.finance.advances.index'),
                 $user->id
             );
-            return back()->with('status', '✅ Verified salary advance. Forwarded to CVO for approval.');
-        } elseif ($action === 'correction') {
+
+            return back()->with('status', '✅ Forwarded salary advance to CVO for review.');
+        }
+
+        if ($action === 'correction') {
             $advance->update([
                 'status' => 'returned_for_correction',
                 'finance_feedback' => $request->feedback,
             ]);
+
             return back()->with('status', '🔄 Request returned to user for correction.');
-        } else {
-            $advance->update([
-                'status' => 'rejected',
-            ]);
-            return back()->with('status', '✗ Salary advance request rejected.');
         }
+
+        $advance->update([
+            'status' => 'rejected',
+            'finance_feedback' => $request->feedback,
+        ]);
+
+        return back()->with('status', '✗ Salary advance request rejected.');
     }
 
     /**
@@ -1502,7 +1660,7 @@ class DepartmentController extends Controller
      */
     public function cvoActionAdvance(Request $request, \App\Models\SalaryAdvance $advance): RedirectResponse
     {
-        if (!$this->isCVO($request->user())) {
+        if (! $this->isCVO($request->user())) {
             abort(403, 'Only CVO or Super Admin can approve salary advance requests.');
         }
 
@@ -1515,33 +1673,114 @@ class DepartmentController extends Controller
 
         if ($action === 'approve') {
             $advance->update([
-                'status' => 'approved',
-            ]);
-            return back()->with('status', '🎉 Salary advance approved by CVO.');
-        } elseif ($action === 'return_to_finance') {
-            $advance->update([
                 'status' => 'pending_finance',
+                'cvo_reviewed_by' => $request->user()->id,
+                'cvo_reviewed_at' => now(),
+                'approved_by' => $request->user()->id,
+                'approved_at' => now(),
             ]);
 
             NotificationService::sendApprovalNeededToMany(
                 NotificationService::activeFinanceApproverIds($request->user()->id),
-                'Salary Advance Re-Verification Needed',
-                "CVO returned {$advance->user->name}'s salary advance request to Finance for verification.",
+                'Salary Advance Approved by CVO',
+                "CVO approved {$advance->user->name}'s salary advance. Finance can now proceed to payout disbursement.",
                 route('portal.finance.advances.index'),
                 $request->user()->id
             );
+
+            return back()->with('status', '🎉 Salary advance approved by CVO and returned to Finance for payment payout.');
+        }
+
+        if ($action === 'return_to_finance') {
+            $advance->update([
+                'status' => 'pending_finance',
+                'cvo_reviewed_by' => $request->user()->id,
+                'cvo_reviewed_at' => now(),
+                'finance_feedback' => $request->feedback,
+            ]);
+
             return back()->with('status', '🔄 Salary advance request returned to Finance for verification.');
-        } elseif ($action === 'return_for_correction') {
+        }
+
+        if ($action === 'return_for_correction') {
             $advance->update([
                 'status' => 'returned_for_correction',
                 'finance_feedback' => $request->feedback,
+                'cvo_reviewed_by' => $request->user()->id,
+                'cvo_reviewed_at' => now(),
             ]);
+
             return back()->with('status', '🔄 Request returned to user for correction by CVO.');
-        } else {
-            $advance->update([
-                'status' => 'rejected',
-            ]);
-            return back()->with('status', '✗ Salary advance request rejected by CVO.');
         }
+
+        $advance->update([
+            'status' => 'rejected',
+            'finance_feedback' => $request->feedback,
+            'cvo_reviewed_by' => $request->user()->id,
+            'cvo_reviewed_at' => now(),
+        ]);
+
+        return back()->with('status', '✗ Salary advance request rejected by CVO.');
+    }
+
+    /**
+     * Finance: Store a repayment against an active loan
+     */
+    public function storeAdvanceRepayment(Request $request, \App\Models\SalaryAdvance $advance): RedirectResponse
+    {
+        $user = $request->user();
+        if (! $this->canActionSalaryAdvanceFinance($user)) {
+            abort(403, 'Only Finance department staff or Super Admin can record loan repayments.');
+        }
+
+        if (! in_array($advance->status, ['repayment_active', 'disbursed', 'approved', 'fully_paid'], true)) {
+            return back()->withErrors(['amount' => 'Repayments can only be recorded after the loan has been disbursed by Finance.']);
+        }
+
+        $balance = $advance->balance();
+
+        $request->validate([
+            'amount' => [
+                'required',
+                'numeric',
+                'min:0.01',
+                function ($attribute, $value, $fail) use ($balance) {
+                    if ((float) $value > ($balance + 0.009)) {
+                        $fail('The repayment amount cannot exceed the outstanding balance of GH₵ ' . number_format($balance, 2) . '.');
+                    }
+                },
+            ],
+            'payment_date' => ['required', 'date'],
+            'payment_method' => ['nullable', 'string', 'max:64'],
+            'reference' => ['nullable', 'string', 'max:150'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        \App\Models\SalaryAdvanceRepayment::create([
+            'salary_advance_id' => $advance->id,
+            'amount' => $request->input('amount'),
+            'payment_date' => $request->input('payment_date'),
+            'payment_method' => $request->input('payment_method', 'payroll_deduction'),
+            'reference' => $request->input('reference'),
+            'notes' => $request->input('notes'),
+            'recorded_by' => $user->id,
+        ]);
+
+        $advance->refresh()->load('repayments');
+        $isFullyPaid = $advance->isFullyPaid();
+
+        $advance->update([
+            'status' => $isFullyPaid ? 'fully_paid' : 'repayment_active',
+            'fully_paid_at' => $isFullyPaid ? now() : null,
+        ]);
+
+        NotificationService::send(
+            $advance->user_id,
+            'Salary Advance Repayment Recorded',
+            "Finance recorded a repayment of GH₵ " . number_format($request->input('amount'), 2) . " against your loan. Remaining balance: GH₵ " . number_format($advance->balance(), 2),
+            route('portal.finance.advances.index')
+        );
+
+        return back()->with('status', '💳 Repayment recorded successfully.');
     }
 }

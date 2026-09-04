@@ -245,8 +245,11 @@ Route::middleware(['auth', 'active', 'clocked_in'])->prefix('portal')->name('por
     Route::get('/finance/advances', [\App\Http\Controllers\Portal\DepartmentController::class, 'advancesIndex'])->name('finance.advances.index');
     Route::post('/finance/advances', [\App\Http\Controllers\Portal\DepartmentController::class, 'storeAdvance'])->name('finance.advances.store');
     Route::post('/finance/advances/{advance}/resubmit', [\App\Http\Controllers\Portal\DepartmentController::class, 'resubmitAdvance'])->name('finance.advances.resubmit');
+    Route::post('/hr/advances/{advance}/hr-action', [\App\Http\Controllers\Portal\DepartmentController::class, 'hrActionAdvance'])->name('hr.advances.hr-action');
+    Route::post('/hr/advances/policy', [\App\Http\Controllers\Portal\DepartmentController::class, 'hrUpdatePolicy'])->name('hr.advances.policy');
     Route::post('/finance/advances/{advance}/finance-action', [\App\Http\Controllers\Portal\DepartmentController::class, 'financeActionAdvance'])->name('finance.advances.finance-action');
     Route::post('/finance/advances/{advance}/cvo-action', [\App\Http\Controllers\Portal\DepartmentController::class, 'cvoActionAdvance'])->name('finance.advances.cvo-action');
+    Route::post('/finance/advances/{advance}/repayment', [\App\Http\Controllers\Portal\DepartmentController::class, 'storeAdvanceRepayment'])->name('finance.advances.repayment');
 
     Route::get('/operations', [\App\Http\Controllers\Portal\DepartmentController::class, 'operations'])->name('operations');
     Route::post('/operations/vendors', [\App\Http\Controllers\Portal\DepartmentController::class, 'storeVendor'])->name('operations.vendors.store');

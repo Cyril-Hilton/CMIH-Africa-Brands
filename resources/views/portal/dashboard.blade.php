@@ -174,6 +174,82 @@
         </div>
     </div>
 
+    {{-- Staff Salary Advances Card (visible if user has any loan requests) --}}
+    @if(isset($mySalaryAdvances) && $mySalaryAdvances->count() > 0)
+        <div class="mb-8 glass-panel rounded-2xl p-6 border border-brand-white/10 bg-brand-white/5 space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-4 border-b border-brand-white/10 pb-4">
+                <div>
+                    <p class="text-xs uppercase tracking-[0.2em] text-brand-ash">Financial Support</p>
+                    <h3 class="text-lg font-display text-brand-white uppercase">💵 My Salary Advance & Loan Status</h3>
+                </div>
+                <a href="{{ route('portal.finance.advances.index') }}" class="rounded-xl border border-brand-white/20 bg-brand-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-brand-white hover:bg-brand-white/20 transition">
+                    Manage / Apply New Advance
+                </a>
+            </div>
+
+            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                @foreach($mySalaryAdvances as $adv)
+                    @php
+                        $statusClasses = [
+                            'pending_hr' => 'text-amber-400 border-amber-500/30 bg-amber-500/10',
+                            'pending_finance' => 'text-sky-400 border-sky-500/30 bg-sky-500/10',
+                            'pending_cvo' => 'text-purple-400 border-purple-500/30 bg-purple-500/10',
+                            'repayment_active' => 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10',
+                            'disbursed' => 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10',
+                            'fully_paid' => 'text-emerald-300 border-emerald-500/40 bg-emerald-500/20',
+                            'returned_for_correction' => 'text-orange-400 border-orange-500/30 bg-orange-500/10',
+                            'rejected' => 'text-red-400 border-red-500/30 bg-red-500/10',
+                        ];
+                        $statusLabels = [
+                            'pending_hr' => 'Step 1: HR Reviewing Terms',
+                            'pending_finance' => 'Step 2: Finance Checking Cash',
+                            'pending_cvo' => 'Step 3: CVO Reviewing',
+                            'repayment_active' => 'Paid Out & Active Repayment',
+                            'disbursed' => 'Paid Out & Active Repayment',
+                            'fully_paid' => 'Fully Paid Off 🎉',
+                            'returned_for_correction' => 'Returned for Correction',
+                            'rejected' => 'Rejected',
+                        ];
+                    @endphp
+                    <div class="rounded-xl border border-brand-white/10 bg-brand-black/30 p-4 space-y-3">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="font-mono text-base font-bold text-brand-white">GH₵ {{ number_format($adv->amount, 2) }}</span>
+                            <span class="rounded-full border px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider {{ $statusClasses[$adv->status] ?? 'text-brand-white/60 border-brand-white/10 bg-brand-white/5' }}">
+                                {{ $statusLabels[$adv->status] ?? ucfirst($adv->status) }}
+                            </span>
+                        </div>
+
+                        <p class="text-xs text-brand-white/70 italic">"{{ $adv->reason }}"</p>
+
+                        @if(in_array($adv->status, ['repayment_active', 'disbursed', 'fully_paid'], true))
+                            <div class="space-y-1.5 pt-2 border-t border-brand-white/5">
+                                <div class="flex justify-between text-xs">
+                                    <span class="text-brand-white/60">Total Paid:</span>
+                                    <span class="font-bold text-emerald-400 font-mono">GH₵ {{ number_format($adv->totalPaid(), 2) }}</span>
+                                </div>
+                                <div class="flex justify-between text-xs">
+                                    <span class="text-brand-white/60">Remaining Balance:</span>
+                                    <span class="font-bold text-amber-400 font-mono">GH₵ {{ number_format($adv->balance(), 2) }}</span>
+                                </div>
+                                <div class="h-2 w-full bg-brand-white/10 rounded-full overflow-hidden">
+                                    @php
+                                        $loanTotal = $adv->disbursed_amount ?: $adv->amount;
+                                        $paidPct = $loanTotal > 0 ? min(100, round(($adv->totalPaid() / $loanTotal) * 100)) : 0;
+                                    @endphp
+                                    <div class="h-full bg-emerald-500" style="width: {{ $paidPct }}%"></div>
+                                </div>
+                            </div>
+                        @else
+                            <p class="text-[10px] text-brand-white/40 pt-2 border-t border-brand-white/5">
+                                Submitted on {{ $adv->created_at->format('d M Y') }}
+                            </p>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
     <!-- 2. Collective KPIs & Department Badges -->
     <div class="mb-8">
         <div class="flex items-center justify-between gap-4 mb-4">

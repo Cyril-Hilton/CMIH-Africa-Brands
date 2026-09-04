@@ -352,6 +352,11 @@ class DashboardController extends Controller
                 ->get()
             : collect();
 
+        $mySalaryAdvances = \App\Models\SalaryAdvance::where('user_id', $user->id)
+            ->with(['repayments', 'hrReviewer', 'disbursedBy'])
+            ->latest()
+            ->get();
+
         return view('portal.dashboard', compact(
             'user', 'individualStats', 'collectiveStats', 'winningDept',
             'deptPerformances', 'departmentChartData', 'weeklyTrends',
@@ -365,7 +370,7 @@ class DashboardController extends Controller
             'weeklyDepartmentFilter', 'megaSort', 'megaSortDirection',
             'weeklySort', 'weeklySortDirection', 'weeklyDepartmentHasBreakdown',
             'canManageActiveWeeklyDepartment', 'isAllWeeklyDepartments',
-            'actionPoints'
+            'actionPoints', 'mySalaryAdvances'
         ));
     }
 

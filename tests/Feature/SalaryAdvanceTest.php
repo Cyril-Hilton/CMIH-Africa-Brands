@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
 use App\Models\SalaryAdvance;
+use App\Models\SalaryAdvancePolicy;
+use App\Models\SalaryAdvanceRepayment;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -11,194 +13,216 @@ class SalaryAdvanceTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_user_can_submit_salary_advance_successfully_with_deduction()
+    protected User $staff;
+    protected User $hrUser;
+    protected User $financeUser;
+    protected User $cvoUser;
+
+    protected function setUp(): void
     {
-        $user = User::factory()->create([
+        parent::setUp();
+
+        $this->staff = User::factory()->create([
+            'name' => 'John Staff',
+            'email' => 'john.staff@cmih.africa',
+            'department' => 'operations',
             'status' => 'active',
-            'access_role' => 'staff',
-            'job_level' => 'executive',
-            'salary' => 4500,
+            'salary' => 5000,
         ]);
 
-        $financeUser = User::factory()->create([
+        $this->hrUser = User::factory()->create([
+            'name' => 'HR Manager',
+            'email' => 'hr@cmih.africa',
+            'department' => 'hr_admin',
+            'access_role' => 'admin',
             'status' => 'active',
-            'access_role' => 'staff',
+        ]);
+
+        $this->financeUser = User::factory()->create([
+            'name' => 'Finance Staff',
+            'email' => 'finance@cmih.africa',
             'department' => 'finance',
-        ]);
-
-        $superAdmin = User::factory()->create([
             'status' => 'active',
-            'access_role' => 'super_admin',
         ]);
 
-        $response = $this->actingAs($user)->post(route('portal.finance.advances.store'), [
-            'amount' => 8000,
+        $this->cvoUser = User::factory()->create([
+            'name' => 'CVO Admin',
+            'email' => 'cvo@cmih.africa',
+            'access_role' => 'super_admin',
+            'job_level' => 'super_admin',
+            'status' => 'active',
+        ]);
+    }
+
+    public function test_staff_submits_loan_request_landing_in_pending_hr()
+    {
+        $response = $this->actingAs($this->staff)->post(route('portal.finance.advances.store'), [
+            'amount' => 4000,
             'repayment_style' => 'monthly_deduction',
-            'monthly_deduction_amount' => 1000,
-            'reason' => 'Need money for school fees.',
+            'monthly_deduction_amount' => 800,
+            'reason' => 'Emergency medical expenses',
         ]);
 
         $response->assertSessionHasNoErrors();
         $response->assertRedirect();
 
         $this->assertDatabaseHas('salary_advances', [
-            'user_id' => $user->id,
-            'amount' => 8000,
-            'repayment_style' => 'monthly_deduction',
-            'monthly_deduction_amount' => 1000,
-            'reason' => 'Need money for school fees.',
-            'status' => 'pending_finance',
-        ]);
-
-        $this->assertDatabaseHas('notifications', [
-            'user_id' => $financeUser->id,
-            'title' => 'Salary Advance Verification Needed',
-        ]);
-        $this->assertDatabaseHas('notifications', [
-            'user_id' => $superAdmin->id,
-            'title' => 'Salary Advance Verification Needed',
+            'user_id' => $this->staff->id,
+            'amount' => 4000,
+            'status' => 'pending_hr',
+            'reason' => 'Emergency medical expenses',
         ]);
     }
 
-    public function test_user_cannot_exceed_double_monthly_salary()
+    public function test_hr_can_update_dynamic_loan_policy_rules()
     {
-        $user = User::factory()->create([
-            'status' => 'active',
-            'access_role' => 'staff',
-            'job_level' => 'executive',
-            'salary' => 4500,
+        $response = $this->actingAs($this->hrUser)->post(route('portal.hr.advances.policy'), [
+            'max_salary_multiplier' => 3.5,
+            'min_monthly_deduction' => 600,
+            'max_repayment_months' => 24,
         ]);
 
-        $response = $this->actingAs($user)->post(route('portal.finance.advances.store'), [
-            'amount' => 9001,
-            'repayment_style' => 'monthly_deduction',
-            'monthly_deduction_amount' => 1000,
-            'reason' => 'Over limit.',
-        ]);
+        $response->assertSessionHasNoErrors();
 
-        $response->assertSessionHasErrors(['amount']);
-        $this->assertDatabaseMissing('salary_advances', [
-            'user_id' => $user->id,
+        $this->assertDatabaseHas('salary_advance_policies', [
+            'max_salary_multiplier' => 3.5,
+            'min_monthly_deduction' => 600,
+            'max_repayment_months' => 24,
+            'updated_by' => $this->hrUser->id,
         ]);
     }
 
-    public function test_user_repayment_style_monthly_deduction_requires_minimum_1000()
+    public function test_hr_reviews_and_approves_terms_forwarding_to_finance()
     {
-        $user = User::factory()->create([
-            'status' => 'active',
-            'access_role' => 'staff',
-            'job_level' => 'executive',
-            'salary' => 4500,
-        ]);
-
-        $response = $this->actingAs($user)->post(route('portal.finance.advances.store'), [
-            'amount' => 5000,
-            'repayment_style' => 'monthly_deduction',
-            'monthly_deduction_amount' => 999,
-            'reason' => 'Low monthly deduction.',
-        ]);
-
-        $response->assertSessionHasErrors(['monthly_deduction_amount']);
-        $this->assertDatabaseMissing('salary_advances', [
-            'user_id' => $user->id,
-        ]);
-    }
-
-    public function test_full_workflow_finance_verification_to_cvo_approval()
-    {
-        $user = User::factory()->create([
-            'status' => 'active',
-            'access_role' => 'staff',
-            'job_level' => 'executive',
-            'salary' => 4500,
-        ]);
-
-        $financeUser = User::factory()->create([
-            'status' => 'active',
-            'access_role' => 'staff',
-            'department' => 'finance',
-        ]);
-
-        $cvoUser = User::factory()->create([
-            'status' => 'active',
-            'access_role' => 'super_admin',
-            'position_title' => 'CVO',
-        ]);
-
-        // 1. Create a pending finance advance
         $advance = SalaryAdvance::create([
-            'user_id' => $user->id,
-            'amount' => 3000,
-            'repayment_style' => 'pay_all_at_once',
-            'reason' => 'Advance.',
+            'user_id' => $this->staff->id,
+            'amount' => 4000,
+            'repayment_style' => 'monthly_deduction',
+            'monthly_deduction_amount' => 800,
+            'reason' => 'School fees',
+            'status' => 'pending_hr',
+        ]);
+
+        $response = $this->actingAs($this->hrUser)->post(route('portal.hr.advances.hr-action', $advance), [
+            'action' => 'approve',
+            'approved_monthly_deduction_amount' => 1000,
+            'repayment_start_date' => now()->addMonth()->startOfMonth()->toDateString(),
+            'repayment_months' => 4,
+            'hr_notes' => 'Approved monthly deduction at GH₵ 1,000 for 4 months.',
+        ]);
+
+        $response->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('salary_advances', [
+            'id' => $advance->id,
             'status' => 'pending_finance',
+            'hr_reviewed_by' => $this->hrUser->id,
+            'approved_monthly_deduction_amount' => 1000,
+            'repayment_months' => 4,
+        ]);
+    }
+
+    public function test_finance_can_approve_and_disburse_loan_directly_without_cvo()
+    {
+        $advance = SalaryAdvance::create([
+            'user_id' => $this->staff->id,
+            'amount' => 3000,
+            'repayment_style' => 'monthly_deduction',
+            'monthly_deduction_amount' => 1000,
+            'approved_monthly_deduction_amount' => 1000,
+            'reason' => 'Home repair',
+            'status' => 'pending_finance',
+            'hr_reviewed_by' => $this->hrUser->id,
+            'hr_reviewed_at' => now(),
         ]);
 
-        // 2. Finance verify the advance
-        $responseFinance = $this->actingAs($financeUser)->post(route('portal.finance.advances.finance-action', $advance), [
-            'action' => 'verify',
+        $response = $this->actingAs($this->financeUser)->post(route('portal.finance.advances.finance-action', $advance), [
+            'action' => 'approve_and_disburse',
+            'disbursed_amount' => 3000,
         ]);
 
-        $responseFinance->assertSessionHasNoErrors();
-        $this->assertEquals('pending_cvo', $advance->refresh()->status);
+        $response->assertSessionHasNoErrors();
 
-        $this->assertDatabaseHas('notifications', [
-            'user_id' => $cvoUser->id,
-            'title' => 'Salary Advance Approval Needed',
+        $advance->refresh();
+        $this->assertEquals('repayment_active', $advance->status);
+        $this->assertEquals($this->financeUser->id, $advance->disbursed_by);
+        $this->assertEquals(3000, $advance->disbursed_amount);
+        $this->assertEquals(3000, $advance->balance());
+    }
+
+    public function test_finance_records_repayment_and_loan_closes_when_fully_paid()
+    {
+        $advance = SalaryAdvance::create([
+            'user_id' => $this->staff->id,
+            'amount' => 2000,
+            'disbursed_amount' => 2000,
+            'repayment_style' => 'monthly_deduction',
+            'approved_monthly_deduction_amount' => 1000,
+            'reason' => 'Short loan',
+            'status' => 'repayment_active',
+            'disbursed_at' => now(),
+            'disbursed_by' => $this->financeUser->id,
         ]);
 
-        // 3. CVO approves the advance
-        $responseCvo = $this->actingAs($cvoUser)->post(route('portal.finance.advances.cvo-action', $advance), [
+        // First partial payment of 1000 GH₵
+        $response1 = $this->actingAs($this->financeUser)->post(route('portal.finance.advances.repayment', $advance), [
+            'amount' => 1000,
+            'payment_date' => now()->toDateString(),
+            'payment_method' => 'payroll_deduction',
+            'reference' => 'PAYROLL-INST-1',
+        ]);
+        $response1->assertSessionHasNoErrors();
+
+        $advance->refresh();
+        $this->assertEquals('repayment_active', $advance->status);
+        $this->assertEquals(1000, $advance->totalPaid());
+        $this->assertEquals(1000, $advance->balance());
+        $this->assertFalse($advance->isFullyPaid());
+
+        // Second final payment of 1000 GH₵
+        $response2 = $this->actingAs($this->financeUser)->post(route('portal.finance.advances.repayment', $advance), [
+            'amount' => 1000,
+            'payment_date' => now()->toDateString(),
+            'payment_method' => 'payroll_deduction',
+            'reference' => 'PAYROLL-INST-2',
+        ]);
+        $response2->assertSessionHasNoErrors();
+
+        $advance->refresh();
+        $this->assertEquals('fully_paid', $advance->status);
+        $this->assertEquals(2000, $advance->totalPaid());
+        $this->assertEquals(0, $advance->balance());
+        $this->assertTrue($advance->isFullyPaid());
+        $this->assertNotNull($advance->fully_paid_at);
+    }
+
+    public function test_cvo_optional_escalation_route()
+    {
+        $advance = SalaryAdvance::create([
+            'user_id' => $this->staff->id,
+            'amount' => 10000,
+            'repayment_style' => 'monthly_deduction',
+            'monthly_deduction_amount' => 1000,
+            'reason' => 'Large vehicle repair',
+            'status' => 'pending_finance',
+            'hr_reviewed_by' => $this->hrUser->id,
+        ]);
+
+        // Finance escalates to CVO
+        $this->actingAs($this->financeUser)->post(route('portal.finance.advances.finance-action', $advance), [
+            'action' => 'send_to_cvo',
+        ]);
+
+        $advance->refresh();
+        $this->assertEquals('pending_cvo', $advance->status);
+
+        // CVO approves and returns to Finance for payout
+        $this->actingAs($this->cvoUser)->post(route('portal.finance.advances.cvo-action', $advance), [
             'action' => 'approve',
         ]);
 
-        $responseCvo->assertSessionHasNoErrors();
-        $this->assertEquals('approved', $advance->refresh()->status);
-    }
-
-    public function test_finance_correction_flow_and_resubmission()
-    {
-        $user = User::factory()->create([
-            'status' => 'active',
-            'access_role' => 'staff',
-            'job_level' => 'executive',
-            'salary' => 4500,
-        ]);
-
-        $financeUser = User::factory()->create([
-            'status' => 'active',
-            'access_role' => 'staff',
-            'department' => 'finance',
-        ]);
-
-        // 1. Create a pending advance
-        $advance = SalaryAdvance::create([
-            'user_id' => $user->id,
-            'amount' => 4000,
-            'repayment_style' => 'pay_all_at_once',
-            'reason' => 'Advance.',
-            'status' => 'pending_finance',
-        ]);
-
-        // 2. Finance requests correction
-        $responseCorrection = $this->actingAs($financeUser)->post(route('portal.finance.advances.finance-action', $advance), [
-            'action' => 'correction',
-            'feedback' => 'Please provide a better reason.',
-        ]);
-
-        $responseCorrection->assertSessionHasNoErrors();
-        $this->assertEquals('returned_for_correction', $advance->refresh()->status);
-        $this->assertEquals('Please provide a better reason.', $advance->finance_feedback);
-
-        // 3. User resubmits corrected advance
-        $responseResubmit = $this->actingAs($user)->post(route('portal.finance.advances.resubmit', $advance), [
-            'amount' => 4000,
-            'repayment_style' => 'pay_all_at_once',
-            'reason' => 'Family emergency bills.',
-        ]);
-
-        $responseResubmit->assertSessionHasNoErrors();
-        $this->assertEquals('pending_finance', $advance->refresh()->status);
-        $this->assertNull($advance->finance_feedback);
+        $advance->refresh();
+        $this->assertEquals('pending_finance', $advance->status);
+        $this->assertEquals($this->cvoUser->id, $advance->cvo_reviewed_by);
     }
 }

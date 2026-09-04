@@ -5306,4 +5306,94 @@ class MerchandiserPortalTest extends TestCase
 
         Carbon::setTestNow();
     }
+
+    #[Test]
+    public function all_four_user_roles_can_log_into_the_merchandiser_portal(): void
+    {
+        // 1. Field Agent / Merchandiser
+        $fieldAgent = User::create([
+            'name' => 'Field Agent Login Test',
+            'email' => 'field-agent-login@cmih.africa',
+            'contact_email' => 'field-agent-login@personal.com',
+            'phone' => '12345678',
+            'date_of_birth' => '1995-05-05',
+            'password' => Hash::make('Pass123!'),
+            'access_role' => User::MERCHANDISER_ROLE,
+            'status' => 'active',
+        ]);
+
+        $res1 = $this->post(route('merchandisers.login'), [
+            'email' => 'field-agent-login@cmih.africa',
+            'password' => 'Pass123!',
+            'portal_role' => MerchandiserPortalRole::FIELD,
+        ]);
+        $res1->assertRedirect(route('merchandisers.dashboard'));
+        $this->assertAuthenticatedAs($fieldAgent);
+
+        auth()->logout();
+
+        // 2. Admin / Brands Team Member
+        $adminUser = User::create([
+            'name' => 'Admin Login Test',
+            'email' => 'admin-login@cmih.africa',
+            'contact_email' => 'admin-login@personal.com',
+            'phone' => '12345678',
+            'password' => Hash::make('Pass123!'),
+            'access_role' => 'staff',
+            'job_level' => 'executive',
+            'department' => 'brands_marketing',
+            'status' => 'active',
+        ]);
+
+        $res2 = $this->post(route('merchandisers.login'), [
+            'email' => 'admin-login@cmih.africa',
+            'password' => 'Pass123!',
+            'portal_role' => MerchandiserPortalRole::ADMIN,
+        ]);
+        $res2->assertRedirect(route('merchandisers.admin.dashboard'));
+        $this->assertAuthenticatedAs($adminUser);
+
+        auth()->logout();
+
+        // 3. Merchandiser Supervisor
+        $supervisor = User::create([
+            'name' => 'Supervisor Login Test',
+            'email' => 'supervisor-login@cmih.africa',
+            'contact_email' => 'supervisor-login@personal.com',
+            'phone' => '12345678',
+            'password' => Hash::make('Pass123!'),
+            'access_role' => User::MERCHANDISER_SUPERVISOR_ROLE,
+            'status' => 'active',
+        ]);
+
+        $res3 = $this->post(route('merchandisers.login'), [
+            'email' => 'supervisor-login@cmih.africa',
+            'password' => 'Pass123!',
+            'portal_role' => MerchandiserPortalRole::SUPERVISOR,
+        ]);
+        $res3->assertRedirect(route('merchandisers.supervisor.dashboard'));
+        $this->assertAuthenticatedAs($supervisor);
+
+        auth()->logout();
+
+        // 4. Merchandiser Client
+        $client = User::create([
+            'name' => 'Client Login Test',
+            'email' => 'client-login@cmih.africa',
+            'contact_email' => 'client-login@personal.com',
+            'phone' => '12345678',
+            'password' => Hash::make('Pass123!'),
+            'access_role' => User::MERCHANDISER_CLIENT_ROLE,
+            'status' => 'active',
+        ]);
+
+        $res4 = $this->post(route('merchandisers.login'), [
+            'email' => 'client-login@cmih.africa',
+            'password' => 'Pass123!',
+            'portal_role' => MerchandiserPortalRole::CLIENT,
+        ]);
+        $res4->assertRedirect(route('merchandisers.client.dashboard'));
+        $this->assertAuthenticatedAs($client);
+    }
 }
+
