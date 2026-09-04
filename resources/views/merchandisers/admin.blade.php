@@ -835,6 +835,56 @@ function readPerfectStoreOverviewChartData() {
 }
 
 window.adminChartDatasets = window.adminChartDatasets || {};
+window.adminChartPeriodRequests = window.adminChartPeriodRequests || {};
+window.adminChartPeriodEndpointTemplate = window.adminChartPeriodEndpointTemplate || null;
+
+function mergeAdminChartPeriods(periods) {
+    if (!periods || typeof periods !== 'object') return;
+
+    window.adminChartDatasets = window.adminChartDatasets || {};
+    Object.entries(periods).forEach(([chartId, chartPeriods]) => {
+        if (!chartPeriods || typeof chartPeriods !== 'object') return;
+        window.adminChartDatasets[chartId] = Object.assign(
+            {},
+            window.adminChartDatasets[chartId] || {},
+            chartPeriods
+        );
+    });
+    window.attendancePeriodDatasets = window.adminChartDatasets.attendanceChart || {};
+}
+window.mergeAdminChartPeriods = mergeAdminChartPeriods;
+
+async function fetchAdminChartPeriod(period) {
+    const endpoint = window.adminChartPeriodEndpointTemplate;
+    if (!endpoint || !endpoint.includes('__PERIOD__')) return false;
+
+    if (!window.adminChartPeriodRequests[period]) {
+        const url = endpoint.replace('__PERIOD__', encodeURIComponent(period));
+        window.adminChartPeriodRequests[period] = fetch(url, {
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin',
+        })
+            .then(async (response) => {
+                if (!response.ok) {
+                    throw new Error(`Chart period request failed with ${response.status}`);
+                }
+
+                const payload = await response.json();
+                mergeAdminChartPeriods(payload.periods || payload);
+                return true;
+            })
+            .catch((error) => {
+                console.warn('Unable to load admin chart period data.', error);
+                delete window.adminChartPeriodRequests[period];
+                return false;
+            });
+    }
+
+    return window.adminChartPeriodRequests[period];
+}
 
 function getAdminChartPeriodData(chartId, period, fallback = {}) {
     const source = window.adminChartDatasets?.[chartId]?.[period] || {};
@@ -851,14 +901,19 @@ function getAdminChartPeriodData(chartId, period, fallback = {}) {
     };
 }
 
-window.switchAdminChartPeriod = function(chartId, period) {
+window.switchAdminChartPeriod = async function(chartId, period) {
     const canvas = document.getElementById(chartId);
     if (!canvas || typeof Chart === 'undefined') return;
     const chart = Chart.getChart(canvas);
     if (!chart) return;
 
-    const chartPeriods = window.adminChartDatasets?.[chartId];
-    if (!chartPeriods || !Object.prototype.hasOwnProperty.call(chartPeriods, period)) return;
+    let chartPeriods = window.adminChartDatasets?.[chartId];
+    if (!chartPeriods || !Object.prototype.hasOwnProperty.call(chartPeriods, period)) {
+        const loaded = await fetchAdminChartPeriod(period);
+        if (!loaded) return;
+        chartPeriods = window.adminChartDatasets?.[chartId];
+        if (!chartPeriods || !Object.prototype.hasOwnProperty.call(chartPeriods, period)) return;
+    }
 
     const dataset = getAdminChartPeriodData(chartId, period);
     chart.data.labels = dataset.labels.slice();
@@ -881,11 +936,25 @@ function initPerfectStoreOverviewCharts() {
     const payload = readPerfectStoreOverviewChartData();
     if (!payload) return;
 
+    if (typeof payload.periodEndpoint === 'string') {
+        if (window.adminChartPeriodEndpointTemplate !== payload.periodEndpoint) {
+            window.adminChartPeriodRequests = {};
+            ['perfectStoreMetricRadarChart', 'perfectStoreMerchChart', 'perfectStoreKdChart'].forEach((chartId) => {
+                if (!window.adminChartDatasets?.[chartId]) return;
+                Object.keys(window.adminChartDatasets[chartId]).forEach((period) => {
+                    if (period !== 'weekly') {
+                        delete window.adminChartDatasets[chartId][period];
+                    }
+                });
+            });
+        }
+        window.adminChartPeriodEndpointTemplate = payload.periodEndpoint;
+    }
+
     // The overview region can be replaced without re-executing its inline scripts.
     // Refresh the global period store from the current region before rebuilding charts.
     if (payload.periods && typeof payload.periods === 'object') {
-        window.adminChartDatasets = Object.assign({}, window.adminChartDatasets || {}, payload.periods);
-        window.attendancePeriodDatasets = window.adminChartDatasets.attendanceChart || {};
+        mergeAdminChartPeriods(payload.periods);
     }
 
     const radarWeekly = {
@@ -1072,13 +1141,18 @@ if (routeStatusCtx && adminChartsAvailable) {
 
 window.attendancePeriodDatasets = window.adminChartDatasets.attendanceChart || {};
 
-window.switchAttendancePeriod = function(period) {
+window.switchAttendancePeriod = async function(period) {
     const attCtx = document.getElementById('attendanceChart');
     if (!attCtx || typeof Chart === 'undefined') return;
     const chart = Chart.getChart(attCtx);
     if (!chart) return;
 
-    const data = window.attendancePeriodDatasets[period];
+    let data = window.attendancePeriodDatasets[period];
+    if (!data) {
+        const loaded = await fetchAdminChartPeriod(period);
+        if (!loaded) return;
+        data = window.attendancePeriodDatasets[period];
+    }
     if (!data) return;
     chart.data.labels = Array.isArray(data.labels) ? data.labels.slice() : [];
     chart.data.datasets[0].data = Array.isArray(data.values) ? data.values.slice() : [];

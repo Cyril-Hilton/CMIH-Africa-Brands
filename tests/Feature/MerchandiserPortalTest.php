@@ -5277,10 +5277,7 @@ class MerchandiserPortalTest extends TestCase
         $this->assertNotEmpty($payloadMatch[1] ?? null);
         $payload = json_decode($payloadMatch[1], true, 512, JSON_THROW_ON_ERROR);
         $expectedPeriods = ['daily', 'weekly', 'monthly', 'yearly'];
-        $expectedCharts = [
-            'perfectStoreMetricRadarChart',
-            'perfectStoreMerchChart',
-            'perfectStoreKdChart',
+        $preloadedCharts = [
             'kdVisitsChart',
             'assetsChart',
             'outletsRegionChart',
@@ -5288,27 +5285,55 @@ class MerchandiserPortalTest extends TestCase
             'clockCoverageChart',
             'attendanceChart',
         ];
+        $lazyPerfectStoreCharts = [
+            'perfectStoreMetricRadarChart',
+            'perfectStoreMerchChart',
+            'perfectStoreKdChart',
+        ];
 
-        foreach ($expectedCharts as $chartId) {
+        foreach ($preloadedCharts as $chartId) {
             $this->assertArrayHasKey($chartId, $payload['periods']);
             foreach ($expectedPeriods as $period) {
                 $this->assertArrayHasKey($period, $payload['periods'][$chartId]);
             }
         }
 
-        foreach ($expectedPeriods as $period) {
-            $this->assertIsArray($payload['periods']['perfectStoreMetricRadarChart'][$period]['actual']);
-            $this->assertIsArray($payload['periods']['perfectStoreMetricRadarChart'][$period]['targets']);
-            $this->assertIsArray($payload['periods']['perfectStoreMerchChart'][$period]['data']);
-            $this->assertIsArray($payload['periods']['perfectStoreKdChart'][$period]['data']);
-            $this->assertIsArray($payload['periods']['attendanceChart'][$period]['values']);
+        foreach ($lazyPerfectStoreCharts as $chartId) {
+            $this->assertArrayHasKey($chartId, $payload['periods']);
+            $this->assertArrayHasKey('weekly', $payload['periods'][$chartId]);
+            $this->assertArrayNotHasKey('daily', $payload['periods'][$chartId]);
+            $this->assertArrayNotHasKey('monthly', $payload['periods'][$chartId]);
+            $this->assertArrayNotHasKey('yearly', $payload['periods'][$chartId]);
         }
+
+        $this->assertIsString($payload['periodEndpoint'] ?? null);
+        $this->assertIsArray($payload['periods']['perfectStoreMetricRadarChart']['weekly']['actual']);
+        $this->assertIsArray($payload['periods']['perfectStoreMetricRadarChart']['weekly']['targets']);
+        $this->assertIsArray($payload['periods']['perfectStoreMerchChart']['weekly']['data']);
+        $this->assertIsArray($payload['periods']['perfectStoreKdChart']['weekly']['data']);
+
+        $periodResponse = $this->actingAs($admin)
+            ->getJson(route('merchandisers.admin.overview-charts', ['period' => 'yearly']));
+        $periodResponse->assertOk()->assertJsonPath('period', 'yearly');
+        $periodPayload = $periodResponse->json('periods');
+        $expectedCharts = array_merge($lazyPerfectStoreCharts, $preloadedCharts);
+
+        foreach ($expectedCharts as $chartId) {
+            $this->assertArrayHasKey($chartId, $periodPayload);
+            $this->assertArrayHasKey('yearly', $periodPayload[$chartId]);
+        }
+
+        $this->assertIsArray($periodPayload['perfectStoreMetricRadarChart']['yearly']['actual']);
+        $this->assertIsArray($periodPayload['perfectStoreMetricRadarChart']['yearly']['targets']);
+        $this->assertIsArray($periodPayload['perfectStoreMerchChart']['yearly']['data']);
+        $this->assertIsArray($periodPayload['perfectStoreKdChart']['yearly']['data']);
+        $this->assertIsArray($payload['periods']['attendanceChart']['yearly']['values']);
 
         Carbon::setTestNow();
     }
 
     #[Test]
-    public function all_four_user_roles_can_log_into_the_merchandiser_portal(): void
+    public function all_four_user_roles_can_log_into_and_log_out_of_the_merchandiser_portal(): void
     {
         // 1. Field Agent / Merchandiser
         $fieldAgent = User::create([
@@ -5330,7 +5355,9 @@ class MerchandiserPortalTest extends TestCase
         $res1->assertRedirect(route('merchandisers.dashboard'));
         $this->assertAuthenticatedAs($fieldAgent);
 
-        auth()->logout();
+        $logout1 = $this->post(route('merchandisers.logout'));
+        $logout1->assertRedirect(route('merchandisers.login'));
+        $this->assertGuest();
 
         // 2. Admin / Brands Team Member
         $adminUser = User::create([
@@ -5353,7 +5380,9 @@ class MerchandiserPortalTest extends TestCase
         $res2->assertRedirect(route('merchandisers.admin.dashboard'));
         $this->assertAuthenticatedAs($adminUser);
 
-        auth()->logout();
+        $logout2 = $this->post(route('merchandisers.logout'));
+        $logout2->assertRedirect(route('merchandisers.login'));
+        $this->assertGuest();
 
         // 3. Merchandiser Supervisor
         $supervisor = User::create([
@@ -5374,7 +5403,9 @@ class MerchandiserPortalTest extends TestCase
         $res3->assertRedirect(route('merchandisers.supervisor.dashboard'));
         $this->assertAuthenticatedAs($supervisor);
 
-        auth()->logout();
+        $logout3 = $this->post(route('merchandisers.logout'));
+        $logout3->assertRedirect(route('merchandisers.login'));
+        $this->assertGuest();
 
         // 4. Merchandiser Client
         $client = User::create([
@@ -5394,6 +5425,28 @@ class MerchandiserPortalTest extends TestCase
         ]);
         $res4->assertRedirect(route('merchandisers.client.dashboard'));
         $this->assertAuthenticatedAs($client);
+
+        $logout4 = $this->post(route('merchandisers.logout'));
+        $logout4->assertRedirect(route('merchandisers.login'));
+        $this->assertGuest();
+    }
+
+    #[Test]
+    public function merchandiser_logout_is_not_blocked_by_active_status_guards(): void
+    {
+        $user = User::create([
+            'name' => 'Suspended Logout Test',
+            'email' => 'suspended-logout@cmih.africa',
+            'contact_email' => 'suspended-logout@personal.com',
+            'phone' => '12345678',
+            'password' => Hash::make('Pass123!'),
+            'access_role' => User::MERCHANDISER_ROLE,
+            'status' => 'suspended',
+        ]);
+
+        $response = $this->actingAs($user)->post(route('merchandisers.logout'));
+
+        $response->assertRedirect(route('merchandisers.login'));
+        $this->assertGuest();
     }
 }
-

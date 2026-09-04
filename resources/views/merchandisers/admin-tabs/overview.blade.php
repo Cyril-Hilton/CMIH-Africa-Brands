@@ -171,65 +171,18 @@
                         $activeOutletsCount = $activeOutletsCount ?? 0;
                         $googleForms = $googleForms ?? collect();
                         $formSubmissionsCount = $formSubmissionsCount ?? 0;
-                        $svc = app(\App\Services\PerfectStoreKpiService::class);
-                        $now = now();
-                        $periodSummaries = [
-                            'daily'   => $svc->summary($now->copy()->startOfDay(), $now->copy()->endOfDay(), $merchTenant['code'] ?? null),
-                            'weekly'  => $svc->summary($now->copy()->startOfWeek(), $now->copy()->endOfWeek(), $merchTenant['code'] ?? null),
-                            'monthly' => $svc->summary($now->copy()->startOfMonth(), $now->copy()->endOfMonth(), $merchTenant['code'] ?? null),
-                            'yearly'  => $svc->summary($now->copy()->startOfYear(), $now->copy()->endOfYear(), $merchTenant['code'] ?? null),
-                        ];
-
+                        $metricKeys = ['coverage', 'osa', 'npd', 'mhs', 'planogram', 'facing', 'sos'];
+                        $perfectMetricLabels = ['Coverage', 'OSA', 'NPD', 'MHS', 'Planogram', 'Facing', 'SOS'];
+                        $realAdminChartDatasets = $adminChartDatasets ?? [];
                         $extractRadarMetrics = function(array $sum) {
                             $ov = $sum['overview'] ?? [];
                             return collect(['coverage', 'osa', 'npd', 'mhs', 'planogram', 'facing', 'sos'])
-                                ->map(fn ($m) => $ov[$m] === null ? 0 : (float) ($ov[$m] ?? 0))
+                                ->map(fn ($m) => ($ov[$m] ?? null) === null ? 0 : (float) $ov[$m])
                                 ->values()
                                 ->all();
                         };
 
-                        $extractMerchScores = function(array $sum) {
-                            $merchs = collect($sum['merchandisers'] ?? collect())->take(8);
-                            return $merchs->pluck('perfect_store_score')->map(fn ($v) => (float) $v)->values()->all();
-                        };
-
-                        $extractKdScores = function(array $sum) {
-                            $kds = collect($sum['kds'] ?? collect())->take(8);
-                            return $kds->pluck('perfect_store_score')->map(fn ($v) => (float) $v)->values()->all();
-                        };
-
-                        $metricKeys = ['coverage', 'osa', 'npd', 'mhs', 'planogram', 'facing', 'sos'];
-                        $perfectMetricLabels = ['Coverage', 'OSA', 'NPD', 'MHS', 'Planogram', 'Facing', 'SOS'];
-                        $realAdminChartDatasets = $adminChartDatasets ?? [];
-
-                        foreach (['daily', 'weekly', 'monthly', 'yearly'] as $period) {
-                            $summary = $periodSummaries[$period];
-                            $periodMerchandisers = collect($summary['merchandisers'] ?? [])->take(8);
-                            $periodKds = collect($summary['kds'] ?? [])->take(8);
-                            $periodTargets = $summary['targets'] ?? [];
-
-                            $realAdminChartDatasets['perfectStoreMetricRadarChart'][$period] = [
-                                'labels' => $perfectMetricLabels,
-                                'actual' => $extractRadarMetrics($summary),
-                                'targets' => collect($metricKeys)
-                                    ->map(fn ($metric) => (float) ($periodTargets[$metric] ?? 100))
-                                    ->values()
-                                    ->all(),
-                            ];
-                            $realAdminChartDatasets['perfectStoreMerchChart'][$period] = [
-                                'labels' => $periodMerchandisers->pluck('name')->values()->all(),
-                                'data' => $periodMerchandisers->pluck('perfect_store_score')->map(fn ($value) => (float) $value)->values()->all(),
-                            ];
-                            $realAdminChartDatasets['perfectStoreKdChart'][$period] = [
-                                'labels' => $periodKds->pluck('name')->values()->all(),
-                                'data' => $periodKds->pluck('perfect_store_score')->map(fn ($value) => (float) $value)->values()->all(),
-                            ];
-                        }
-
-                        $activeSummary = (request()->filled('clock_from') || request()->filled('clock_to'))
-                            ? $perfectStoreSummary
-                            : $periodSummaries['weekly'];
-
+                        $activeSummary = $perfectStoreSummary ?? \App\Services\PerfectStoreKpiService::emptySummary();
                         $perfectOverview = $activeSummary['overview'] ?? [];
                         $perfectTargets = $activeSummary['targets'] ?? [];
                         $metricLabel = fn ($value) => number_format((float) ($value ?? 0), 1) . '%';
@@ -257,6 +210,18 @@
                                 'labels' => $perfectKdChartLabels,
                                 'scores' => $perfectKdChartScores,
                             ],
+                            'periodEndpoint' => route('merchandisers.admin.overview-charts', array_merge(
+                                ['period' => '__PERIOD__', 'tenant' => $merchTenant['code'] ?? 'unilever'],
+                                request()->only([
+                                    'performance_region_id',
+                                    'performance_kd_id',
+                                    'performance_supervisor_id',
+                                    'performance_merchandiser_id',
+                                    'performance_outlet_id',
+                                    'performance_channel',
+                                    'performance_category',
+                                ])
+                            )),
                         ];
 
                         // Keep the Weekly toggle aligned with the data rendered on first load,
@@ -421,9 +386,31 @@
                         </div>
                     </div>
                     <div class="grid grid-cols-1 gap-5 mb-6 xl:grid-cols-3">
+                        @php
+                            $perfectOverviewChartPayload = array_merge($perfectOverviewChartPayload ?? [], [
+                                'periodEndpoint' => route('merchandisers.admin.overview-charts', array_merge(
+                                    ['period' => '__PERIOD__', 'tenant' => $merchTenant['code'] ?? 'unilever'],
+                                    request()->only([
+                                        'performance_region_id',
+                                        'performance_kd_id',
+                                        'performance_supervisor_id',
+                                        'performance_merchandiser_id',
+                                        'performance_outlet_id',
+                                        'performance_channel',
+                                        'performance_category',
+                                    ])
+                                )),
+                                'periods' => $realAdminChartDatasets ?? [],
+                            ]);
+                        @endphp
                         <script type="application/json" data-perfect-store-overview-charts>@json($perfectOverviewChartPayload)</script>
                         <script>
-                            window.adminChartDatasets = Object.assign({}, window.adminChartDatasets || {}, @json($realAdminChartDatasets));
+                            window.adminChartDatasets = window.adminChartDatasets || {};
+                            if (typeof window.mergeAdminChartPeriods === 'function') {
+                                window.mergeAdminChartPeriods(@json($realAdminChartDatasets));
+                            } else {
+                                window.adminChartDatasets = Object.assign({}, window.adminChartDatasets, @json($realAdminChartDatasets));
+                            }
                         </script>
                         
                         <!-- Radar Chart Card with Period Filters -->

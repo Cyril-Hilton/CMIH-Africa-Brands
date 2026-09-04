@@ -132,8 +132,12 @@ class MerchandiserController extends Controller
         $selectedPortalRole = MerchandiserPortalRole::normalize($request->input('portal_role', MerchandiserPortalRole::FIELD));
         $selectedTenant = MerchandiserTenant::normalize($request->input('merchandiser_tenant', 'unilever'));
 
-        $user = User::whereRaw('LOWER(email) = ?', [$email])->first()
-            ?: User::whereRaw('LOWER(contact_email) = ?', [$email])->first();
+        $user = User::where(function ($query) use ($email) {
+            $query->where('email', $email)
+                ->orWhere('contact_email', $email)
+                ->orWhereRaw('LOWER(email) = ?', [$email])
+                ->orWhereRaw('LOWER(contact_email) = ?', [$email]);
+        })->first();
 
         if ($user) {
             if ($user->status === 'pending') {
@@ -175,8 +179,10 @@ class MerchandiserController extends Controller
 
             if (Auth::attempt(['email' => $user->email, 'password' => $credentials['password']], $request->boolean('remember'))) {
                 $request->session()->regenerate();
+                $now = now();
                 $user->update([
-                    'last_login_at' => now(),
+                    'last_login_at' => $now,
+                    'last_seen_at' => $now,
                     'last_login_ip' => $request->ip(),
                     'last_login_user_agent' => $request->userAgent()
                 ]);
@@ -564,50 +570,46 @@ class MerchandiserController extends Controller
             'coverage' => [],
         ];
 
+        $chartStart = Carbon::today($timezone)->subDays(6)->startOfDay();
+        $chartEnd = Carbon::today($timezone)->endOfDay();
+
+        $sevenDayAssignments = MerchandiserOutletAssignment::where('user_id', $user->id)
+            ->whereBetween('assigned_date', [$chartStart->toDateString(), $chartEnd->toDateString()])
+            ->get()
+            ->groupBy(fn ($a) => $a->assigned_date?->toDateString());
+
+        $sevenDayAttendances = MerchandiserAttendance::where('user_id', $user->id)
+            ->whereBetween('clock_in_time', [$chartStart, $chartEnd])
+            ->get()
+            ->groupBy(fn ($a) => Carbon::parse($a->clock_in_time)->timezone($timezone)->toDateString());
+
+        $sevenDayVisits = MerchandiserVisit::where('user_id', $user->id)
+            ->whereBetween('created_at', [$chartStart, $chartEnd])
+            ->get()
+            ->groupBy(fn ($v) => Carbon::parse($v->created_at)->timezone($timezone)->toDateString());
+
         for ($i = 6; $i >= 0; $i--) {
             $day = Carbon::today($timezone)->subDays($i);
-            $dayStart = $day->copy()->startOfDay();
-            $dayEnd = $day->copy()->endOfDay();
-            $scheduledOutletIdsForDay = MerchandiserOutletAssignment::where('user_id', $user->id)
-                ->whereDate('assigned_date', $day->toDateString())
-                ->pluck('outlet_id')
-                ->filter()
-                ->unique()
-                ->values();
+            $dStr = $day->toDateString();
+
+            $dayAssignments = $sevenDayAssignments->get($dStr, collect());
+            $scheduledOutletIdsForDay = $dayAssignments->pluck('outlet_id')->filter()->unique()->map(fn ($id) => (int) $id)->values();
             $scheduledForDay = $scheduledOutletIdsForDay->count();
-            $clockedForDay = $scheduledOutletIdsForDay->isEmpty()
-                ? 0
-                : MerchandiserAttendance::where('user_id', $user->id)
-                    ->whereIn('outlet_id', $scheduledOutletIdsForDay)
-                    ->whereBetween('clock_in_time', [$dayStart, $dayEnd])
-                    ->distinct('outlet_id')
-                    ->count('outlet_id');
-            $scoredForDay = $scheduledOutletIdsForDay->isEmpty()
-                ? 0
-                : MerchandiserVisit::where('user_id', $user->id)
-                    ->whereIn('outlet_id', $scheduledOutletIdsForDay)
-                    ->whereBetween('created_at', [$dayStart, $dayEnd])
-                    ->distinct('outlet_id')
-                    ->count('outlet_id');
-            $clockedOutForDay = $scheduledOutletIdsForDay->isEmpty()
-                ? 0
-                : MerchandiserAttendance::where('user_id', $user->id)
-                    ->whereIn('outlet_id', $scheduledOutletIdsForDay)
-                    ->whereBetween('clock_in_time', [$dayStart, $dayEnd])
-                    ->whereNotNull('clock_out_time')
-                    ->distinct('outlet_id')
-                    ->count('outlet_id');
-            $visitMinutesForDay = MerchandiserAttendance::where('user_id', $user->id)
-                ->whereBetween('clock_in_time', [$dayStart, $dayEnd])
-                ->whereNotNull('outlet_id')
-                ->sum(DB::raw('coalesce(visit_duration_minutes, 0)'));
+
+            $dayAttendances = $sevenDayAttendances->get($dStr, collect());
+            $dayVisits = $sevenDayVisits->get($dStr, collect());
+
+            $clockedForDay = $scheduledOutletIdsForDay->isEmpty() ? 0 : $dayAttendances->filter(fn ($a) => $scheduledOutletIdsForDay->contains((int) $a->outlet_id))->pluck('outlet_id')->unique()->count();
+            $scoredForDay = $scheduledOutletIdsForDay->isEmpty() ? 0 : $dayVisits->filter(fn ($v) => $scheduledOutletIdsForDay->contains((int) $v->outlet_id))->pluck('outlet_id')->unique()->count();
+            $clockedOutForDay = $scheduledOutletIdsForDay->isEmpty() ? 0 : $dayAttendances->filter(fn ($a) => $scheduledOutletIdsForDay->contains((int) $a->outlet_id) && $a->clock_out_time)->pluck('outlet_id')->unique()->count();
+            $visitMinutesForDay = (int) $dayAttendances->whereNotNull('outlet_id')->sum('visit_duration_minutes');
 
             $dailyPerformanceChart['labels'][] = $day->format('D d');
             $dailyPerformanceChart['scheduled'][] = $scheduledForDay;
             $dailyPerformanceChart['clocked'][] = $clockedForDay;
             $dailyPerformanceChart['scored'][] = $scoredForDay;
             $dailyPerformanceChart['clocked_out'][] = $clockedOutForDay;
-            $dailyPerformanceChart['visit_minutes'][] = (int) $visitMinutesForDay;
+            $dailyPerformanceChart['visit_minutes'][] = $visitMinutesForDay;
             $dailyPerformanceChart['coverage'][] = $this->boundedPercent($scoredForDay, $scheduledForDay);
         }
 
@@ -2641,6 +2643,11 @@ class MerchandiserController extends Controller
             ->get()
             ->groupBy(fn (MerchandiserOutletAssignment $assignment) => $assignment->assigned_date->toDateString());
 
+        $monthAttendances = MerchandiserAttendance::where('user_id', $user->id)
+            ->whereBetween('clock_in_time', [$startDate->copy()->startOfDay(), $endDate->copy()->endOfDay()])
+            ->get()
+            ->groupBy(fn ($a) => Carbon::parse($a->clock_in_time)->timezone($timezone)->toDateString());
+
         foreach ($routeDays as $dateString => $assignments) {
             $date = Carbon::parse($dateString, $timezone)->startOfDay();
             $hasApprovedLeave = $approvedLeaves->contains(function (LeaveApplication $leave) use ($date) {
@@ -2654,10 +2661,11 @@ class MerchandiserController extends Controller
             }
 
             $visitWindow = MerchandiserClockWindows::visitWindow($timezone, $date->copy());
-            $firstAttendance = MerchandiserAttendance::where('user_id', $user->id)
-                ->whereIn('outlet_id', $assignments->pluck('outlet_id')->filter()->values())
-                ->whereBetween('clock_in_time', [$date->copy()->startOfDay(), $date->copy()->endOfDay()])
-                ->orderBy('clock_in_time')
+            $dateAttendances = $monthAttendances->get($dateString, collect());
+            $outletIds = $assignments->pluck('outlet_id')->filter()->map(fn ($id) => (int) $id)->values();
+            $firstAttendance = $dateAttendances
+                ->filter(fn ($a) => $outletIds->contains((int) $a->outlet_id))
+                ->sortBy('clock_in_time')
                 ->first();
 
             $isDue = $date->lt($nowLocal->copy()->startOfDay()) || $nowLocal->gt($visitWindow['end_at']);

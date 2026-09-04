@@ -465,10 +465,9 @@ Route::prefix('merchandisers')->name('merchandisers.')->group(function () {
     Route::post('/forgot-password', [\App\Http\Controllers\Auth\PasswordResetLinkController::class, 'store'])->defaults('portal', 'merchandisers')->name('password.email');
     Route::get('/register', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'showRegister'])->name('register');
     Route::post('/register', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'register'])->name('register.store');
+    Route::middleware(['auth'])->post('/logout', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'logout'])->name('logout');
     
     Route::middleware(['auth', 'active', 'identity_docs'])->group(function () {
-        Route::post('/logout', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'logout'])->name('logout');
-
         Route::middleware(['merchandiser_field'])->group(function () {
             Route::get('/dashboard', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'dashboard'])->name('dashboard');
             Route::post('/outlets', [\App\Http\Controllers\Merchandiser\MerchandiserController::class, 'storeOutlet'])->name('outlets.store');
@@ -520,6 +519,9 @@ Route::prefix('merchandisers')->name('merchandisers.')->group(function () {
         // ── Merchandiser Admin Hub (admin, super_admin, supervisor, client) ─────────────────────
         Route::middleware(['role:admin,super_admin,merchandiser_supervisor,merchandiser_client'])->prefix('admin')->name('admin.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'dashboard'])->name('dashboard');
+            Route::get('/overview-charts/{period}', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'overviewChartPeriod'])
+                ->whereIn('period', ['daily', 'weekly', 'monthly', 'yearly'])
+                ->name('overview-charts');
             Route::get('/hub/{adminTab}', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'dashboard'])
                 ->whereIn('adminTab', ['overview', 'tracking', 'kds', 'routes', 'skus', 'forms', 'merchandisers', 'supervisors', 'assets', 'notifications', 'settings', 'gallery', 'executive', 'perfect-store', 'category-kpi', 'user-performance', 'price-promo', 'supervisor-dashboard', 'client-dashboard', 'regional-dashboard'])
                 ->name('tab');

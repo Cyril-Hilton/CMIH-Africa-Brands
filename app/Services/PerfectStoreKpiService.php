@@ -78,35 +78,35 @@ class PerfectStoreKpiService
             $visitScores,
             fn ($assignment) => (int) $assignment->user_id,
             fn ($score) => (int) $score['user_id'],
-            fn ($assignment, $key) => $assignment?->user?->name ?: 'Merchandiser #'.$key
+            fn ($row, $key) => data_get($row, 'user.name') ?: data_get($row, 'user_name') ?: 'Merchandiser #'.$key
         );
         $kdRollups = $this->rollupsBy(
             $assignments,
             $visitScores,
             fn ($assignment) => (int) ($assignment->outlet?->kd_id ?? 0),
             fn ($score) => (int) ($score['kd_id'] ?? 0),
-            fn ($assignment, $key) => $assignment?->outlet?->keyDistributor?->name ?: 'KD #'.$key
+            fn ($row, $key) => data_get($row, 'outlet.keyDistributor.name') ?: data_get($row, 'kd_name') ?: 'KD #'.$key
         );
         $regionRollups = $this->rollupsBy(
             $assignments,
             $visitScores,
             fn ($assignment) => (int) ($assignment->outlet?->keyDistributor?->region_id ?? 0),
             fn ($score) => (int) ($score['region_id'] ?? 0),
-            fn ($assignment, $key) => $assignment?->outlet?->keyDistributor?->region?->name ?: 'Region #'.$key
+            fn ($row, $key) => data_get($row, 'outlet.keyDistributor.region.name') ?: data_get($row, 'region_name') ?: 'Region #'.$key
         );
         $supervisorRollups = $this->rollupsBy(
             $assignments,
             $visitScores,
             fn ($assignment) => (int) ($assignment->user?->supervisor_id ?? 0),
             fn ($score) => (int) ($score['supervisor_id'] ?? 0),
-            fn ($assignment, $key) => $assignment?->user?->supervisor?->name ?: 'Supervisor #'.$key
+            fn ($row, $key) => data_get($row, 'user.supervisor.name') ?: data_get($row, 'supervisor_name') ?: 'Supervisor #'.$key
         );
         $outletRollups = $this->rollupsBy(
             $assignments,
             $visitScores,
             fn ($assignment) => (int) ($assignment->outlet_id ?? 0),
             fn ($score) => (int) ($score['outlet_id'] ?? 0),
-            fn ($assignment, $key) => $assignment?->outlet?->name ?: 'Outlet #'.$key
+            fn ($row, $key) => data_get($row, 'outlet.name') ?: data_get($row, 'outlet_name') ?: 'Outlet #'.$key
         );
         $brandRollups = $this->rollupsByScores(
             $brandScores,
@@ -380,10 +380,15 @@ class PerfectStoreKpiService
         return [
             'visit_id' => $visit->id,
             'user_id' => $visit->user_id,
+            'user_name' => $visit->user?->name,
             'supervisor_id' => $visit->user?->supervisor_id,
+            'supervisor_name' => $visit->user?->supervisor?->name,
             'outlet_id' => $visit->outlet_id,
+            'outlet_name' => $visit->outlet?->name,
             'kd_id' => $kd?->id ?? $visit->outlet?->kd_id,
+            'kd_name' => $kd?->name,
             'region_id' => $kd?->region_id,
+            'region_name' => $kd?->region?->name,
             'channel' => $visit->outlet?->channel_type,
             ...$metrics,
             'perfect_store_score' => $this->weightedScore($metrics),
@@ -565,20 +570,23 @@ class PerfectStoreKpiService
         callable $scoreKey,
         callable $nameResolver
     ): Collection {
-        $keys = collect($assignments
-            ->map($assignmentKey)
-            ->all())
-            ->merge($visitScores->map($scoreKey))
+        $assignmentsGrouped = $assignments->groupBy(fn ($a) => (int) $assignmentKey($a));
+        $visitScoresGrouped = $visitScores->groupBy(fn ($s) => (int) $scoreKey($s));
+
+        $keys = $assignmentsGrouped->keys()
+            ->merge($visitScoresGrouped->keys())
             ->filter(fn ($key) => (int) $key > 0)
             ->unique()
             ->values();
 
         return $keys
-            ->map(function ($key) use ($assignments, $visitScores, $assignmentKey, $scoreKey, $nameResolver) {
-                $groupAssignments = $assignments->filter(fn ($assignment) => (int) $assignmentKey($assignment) === (int) $key);
-                $groupScores = $visitScores->filter(fn ($score) => (int) $scoreKey($score) === (int) $key);
-                $rollup = $this->rollup($groupAssignments, $groupScores, $nameResolver($groupAssignments->first(), $key));
-                $rollup['id'] = (int) $key;
+            ->map(function ($key) use ($assignmentsGrouped, $visitScoresGrouped, $nameResolver) {
+                $keyInt = (int) $key;
+                $groupAssignments = $assignmentsGrouped->get($keyInt, collect());
+                $groupScores = $visitScoresGrouped->get($keyInt, collect());
+                $first = $groupAssignments->first() ?: $groupScores->first();
+                $rollup = $this->rollup($groupAssignments, $groupScores, $nameResolver($first, $keyInt));
+                $rollup['id'] = $keyInt;
 
                 return $rollup;
             })
@@ -588,15 +596,16 @@ class PerfectStoreKpiService
 
     private function rollupsByScores(Collection $visitScores, callable $scoreKey, callable $nameResolver): Collection
     {
-        return $visitScores
-            ->map($scoreKey)
+        $scoresGrouped = $visitScores->groupBy(fn ($s) => (int) $scoreKey($s));
+
+        return $scoresGrouped->keys()
             ->filter(fn ($key) => (int) $key > 0)
-            ->unique()
             ->values()
-            ->map(function ($key) use ($visitScores, $scoreKey, $nameResolver) {
-                $groupScores = $visitScores->filter(fn ($score) => (int) $scoreKey($score) === (int) $key);
-                $rollup = $this->rollup(collect(), $groupScores, $nameResolver($groupScores->first(), $key), false);
-                $rollup['id'] = (int) $key;
+            ->map(function ($key) use ($scoresGrouped, $nameResolver) {
+                $keyInt = (int) $key;
+                $groupScores = $scoresGrouped->get($keyInt, collect());
+                $rollup = $this->rollup(collect(), $groupScores, $nameResolver($groupScores->first(), $keyInt), false);
+                $rollup['id'] = $keyInt;
 
                 return $rollup;
             })

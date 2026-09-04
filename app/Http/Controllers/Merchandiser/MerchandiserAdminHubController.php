@@ -122,26 +122,21 @@ class MerchandiserAdminHubController extends Controller
         // ── KPI Counts ─────────────────────────────────────────────────────────
         // Admins can switch workspaces through the tenant query parameter.
         $tenantCode = MerchandiserTenant::forUser($currentUser, $request);
-        $tenantMerchandiserIds = User::merchandisers()
+        $tenantUsers = User::merchandisers()
             ->forMerchandiserTenant($tenantCode)
-            ->pluck('id')
-            ->map(fn ($id) => (int) $id)
-            ->values();
-        $tenantKdIds = User::merchandisers()
-            ->forMerchandiserTenant($tenantCode)
-            ->whereNotNull('kd_id')
-            ->pluck('kd_id')
-            ->map(fn ($id) => (int) $id)
-            ->unique()
-            ->values();
+            ->get(['id', 'kd_id', 'status']);
+
+        $tenantMerchandiserIds = $tenantUsers->pluck('id')->map(fn ($id) => (int) $id)->values();
+        $tenantKdIds = $tenantUsers->pluck('kd_id')->filter()->map(fn ($id) => (int) $id)->unique()->values();
+
         $performanceFilters = $this->resolvePerformanceFilters($request, $tenantMerchandiserIds, $tenantKdIds);
         $performanceFilterOptions = $this->performanceFilterOptions($performanceFilters, $tenantMerchandiserIds, $tenantKdIds);
 
         $totalMerchandisers   = $tenantMerchandiserIds->count();
-        $activeMerchandisers  = User::whereIn('id', $tenantMerchandiserIds)->where('status', 'active')->count();
-        $pendingMerchandisers = User::whereIn('id', $tenantMerchandiserIds)->where('status', 'pending')->count();
-        $totalKds             = KeyDistributor::whereIn('id', $tenantKdIds)->count();
-        $totalOutlets         = Outlet::whereIn('kd_id', $tenantKdIds)->count();
+        $activeMerchandisers  = $tenantUsers->where('status', 'active')->count();
+        $pendingMerchandisers = $tenantUsers->where('status', 'pending')->count();
+        $totalKds             = $tenantKdIds->count();
+        $totalOutlets         = $tenantKdIds->isEmpty() ? 0 : Outlet::whereIn('kd_id', $tenantKdIds)->count();
 
         // Clock-in range for the dashboard KPI, chart, and PCM/PJP log review.
         $clockTimezone = 'Africa/Accra';
@@ -594,7 +589,7 @@ class MerchandiserAdminHubController extends Controller
         }
 
         $adminChartDatasets = $activeTab === 'overview'
-            ? $this->adminOverviewChartDatasets($tenantCode)
+            ? $this->adminOverviewChartDatasets($tenantCode, null, $performanceFilters, false)
             : [];
 
         // ── Recent Share Links ─────────────────────────────────────────────────
@@ -1370,6 +1365,33 @@ class MerchandiserAdminHubController extends Controller
         return $this->dashboard($request, 'client-dashboard', true);
     }
 
+    public function overviewChartPeriod(Request $request, string $period)
+    {
+        $this->guardHubView($request);
+
+        if (! in_array($period, ['daily', 'weekly', 'monthly', 'yearly'], true)) {
+            abort(404);
+        }
+
+        $currentUser = $request->user();
+        if (! $currentUser?->isMerchandiserPortalAdmin()) {
+            abort(403, 'Unauthorized');
+        }
+
+        $tenantCode = MerchandiserTenant::forUser($currentUser, $request);
+        $tenantUsers = User::merchandisers()
+            ->forMerchandiserTenant($tenantCode)
+            ->get(['id', 'kd_id']);
+        $tenantMerchandiserIds = $tenantUsers->pluck('id')->map(fn ($id) => (int) $id)->values();
+        $tenantKdIds = $tenantUsers->pluck('kd_id')->filter()->map(fn ($id) => (int) $id)->unique()->values();
+        $performanceFilters = $this->resolvePerformanceFilters($request, $tenantMerchandiserIds, $tenantKdIds);
+
+        return response()->json([
+            'period' => $period,
+            'periods' => $this->adminOverviewChartDatasets($tenantCode, [$period], $performanceFilters, true),
+        ]);
+    }
+
     private function resolveAdminTab(Request $request, ?string $adminTab): string
     {
         $tabs = [
@@ -1436,13 +1458,15 @@ class MerchandiserAdminHubController extends Controller
             $filters['channel'] = null;
         }
 
-        $knownCategories = Sku::whereNotNull('category')->distinct()->pluck('category')
-            ->merge(config('merchandiser.ai_capture_categories', []))
-            ->filter()
-            ->unique()
-            ->all();
-        if ($filters['category'] && ! in_array($filters['category'], $knownCategories, true)) {
-            $filters['category'] = null;
+        if ($filters['category']) {
+            $knownCategories = Sku::whereNotNull('category')->distinct()->pluck('category')
+                ->merge(config('merchandiser.ai_capture_categories', []))
+                ->filter()
+                ->unique()
+                ->all();
+            if (! in_array($filters['category'], $knownCategories, true)) {
+                $filters['category'] = null;
+            }
         }
 
         return array_filter($filters, fn ($value) => $value !== null && $value !== '');
@@ -1452,6 +1476,19 @@ class MerchandiserAdminHubController extends Controller
     {
         $tenantKdIds = collect($tenantKdIds)->map(fn ($id) => (int) $id)->values();
         $tenantMerchandiserIds = collect($tenantMerchandiserIds)->map(fn ($id) => (int) $id)->values();
+
+        if ($tenantKdIds->isEmpty() && $tenantMerchandiserIds->isEmpty()) {
+            return [
+                'regions' => collect(),
+                'kds' => collect(),
+                'supervisors' => collect(),
+                'merchandisers' => collect(),
+                'outlets' => collect(),
+                'channels' => collect(),
+                'categories' => collect(),
+            ];
+        }
+
         $regionIds = KeyDistributor::whereIn('id', $tenantKdIds)
             ->whereNotNull('region_id')
             ->pluck('region_id')
@@ -1478,7 +1515,7 @@ class MerchandiserAdminHubController extends Controller
         }
         $filteredUsers = (clone $userQuery)->orderBy('name')->get(['id', 'name', 'kd_id', 'supervisor_id']);
         $channelQuery = clone $outletQuery;
-        $outlets = (clone $outletQuery)->orderBy('name')->get(['id', 'name', 'kd_id', 'channel_type']);
+        $outlets = (clone $outletQuery)->orderBy('name')->take(500)->get(['id', 'name', 'kd_id', 'channel_type']);
 
         return [
             'regions' => $regionIds->isEmpty()
@@ -3273,7 +3310,12 @@ class MerchandiserAdminHubController extends Controller
      * Build the period payload used by every filterable chart on the admin overview.
      * The client only changes chart state; all measurements remain server-calculated.
      */
-    private function adminOverviewChartDatasets(string $tenantCode): array
+    private function adminOverviewChartDatasets(
+        string $tenantCode,
+        ?array $onlyPeriods = null,
+        array $performanceFilters = [],
+        bool $includePerfectStoreCharts = true
+    ): array
     {
         $timezone = 'Africa/Accra';
         $now = Carbon::now($timezone);
@@ -3292,6 +3334,17 @@ class MerchandiserAdminHubController extends Controller
             'clockCoverageChart' => [],
             'attendanceChart' => [],
         ];
+
+        if ($includePerfectStoreCharts) {
+            $datasets['perfectStoreMetricRadarChart'] = [];
+            $datasets['perfectStoreMerchChart'] = [];
+            $datasets['perfectStoreKdChart'] = [];
+        }
+
+        if ($onlyPeriods !== null) {
+            $allowedPeriods = array_flip(array_intersect($onlyPeriods, array_keys($ranges)));
+            $ranges = array_filter($ranges, fn ($period) => isset($allowedPeriods[$period]), ARRAY_FILTER_USE_KEY);
+        }
 
         $tenantMerchandiserIds = User::merchandisers()
             ->forMerchandiserTenant($tenantCode)
@@ -3380,9 +3433,51 @@ class MerchandiserAdminHubController extends Controller
                 'data' => [$clockedMerchandiserCount, max($activeMerchandiserCount - $clockedMerchandiserCount, 0)],
             ];
             $datasets['attendanceChart'][$period] = $this->attendanceChartPeriod($period, $from, $to, $tenantMerchandiserIds, $timezone);
+
+            if ($includePerfectStoreCharts) {
+                $perfectStoreCharts = $this->perfectStoreOverviewChartPeriod(
+                    app(PerfectStoreKpiService::class)->summary($from, $to, $tenantCode, $performanceFilters)
+                );
+
+                foreach ($perfectStoreCharts as $chartId => $chartData) {
+                    $datasets[$chartId][$period] = $chartData;
+                }
+            }
         }
 
         return $datasets;
+    }
+
+    private function perfectStoreOverviewChartPeriod(array $summary): array
+    {
+        $metricKeys = ['coverage', 'osa', 'npd', 'mhs', 'planogram', 'facing', 'sos'];
+        $metricLabels = ['Coverage', 'OSA', 'NPD', 'MHS', 'Planogram', 'Facing', 'SOS'];
+        $overview = $summary['overview'] ?? [];
+        $targets = $summary['targets'] ?? [];
+        $merchandisers = collect($summary['merchandisers'] ?? [])->take(8);
+        $kds = collect($summary['kds'] ?? [])->take(8);
+
+        return [
+            'perfectStoreMetricRadarChart' => [
+                'labels' => $metricLabels,
+                'actual' => collect($metricKeys)
+                    ->map(fn ($metric) => ($overview[$metric] ?? null) === null ? 0 : (float) $overview[$metric])
+                    ->values()
+                    ->all(),
+                'targets' => collect($metricKeys)
+                    ->map(fn ($metric) => (float) ($targets[$metric] ?? 100))
+                    ->values()
+                    ->all(),
+            ],
+            'perfectStoreMerchChart' => [
+                'labels' => $merchandisers->pluck('name')->values()->all(),
+                'data' => $merchandisers->pluck('perfect_store_score')->map(fn ($value) => (float) $value)->values()->all(),
+            ],
+            'perfectStoreKdChart' => [
+                'labels' => $kds->pluck('name')->values()->all(),
+                'data' => $kds->pluck('perfect_store_score')->map(fn ($value) => (float) $value)->values()->all(),
+            ],
+        ];
     }
 
     private function attendanceChartPeriod(

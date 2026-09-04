@@ -960,6 +960,8 @@ class User extends Authenticatable
         return $this->access_role === self::BRAND_PROMOTER_ROLE;
     }
 
+    protected ?bool $is_merchandiser_supervisor_memoized = null;
+
     public function isMerchandiserSupervisor(): bool
     {
         if ($this->access_role === self::MERCHANDISER_SUPERVISOR_ROLE) {
@@ -970,10 +972,16 @@ class User extends Authenticatable
             return false;
         }
 
-        return MerchandiserSupervisorAssignment::where('supervisor_id', $this->id)->exists()
+        if ($this->is_merchandiser_supervisor_memoized !== null) {
+            return $this->is_merchandiser_supervisor_memoized;
+        }
+
+        return $this->is_merchandiser_supervisor_memoized = (
+            MerchandiserSupervisorAssignment::where('supervisor_id', $this->id)->exists()
             || static::where('supervisor_id', $this->id)
                 ->whereIn('access_role', self::MERCHANDISER_FIELD_ROLES)
-                ->exists();
+                ->exists()
+        );
     }
 
     public function isMerchandiserClient(): bool
@@ -1045,27 +1053,6 @@ class User extends Authenticatable
             }
 
             $cleanPath = ltrim(str_replace(['public/', 'storage/'], '', $photo), '/');
-
-            // Mirror file from storage/app/public to public/storage if missing from public/storage
-            if (file_exists(storage_path('app/public/' . $cleanPath))) {
-                $targetPath = public_path('storage/' . $cleanPath);
-                if (!file_exists($targetPath)) {
-                    $targetDir = dirname($targetPath);
-                    if (!is_dir($targetDir)) {
-                        @mkdir($targetDir, 0777, true);
-                    }
-                    @copy(storage_path('app/public/' . $cleanPath), $targetPath);
-                }
-                return asset('storage/' . $cleanPath);
-            }
-
-            if (file_exists(public_path('storage/' . $cleanPath))) {
-                return asset('storage/' . $cleanPath);
-            }
-
-            if (file_exists(public_path($cleanPath))) {
-                return asset($cleanPath);
-            }
 
             return asset('storage/' . $cleanPath);
         }

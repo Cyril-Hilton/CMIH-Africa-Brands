@@ -108,9 +108,6 @@ class PerfectStoreCalculator
             $category = $skuRecord->sku?->category ?: 'General';
             $unileverFacings = (int) ($skuRecord->category_unilever_facings ?? $skuRecord->facing ?? 0);
             $totalCategoryFacings = (int) ($skuRecord->category_total_facings ?? $skuRecord->visit?->total_category_facings ?? 0);
-            if ($totalCategoryFacings === 0 && ! empty($skuRecord->visit_id)) {
-                $totalCategoryFacings = (int) (\App\Models\MerchandiserVisit::where('id', $skuRecord->visit_id)->value('total_category_facings') ?? 0);
-            }
             $fallbackSos = $skuRecord->share_of_shelf !== null ? (float) $skuRecord->share_of_shelf : null;
 
             $sos = self::calculateCategorySosPct($unileverFacings, $totalCategoryFacings, $fallbackSos);
