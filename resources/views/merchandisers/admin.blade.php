@@ -1985,7 +1985,47 @@ window.addEventListener('load', () => {
     if (activeTab === 'overview') initPerfectStoreOverviewCharts();
 });
 
+function activateKdAdminTab(root, tab) {
+    const nextTab = ['list', 'outlets', 'pairings'].includes(tab) ? tab : 'list';
+    root.dataset.activeKdTab = nextTab;
+
+    root.querySelectorAll('[data-kd-tab-button]').forEach((button) => {
+        const active = button.dataset.kdTabButton === nextTab;
+        button.classList.toggle('is-active', active);
+        button.setAttribute('aria-pressed', String(active));
+    });
+    root.querySelectorAll('[data-kd-tab-panel]').forEach((panel) => {
+        const active = panel.dataset.kdTabPanel === nextTab;
+        panel.style.display = active ? '' : 'none';
+        panel.hidden = !active;
+        panel.removeAttribute('x-cloak');
+    });
+
+    if (window.Alpine) {
+        const state = window.Alpine.$data(root);
+        if (state && 'kdTab' in state) state.kdTab = nextTab;
+    }
+}
+
+function initKdAdminTabs() {
+    document.querySelectorAll('[data-kd-tabs]').forEach((root) => {
+        activateKdAdminTab(root, root.dataset.activeKdTab);
+        if (root.dataset.kdTabsReady === '1') return;
+        root.dataset.kdTabsReady = '1';
+        root.querySelectorAll('[data-kd-tab-button]').forEach((button) => {
+            button.addEventListener('click', (event) => {
+                event.preventDefault();
+                activateKdAdminTab(root, button.dataset.kdTabButton);
+            });
+        });
+    });
+}
+
+document.addEventListener('alpine:initialized', initKdAdminTabs);
+window.addEventListener('load', initKdAdminTabs);
+
 document.addEventListener('DOMContentLoaded', () => {
+    initKdAdminTabs();
     function setCoordinateStatus(scope, message, tone = 'muted') {
         const status = scope.querySelector('[data-gps-status]');
         if (!status) return;

@@ -1,14 +1,14 @@
-                <div x-show="activeTab === 'kds'" x-cloak x-transition x-data="{ kdTab: @js(request('kd_subtab', 'list')), editKdId: null, editOutletId: null, switchKdTab(tab) { if (this.kdTab === tab) return; this.kdTab = tab; } }">
+                <div x-show="activeTab === 'kds'" x-cloak x-transition data-kd-tabs data-active-kd-tab="{{ in_array(request('kd_subtab'), ['list', 'outlets', 'pairings'], true) ? request('kd_subtab') : 'list' }}" x-data="{ kdTab: @js(request('kd_subtab', 'list')), editKdId: null, editOutletId: null, switchKdTab(tab) { if (this.kdTab === tab) return; this.kdTab = tab; } }">
 
                     <!-- Sub-tabs -->
                     <div class="flex gap-2 mb-5 flex-wrap">
-                        <button type="button" @click.prevent="switchKdTab('list')" :aria-pressed="kdTab === 'list'" :class="{ 'is-active': kdTab === 'list' }" class="admin-kd-tab-button"><i class="fa-solid fa-building"></i> Key Distributors</button>
-                        <button type="button" @click.prevent="switchKdTab('outlets')" :aria-pressed="kdTab === 'outlets'" :class="{ 'is-active': kdTab === 'outlets' }" class="admin-kd-tab-button"><i class="fa-solid fa-store"></i> Outlets</button>
-                        <button type="button" @click.prevent="switchKdTab('pairings')" :aria-pressed="kdTab === 'pairings'" :class="{ 'is-active': kdTab === 'pairings' }" class="admin-kd-tab-button"><i class="fa-solid fa-link"></i> Pairings</button>
+                        <button type="button" data-kd-tab-button="list" @click.prevent="switchKdTab('list')" :aria-pressed="kdTab === 'list'" :class="{ 'is-active': kdTab === 'list' }" class="admin-kd-tab-button"><i class="fa-solid fa-building"></i> Key Distributors</button>
+                        <button type="button" data-kd-tab-button="outlets" @click.prevent="switchKdTab('outlets')" :aria-pressed="kdTab === 'outlets'" :class="{ 'is-active': kdTab === 'outlets' }" class="admin-kd-tab-button"><i class="fa-solid fa-store"></i> Outlets</button>
+                        <button type="button" data-kd-tab-button="pairings" @click.prevent="switchKdTab('pairings')" :aria-pressed="kdTab === 'pairings'" :class="{ 'is-active': kdTab === 'pairings' }" class="admin-kd-tab-button"><i class="fa-solid fa-link"></i> Pairings</button>
                     </div>
 
                     <!-- KD List Tab -->
-                    <div x-show="kdTab === 'list'" x-cloak>
+                    <div data-kd-tab-panel="list" x-show="kdTab === 'list'" x-cloak>
                         <!-- Add KD Form -->
                         <div class="merch-card rounded-2xl p-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm mb-5" x-data="{ newRegion: false }">
                             <p class="text-xs uppercase tracking-widest text-slate-900 dark:text-white font-extrabold mb-4"><i class="fa-solid fa-plus text-emerald-500"></i> Add New Key Distributor</p>
@@ -181,7 +181,7 @@
                     </div>
 
                     <!-- Outlets Tab -->
-                    <div x-show="kdTab === 'outlets'" x-cloak class="space-y-5">
+                    <div data-kd-tab-panel="outlets" x-show="kdTab === 'outlets'" x-cloak class="space-y-5">
                         <div class="merch-card rounded-2xl p-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
                             <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                                 <div>
@@ -457,7 +457,7 @@
                     @endif
 
                     <!-- Pairings Tab -->
-                    <div x-show="kdTab === 'pairings'" x-cloak>
+                    <div data-kd-tab-panel="pairings" x-show="kdTab === 'pairings'" x-cloak>
                         <div class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
                             <div class="px-5 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
                                 <p class="text-xs uppercase tracking-widest text-slate-900 dark:text-white font-extrabold">Assign Merchandisers to KDs & Regions</p>
