@@ -69,9 +69,170 @@
         .kpi-glow-green { box-shadow: 0 0 20px rgba(34,197,94,0.15); }
         .kpi-glow-blue  { box-shadow: 0 0 20px rgba(59,130,246,0.15); }
         .kpi-glow-amber { box-shadow: 0 0 20px rgba(245,158,11,0.15); }
-        .status-pill-active   { background: rgba(34,197,94,0.12);  color: #4ade80; border: 1px solid rgba(34,197,94,0.25); }
-        .status-pill-pending  { background: rgba(245,158,11,0.12); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
-        .status-pill-suspended{ background: rgba(239,68,68,0.12);  color: #f87171; border: 1px solid rgba(239,68,68,0.25); }
+        [class^="status-pill-"],
+        [class*=" status-pill-"],
+        .performance-status-pill,
+        .admin-count-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            max-width: 100%;
+            min-height: 1.75rem;
+            border-radius: 9999px;
+            padding: 0.35rem 0.7rem;
+            font-size: 0.64rem;
+            font-weight: 800;
+            letter-spacing: 0;
+            line-height: 1.05;
+            text-align: center;
+            text-transform: uppercase;
+            white-space: normal;
+            overflow-wrap: anywhere;
+        }
+        .status-pill-active   { background: #DCFCE7 !important; color: #14532D !important; border: 1px solid #86EFAC !important; }
+        .status-pill-pending  { background: #FEF3C7 !important; color: #78350F !important; border: 1px solid #F59E0B !important; }
+        .status-pill-suspended{ background: #FEE2E2 !important; color: #7F1D1D !important; border: 1px solid #FCA5A5 !important; }
+        html[data-theme="dark"] .status-pill-active   { background: #064E3B !important; color: #D1FAE5 !important; border-color: #10B981 !important; }
+        html[data-theme="dark"] .status-pill-pending  { background: #3A2A00 !important; color: #FDE68A !important; border-color: #F59E0B !important; }
+        html[data-theme="dark"] .status-pill-suspended{ background: #4C0519 !important; color: #FECACA !important; border-color: #FB7185 !important; }
+
+        .admin-action-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.35rem;
+            min-height: 2rem;
+            border-radius: 0.65rem;
+            padding: 0.45rem 0.8rem;
+            font-size: 0.66rem;
+            font-weight: 800;
+            letter-spacing: 0;
+            line-height: 1.05;
+            text-align: center;
+            text-transform: uppercase;
+            white-space: normal;
+            transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.12s ease;
+        }
+        .admin-action-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+        }
+        .admin-action-button.admin-action-warning {
+            background: #F59E0B !important;
+            border: 1px solid #B45309 !important;
+            color: #111827 !important;
+        }
+        .admin-action-button.admin-action-warning:hover {
+            background: #D97706 !important;
+            color: #111827 !important;
+        }
+        .admin-action-button.admin-action-success {
+            background: #047857 !important;
+            border: 1px solid #047857 !important;
+            color: #FFFFFF !important;
+        }
+        .admin-action-button.admin-action-success:hover {
+            background: #065F46 !important;
+            color: #FFFFFF !important;
+        }
+        .admin-action-button.admin-action-danger {
+            background: #DC2626 !important;
+            border: 1px solid #B91C1C !important;
+            color: #FFFFFF !important;
+        }
+        .admin-action-button.admin-action-danger:hover {
+            background: #B91C1C !important;
+            color: #FFFFFF !important;
+        }
+        .admin-action-button *,
+        .admin-count-pill * {
+            color: inherit !important;
+        }
+        .admin-count-pill {
+            min-width: 7.75rem;
+            background: #FFFBEB !important;
+            border: 1px solid #F59E0B !important;
+            color: #78350F !important;
+            white-space: nowrap;
+        }
+        html[data-theme="dark"] .admin-count-pill {
+            background: #3A2A00 !important;
+            border-color: #FECB00 !important;
+            color: #FDE68A !important;
+        }
+        .performance-status-pill.performance-status-perfect {
+            min-width: 6.35rem;
+            background: #DCFCE7 !important;
+            border: 1px solid #86EFAC !important;
+            color: #14532D !important;
+            white-space: nowrap;
+        }
+        .performance-status-pill.performance-status-track {
+            min-width: 6.35rem;
+            background: #E0F2FE !important;
+            border: 1px solid #7DD3FC !important;
+            color: #0C4A6E !important;
+            white-space: nowrap;
+        }
+        .performance-status-pill.performance-status-attention {
+            min-width: 6.35rem;
+            background: #FEF3C7 !important;
+            border: 1px solid #F59E0B !important;
+            color: #78350F !important;
+            white-space: nowrap;
+        }
+        html[data-theme="dark"] .performance-status-pill.performance-status-perfect {
+            background: #064E3B !important;
+            border-color: #10B981 !important;
+            color: #D1FAE5 !important;
+        }
+        html[data-theme="dark"] .performance-status-pill.performance-status-track {
+            background: #082F49 !important;
+            border-color: #38BDF8 !important;
+            color: #BAE6FD !important;
+        }
+        html[data-theme="dark"] .performance-status-pill.performance-status-attention {
+            background: #3A2A00 !important;
+            border-color: #F59E0B !important;
+            color: #FDE68A !important;
+        }
+        button[data-gps-capture] {
+            background: #047857 !important;
+            border: 1px solid #047857 !important;
+            color: #FFFFFF !important;
+            font-weight: 800 !important;
+            letter-spacing: 0 !important;
+            opacity: 1 !important;
+            box-shadow: 0 10px 22px rgba(4, 120, 87, 0.14);
+        }
+        button[data-gps-capture]:hover {
+            background: #065F46 !important;
+            border-color: #065F46 !important;
+            color: #FFFFFF !important;
+        }
+        button[data-gps-capture].is-loading,
+        button[data-gps-capture]:disabled {
+            background: #D1FAE5 !important;
+            border-color: #10B981 !important;
+            color: #064E3B !important;
+            cursor: progress !important;
+            opacity: 1 !important;
+            box-shadow: none;
+        }
+        button[data-gps-capture] * {
+            color: inherit !important;
+        }
+        [data-gps-status] {
+            color: #334155 !important;
+            line-height: 1.35;
+        }
+        [data-gps-status].gps-status-success { color: #047857 !important; font-weight: 800; }
+        [data-gps-status].gps-status-error { color: #B91C1C !important; font-weight: 800; }
+        [data-gps-status].gps-status-warning { color: #92400E !important; font-weight: 800; }
+        html[data-theme="dark"] [data-gps-status] { color: #CBD5E1 !important; }
+        html[data-theme="dark"] [data-gps-status].gps-status-success { color: #6EE7B7 !important; }
+        html[data-theme="dark"] [data-gps-status].gps-status-error { color: #FCA5A5 !important; }
+        html[data-theme="dark"] [data-gps-status].gps-status-warning { color: #FDE68A !important; }
         table { border-collapse: separate; border-spacing: 0; }
         tbody tr { transition: background 0.15s; }
         tbody tr:hover { background: color-mix(in srgb, var(--merch-primary) 5%, transparent); }
@@ -124,6 +285,71 @@
             background: linear-gradient(135deg, rgba(18,18,21,0.98), rgba(30,18,22,0.9), rgba(18,18,21,0.98));
             padding: clamp(1rem, 2vw, 1.5rem);
             box-shadow: 0 18px 44px rgba(0,0,0,0.32);
+        }
+        body[data-merch-tenant="unilever"] .perfect-store-hero,
+        body[data-merch-tenant="unilever"] .perfect-store-hero h1,
+        body[data-merch-tenant="unilever"] .perfect-store-hero h2,
+        body[data-merch-tenant="unilever"] .perfect-store-hero h3,
+        body[data-merch-tenant="unilever"] .perfect-store-hero span {
+            color: #F8FAFC !important;
+        }
+        body[data-merch-tenant="unilever"] .perfect-store-hero p {
+            color: #CBD5E1 !important;
+        }
+        body[data-merch-tenant="unilever"] .perfect-store-hero .inline-flex {
+            background: rgba(37, 99, 235, 0.16) !important;
+            border-color: rgba(96, 165, 250, 0.48) !important;
+            color: #93C5FD !important;
+        }
+        .admin-kd-tab-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.45rem;
+            min-height: 2.75rem;
+            border-radius: 0.75rem;
+            border: 1px solid #CBD5E1;
+            background: #FFFFFF;
+            color: #1F2937;
+            padding: 0.65rem 1rem;
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0;
+            line-height: 1.05;
+            text-transform: uppercase;
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+            transition: background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease;
+        }
+        .admin-kd-tab-button:hover {
+            background: #F8FAFC;
+            border-color: #94A3B8;
+            transform: translateY(-1px);
+        }
+        .admin-kd-tab-button.is-active {
+            background: #0F0E9A !important;
+            border-color: #0F0E9A !important;
+            color: #FFFFFF !important;
+            box-shadow: 0 12px 24px rgba(15, 14, 154, 0.22);
+            transform: none;
+        }
+        .admin-kd-tab-button * {
+            color: inherit !important;
+        }
+        html[data-theme="dark"] .admin-kd-tab-button {
+            background: #0F172A;
+            border-color: #334155;
+            color: #F8FAFC;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+        }
+        html[data-theme="dark"] .admin-kd-tab-button:hover {
+            background: #111827;
+            border-color: #475569;
+        }
+        body[data-merch-tenant="ggbl"] .admin-kd-tab-button.is-active {
+            background: #FECB00 !important;
+            border-color: #FECB00 !important;
+            color: #1A1A1A !important;
+            box-shadow: 0 12px 24px rgba(254, 203, 0, 0.18);
         }
         .perfect-store-kpi-grid {
             display: grid;
@@ -1765,10 +1991,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!status) return;
 
         status.textContent = message;
-        status.classList.remove('text-green-300', 'text-red-300', 'text-amber-200');
-        if (tone === 'success') status.classList.add('text-green-300');
-        if (tone === 'error') status.classList.add('text-red-300');
-        if (tone === 'warning') status.classList.add('text-amber-200');
+        status.classList.remove('gps-status-success', 'gps-status-error', 'gps-status-warning');
+        if (tone === 'success') status.classList.add('gps-status-success');
+        if (tone === 'error') status.classList.add('gps-status-error');
+        if (tone === 'warning') status.classList.add('gps-status-warning');
     }
 
     document.querySelectorAll('[data-gps-capture]').forEach((button) => {
@@ -1785,9 +2011,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            const originalText = button.textContent;
+            const originalText = button.textContent.trim();
             button.disabled = true;
-            button.classList.add('opacity-60', 'cursor-not-allowed');
+            button.classList.add('is-loading', 'cursor-wait');
             button.textContent = 'Capturing...';
             setCoordinateStatus(scope, 'Requesting location permission...', 'warning');
 
@@ -1797,7 +2023,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     longitudeInput.value = position.coords.longitude.toFixed(8);
                     setCoordinateStatus(scope, 'GPS captured. Save this record to apply the geofence coordinates.', 'success');
                     button.disabled = false;
-                    button.classList.remove('opacity-60', 'cursor-not-allowed');
+                    button.classList.remove('is-loading', 'cursor-wait');
                     button.textContent = originalText;
                 },
                 (error) => {
@@ -1807,7 +2033,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (error.code === error.TIMEOUT) message = 'Location request timed out. Move outdoors or try again.';
                     setCoordinateStatus(scope, message, 'error');
                     button.disabled = false;
-                    button.classList.remove('opacity-60', 'cursor-not-allowed');
+                    button.classList.remove('is-loading', 'cursor-wait');
                     button.textContent = originalText;
                 },
                 { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }

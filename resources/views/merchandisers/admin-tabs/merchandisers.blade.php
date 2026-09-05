@@ -86,12 +86,12 @@
                                                 @if($m->status === 'active')
                                                 <form method="POST" action="{{ route('merchandisers.admin.merchandisers.suspend', $m) }}">
                                                     @csrf
-                                                    <button type="submit" class="text-[10px] px-2.5 py-1 rounded-lg border border-amber-400/40 bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-200 hover:bg-amber-200 transition font-bold shrink-0">Suspend</button>
+                                                    <button type="submit" class="admin-action-button admin-action-warning shrink-0">Suspend</button>
                                                 </form>
                                                 @else
                                                 <form method="POST" action="{{ route('merchandisers.admin.merchandisers.activate', $m) }}">
                                                     @csrf
-                                                    <button type="submit" class="text-[10px] px-2.5 py-1 rounded-lg border border-emerald-400/40 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 hover:bg-emerald-200 transition font-bold shrink-0">Activate</button>
+                                                    <button type="submit" class="admin-action-button admin-action-success shrink-0">Activate</button>
                                                 </form>
                                                 @endif
                                             </div>

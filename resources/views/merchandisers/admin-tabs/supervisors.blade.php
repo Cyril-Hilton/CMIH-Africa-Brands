@@ -39,7 +39,7 @@
                                     <h3 class="text-xl font-bold text-slate-900 dark:text-white mt-1">PJP, KDs, Merchandisers & Compliance</h3>
                                     <p class="text-xs text-slate-600 dark:text-slate-400 font-semibold mt-1">Brands Team promotes/demotes merchandiser supervisors, assigns their coverage, and reviews PJP activity. Supervisors upload weekly PJPs from their own supervisor view.</p>
                                 </div>
-                                <span class="inline-flex w-fit rounded-full border border-amber-400/40 bg-amber-100 dark:bg-amber-500/20 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-200">
+                                <span class="admin-count-pill w-fit">
                                     {{ $supervisorCandidates->count() }} supervisors
                                 </span>
                             </div>
@@ -191,12 +191,12 @@
                                     @if($m->isMerchandiserSupervisor())
                                         <form method="POST" action="{{ route('merchandisers.admin.supervisors.demote', $m) }}" onsubmit="return confirm('Remove supervisor privileges from {{ addslashes($m->name) }}?')">
                                             @csrf
-                                            <button type="submit" class="w-full rounded-lg border border-red-400/40 bg-red-100 dark:bg-red-500/20 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-red-700 dark:text-red-300 hover:bg-red-200 sm:w-auto">Remove Supervisor</button>
+                                            <button type="submit" class="admin-action-button admin-action-danger w-full sm:w-auto">Remove Supervisor</button>
                                         </form>
                                     @else
                                         <form method="POST" action="{{ route('merchandisers.admin.merchandisers.promote-supervisor', $m) }}">
                                             @csrf
-                                            <button type="submit" class="w-full rounded-lg border border-amber-400/40 bg-amber-100 dark:bg-amber-500/20 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-200 hover:bg-amber-200 sm:w-auto">Make Supervisor</button>
+                                            <button type="submit" class="admin-action-button admin-action-warning w-full sm:w-auto">Make Supervisor</button>
                                         </form>
                                     @endif
                                 </div>
@@ -300,7 +300,7 @@
                                             <td class="py-3 text-right font-mono font-bold text-amber-700 dark:text-amber-300">{{ number_format($sup['sos_pct'], 1) }}%</td>
                                             <td class="py-3 text-right font-mono font-extrabold text-slate-900 dark:text-white text-sm">{{ number_format($sup['overall_score'], 1) }}%</td>
                                             <td class="py-3 text-center">
-                                                <span class="rounded-full border px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider {{ match($sup['status']) { 'Perfect Store' => 'border-emerald-400/40 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-200', 'On Track' => 'border-sky-400/40 bg-sky-100 dark:bg-sky-500/20 text-sky-800 dark:text-sky-200', default => 'border-amber-400/40 bg-amber-100 dark:bg-amber-500/20 text-amber-900 dark:text-amber-200' } }}">
+                                                <span class="performance-status-pill {{ match($sup['status']) { 'Perfect Store' => 'performance-status-perfect', 'On Track' => 'performance-status-track', default => 'performance-status-attention' } }}">
                                                     {{ $sup['status'] }}
                                                 </span>
                                             </td>
@@ -379,7 +379,7 @@
                                                             <form method="POST" action="{{ route('merchandisers.admin.pjps.forward', $pjp) }}">@csrf<button type="submit" class="rounded-lg border border-sky-400/40 bg-sky-100 dark:bg-sky-500/20 px-3 py-1.5 text-[10px] font-bold text-sky-800 dark:text-sky-200 hover:bg-sky-200 transition">Forward</button></form>
                                                         @endif
                                                         @if($pjp->status !== 'active')
-                                                            <form method="POST" action="{{ route('merchandisers.admin.pjps.activate', $pjp) }}">@csrf<button type="submit" class="rounded-lg border border-emerald-400/40 bg-emerald-100 dark:bg-emerald-500/20 px-3 py-1.5 text-[10px] font-bold text-emerald-800 dark:text-emerald-200 hover:bg-emerald-200 transition">Activate</button></form>
+                                                            <form method="POST" action="{{ route('merchandisers.admin.pjps.activate', $pjp) }}">@csrf<button type="submit" class="admin-action-button admin-action-success">Activate</button></form>
                                                         @endif
                                                         @if($pjp->file_path)
                                                             <a href="{{ Storage::disk('public')->url($pjp->file_path) }}" target="_blank" class="rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 text-[10px] font-bold text-slate-900 dark:text-white hover:bg-slate-200 transition">File</a>

@@ -93,7 +93,7 @@
                                             <td class="py-3 text-right font-mono font-bold text-pink-700 dark:text-pink-300">{{ number_format($m['sos_pct'], 1) }}%</td>
                                             <td class="py-3 text-right font-mono font-extrabold text-slate-900 dark:text-white text-sm">{{ number_format($m['overall_score'], 1) }}%</td>
                                             <td class="py-3 text-center">
-                                                <span class="rounded-full border px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider {{ match($m['status']) { 'Perfect Store' => 'border-emerald-400/40 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-200', 'On Track' => 'border-sky-400/40 bg-sky-100 dark:bg-sky-500/20 text-sky-800 dark:text-sky-200', default => 'border-amber-400/40 bg-amber-100 dark:bg-amber-500/20 text-amber-900 dark:text-amber-200' } }}">
+                                                <span class="performance-status-pill {{ match($m['status']) { 'Perfect Store' => 'performance-status-perfect', 'On Track' => 'performance-status-track', default => 'performance-status-attention' } }}">
                                                     {{ $m['status'] }}
                                                 </span>
                                             </td>

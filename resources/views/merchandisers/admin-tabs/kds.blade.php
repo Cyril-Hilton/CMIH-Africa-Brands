@@ -1,14 +1,14 @@
-                <div x-show="activeTab === 'kds'" x-cloak x-transition x-data="{ kdTab: @js(request('kd_subtab', 'list')), editKdId: null, editOutletId: null }">
+                <div x-show="activeTab === 'kds'" x-cloak x-transition x-data="{ kdTab: @js(request('kd_subtab', 'list')), editKdId: null, editOutletId: null, switchKdTab(tab) { if (this.kdTab === tab) return; this.kdTab = tab; } }">
 
                     <!-- Sub-tabs -->
                     <div class="flex gap-2 mb-5 flex-wrap">
-                        <button @click="kdTab = 'list'" :class="kdTab === 'list' ? 'bg-brand-red text-white' : 'border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700'" class="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition shadow-sm"><i class="fa-solid fa-building text-sky-500"></i> Key Distributors</button>
-                        <button @click="kdTab = 'outlets'" :class="kdTab === 'outlets' ? 'bg-brand-red text-white' : 'border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700'" class="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition shadow-sm"><i class="fa-solid fa-store text-emerald-500"></i> Outlets</button>
-                        <button @click="kdTab = 'pairings'" :class="kdTab === 'pairings' ? 'bg-brand-red text-white' : 'border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700'" class="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition shadow-sm"><i class="fa-solid fa-link text-indigo-500"></i> Pairings</button>
+                        <button type="button" @click.prevent="switchKdTab('list')" :aria-pressed="kdTab === 'list'" :class="{ 'is-active': kdTab === 'list' }" class="admin-kd-tab-button"><i class="fa-solid fa-building"></i> Key Distributors</button>
+                        <button type="button" @click.prevent="switchKdTab('outlets')" :aria-pressed="kdTab === 'outlets'" :class="{ 'is-active': kdTab === 'outlets' }" class="admin-kd-tab-button"><i class="fa-solid fa-store"></i> Outlets</button>
+                        <button type="button" @click.prevent="switchKdTab('pairings')" :aria-pressed="kdTab === 'pairings'" :class="{ 'is-active': kdTab === 'pairings' }" class="admin-kd-tab-button"><i class="fa-solid fa-link"></i> Pairings</button>
                     </div>
 
                     <!-- KD List Tab -->
-                    <div x-show="kdTab === 'list'" x-transition>
+                    <div x-show="kdTab === 'list'" x-cloak>
                         <!-- Add KD Form -->
                         <div class="merch-card rounded-2xl p-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm mb-5" x-data="{ newRegion: false }">
                             <p class="text-xs uppercase tracking-widest text-slate-900 dark:text-white font-extrabold mb-4"><i class="fa-solid fa-plus text-emerald-500"></i> Add New Key Distributor</p>
@@ -181,7 +181,7 @@
                     </div>
 
                     <!-- Outlets Tab -->
-                    <div x-show="kdTab === 'outlets'" x-transition class="space-y-5">
+                    <div x-show="kdTab === 'outlets'" x-cloak class="space-y-5">
                         <div class="merch-card rounded-2xl p-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
                             <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                                 <div>
@@ -432,7 +432,7 @@
                     @endif
 
                     <!-- Pairings Tab -->
-                    <div x-show="kdTab === 'pairings'" x-transition>
+                    <div x-show="kdTab === 'pairings'" x-cloak>
                         <div class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
                             <div class="px-5 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
                                 <p class="text-xs uppercase tracking-widest text-slate-900 dark:text-white font-extrabold">Assign Merchandisers to KDs & Regions</p>
