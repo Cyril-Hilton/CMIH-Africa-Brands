@@ -1632,6 +1632,7 @@ class MerchandiserAdminHubController extends Controller
         }
         $channelQuery = clone $outletQuery;
         $shouldLoadOutlets = filled($filters['outlet_id'] ?? null)
+            || filled($filters['region_id'] ?? null)
             || filled($filters['kd_id'] ?? null)
             || filled($filters['supervisor_id'] ?? null)
             || filled($filters['merchandiser_id'] ?? null);
