@@ -354,27 +354,50 @@ class MerchandiserAdminHubController extends Controller
         $outletDayLabels = $this->outletDayLabels();
         $kds = collect();
         $outletManagementKds = collect();
+        $outletManagementOutlets = $this->emptyPaginator($request, 'outlet_page', 50);
         $assignableOutlets = collect();
 
         if (in_array($activeTab, ['kds', 'forms', 'merchandisers', 'supervisors'], true)) {
-            $kds = KeyDistributor::whereIn('id', $tenantKdIds)
-                ->with(['region', 'outlets.registeredBy', 'outlets.assignedMerchandisers', 'merchandisers'])
-                ->withCount(['merchandisers' => fn ($query) => $query->forMerchandiserTenant($tenantCode)])
-                ->orderBy('name')
-                ->get();
-
-            $outletManagementKds = $kds->map(function (KeyDistributor $kd) use ($outletCreatedFrom, $outletCreatedTo) {
-                $clone = clone $kd;
-                $clone->setRelation(
+            $kdsQuery = KeyDistributor::whereIn('id', $tenantKdIds)
+                ->with('region')
+                ->withCount([
                     'outlets',
-                    $kd->outlets
-                        ->filter(fn (Outlet $outlet) => $this->outletCreatedWithinRange($outlet, $outletCreatedFrom, $outletCreatedTo))
-                        ->sortByDesc('created_at')
-                        ->values()
-                );
+                    'merchandisers' => fn ($query) => $query->forMerchandiserTenant($tenantCode),
+                ])
+                ->orderBy('name');
 
-                return $clone;
-            });
+            if ($activeTab === 'kds') {
+                $kds = $kdsQuery
+                    ->with(['merchandisers' => fn ($query) => $query->forMerchandiserTenant($tenantCode)->orderBy('name')])
+                    ->get();
+
+                $outletManagementOutletsQuery = Outlet::query()
+                    ->with([
+                        'keyDistributor.region',
+                        'registeredBy',
+                        'assignedMerchandisers' => fn ($query) => $query->orderBy('name'),
+                    ])
+                    ->whereIn('kd_id', $tenantKdIds)
+                    ->orderByDesc('created_at');
+
+                if ($outletCreatedFrom) {
+                    $outletManagementOutletsQuery->whereDate('created_at', '>=', $outletCreatedFrom->toDateString());
+                }
+
+                if ($outletCreatedTo) {
+                    $outletManagementOutletsQuery->whereDate('created_at', '<=', $outletCreatedTo->toDateString());
+                }
+
+                $outletManagementOutlets = $outletManagementOutletsQuery
+                    ->paginate(50, ['*'], 'outlet_page')
+                    ->appends(array_merge($request->query(), ['tab' => 'kds', 'kd_subtab' => 'outlets']));
+            } else {
+                if ($activeTab === 'forms') {
+                    $kdsQuery->with(['outlets' => fn ($query) => $query->select('id', 'kd_id', 'name')->orderBy('name')]);
+                }
+
+                $kds = $kdsQuery->get();
+            }
         }
 
         $merchandiserLocations = [];
@@ -1396,7 +1419,7 @@ class MerchandiserAdminHubController extends Controller
             'perfectStoreTargets', 'perfectStoreWeights',
             'clockAttendanceCount', 'clockPcmCount', 'clockPjpCount',
             'kds', 'regions',
-            'outletManagementKds', 'outletRegistrationDay', 'outletDayLabels',
+            'outletManagementKds', 'outletManagementOutlets', 'outletRegistrationDay', 'outletDayLabels',
             'outletCreatedFromInput', 'outletCreatedToInput', 'outletCreatedRangeLabel',
             'assignableOutlets', 'outletAssignmentMerchandisers',
             'merchandiserLocations',

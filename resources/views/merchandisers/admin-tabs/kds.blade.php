@@ -151,7 +151,7 @@
                                                     </form>
                                                 </div>
                                             </td>
-                                            <td class="px-5 py-3 text-center"><span class="text-xs font-extrabold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-2 py-1 rounded-md">{{ $kd->outlets->count() }}</span></td>
+                                            <td class="px-5 py-3 text-center"><span class="text-xs font-extrabold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-2 py-1 rounded-md">{{ $kd->outlets_count ?? $kd->outlets->count() }}</span></td>
                                             <td class="px-5 py-3 text-right">
                                                 <form id="kd-edit-form-{{ $kd->id }}" method="POST" action="{{ route('merchandisers.admin.kds.update', $kd) }}" class="hidden">
                                                     @csrf @method('PUT')
@@ -238,121 +238,146 @@
                             </form>
                         </div>
 
-                        @foreach($outletManagementKds as $kd)
-                            @if($kd->outlets->count() > 0)
-                                <div class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden mb-5">
-                                    <div class="px-5 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-                                        <p class="text-sm font-extrabold text-slate-900 dark:text-white">{{ $kd->name }} <span class="text-slate-600 dark:text-slate-400 text-xs font-bold">({{ $kd->region->name ?? '' }})</span></p>
-                                    </div>
-                                    <div class="overflow-x-auto">
-                                        <table class="w-full text-sm min-w-[1180px]">
-                                            <thead>
-                                                <tr class="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/30">
-                                                    <th class="px-5 py-2 text-left text-[10px] uppercase tracking-widest text-slate-900 dark:text-white font-extrabold">Outlet</th>
-                                                    <th class="px-5 py-2 text-left text-[10px] uppercase tracking-widest text-slate-900 dark:text-white font-extrabold">Channel / Code</th>
-                                                    <th class="px-5 py-2 text-left text-[10px] uppercase tracking-widest text-slate-900 dark:text-white font-extrabold">Address</th>
-                                                    <th class="px-5 py-2 text-left text-[10px] uppercase tracking-widest text-slate-900 dark:text-white font-extrabold">Coordinates</th>
-                                                    <th class="px-5 py-2 text-left text-[10px] uppercase tracking-widest text-slate-900 dark:text-white font-extrabold">Assigned Merchandisers</th>
-                                                    <th class="px-5 py-2 text-left text-[10px] uppercase tracking-widest text-slate-900 dark:text-white font-extrabold">Registered</th>
-                                                    <th class="px-5 py-2 text-right text-[10px] uppercase tracking-widest text-slate-900 dark:text-white font-extrabold">Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
-                                                @foreach($kd->outlets as $outlet)
-                                                    @php
-                                                        $outletEditFormId = 'outlet-edit-' . $outlet->id;
-                                                        $sameKdMerchandisers = $allMerchandisers->filter(fn($merchandiser) => (int) $merchandiser->kd_id === (int) $outlet->kd_id);
-                                                        $assignedOutletUserIds = $outlet->assignedMerchandisers->pluck('id')->map(fn($id) => (int) $id)->all();
-                                                    @endphp
-                                                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition align-top" x-data="{ editing: false }" data-gps-coordinate-scope>
-                                                        <td class="px-5 py-3">
-                                                            <p x-show="!editing" class="text-xs font-bold text-slate-900 dark:text-white">{{ $outlet->name }}</p>
-                                                            <div x-show="editing" class="space-y-2">
-                                                                <select name="kd_id" form="{{ $outletEditFormId }}" class="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs px-2 py-1.5 focus:border-brand-red focus:ring-0 font-semibold">
-                                                                    @foreach($kds as $availableKd)
-                                                                        <option value="{{ $availableKd->id }}" {{ (int) $outlet->kd_id === (int) $availableKd->id ? 'selected' : '' }}>{{ $availableKd->name }}</option>
-                                                                    @endforeach
-                                                                </select>
-                                                                <input type="text" name="name" form="{{ $outletEditFormId }}" value="{{ $outlet->name }}" class="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs px-2 py-1.5 focus:border-brand-red focus:ring-0 font-semibold">
-                                                            </div>
-                                                        </td>
-                                                        <td class="px-5 py-3">
-                                                            <div x-show="!editing" class="space-y-1">
-                                                                <span class="inline-flex rounded-full border border-red-200 dark:border-red-500/30 bg-red-100 dark:bg-brand-red/20 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-red-800 dark:text-red-300">{{ $outlet->channel_type ?? 'N/A' }}</span>
-                                                                <p class="text-[10px] font-mono text-slate-600 dark:text-slate-400 font-bold">{{ $outlet->code ?? 'No code' }}</p>
-                                                            </div>
-                                                            <div x-show="editing" class="space-y-2">
-                                                                <select name="channel_type" form="{{ $outletEditFormId }}" class="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs px-2 py-1.5 focus:border-brand-red focus:ring-0 font-semibold">
-                                                                    <option value="">Channel</option>
-                                                                    <option value="GT" {{ $outlet->channel_type === 'GT' ? 'selected' : '' }}>GT</option>
-                                                                    <option value="SSM" {{ $outlet->channel_type === 'SSM' ? 'selected' : '' }}>SSM</option>
-                                                                </select>
-                                                                <input type="text" name="code" form="{{ $outletEditFormId }}" value="{{ $outlet->code }}" placeholder="Outlet code" class="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs px-2 py-1.5 focus:border-brand-red focus:ring-0 font-semibold">
-                                                            </div>
-                                                        </td>
-                                                        <td class="px-5 py-3">
-                                                            <p x-show="!editing" class="max-w-[260px] text-xs text-slate-700 dark:text-slate-300 font-medium">{{ $outlet->address ?? 'No address' }}</p>
-                                                            <textarea x-show="editing" name="address" form="{{ $outletEditFormId }}" rows="3" class="w-full min-w-[220px] rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs px-2 py-1.5 focus:border-brand-red focus:ring-0 font-semibold">{{ $outlet->address }}</textarea>
-                                                        </td>
-                                                        <td class="px-5 py-3">
-                                                            <div x-show="!editing" class="space-y-1">
-                                                                <p class="text-[10px] font-mono text-slate-700 dark:text-slate-300 font-bold">{{ filled($outlet->latitude) && filled($outlet->longitude) ? number_format((float) $outlet->latitude, 6) . ', ' . number_format((float) $outlet->longitude, 6) : 'GPS needed' }}</p>
-                                                                <span class="inline-flex rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider {{ $outlet->coordinates_locked_at ? 'border-emerald-300 dark:border-emerald-500/20 bg-emerald-100 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300' : 'border-amber-300 dark:border-amber-500/20 bg-amber-100 dark:bg-amber-500/10 text-amber-800 dark:text-amber-200' }}">
-                                                                    {{ $outlet->coordinates_locked_at ? 'Locked' : 'Unlocked' }}
-                                                                </span>
-                                                            </div>
-                                                            <div x-show="editing" class="grid min-w-[220px] gap-2 sm:grid-cols-2">
-                                                                <input type="text" name="latitude" form="{{ $outletEditFormId }}" value="{{ $outlet->latitude }}" placeholder="Latitude" data-gps-latitude class="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs px-2 py-1.5 focus:border-brand-red focus:ring-0 font-semibold">
-                                                                <input type="text" name="longitude" form="{{ $outletEditFormId }}" value="{{ $outlet->longitude }}" placeholder="Longitude" data-gps-longitude class="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs px-2 py-1.5 focus:border-brand-red focus:ring-0 font-semibold">
-                                                                <div class="sm:col-span-2 flex flex-col gap-2">
-                                                                    <p class="text-[10px] leading-relaxed text-slate-600 dark:text-slate-400 font-medium" data-gps-status>Saving coordinates here re-locks the outlet for staff-side clock-in.</p>
-                                                                    <button type="button" data-gps-capture class="w-fit rounded-lg border border-emerald-300 dark:border-emerald-500/30 bg-emerald-100 dark:bg-emerald-500/20 px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 hover:bg-emerald-200 transition">
-                                                                        Capture GPS
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                        <td class="px-5 py-3">
-                                                            <div x-show="!editing" class="flex max-w-[280px] flex-wrap gap-1.5">
-                                                                @forelse($outlet->assignedMerchandisers as $assignedMerchandiser)
-                                                                    <span class="rounded-full border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-[10px] font-bold text-slate-900 dark:text-white">{{ $assignedMerchandiser->name }}</span>
-                                                                @empty
-                                                                    <span class="text-xs text-amber-700 dark:text-amber-400 font-bold italic">Not assigned</span>
-                                                                @endforelse
-                                                            </div>
-                                                            <select x-show="editing" name="assigned_user_ids[]" form="{{ $outletEditFormId }}" multiple size="4" class="w-full min-w-[240px] rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs px-2 py-1.5 focus:border-brand-red focus:ring-0 font-semibold">
-                                                                @foreach($sameKdMerchandisers as $merchandiser)
-                                                                    <option value="{{ $merchandiser->id }}" {{ in_array((int) $merchandiser->id, $assignedOutletUserIds, true) ? 'selected' : '' }}>{{ $merchandiser->name }}</option>
-                                                                @endforeach
-                                                            </select>
-                                                        </td>
-                                                        <td class="px-5 py-3">
-                                                            <p class="text-xs text-slate-900 dark:text-white font-bold">{{ $outlet->created_at?->format('D, d M Y') ?? 'No date' }}</p>
-                                                            <p class="mt-1 text-[10px] text-slate-600 dark:text-slate-400 font-semibold">{{ $outlet->registeredBy?->name ?? 'Admin/System' }}</p>
-                                                        </td>
-                                                        <td class="px-5 py-3 text-right">
-                                                            <form id="{{ $outletEditFormId }}" method="POST" action="{{ route('merchandisers.admin.outlets.update', $outlet) }}">
-                                                                @csrf
-                                                                @method('PUT')
-                                                            </form>
-                                                            <div class="flex items-center justify-end gap-2">
-                                                                <button x-show="!editing" type="button" @click="editing = true" class="text-[10px] px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 hover:bg-slate-200 transition font-bold">Edit</button>
-                                                                <button x-show="editing" type="submit" form="{{ $outletEditFormId }}" class="text-[10px] px-2.5 py-1 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition font-bold">Save</button>
-                                                                <button x-show="editing" type="button" @click="editing=false" class="text-[10px] px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 hover:bg-slate-200 transition font-bold">Cancel</button>
-                                                                <form method="POST" action="{{ route('merchandisers.admin.outlets.destroy', $outlet) }}" onsubmit="return confirm('Remove outlet?')">
-                                                                    @csrf @method('DELETE')
-                                                                    <button type="submit" class="text-[10px] px-2.5 py-1 rounded-lg bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-500/30 hover:bg-red-200 transition font-bold">Remove</button>
-                                                                </form>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                @endforeach
-                                            </tbody>
-                                        </table>
-                                    </div>
+                        <div class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+                            <div class="flex flex-col gap-1 border-b border-slate-200 bg-slate-50 px-5 py-4 dark:border-slate-800 dark:bg-slate-800/50 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <p class="text-xs uppercase tracking-widest text-slate-900 dark:text-white font-extrabold">Outlet Directory</p>
+                                    <p class="mt-1 text-xs text-slate-600 dark:text-slate-400 font-semibold">
+                                        @if($outletManagementOutlets->total() > 0)
+                                            Showing {{ $outletManagementOutlets->firstItem() }}-{{ $outletManagementOutlets->lastItem() }} of {{ $outletManagementOutlets->total() }} outlets {{ $outletCreatedRangeLabel }}.
+                                        @else
+                                            No outlets found {{ $outletCreatedRangeLabel }}.
+                                        @endif
+                                    </p>
+                                </div>
+                                <span class="inline-flex w-fit rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
+                                    50 per page
+                                </span>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm min-w-[1180px]">
+                                    <thead>
+                                        <tr class="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/30">
+                                            <th class="px-5 py-2 text-left text-[10px] uppercase tracking-widest text-slate-900 dark:text-white font-extrabold">KD / Outlet</th>
+                                            <th class="px-5 py-2 text-left text-[10px] uppercase tracking-widest text-slate-900 dark:text-white font-extrabold">Channel / Code</th>
+                                            <th class="px-5 py-2 text-left text-[10px] uppercase tracking-widest text-slate-900 dark:text-white font-extrabold">Address</th>
+                                            <th class="px-5 py-2 text-left text-[10px] uppercase tracking-widest text-slate-900 dark:text-white font-extrabold">Coordinates</th>
+                                            <th class="px-5 py-2 text-left text-[10px] uppercase tracking-widest text-slate-900 dark:text-white font-extrabold">Assigned Merchandisers</th>
+                                            <th class="px-5 py-2 text-left text-[10px] uppercase tracking-widest text-slate-900 dark:text-white font-extrabold">Registered</th>
+                                            <th class="px-5 py-2 text-right text-[10px] uppercase tracking-widest text-slate-900 dark:text-white font-extrabold">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+                                        @forelse($outletManagementOutlets as $outlet)
+                                            @php
+                                                $outletEditFormId = 'outlet-edit-' . $outlet->id;
+                                                $sameKdMerchandisers = $allMerchandisers->filter(fn($merchandiser) => (int) $merchandiser->kd_id === (int) $outlet->kd_id);
+                                                $assignedOutletUserIds = $outlet->assignedMerchandisers->pluck('id')->map(fn($id) => (int) $id)->all();
+                                            @endphp
+                                            <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition align-top" x-data="{ editing: false }" data-gps-coordinate-scope>
+                                                <td class="px-5 py-3">
+                                                    <div x-show="!editing" class="space-y-1">
+                                                        <p class="text-xs font-extrabold text-slate-900 dark:text-white">{{ $outlet->name }}</p>
+                                                        <p class="text-[10px] font-bold text-slate-600 dark:text-slate-400">
+                                                            {{ $outlet->keyDistributor?->name ?? 'No KD' }}
+                                                            @if($outlet->keyDistributor?->region)
+                                                                <span class="text-slate-400 dark:text-slate-500">/ {{ $outlet->keyDistributor->region->name }}</span>
+                                                            @endif
+                                                        </p>
+                                                    </div>
+                                                    <div x-show="editing" class="space-y-2">
+                                                        <select name="kd_id" form="{{ $outletEditFormId }}" class="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs px-2 py-1.5 focus:border-brand-red focus:ring-0 font-semibold">
+                                                            @foreach($kds as $availableKd)
+                                                                <option value="{{ $availableKd->id }}" {{ (int) $outlet->kd_id === (int) $availableKd->id ? 'selected' : '' }}>{{ $availableKd->name }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                        <input type="text" name="name" form="{{ $outletEditFormId }}" value="{{ $outlet->name }}" class="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs px-2 py-1.5 focus:border-brand-red focus:ring-0 font-semibold">
+                                                    </div>
+                                                </td>
+                                                <td class="px-5 py-3">
+                                                    <div x-show="!editing" class="space-y-1">
+                                                        <span class="inline-flex rounded-full border border-red-200 dark:border-red-500/30 bg-red-100 dark:bg-brand-red/20 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-red-800 dark:text-red-300">{{ $outlet->channel_type ?? 'N/A' }}</span>
+                                                        <p class="text-[10px] font-mono text-slate-600 dark:text-slate-400 font-bold">{{ $outlet->code ?? 'No code' }}</p>
+                                                    </div>
+                                                    <div x-show="editing" class="space-y-2">
+                                                        <select name="channel_type" form="{{ $outletEditFormId }}" class="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs px-2 py-1.5 focus:border-brand-red focus:ring-0 font-semibold">
+                                                            <option value="">Channel</option>
+                                                            <option value="GT" {{ $outlet->channel_type === 'GT' ? 'selected' : '' }}>GT</option>
+                                                            <option value="SSM" {{ $outlet->channel_type === 'SSM' ? 'selected' : '' }}>SSM</option>
+                                                        </select>
+                                                        <input type="text" name="code" form="{{ $outletEditFormId }}" value="{{ $outlet->code }}" placeholder="Outlet code" class="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs px-2 py-1.5 focus:border-brand-red focus:ring-0 font-semibold">
+                                                    </div>
+                                                </td>
+                                                <td class="px-5 py-3">
+                                                    <p x-show="!editing" class="max-w-[260px] text-xs text-slate-700 dark:text-slate-300 font-medium">{{ $outlet->address ?? 'No address' }}</p>
+                                                    <textarea x-show="editing" name="address" form="{{ $outletEditFormId }}" rows="3" class="w-full min-w-[220px] rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs px-2 py-1.5 focus:border-brand-red focus:ring-0 font-semibold">{{ $outlet->address }}</textarea>
+                                                </td>
+                                                <td class="px-5 py-3">
+                                                    <div x-show="!editing" class="space-y-1">
+                                                        <p class="text-[10px] font-mono text-slate-700 dark:text-slate-300 font-bold">{{ filled($outlet->latitude) && filled($outlet->longitude) ? number_format((float) $outlet->latitude, 6) . ', ' . number_format((float) $outlet->longitude, 6) : 'GPS needed' }}</p>
+                                                        <span class="inline-flex rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider {{ $outlet->coordinates_locked_at ? 'border-emerald-300 dark:border-emerald-500/20 bg-emerald-100 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300' : 'border-amber-300 dark:border-amber-500/20 bg-amber-100 dark:bg-amber-500/10 text-amber-800 dark:text-amber-200' }}">
+                                                            {{ $outlet->coordinates_locked_at ? 'Locked' : 'Unlocked' }}
+                                                        </span>
+                                                    </div>
+                                                    <div x-show="editing" class="grid min-w-[220px] gap-2 sm:grid-cols-2">
+                                                        <input type="text" name="latitude" form="{{ $outletEditFormId }}" value="{{ $outlet->latitude }}" placeholder="Latitude" data-gps-latitude class="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs px-2 py-1.5 focus:border-brand-red focus:ring-0 font-semibold">
+                                                        <input type="text" name="longitude" form="{{ $outletEditFormId }}" value="{{ $outlet->longitude }}" placeholder="Longitude" data-gps-longitude class="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs px-2 py-1.5 focus:border-brand-red focus:ring-0 font-semibold">
+                                                        <div class="sm:col-span-2 flex flex-col gap-2">
+                                                            <p class="text-[10px] leading-relaxed text-slate-600 dark:text-slate-400 font-medium" data-gps-status>Saving coordinates here re-locks the outlet for staff-side clock-in.</p>
+                                                            <button type="button" data-gps-capture class="w-fit rounded-lg border border-emerald-300 dark:border-emerald-500/30 bg-emerald-100 dark:bg-emerald-500/20 px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 hover:bg-emerald-200 transition">
+                                                                Capture GPS
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td class="px-5 py-3">
+                                                    <div x-show="!editing" class="flex max-w-[280px] flex-wrap gap-1.5">
+                                                        @forelse($outlet->assignedMerchandisers as $assignedMerchandiser)
+                                                            <span class="rounded-full border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-[10px] font-bold text-slate-900 dark:text-white">{{ $assignedMerchandiser->name }}</span>
+                                                        @empty
+                                                            <span class="text-xs text-amber-700 dark:text-amber-400 font-bold italic">Not assigned</span>
+                                                        @endforelse
+                                                    </div>
+                                                    <select x-show="editing" name="assigned_user_ids[]" form="{{ $outletEditFormId }}" multiple size="4" class="w-full min-w-[240px] rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs px-2 py-1.5 focus:border-brand-red focus:ring-0 font-semibold">
+                                                        @foreach($sameKdMerchandisers as $merchandiser)
+                                                            <option value="{{ $merchandiser->id }}" {{ in_array((int) $merchandiser->id, $assignedOutletUserIds, true) ? 'selected' : '' }}>{{ $merchandiser->name }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </td>
+                                                <td class="px-5 py-3">
+                                                    <p class="text-xs text-slate-900 dark:text-white font-bold">{{ $outlet->created_at?->format('D, d M Y') ?? 'No date' }}</p>
+                                                    <p class="mt-1 text-[10px] text-slate-600 dark:text-slate-400 font-semibold">{{ $outlet->registeredBy?->name ?? 'Admin/System' }}</p>
+                                                </td>
+                                                <td class="px-5 py-3 text-right">
+                                                    <form id="{{ $outletEditFormId }}" method="POST" action="{{ route('merchandisers.admin.outlets.update', $outlet) }}">
+                                                        @csrf
+                                                        @method('PUT')
+                                                    </form>
+                                                    <div class="flex items-center justify-end gap-2">
+                                                        <button x-show="!editing" type="button" @click="editing = true" class="text-[10px] px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 hover:bg-slate-200 transition font-bold">Edit</button>
+                                                        <button x-show="editing" type="submit" form="{{ $outletEditFormId }}" class="text-[10px] px-2.5 py-1 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition font-bold">Save</button>
+                                                        <button x-show="editing" type="button" @click="editing=false" class="text-[10px] px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 hover:bg-slate-200 transition font-bold">Cancel</button>
+                                                        <form method="POST" action="{{ route('merchandisers.admin.outlets.destroy', $outlet) }}" onsubmit="return confirm('Remove outlet?')">
+                                                            @csrf @method('DELETE')
+                                                            <button type="submit" class="text-[10px] px-2.5 py-1 rounded-lg bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-500/30 hover:bg-red-200 transition font-bold">Remove</button>
+                                                        </form>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        @empty
+                                            <tr>
+                                                <td colspan="7" class="px-5 py-8 text-center text-slate-600 dark:text-slate-400 font-bold text-sm">No outlets match this filter.</td>
+                                            </tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                            @if($outletManagementOutlets->hasPages())
+                                <div class="border-t border-slate-200 px-5 py-4 dark:border-slate-800">
+                                    {{ $outletManagementOutlets->links() }}
                                 </div>
                             @endif
-                        @endforeach
+                        </div>
                     </div>
                     @if(false)
                     <div x-show="false" x-cloak class="hidden">
