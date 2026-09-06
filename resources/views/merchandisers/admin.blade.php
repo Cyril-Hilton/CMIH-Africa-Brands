@@ -160,6 +160,37 @@
             border-color: #FECB00 !important;
             color: #FDE68A !important;
         }
+        .admin-tenant-switcher {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            padding: 4px;
+            max-width: 100%;
+            border: 1px solid #9ca3af;
+            border-radius: 8px;
+        }
+        .merch-workspace-header .admin-tenant-switcher a {
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            white-space: nowrap;
+            background: #ffffff !important;
+            color: #1a1a1a !important;
+        }
+        .merch-workspace-header .admin-tenant-switcher a[data-tenant-option="unilever"]:is(:hover, :focus-visible, [aria-current="page"]) {
+            background: #0f0e9a !important;
+            color: #ffffff !important;
+        }
+        .merch-workspace-header .admin-tenant-switcher a[data-tenant-option="ggbl"]:is(:hover, :focus-visible, [aria-current="page"]) {
+            background: #1a1a1a !important;
+            color: #fecb00 !important;
+        }
+        .admin-tenant-switcher a:focus-visible {
+            outline: 2px solid #fecb00;
+            outline-offset: 2px;
+        }
+
         .performance-ranking-table th,
         .performance-ranking-table td {
             padding-left: 12px;
@@ -838,8 +869,8 @@
 
             <!-- Top Header Bar -->
             <header class="merch-workspace-header shrink-0 border-b border-brand-white/10 px-4 py-3.5 sm:px-6 relative z-40 w-full min-w-0">
-                <div class="flex items-center justify-between gap-4">
-                    <div class="flex items-center gap-3">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex flex-wrap items-center gap-3 min-w-0">
                         <button type="button"
                             @click="toggleSidebar()"
                             aria-controls="merchandiser-admin-sidebar"
@@ -852,10 +883,11 @@
                             <span class="font-extrabold" x-text="sidebarCollapsed ? 'Show Sidebar ☰' : 'Hide Sidebar ◀'">Hide Sidebar ◀</span>
                         </button>
                         @if(auth()->user()->isMerchandiserPortalAdmin())
-                            <div class="hidden items-center rounded-lg border border-slate-300 dark:border-slate-700 p-1 sm:flex bg-slate-50 dark:bg-slate-900 shrink-0" aria-label="Tenant workspace">
+                            <div class="admin-tenant-switcher" aria-label="Tenant workspace">
                                 @foreach(\App\Support\MerchandiserTenant::all() as $tenantOption)
                                     <a href="{{ $adminTabUrl($activeAdminTab, ['tenant' => $tenantOption['code']]) }}"
-                                       class="rounded-md px-3 py-1.5 text-[10px] font-bold transition shadow-sm {{ $merchTenant['code'] === $tenantOption['code'] ? 'merch-primary-button' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white' }}">
+                                       data-tenant-option="{{ $tenantOption['code'] }}"
+                                       aria-current="{{ $merchTenant['code'] === $tenantOption['code'] ? 'page' : 'false' }}">
                                         {{ $tenantOption['name'] }}
                                     </a>
                                 @endforeach
