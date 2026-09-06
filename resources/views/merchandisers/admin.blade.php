@@ -188,6 +188,41 @@
             .executive-kpi-card { flex-direction: column; align-items: flex-start; }
         }
 
+        .sku-catalog-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 24px;
+        }
+        .sku-catalog { min-width: 0; }
+        .sku-catalog label, .sku-catalog form > div { min-width: 0; }
+        .sku-catalog :is(input, select, textarea) { max-width: 100%; min-width: 0; }
+        .sku-catalog :is(label, p, button) { overflow-wrap: anywhere; }
+        .sku-create-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+            gap: 20px;
+            align-items: start;
+        }
+        .sku-field-group {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+            gap: 20px;
+            padding: 20px 0;
+            border-block: 1px solid var(--merch-muted);
+        }
+        .sku-create-submit { grid-column: 1 / -1; justify-self: end; min-height: 44px; }
+        .sku-catalog input[type="checkbox"] { flex-shrink: 0; }
+        @layer theme {
+            html[data-merch-tenant="unilever"] .sku-catalog :is(span, div)[class~="bg-sky-100"] { color: #075985 !important; }
+            html[data-merch-tenant="unilever"] .sku-catalog :is(span, div)[class~="bg-cyan-100"] { color: #155e75 !important; }
+            html[data-merch-tenant="unilever"] .sku-catalog :is(span, div)[class~="bg-violet-100"] { color: #5b21b6 !important; }
+            html[data-merch-tenant="unilever"] .sku-catalog :is(span, div)[class~="bg-emerald-100"],
+            html[data-merch-tenant="unilever"] .sku-catalog :is(span, div)[class~="bg-emerald-50"] { color: #065f46 !important; }
+            html[data-merch-tenant="unilever"] .sku-catalog :is(span, div)[class~="bg-amber-100"] { color: #92400e !important; }
+            html[data-merch-tenant="unilever"] .sku-catalog :is(span, div)[class~="bg-pink-100"] { color: #9d174d !important; }
+        }
+
         .admin-tenant-switcher {
             display: flex;
             flex-wrap: wrap;

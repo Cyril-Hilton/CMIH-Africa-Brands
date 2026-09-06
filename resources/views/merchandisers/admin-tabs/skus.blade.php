@@ -1,4 +1,4 @@
-                <div x-show="activeTab === 'skus'" x-cloak x-transition class="space-y-5">
+                <div x-show="activeTab === 'skus'" x-cloak x-transition class="sku-catalog space-y-5">
                     <div class="merch-card border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm rounded-2xl">
                         <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                             <div>
@@ -32,9 +32,9 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
+                    <div class="sku-catalog-layout">
                         <!-- AI Reference Catalog Card -->
-                        <div class="xl:col-span-1 merch-card rounded-2xl p-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+                        <div class="sku-create-panel merch-card rounded-2xl p-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
                             <div class="mb-5">
                                 <p class="text-xs uppercase tracking-widest text-slate-900 dark:text-white font-extrabold">AI Reference Catalog</p>
                                 <h3 class="text-xl font-bold text-slate-900 dark:text-white mt-1">Add SKU Reference</h3>
@@ -49,7 +49,7 @@
                                 @endif
                             </div>
 
-                            <form method="POST" action="{{ route('merchandisers.admin.skus.store') }}" enctype="multipart/form-data" class="space-y-4">
+                            <form method="POST" action="{{ route('merchandisers.admin.skus.store') }}" enctype="multipart/form-data" class="sku-create-form">
                                 @csrf
                                 <label class="block">
                                     <span class="text-[10px] uppercase tracking-wider text-slate-900 dark:text-slate-100 font-bold">SKU Name</span>
@@ -76,8 +76,7 @@
                                     <span class="text-[10px] uppercase tracking-wider text-slate-900 dark:text-slate-100 font-bold">New Category If Not Listed</span>
                                     <input name="new_category" placeholder="Type category to add it" class="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-white font-semibold focus:border-brand-red focus:ring-0">
                                 </label>
-                                <div class="grid gap-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-3 sm:grid-cols-3">
-                                <div class="grid gap-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 sm:grid-cols-3">
+                                <div class="sku-field-group">
                                     <label class="block">
                                         <span class="flex items-center gap-2 text-[10px] uppercase tracking-wider text-slate-900 dark:text-white font-extrabold">
                                             <input type="checkbox" name="track_osa" value="1" checked class="rounded border-slate-300 text-brand-red focus:ring-0">
@@ -100,7 +99,7 @@
                                         <input name="mhs_drop_size" type="number" min="1" value="1" class="mt-2 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-white font-semibold focus:border-brand-red focus:ring-0">
                                     </label>
                                 </div>
-                                <div class="grid gap-4 rounded-2xl border border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 p-4 sm:grid-cols-3 items-stretch">
+                                <div class="sku-field-group">
                                     <label class="flex flex-col justify-between">
                                         <div>
                                             <span class="text-[10px] uppercase tracking-wider text-slate-900 dark:text-white font-extrabold block">Facing Target</span>
@@ -108,7 +107,7 @@
                                         </div>
                                         <input name="facing_target" type="number" min="1" value="1" class="mt-2 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-white font-semibold focus:border-brand-red focus:ring-0">
                                     </label>
-                                    <div class="flex flex-col justify-between rounded-xl border border-emerald-300 dark:border-emerald-500/30 bg-white dark:bg-slate-800 p-3">
+                                    <div class="flex flex-col justify-between">
                                         <div>
                                             <label class="flex items-center gap-2 text-[10px] uppercase tracking-wider text-slate-900 dark:text-white font-extrabold cursor-pointer">
                                                 <input type="checkbox" name="track_planogram" value="1" checked class="rounded border-slate-300 text-brand-red focus:ring-0">
@@ -145,14 +144,14 @@
                                         <option value="{{ $category }}"></option>
                                     @endforeach
                                 </datalist>
-                                <button type="submit" class="w-full rounded-xl bg-brand-red px-4 py-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-red-700 transition shadow-sm">
+                                <button type="submit" class="sku-create-submit rounded-xl bg-brand-red px-4 py-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-red-700 transition shadow-sm">
                                     Save SKU Reference
                                 </button>
                             </form>
                         </div>
 
                         <!-- Configured SKU References List -->
-                        <div class="xl:col-span-2 merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+                        <div class="sku-reference-list merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
                             <div class="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
                                 <div>
                                     <p class="text-xs uppercase tracking-widest text-slate-900 dark:text-white font-extrabold">Configured SKU References</p>
