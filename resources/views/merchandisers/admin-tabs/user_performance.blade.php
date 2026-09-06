@@ -10,10 +10,10 @@
                                 <p class="text-xs text-slate-600 dark:text-slate-400 font-semibold mt-1">Decoupled performance tracking for field merchandisers and supervisor team accountability.</p>
                             </div>
                             <div class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 overflow-x-auto">
-                                @foreach(['daily' => '<i class="fa-solid fa-calendar-day"></i> Daily', 'weekly' => '<i class="fa-solid fa-calendar-week"></i> Weekly', 'monthly' => '<i class="fa-solid fa-chart-pie text-sky-500"></i> Monthly', 'yearly' => '<i class="fa-solid fa-trophy"></i> Yearly'] as $pKey => $pLabel)
+                                @foreach(['daily' => 'fa-calendar-day', 'weekly' => 'fa-calendar-week', 'monthly' => 'fa-chart-pie', 'yearly' => 'fa-trophy'] as $pKey => $pIcon)
                                     <a href="{{ route('merchandisers.admin.tab', ['adminTab' => 'user-performance', 'perf_period' => $pKey]) }}"
                                        class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 {{ $perfPeriod === $pKey ? 'bg-brand-red text-white shadow-sm' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700' }}">
-                                        {{ $pLabel }}
+                                        <i class="fa-solid {{ $pIcon }}" aria-hidden="true"></i> {{ ucfirst($pKey) }}
                                     </a>
                                 @endforeach
                             </div>
@@ -63,7 +63,7 @@
                             <span class="text-xs text-slate-600 dark:text-slate-400 font-semibold">{{ count($userPerformance) }} Field Promoters</span>
                         </div>
                         <div class="overflow-x-auto">
-                            <table class="w-full text-left text-xs">
+                            <table class="performance-ranking-table w-full text-left text-xs">
                                 <thead class="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-[10px] uppercase tracking-wider text-slate-900 dark:text-slate-100 font-extrabold">
                                     <tr>
                                         <th class="p-3">Merchandiser</th>

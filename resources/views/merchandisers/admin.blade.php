@@ -160,6 +160,17 @@
             border-color: #FECB00 !important;
             color: #FDE68A !important;
         }
+        .performance-ranking-table th,
+        .performance-ranking-table td {
+            padding-left: 12px;
+            padding-right: 12px;
+        }
+
+        .performance-ranking-table th:nth-last-child(-n+2),
+        .performance-ranking-table td:nth-last-child(-n+2) {
+            white-space: nowrap;
+        }
+
         .performance-status-pill.performance-status-perfect {
             min-width: 6.35rem;
             background: #DCFCE7 !important;
