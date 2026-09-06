@@ -160,6 +160,34 @@
             border-color: #FECB00 !important;
             color: #FDE68A !important;
         }
+        html[data-merch-tenant="ggbl"] .app-subtab-btn {
+            background: #242424 !important;
+            color: #ffffff !important;
+            border: 1px solid #525252 !important;
+            border-radius: 8px !important;
+        }
+        html[data-merch-tenant="ggbl"] .app-subtab-btn span {
+            color: inherit !important;
+            white-space: normal;
+        }
+        html[data-merch-tenant="ggbl"] .app-subtab-btn:is(.active, :hover, :focus-visible) {
+            background: #fecb00 !important;
+            color: #1a1a1a !important;
+            border-color: #fecb00 !important;
+        }
+        html[data-merch-tenant="ggbl"] .executive-kpi-card {
+            border-radius: 8px !important;
+        }
+        html[data-merch-tenant="ggbl"] .executive-kpi-card .rounded-full {
+            background: #1a1a1a !important;
+        }
+        html[data-merch-tenant="ggbl"] .executive-kpi-card i {
+            color: #fecb00 !important;
+        }
+        @media (max-width: 479px) {
+            .executive-kpi-card { flex-direction: column; align-items: flex-start; }
+        }
+
         .admin-tenant-switcher {
             display: flex;
             flex-wrap: wrap;

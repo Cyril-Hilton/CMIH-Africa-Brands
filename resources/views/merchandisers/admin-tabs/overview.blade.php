@@ -319,7 +319,7 @@
                                 'label'  => 'Share of Shelf',
                                 'val'    => (float) ($perfectOverview['sos'] ?? 0),
                                 'textVal'=> $metricLabel($perfectOverview['sos'] ?? null),
-                                'sub'    => 'Unilever facings vs category',
+                                'sub'    => $merchTenant['name'].' facings vs category',
                                 'icon'   => '<i class="fa-solid fa-tag text-base text-rose-600 dark:text-rose-400"></i>',
                                 'stroke' => '#E11D48',
                                 'bg'     => '#FFF1F2',
@@ -345,16 +345,22 @@
                     <div class="grid grid-cols-2 gap-4 mb-6 xl:grid-cols-4">
                         @foreach($execKpis as $kpi)
                             @php
+                                if ($merchTenant['code'] === 'ggbl') {
+                                    $kpi['bg'] = '#242424';
+                                    $kpi['border'] = $kpi['key'] === 'perfect_store' ? '#FECB00' : '#525252';
+                                    $kpi['text'] = $kpi['key'] === 'perfect_store' ? '#FECB00' : '#FFFFFF';
+                                    $kpi['stroke'] = '#FECB00';
+                                }
                                 $pct = min(100, max(0, $kpi['val']));
                                 $dashArray = 2 * M_PI * 26; // radius = 26
                                 $dashOffset = $dashArray - ($dashArray * $pct / 100);
                             @endphp
-                            <div class="merch-card rounded-2xl p-4 sm:p-5 border shadow-sm flex items-center justify-between gap-3 transition-transform hover:scale-[1.02]"
+                            <div class="executive-kpi-card merch-card rounded-2xl p-4 sm:p-5 border shadow-sm flex items-center justify-between gap-3"
                                  style="background-color: {{ $kpi['bg'] }} !important; border-color: {{ $kpi['border'] }} !important;">
                                 <div class="min-w-0 flex-1">
-                                    <p class="text-[10px] uppercase tracking-widest font-extrabold truncate" style="color: {{ $kpi['text'] }} !important;">{{ $kpi['label'] }}</p>
+                                    <p class="text-[10px] uppercase font-extrabold" style="color: {{ $kpi['text'] }} !important; overflow-wrap: anywhere;">{{ $kpi['label'] }}</p>
                                     <p class="text-2xl sm:text-3xl font-black mt-2 tabular-nums" style="color: {{ $kpi['text'] }} !important;">{{ $kpi['textVal'] }}</p>
-                                    <p class="text-[10px] font-bold mt-1 truncate" style="color: {{ $kpi['text'] }} !important; opacity: 0.85;">{{ $kpi['sub'] }}</p>
+                                    <p class="text-[10px] font-bold mt-1" style="color: {{ $kpi['text'] }} !important; opacity: 0.85; overflow-wrap: anywhere;">{{ $kpi['sub'] }}</p>
                                 </div>
                                 <!-- Aesthetic Radial Gauge Ring with Icon Badge (No Redundant Duplicate Text) -->
                                 <div class="relative w-14 h-14 shrink-0 flex items-center justify-center p-1 rounded-full bg-white dark:bg-slate-900 shadow-xs">
