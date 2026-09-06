@@ -760,6 +760,40 @@
             border-radius: 1.1rem !important;
         }
     }
+    html[data-merch-tenant="ggbl"] table th:hover,
+    html[data-merch-tenant="ggbl"] table th:hover * {
+        background-color: #333333 !important;
+        color: #FECB00 !important;
+    }
+
+    @layer theme {
+    html[data-merch-tenant="ggbl"] main :is(input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), select, textarea) {
+        background-color: #1A1A1A !important;
+        color: #FFFFFF !important;
+        border-color: #737373 !important;
+    }
+    html[data-merch-tenant="ggbl"] main :is(input, textarea)::placeholder {
+        color: #BDBDBD !important;
+        opacity: 1;
+    }
+    }
+    html[data-merch-tenant="ggbl"] main :is(button, a).bg-\[\#0F0E9A\],
+    html[data-merch-tenant="ggbl"] main a.bg-brand-red,
+    html[data-merch-tenant="ggbl"] .admin-kd-tab-button.is-active {
+        background: #FECB00 !important;
+        color: #1A1A1A !important;
+        border-color: #FECB00 !important;
+    }
+    html[data-merch-tenant="ggbl"] main :is(button, a).bg-\[\#0F0E9A\] *,
+    html[data-merch-tenant="ggbl"] main a.bg-brand-red *,
+    html[data-merch-tenant="ggbl"] .admin-kd-tab-button.is-active * {
+        color: inherit !important;
+    }
+    html[data-merch-tenant="ggbl"] .admin-kd-tab-button:not(.is-active) {
+        background: #242424 !important;
+        color: #FFFFFF !important;
+        border-color: #737373 !important;
+    }
 </style>
 
 <script>

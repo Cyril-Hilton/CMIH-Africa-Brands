@@ -60,7 +60,7 @@
                                                         @case('mhs') Must-have SKU compliance @break
                                                         @case('planogram') Approved shelf sequence @break
                                                         @case('facing') Actual facings vs SKU target @break
-                                                        @case('sos') Unilever facings vs category total @break
+                                                        @case('sos') {{ $merchTenant['name'] }} facings vs category total @break
                                                     @endswitch
                                                 </td>
                                             </tr>
@@ -90,7 +90,7 @@
                                 </label>
                                 <button type="submit" class="self-end rounded-xl bg-brand-red px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-white hover:bg-red-700 transition shadow-sm">Save Target</button>
                             </div>
-                            <p class="mt-3 text-[11px] leading-relaxed text-slate-600 dark:text-slate-400 font-semibold">SOS targets are defined at category level, then compared against Unilever facings divided by total category facings from completed outlet visits.</p>
+                            <p class="mt-3 text-[11px] leading-relaxed text-slate-600 dark:text-slate-400 font-semibold">SOS targets are defined at category level, then compared against {{ $merchTenant['name'] }} facings divided by total category facings from completed outlet visits.</p>
                         </form>
 
                         <div class="merch-card min-w-0 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-5 shadow-sm">

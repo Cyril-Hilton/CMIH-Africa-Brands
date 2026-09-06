@@ -153,12 +153,14 @@
                         <!-- Perfect Store Reference Guides -->
                         <div class="merch-card p-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm rounded-2xl space-y-4">
                             <p class="text-xs uppercase tracking-widest text-slate-900 dark:text-white font-extrabold">Perfect Store References</p>
-                            @foreach($perfectStoreGuides as $channel => $items)
+                            @forelse($perfectStoreGuides as $channel => $items)
                                 <div class="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-3.5">
                                     <p class="text-xs font-bold text-slate-900 dark:text-white">{{ $channel }}</p>
                                     <p class="mt-1 text-[11px] leading-relaxed text-slate-700 dark:text-slate-300 font-medium">{{ implode(', ', $items) }}</p>
                                 </div>
-                            @endforeach
+                            @empty
+                                <p class="text-sm">No standard reference guides configured for {{ $merchTenant['name'] }}. Saved planograms are listed below.</p>
+                            @endforelse
                         </div>
                     </div>
 

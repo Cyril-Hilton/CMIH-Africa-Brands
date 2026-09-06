@@ -523,7 +523,7 @@ Route::prefix('merchandisers')->name('merchandisers.')->group(function () {
                 ->whereIn('period', ['daily', 'weekly', 'monthly', 'yearly'])
                 ->name('overview-charts');
             Route::get('/hub/{adminTab}', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'dashboard'])
-                ->whereIn('adminTab', ['overview', 'tracking', 'kds', 'routes', 'skus', 'forms', 'merchandisers', 'supervisors', 'assets', 'notifications', 'settings', 'gallery', 'executive', 'perfect-store', 'category-kpi', 'user-performance', 'price-promo', 'supervisor-dashboard', 'client-dashboard', 'regional-dashboard'])
+                ->whereIn('adminTab', ['overview', 'tracking', 'kds', 'routes', 'skus', 'forms', 'merchandisers', 'supervisors', 'assets', 'notifications', 'settings', 'gallery', 'executive', 'perfect-store', 'category-kpi', 'user-performance', 'price-promo', 'supervisor-dashboard', 'client-dashboard', 'regional-dashboard', 'profile'])
                 ->name('tab');
             Route::get('/merchandisers', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'merchandisers'])->name('merchandisers');
             Route::post('/merchandisers/{user}/suspend', [\App\Http\Controllers\Merchandiser\MerchandiserAdminHubController::class, 'suspendMerchandiser'])->name('merchandisers.suspend');

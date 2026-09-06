@@ -967,13 +967,13 @@ class MerchandiserAdminHubController extends Controller
         $campaignOptions = $activeTab === 'forms'
             ? ($tenantMerchandiserIds->isEmpty() ? collect() : Campaign::orderBy('name')->get())
             : collect();
-        $perfectStoreGuides = [
+        $perfectStoreGuides = $tenantCode === 'unilever' ? [
             'SSM & LMT' => ['Skin Care horizontal/vertical standards', 'Comfort vertical/horizontal', 'OMO vertical/horizontal', 'Sunlight DWL vertical/horizontal', 'Bars visibility'],
             'LMT' => ['Wobbler', 'Shelf talker', 'Category divider', 'Gondola end', 'Parasite unit', 'Branded cart', 'FSU', 'Experience centre'],
             'SSM' => ['Wobbler', 'Shelf talker', 'Category divider', 'FSU'],
             'Cosmetics' => ['Body oils', 'Petroleum jelly', 'Lotions', 'Shelf branding', 'FSU', 'Countertop unit', 'Panel', 'Dangler', 'Poster'],
             'Pharmacy' => ['Oral care must-have SKUs', 'Skin cleansing must-have SKUs', 'Skin care must-have SKUs', 'Door cling', 'Dangler', 'FSU', 'Momo stand'],
-        ];
+        ] : [];
 
         // ── ShelfWatch: Image Gallery ───────────────────────────────────────────
         $hasCategoryImageTable = Schema::hasTable('merchandiser_visit_category_images');

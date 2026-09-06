@@ -40,6 +40,31 @@ class MerchandiserAdminHubRenderTest extends TestCase
         }
     }
 
+    #[Test]
+    public function guinness_admin_pages_keep_brand_specific_content(): void
+    {
+        $admin = User::factory()->create(['access_role' => 'super_admin', 'status' => 'active']);
+        foreach (['overview', 'tracking', 'kds', 'routes', 'skus', 'forms', 'merchandisers', 'supervisors', 'assets', 'notifications', 'gallery', 'profile', 'executive', 'category-kpi', 'user-performance', 'price-promo', 'supervisor-dashboard', 'client-dashboard'] as $tab) {
+            $response = $this->actingAs($admin)->get(route('merchandisers.admin.tab', [
+                'adminTab' => $tab, 'tenant' => 'ggbl',
+            ]));
+            $response->assertOk();
+            $response->assertDontSee('Unilever facings');
+            $response->assertDontSee('OMO vertical/horizontal');
+            if ($tab === 'forms') {
+                $response->assertSee('No standard reference guides configured for GGBL / Guinness');
+            }
+            if (in_array($tab, ['overview', 'tracking', 'kds', 'routes', 'merchandisers', 'supervisors'], true)) {
+                $response->assertSee('name="tenant" value="ggbl"', false);
+            }
+            if (in_array($tab, ['supervisors', 'user-performance'], true)) {
+                $response->assertSee(route('merchandisers.admin.tab', [
+                    'tenant' => 'ggbl', 'adminTab' => $tab, 'perf_period' => 'daily',
+                ]));
+            }
+        }
+    }
+
     public static function adminHubTabs(): array
     {
         return [

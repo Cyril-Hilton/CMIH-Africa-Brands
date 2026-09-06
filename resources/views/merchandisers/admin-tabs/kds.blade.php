@@ -189,6 +189,7 @@
                                     <p class="mt-1 text-xs text-slate-600 dark:text-slate-400 font-semibold">Admin-created coordinates are locked immediately. Staff-created outlets can be captured once by GPS, then only admins can correct them.</p>
                                 </div>
                                 <form method="GET" action="{{ route('merchandisers.admin.dashboard') }}" class="grid gap-2 sm:grid-cols-2">
+                                <input type="hidden" name="tenant" value="{{ $merchTenant['code'] }}">
                                     <input type="hidden" name="tab" value="kds">
                                     <input type="hidden" name="kd_subtab" value="outlets">
                                     <label class="flex flex-col gap-1">

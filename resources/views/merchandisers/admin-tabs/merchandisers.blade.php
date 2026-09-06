@@ -11,6 +11,7 @@
                             <option value="suspended">Suspended</option>
                         </select>
                         <form method="GET" action="{{ route('merchandisers.admin.dashboard') }}" class="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-2 shadow-sm">
+                                <input type="hidden" name="tenant" value="{{ $merchTenant['code'] }}">
                             <input type="hidden" name="tab" value="merchandisers">
                             <label class="sr-only" for="coverage_month">Coverage month</label>
                             <input id="coverage_month" type="month" name="coverage_month" value="{{ $coverageMonth }}"

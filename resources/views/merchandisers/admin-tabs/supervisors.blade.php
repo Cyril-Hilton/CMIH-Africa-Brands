@@ -25,9 +25,9 @@
                             </div>
                         </div>
                         <div class="mt-4 flex flex-wrap gap-2">
-                            <a href="{{ route('merchandisers.admin.tab', ['adminTab' => 'merchandisers']) }}" class="rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition">Manage Users</a>
-                            <a href="{{ route('merchandisers.admin.tab', ['adminTab' => 'tracking']) }}" class="rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition">Live Tracking</a>
-                            <a href="{{ route('merchandisers.admin.tab', ['adminTab' => 'routes']) }}" class="rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition">PJP Routes</a>
+                            <a href="{{ route('merchandisers.admin.tab', ['tenant' => $merchTenant['code'], 'adminTab' => 'merchandisers']) }}" class="rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition">Manage Users</a>
+                            <a href="{{ route('merchandisers.admin.tab', ['tenant' => $merchTenant['code'], 'adminTab' => 'tracking']) }}" class="rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition">Live Tracking</a>
+                            <a href="{{ route('merchandisers.admin.tab', ['tenant' => $merchTenant['code'], 'adminTab' => 'routes']) }}" class="rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition">PJP Routes</a>
                         </div>
                     </div>
 
@@ -164,6 +164,7 @@
                             </div>
 
                             <form method="GET" action="{{ route('merchandisers.admin.dashboard') }}" class="space-y-2">
+                                <input type="hidden" name="tenant" value="{{ $merchTenant['code'] }}">
                                 <input type="hidden" name="tab" value="supervisors">
                                 <label for="supervisor-role-search" class="sr-only">Search supervisor role management</label>
                                 <div class="flex flex-col gap-2 sm:flex-row">
@@ -172,7 +173,7 @@
                                     <div class="flex gap-2">
                                         <button type="submit" class="flex-1 rounded-xl bg-brand-red px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white hover:bg-red-700 transition shadow-sm sm:flex-none">Search</button>
                                         @if($supervisorRoleSearch !== '')
-                                            <a href="{{ route('merchandisers.admin.dashboard', ['tab' => 'supervisors']) }}" class="flex-1 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-4 py-2 text-center text-[10px] font-bold uppercase tracking-widest text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition sm:flex-none">Clear</a>
+                                            <a href="{{ route('merchandisers.admin.dashboard', ['tenant' => $merchTenant['code'], 'tab' => 'supervisors']) }}" class="flex-1 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-4 py-2 text-center text-[10px] font-bold uppercase tracking-widest text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition sm:flex-none">Clear</a>
                                         @endif
                                     </div>
                                 </div>
@@ -262,7 +263,7 @@
                             </div>
                             <div class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 overflow-x-auto">
                                 @foreach(['daily' => 'fa-calendar-day', 'weekly' => 'fa-calendar-week', 'monthly' => 'fa-chart-pie', 'yearly' => 'fa-trophy'] as $pKey => $pIcon)
-                                    <a href="{{ route('merchandisers.admin.tab', ['adminTab' => 'supervisors', 'perf_period' => $pKey]) }}"
+                                    <a href="{{ route('merchandisers.admin.tab', ['tenant' => $merchTenant['code'], 'adminTab' => 'supervisors', 'perf_period' => $pKey]) }}"
                                        class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 {{ $perfPeriod === $pKey ? 'bg-brand-red text-white shadow-sm' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700' }}">
                                         <i class="fa-solid {{ $pIcon }}" aria-hidden="true"></i> {{ ucfirst($pKey) }}
                                     </a>

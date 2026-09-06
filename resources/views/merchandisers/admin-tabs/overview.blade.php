@@ -10,6 +10,7 @@
                                 <p class="mt-1 text-sm font-bold text-slate-900 dark:text-white">{{ $clockRangeLabel ?? 'Today' }}</p>
                             </div>
                             <form method="GET" action="{{ route('merchandisers.admin.dashboard') }}" class="grid w-full gap-3 sm:grid-cols-[repeat(2,minmax(0,1fr))_auto_auto] lg:w-auto">
+                                <input type="hidden" name="tenant" value="{{ $merchTenant['code'] }}">
                                 <input type="hidden" name="tab" value="overview">
                                 <label class="block">
                                     <span class="text-[10px] uppercase tracking-wider text-slate-700 dark:text-slate-300 font-bold">From</span>
@@ -22,7 +23,7 @@
                                 <button type="submit" class="self-end rounded-xl bg-brand-red px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-white hover:bg-red-700 transition shadow-sm">
                                     Apply
                                 </button>
-                                <a href="{{ route('merchandisers.admin.dashboard', ['tab' => 'overview']) }}" data-silent-link class="self-end rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-4 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition">
+                                <a href="{{ route('merchandisers.admin.dashboard', ['tenant' => $merchTenant['code'], 'tab' => 'overview']) }}" data-silent-link class="self-end rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-4 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition">
                                     Clear
                                 </a>
                             </form>
@@ -1119,15 +1120,15 @@
                                             <span class="text-[10px] uppercase font-bold text-slate-700 dark:text-slate-300 tracking-wider">CSV Formats</span>
                                             <span class="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">.CSV</span>
                                         </div>
-                                        <a href="{{ route('merchandisers.admin.export', 'merchandisers') }}?format=csv" class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white transition group">
+                                        <a href="{{ route('merchandisers.admin.export', ['type' => 'merchandisers', 'tenant' => $merchTenant['code'], 'format' => 'csv']) }}" class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white transition group">
                                             <span><i class="fa-solid fa-user text-sky-500"></i> Merchandisers List</span>
                                             <span class="text-slate-400 group-hover:translate-x-0.5 transition-transform">↓</span>
                                         </a>
-                                        <a href="{{ route('merchandisers.admin.export', 'attendance') }}?format=csv" class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white transition group">
+                                        <a href="{{ route('merchandisers.admin.export', ['type' => 'attendance', 'tenant' => $merchTenant['code'], 'format' => 'csv']) }}" class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white transition group">
                                             <span><i class="fa-solid fa-calendar-days text-sky-400"></i> Attendance Logs</span>
                                             <span class="text-slate-400 group-hover:translate-x-0.5 transition-transform">↓</span>
                                         </a>
-                                        <a href="{{ route('merchandisers.admin.export', 'assets') }}?format=csv" class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white transition group">
+                                        <a href="{{ route('merchandisers.admin.export', ['type' => 'assets', 'tenant' => $merchTenant['code'], 'format' => 'csv']) }}" class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white transition group">
                                             <span><i class="fa-solid fa-folder text-indigo-500"></i> POSM &amp; Field Gear</span>
                                             <span class="text-slate-400 group-hover:translate-x-0.5 transition-transform">↓</span>
                                         </a>
@@ -1139,15 +1140,15 @@
                                             <span class="text-[10px] uppercase font-bold text-slate-700 dark:text-slate-300 tracking-wider">Excel Formats</span>
                                             <span class="text-[9px] font-bold text-sky-600 dark:text-sky-400 bg-sky-500/10 px-1.5 py-0.5 rounded">.XLSX</span>
                                         </div>
-                                        <a href="{{ route('merchandisers.admin.export', 'leaves') }}?format=excel" class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white transition group">
+                                        <a href="{{ route('merchandisers.admin.export', ['type' => 'leaves', 'tenant' => $merchTenant['code'], 'format' => 'excel']) }}" class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white transition group">
                                             <span><i class="fa-solid fa-calendar-minus text-amber-500"></i> Leave Applications</span>
                                             <span class="text-slate-400 group-hover:translate-x-0.5 transition-transform">↓</span>
                                         </a>
-                                        <a href="{{ route('merchandisers.admin.export', 'claims') }}?format=excel" class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white transition group">
+                                        <a href="{{ route('merchandisers.admin.export', ['type' => 'claims', 'tenant' => $merchTenant['code'], 'format' => 'excel']) }}" class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white transition group">
                                             <span><i class="fa-solid fa-money-bill-wave text-emerald-500"></i> Petty Cash Claims</span>
                                             <span class="text-slate-400 group-hover:translate-x-0.5 transition-transform">↓</span>
                                         </a>
-                                        <a href="{{ route('merchandisers.admin.export', 'loans') }}?format=excel" class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white transition group">
+                                        <a href="{{ route('merchandisers.admin.export', ['type' => 'loans', 'tenant' => $merchTenant['code'], 'format' => 'excel']) }}" class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white transition group">
                                             <span><i class="fa-solid fa-hand-holding-dollar text-amber-400"></i> Salary Advances</span>
                                             <span class="text-slate-400 group-hover:translate-x-0.5 transition-transform">↓</span>
                                         </a>
@@ -1159,15 +1160,15 @@
                                             <span class="text-[10px] uppercase font-bold text-slate-700 dark:text-slate-300 tracking-wider">PDF Formats</span>
                                             <span class="text-[9px] font-bold text-red-600 dark:text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded">.PDF</span>
                                         </div>
-                                        <a href="{{ route('merchandisers.admin.export', 'merchandisers') }}?format=pdf" class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white transition group">
+                                        <a href="{{ route('merchandisers.admin.export', ['type' => 'merchandisers', 'tenant' => $merchTenant['code'], 'format' => 'pdf']) }}" class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white transition group">
                                             <span><i class="fa-solid fa-file-lines text-slate-400"></i> Merchandisers Summary</span>
                                             <span class="text-slate-400 group-hover:translate-x-0.5 transition-transform">↓</span>
                                         </a>
-                                        <a href="{{ route('merchandisers.admin.export', 'attendance') }}?format=pdf" class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white transition group">
+                                        <a href="{{ route('merchandisers.admin.export', ['type' => 'attendance', 'tenant' => $merchTenant['code'], 'format' => 'pdf']) }}" class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white transition group">
                                             <span><i class="fa-solid fa-chart-pie text-sky-500"></i> Attendance PDF Report</span>
                                             <span class="text-slate-400 group-hover:translate-x-0.5 transition-transform">↓</span>
                                         </a>
-                                        <a href="{{ route('merchandisers.admin.export', 'assets') }}?format=pdf" class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white transition group">
+                                        <a href="{{ route('merchandisers.admin.export', ['type' => 'assets', 'tenant' => $merchTenant['code'], 'format' => 'pdf']) }}" class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white transition group">
                                             <span><i class="fa-solid fa-clipboard-list text-purple-500"></i> Field Gear Audit PDF</span>
                                             <span class="text-slate-400 group-hover:translate-x-0.5 transition-transform">↓</span>
                                         </a>
@@ -1196,7 +1197,7 @@
                                 @csrf
                                 <div>
                                     <label class="block text-[10px] uppercase font-bold tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Client Label / Description</label>
-                                    <input type="text" name="label" placeholder="e.g. Unilever Client Quarterly Review" required
+                                    <input type="text" name="label" placeholder="e.g. {{ $merchTenant['name'] }} Client Quarterly Review" required
                                         class="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs px-3.5 py-2.5 focus:border-[#0F0E9A] focus:ring-0 placeholder-slate-400 font-medium">
                                 </div>
 

@@ -5,6 +5,7 @@
                     @endphp
                     <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
                         <form method="GET" action="{{ route('merchandisers.admin.dashboard') }}" class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
+                                <input type="hidden" name="tenant" value="{{ $merchTenant['code'] }}">
                             <input type="hidden" name="tab" value="routes">
                             <p class="text-[10px] uppercase tracking-widest text-slate-900 dark:text-white font-extrabold">Route Assignment Window</p>
                             <div class="mt-3 grid gap-3 md:grid-cols-2">
@@ -82,6 +83,7 @@
                             </div>
                             <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
                                 <form method="GET" action="{{ route('merchandisers.admin.dashboard') }}" class="grid gap-2 sm:grid-cols-2">
+                                <input type="hidden" name="tenant" value="{{ $merchTenant['code'] }}">
                                     <input type="hidden" name="tab" value="routes">
                                     <label class="flex flex-col gap-1">
                                         <span class="text-[10px] uppercase tracking-widest text-slate-700 dark:text-slate-300 font-bold">Created From</span>
@@ -333,7 +335,7 @@
                                 <p class="text-xs uppercase tracking-widest text-slate-900 dark:text-white font-extrabold">Route Assignments</p>
                                 <p class="text-xs text-slate-600 dark:text-slate-400 font-semibold mt-1">Showing {{ $routeAssignments->firstItem() ?? 0 }}-{{ $routeAssignments->lastItem() ?? 0 }} of {{ $routeAssignmentsTotal }} rows for {{ $routeFrom->format('d M Y, H:i') }} to {{ $routeTo->format('d M Y, H:i') }}.</p>
                             </div>
-                            <a href="{{ route('merchandisers.admin.dashboard', ['tab' => 'merchandisers']) }}" class="rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition">Edit Targets</a>
+                            <a href="{{ route('merchandisers.admin.dashboard', ['tenant' => $merchTenant['code'], 'tab' => 'merchandisers']) }}" class="rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition">Edit Targets</a>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-sm min-w-[1020px]">

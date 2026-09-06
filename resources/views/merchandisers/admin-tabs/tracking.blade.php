@@ -8,6 +8,7 @@
                                 <p class="mt-1 text-xs text-slate-600 dark:text-slate-400 font-semibold">{{ count(array_filter($merchandiserLocations, fn($m) => $m['clocked_in'])) }} of {{ count($merchandiserLocations) }} agents clocked in for this range</p>
                             </div>
                             <form method="GET" action="{{ route('merchandisers.admin.dashboard') }}" class="grid w-full gap-3 sm:grid-cols-[repeat(2,minmax(0,1fr))_auto_auto] lg:w-auto">
+                                <input type="hidden" name="tenant" value="{{ $merchTenant['code'] }}">
                                 <input type="hidden" name="tab" value="tracking">
                                 <label class="block">
                                     <span class="text-[10px] uppercase tracking-wider text-slate-700 dark:text-slate-300 font-bold">From</span>
@@ -20,7 +21,7 @@
                                 <button type="submit" class="self-end rounded-xl bg-brand-red px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-white hover:bg-red-700 transition shadow-sm">
                                     Apply
                                 </button>
-                                <a href="{{ route('merchandisers.admin.dashboard', ['tab' => 'tracking']) }}" data-silent-link class="self-end rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-4 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition">
+                                <a href="{{ route('merchandisers.admin.dashboard', ['tenant' => $merchTenant['code'], 'tab' => 'tracking']) }}" data-silent-link class="self-end rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-4 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition">
                                     Clear
                                 </a>
                             </form>
