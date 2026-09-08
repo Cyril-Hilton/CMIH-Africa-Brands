@@ -33,6 +33,8 @@
         $scheduleAssignmentsByOutlet = $todaysAssignments->keyBy('outlet_id');
     @endphp
 
+    @include('merchandisers.partials.carryover-tasks')
+
     <!-- Timeline List -->
     <div class="merch-card divide-y divide-brand-white/10 overflow-hidden">
         @forelse($outlets as $index => $outlet)

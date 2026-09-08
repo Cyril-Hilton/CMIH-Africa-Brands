@@ -118,7 +118,7 @@
                                                             <span class="rounded-full border border-sky-400/40 bg-sky-100 dark:bg-sky-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-sky-800 dark:text-sky-200">Google</span>
                                                         @endif
                                                         @if($form->native_enabled)
-                                                            <span class="rounded-full border border-emerald-400/40 bg-emerald-100 dark:bg-emerald-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-200">Inbuilt</span>
+                                                            <span class="merch-badge-success rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">Inbuilt</span>
                                                         @endif
                                                     </div>
                                                 </td>

@@ -1333,7 +1333,7 @@
                                                                 {{ $form->brand?->name ?? 'Any brand' }} / {{ $form->campaign?->name ?? 'Any campaign' }} / {{ $form->category ?? 'Any category' }}
                                                             </p>
                                                         </div>
-                                                        <span class="rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider {{ $completed ? 'border-green-500/20 bg-green-500/10 text-green-300' : 'border-amber-500/20 bg-amber-500/10 text-amber-200' }}">{{ $nativeCompleted ? 'Inbuilt Done' : ($googleCompleted ? 'Google Done' : 'Pending') }}</span>
+                                                        <span class="rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider {{ $completed ? 'merch-badge-success' : 'merch-badge-pending' }}">{{ $nativeCompleted ? 'Inbuilt Done' : ($googleCompleted ? 'Google Done' : 'Pending') }}</span>
                                                     </div>
                                                     @if($form->description)
                                                         <p class="mt-2 text-xs leading-relaxed text-brand-white/50">{{ $form->description }}</p>

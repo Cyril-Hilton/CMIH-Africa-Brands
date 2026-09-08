@@ -379,8 +379,15 @@ class MerchandiserController extends Controller
             ? 'Today, '.$scheduleDate->format('d M Y')
             : $scheduleDate->format('l, d M Y');
 
-        $carriedOverAssignments = $routePlanner->processOutstandingCarryOver($user, Carbon::today($timezone));
+        $routePlanner->processOutstandingCarryOver($user, Carbon::today($timezone));
+        $carriedOverAssignments = $routePlanner->pendingCarryOvers($user, Carbon::today($timezone));
         $carriedOverCount = $carriedOverAssignments->count();
+        $carryOverOpenAttendance = MerchandiserAttendance::with('outlet')
+            ->where('user_id', $user->id)->whereNull('clock_out_time')
+            ->whereHas('routeAssignment', fn ($query) => $query
+                ->where('assigned_date', '<', Carbon::today($timezone)->toDateString())
+                ->where('status', '!=', MerchandiserOutletAssignment::STATUS_COLLAPSED))
+            ->first();
 
         $weekAssignments = $routePlanner->assignmentsForPeriod(
             $user,
@@ -675,7 +682,7 @@ class MerchandiserController extends Controller
             'pendingOutletsToday', 'pcmClockinToday', 'todaysAssignments',
             'googleForms', 'googleFormCompletionIds', 'nativeFormCompletionIds',
             'selectedDay', 'dayLabels', 'dayOutletCounts', 'currentIsoDay', 'dailyPerformanceChart', 'scheduleLabel',
-            'merchTenant', 'merchKpiRadarValues', 'merchKpiRadarTargets', 'configuredKpiTargets', 'homeChartDatasets', 'carriedOverCount', 'carriedOverAssignments'
+            'merchTenant', 'merchKpiRadarValues', 'merchKpiRadarTargets', 'configuredKpiTargets', 'homeChartDatasets', 'carriedOverCount', 'carriedOverAssignments', 'carryOverOpenAttendance'
         ));
     }
 
@@ -902,6 +909,33 @@ class MerchandiserController extends Controller
         Carbon $date,
         MerchandiserRoutePlanner $routePlanner
     ): array {
+        // An explicit pending task, or its open attendance, retains the original PJP date.
+        $activeAttendance = MerchandiserAttendance::where('user_id', $user->id)
+            ->where('outlet_id', $outlet->id)
+            ->whereNotNull('route_assignment_id')
+            ->whereNull('clock_out_time')
+            ->latest('clock_in_time')->first();
+        $requestedId = request()->input('carryover_assignment_id');
+        if ($requestedId !== null) {
+            abort_unless(is_scalar($requestedId) && ctype_digit((string) $requestedId), 403);
+        }
+        $assignmentId = $requestedId ?? $activeAttendance?->route_assignment_id;
+        if ($assignmentId) {
+            $assignment = MerchandiserOutletAssignment::where('user_id', $user->id)
+                ->where('outlet_id', $outlet->id)->lockForUpdate()->find($assignmentId);
+            abort_unless($assignment, 403, 'This PJP task is not assigned to you at this outlet.');
+            $isPending = in_array($assignment->status, [MerchandiserOutletAssignment::STATUS_CARRY_OVER, 'carried_over'], true)
+                && ! $assignment->visit_id && ! $assignment->completed_at;
+            $isActive = (int) $activeAttendance?->route_assignment_id === (int) $assignment->id;
+            if ($requestedId !== null) {
+                abort_unless($assignment->assigned_date->lt($date->copy()->startOfDay())
+                    && ($isPending || ($isActive && $assignment->status === MerchandiserOutletAssignment::STATUS_COMPLETED)),
+                    403, 'This carryover task is no longer pending.');
+            }
+            $this->abortIfRouteAssignmentBlocked($assignment);
+            return [true, $assignment];
+        }
+
         if (! $routePlanner->outletIsScheduledForDate($user, $outlet, $date->copy())) {
             return [true, null];
         }
@@ -932,15 +966,22 @@ class MerchandiserController extends Controller
             abort(403, 'AccessDenied: This PJP has been collapsed by Admin and is not available for field execution.');
         }
 
-        if (in_array($status, [MerchandiserOutletAssignment::STATUS_CARRY_OVER, 'carried_over'], true)) {
-            abort(403, 'AccessDenied: This outlet remains on its original PJP day as carry-over. It cannot be executed under a different day route.');
-        }
+    }
+
+    private function isCarryOverVisit(?MerchandiserOutletAssignment $assignment, Carbon $date): bool
+    {
+        return $assignment && $assignment->assigned_date->lt($date->copy()->startOfDay());
     }
 
     /**
      * Handle Clock-In
      */
     public function clockIn(Request $request, MerchandiserRoutePlanner $routePlanner)
+    {
+        return DB::transaction(fn () => $this->persistClockIn($request, $routePlanner));
+    }
+
+    private function persistClockIn(Request $request, MerchandiserRoutePlanner $routePlanner)
     {
         $user = $request->user();
         $request->validate([
@@ -987,13 +1028,19 @@ class MerchandiserController extends Controller
 
         $visitWindow = MerchandiserClockWindows::visitWindow($timezone, $effectiveLocalTime->copy());
 
-        if ($effectiveLocalTime->lt($visitWindow['start_at']) || $effectiveLocalTime->gt($visitWindow['end_at'])) {
+        $isCarryOver = $this->isCarryOverVisit($routeAssignment, $effectiveLocalTime);
+        if ($isCarryOver) {
+            abort_unless(in_array($routeAssignment->status, [MerchandiserOutletAssignment::STATUS_CARRY_OVER, 'carried_over'], true)
+                && ! $routeAssignment->visit_id && ! $routeAssignment->completed_at, 403, 'This carryover task is no longer pending.');
+        }
+        if (! $isCarryOver && ($effectiveLocalTime->lt($visitWindow['start_at']) || $effectiveLocalTime->gt($visitWindow['end_at']))) {
             abort(403, 'AccessDenied: Window Closed. Outlet clock-in is open from ' .
                 $visitWindow['start_at']->format('g:i A') . ' to ' . $visitWindow['end_at']->format('g:i A') . '.');
         }
 
         $alreadyClocked = MerchandiserAttendance::where('user_id', $user->id)
             ->where('outlet_id', $outlet->id)
+            ->when($isCarryOver, fn ($query) => $query->where('route_assignment_id', $routeAssignment->id))
             ->whereBetween('clock_in_time', [
                 $effectiveLocalTime->copy()->startOfDay(),
                 $effectiveLocalTime->copy()->endOfDay(),
@@ -1012,7 +1059,6 @@ class MerchandiserController extends Controller
         // Field Agent MUST clock out of any open active outlet visit before clocking into a new outlet.
         $openActiveAttendance = MerchandiserAttendance::where('user_id', $user->id)
             ->whereNull('clock_out_time')
-            ->where('outlet_id', '!=', $outlet->id)
             ->latest('clock_in_time')
             ->first();
 
@@ -1045,6 +1091,7 @@ class MerchandiserController extends Controller
         $attendance = MerchandiserAttendance::create([
             'user_id' => $user->id,
             'outlet_id' => $outlet->id,
+            'route_assignment_id' => $routeAssignment?->id,
             'clock_in_type' => 'outlet',
             'clock_in_time' => $clientRecordedAt ?: now(),
             'client_recorded_at' => $clientRecordedAt,
@@ -1069,7 +1116,10 @@ class MerchandiserController extends Controller
             'recorded_at' => now()
         ]);
 
-        return redirect()->route('merchandisers.dashboard')->with('status', 'Outlet clock-in recorded for ' . $outlet->name . '. Complete the Perfect Store entry, then clock out.');
+        return ($isCarryOver
+            ? redirect()->route('merchandisers.visit', ['outlet' => $outlet, 'carryover_assignment_id' => $routeAssignment->id])
+            : redirect()->route('merchandisers.dashboard'))
+            ->with('status', 'Outlet clock-in recorded for ' . $outlet->name . '. Complete the Perfect Store entry, then clock out.');
     }
 
     /**
@@ -1109,10 +1159,12 @@ class MerchandiserController extends Controller
 
         $attendance = MerchandiserAttendance::where('user_id', $user->id)
             ->where('outlet_id', $outlet->id)
-            ->whereBetween('clock_in_time', [
+            ->when($this->isCarryOverVisit($routeAssignment, $effectiveLocalTime),
+                fn ($query) => $query->where('route_assignment_id', $routeAssignment->id),
+                fn ($query) => $query->whereBetween('clock_in_time', [
                 $effectiveLocalTime->copy()->startOfDay(),
                 $effectiveLocalTime->copy()->endOfDay(),
-            ])
+            ]))
             ->whereNull('clock_out_time')
             ->latest('clock_in_time')
             ->first();
@@ -1123,10 +1175,12 @@ class MerchandiserController extends Controller
 
         $hasScoredVisit = MerchandiserVisit::where('user_id', $user->id)
             ->where('outlet_id', $outlet->id)
-            ->whereBetween('created_at', [
+            ->when($this->isCarryOverVisit($routeAssignment, $effectiveLocalTime),
+                fn ($query) => $query->where('route_assignment_id', $routeAssignment->id),
+                fn ($query) => $query->whereBetween('created_at', [
                 $effectiveLocalTime->copy()->startOfDay(),
                 $effectiveLocalTime->copy()->endOfDay(),
-            ])
+            ]))
             ->exists();
 
         if (! $hasScoredVisit) {
@@ -1313,6 +1367,10 @@ class MerchandiserController extends Controller
         $perfectStoreGuide = $this->perfectStoreGuideForChannel($outlet->channel_type);
         $aiCaptureCategories = $this->requiredAiCaptureCategories();
 
+        $isCarryOver = $this->isCarryOverVisit($routeAssignment, $today);
+        $carryOverAttendance = $isCarryOver ? MerchandiserAttendance::where('user_id', $user->id)
+            ->where('route_assignment_id', $routeAssignment->id)->whereNull('clock_out_time')->first() : null;
+
         return view('merchandisers.visit', compact(
             'outlet',
             'skus',
@@ -1321,7 +1379,7 @@ class MerchandiserController extends Controller
             'nativeFormCompletionIds',
             'planograms',
             'perfectStoreGuide',
-            'aiCaptureCategories'
+            'aiCaptureCategories', 'routeAssignment', 'isCarryOver', 'carryOverAttendance'
         ));
     }
 
@@ -1428,6 +1486,12 @@ class MerchandiserController extends Controller
      */
     public function storeVisit(Request $request, Outlet $outlet, MerchandiserRoutePlanner $routePlanner)
     {
+        // Serialize completion of a selected carryover so retries cannot create two visits.
+        return DB::transaction(fn () => $this->persistStoreVisit($request, $outlet, $routePlanner));
+    }
+
+    private function persistStoreVisit(Request $request, Outlet $outlet, MerchandiserRoutePlanner $routePlanner)
+    {
         $user = $request->user();
         if (! $this->canServiceOutlet($user, $outlet)) {
             abort(403);
@@ -1532,8 +1596,15 @@ class MerchandiserController extends Controller
 
         $hasOutletClockIn = MerchandiserAttendance::where('user_id', $user->id)
             ->where('outlet_id', $outlet->id)
-            ->whereBetween('clock_in_time', [$visitDate->copy()->startOfDay(), $visitDate->copy()->endOfDay()])
+            ->when($this->isCarryOverVisit($routeAssignment, $visitDate),
+                fn ($query) => $query->where('route_assignment_id', $routeAssignment->id)->whereNull('clock_out_time'),
+                fn ($query) => $query->whereBetween('clock_in_time', [$visitDate->copy()->startOfDay(), $visitDate->copy()->endOfDay()]))
             ->exists();
+
+        if ($this->isCarryOverVisit($routeAssignment, $visitDate) && $routeAssignment->visit_id) {
+            return redirect()->route('merchandisers.visit', ['outlet' => $outlet, 'carryover_assignment_id' => $routeAssignment->id])
+                ->with('status', 'This carryover visit has already been submitted. Clock out to finish.');
+        }
 
         if (! $hasOutletClockIn) {
             return redirect()
@@ -1686,6 +1757,15 @@ class MerchandiserController extends Controller
 
         $this->storeVisitCategoryImages($request, $visit, $outlet, $user, $categoryPredictions, $skuEntryMode);
 
+        if ($this->isCarryOverVisit($routeAssignment, $visitDate)) {
+            $routeAssignment->update([
+                'status' => MerchandiserOutletAssignment::STATUS_COMPLETED,
+                'visit_id' => $visit->id,
+                'completed_at' => now(),
+            ]);
+            return redirect()->route('merchandisers.visit', ['outlet' => $outlet, 'carryover_assignment_id' => $routeAssignment->id])
+                ->with('status', 'Carryover visit submitted successfully. Clock out to finish.');
+        }
         $routePlanner->markCompleted($user, $outlet->id, $visitDate->copy(), $visit->id);
 
         return redirect()->route('merchandisers.dashboard')->with('status', 'Visit report and orders for ' . $outlet->name . ' submitted successfully!');
@@ -1737,7 +1817,7 @@ class MerchandiserController extends Controller
             ]
         );
 
-        if ($outlet) {
+        if ($outlet && ! $this->isCarryOverVisit($routeAssignment, Carbon::today($user->merchandiserRegion->timezone ?? 'Africa/Accra'))) {
             $routePlanner->markCompleted(
                 $user,
                 $outlet->id,
@@ -1869,7 +1949,7 @@ class MerchandiserController extends Controller
             ]
         );
 
-        if ($outlet) {
+        if ($outlet && ! $this->isCarryOverVisit($routeAssignment, Carbon::today($user->merchandiserRegion->timezone ?? 'Africa/Accra'))) {
             $routePlanner->markCompleted(
                 $user,
                 $outlet->id,

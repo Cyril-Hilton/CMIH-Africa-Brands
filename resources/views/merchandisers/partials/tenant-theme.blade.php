@@ -767,6 +767,16 @@
     }
 
     @layer theme {
+    html[data-merch-tenant] .merch-badge-success {
+        color: #065F46 !important;
+        background-color: #D1FAE5 !important;
+        border-color: #6EE7B7 !important;
+    }
+    html[data-merch-tenant] .merch-badge-pending {
+        color: #92400E !important;
+        background-color: #FEF3C7 !important;
+        border-color: #FCD34D !important;
+    }
     html[data-merch-tenant="ggbl"] main :is(input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), select, textarea) {
         background-color: #1A1A1A !important;
         color: #FFFFFF !important;

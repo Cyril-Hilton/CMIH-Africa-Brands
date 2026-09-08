@@ -13,7 +13,7 @@ class MerchandiserAttendance extends Model
     protected $table = 'merchandiser_attendances';
 
     protected $fillable = [
-        'user_id', 'outlet_id', 'clock_in_type', 'clock_in_time', 'clock_out_time',
+        'user_id', 'outlet_id', 'route_assignment_id', 'clock_in_type', 'clock_in_time', 'clock_out_time',
         'client_recorded_at', 'sync_token', 'sync_source', 'synced_at',
         'latitude', 'longitude', 'distance_from_outlet',
         'clock_out_latitude', 'clock_out_longitude', 'clock_out_distance_from_outlet',
@@ -42,5 +42,10 @@ class MerchandiserAttendance extends Model
     public function outlet(): BelongsTo
     {
         return $this->belongsTo(Outlet::class);
+    }
+
+    public function routeAssignment(): BelongsTo
+    {
+        return $this->belongsTo(MerchandiserOutletAssignment::class, 'route_assignment_id');
     }
 }

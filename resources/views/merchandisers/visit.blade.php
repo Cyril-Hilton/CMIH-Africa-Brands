@@ -2,6 +2,7 @@
     $merchTenant = \App\Support\MerchandiserTenant::theme(
         \App\Support\MerchandiserTenant::forUser(auth()->user(), request())
     );
+    $visitStep = $isCarryOver && ! $carryOverAttendance ? 2 : ($isCarryOver && $routeAssignment->completed_at ? 7 : 4);
 @endphp
 <!DOCTYPE html>
 <html lang="en" class="{{ $merchTenant['code'] === 'unilever' ? '' : 'dark' }}" data-theme="{{ $merchTenant['code'] === 'unilever' ? 'light' : 'dark' }}" data-merch-tenant="{{ $merchTenant['code'] }}">
@@ -23,7 +24,7 @@
     <header class="merch-workspace-header border-b backdrop-blur-xl sticky top-0 z-40">
         <!-- Step progress bar -->
         <div class="w-full h-1 bg-brand-white/10">
-            <div class="h-full bg-brand-red transition-all duration-500" style="width: 57%"></div><!-- Step 4 of 7 ≈ 57% -->
+            <div class="h-full bg-brand-red transition-all duration-500" style="width: {{ round($visitStep / 7 * 100) }}%"></div>
         </div>
         <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
             <a href="{{ route('merchandisers.dashboard') }}" class="text-xs text-brand-white/60 hover:text-brand-white font-bold flex items-center gap-1.5 transition-all shrink-0">
@@ -42,11 +43,11 @@
                 ] as $step)
                     <div class="flex items-center gap-1 shrink-0">
                         <span class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold
-                            {{ $step['n'] < 4 ? 'bg-emerald-500 text-white' : ($step['n'] === 4 ? 'bg-brand-red text-white ring-2 ring-brand-red/30' : 'bg-brand-white/10 text-brand-ash') }}">
-                            {{ $step['n'] < 4 ? '✓' : $step['n'] }}
+                            {{ $step['n'] < $visitStep ? 'bg-emerald-500 text-white' : ($step['n'] === $visitStep ? 'bg-brand-red text-white ring-2 ring-brand-red/30' : 'bg-brand-white/10 text-brand-ash') }}">
+                            {{ $step['n'] < $visitStep ? '✓' : $step['n'] }}
                         </span>
                         <span class="text-[9px] font-semibold hidden sm:inline
-                            {{ $step['n'] < 4 ? 'text-emerald-400' : ($step['n'] === 4 ? 'text-brand-white' : 'text-brand-ash') }}">
+                            {{ $step['n'] < $visitStep ? 'text-emerald-400' : ($step['n'] === $visitStep ? 'text-brand-white' : 'text-brand-ash') }}">
                             {{ $step['label'] }}
                         </span>
                         @if($step['n'] < 7)
@@ -66,11 +67,12 @@
             <span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-brand-red/10 text-brand-red border border-brand-red/20">{{ $outlet->channel_type }}</span>
             <span class="text-sm font-bold text-brand-white truncate">{{ $outlet->name }}</span>
             <span class="text-[10px] text-brand-ash truncate">{{ $outlet->code }}</span>
-            <span class="ml-auto text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-2 py-0.5">Active Visit</span>
+            <span class="ml-auto text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-2 py-0.5">{{ $isCarryOver && ! $carryOverAttendance ? 'Awaiting clock-in' : 'Active Visit' }}</span>
         </div>
         <script>
             (function() {
-                const startTime = Date.now();
+                if (@js($isCarryOver && ! $carryOverAttendance)) return;
+                const startTime = @js($carryOverAttendance?->clock_in_time?->getTimestampMs()) || Date.now();
                 const el = document.getElementById('visit-timer');
                 if (!el) return;
                 setInterval(() => {
@@ -85,10 +87,55 @@
 
 
     <main class="max-w-4xl mx-auto px-4 py-6">
+        @if($isCarryOver)
+            <section class="merch-card rounded-lg p-4 mb-6 space-y-3">
+                <h1 class="text-xl font-bold text-brand-white">Carryover Visit</h1>
+                <p class="text-sm text-brand-ash">Original PJP: {{ $routeAssignment->assigned_date->format('l, d M Y') }}</p>
+                @if(session('status'))
+                    <p class="text-sm text-brand-white" role="status">{{ session('status') }}</p>
+                @endif
+                @if($errors->any())
+                    <ul class="text-sm text-brand-white" role="alert">
+                        @foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach
+                    </ul>
+                @endif
+                @if(! $carryOverAttendance || $routeAssignment->completed_at)
+                    <form method="POST" action="{{ route($carryOverAttendance ? 'merchandisers.clock-out' : 'merchandisers.clock-in') }}"
+                          x-data="{ busy: false, error: '' }"
+                          @submit.prevent="
+                            if (busy) return;
+                            error = '';
+                            if (!navigator.geolocation) { error = 'Location access is unavailable on this device.'; return; }
+                            busy = true;
+                            navigator.geolocation.getCurrentPosition(position => {
+                                $refs.latitude.value = position.coords.latitude;
+                                $refs.longitude.value = position.coords.longitude;
+                                $el.submit();
+                            }, () => { busy = false; error = 'Allow location access and try again while at the outlet.'; },
+                            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });">
+                        @csrf
+                        <input type="hidden" name="outlet_id" value="{{ $outlet->id }}">
+                        <input type="hidden" name="carryover_assignment_id" value="{{ $routeAssignment->id }}">
+                        <input type="hidden" name="latitude" x-ref="latitude">
+                        <input type="hidden" name="longitude" x-ref="longitude">
+                        <button type="submit" :disabled="busy" class="merch-primary-button rounded-lg px-5 py-3 font-bold">
+                            <span x-show="!busy">{{ $carryOverAttendance ? 'Clock Out' : 'Clock In to Outlet' }}</span>
+                            <span x-show="busy" x-cloak>Getting location...</span>
+                        </button>
+                        <p x-show="error" x-text="error" role="alert" class="mt-2 text-sm text-brand-white"></p>
+                    </form>
+                @endif
+            </section>
+        @endif
+
+        @if(! $isCarryOver || ($carryOverAttendance && ! $routeAssignment->completed_at))
         
         <form method="POST" action="{{ route('merchandisers.visit.store', $outlet) }}" enctype="multipart/form-data" class="space-y-6" data-offline-sync-form="perfect_store_visit"
             x-data="skuAiVisitForm('{{ route('merchandisers.visit.ai-detect', $outlet) }}', '{{ old('sku_entry_mode', 'manual') }}', @js($aiCaptureCategories ?? []))">
             @csrf
+            @if($isCarryOver)
+                <input type="hidden" name="carryover_assignment_id" value="{{ $routeAssignment->id }}">
+            @endif
             <input type="hidden" name="client_recorded_at" value="{{ old('client_recorded_at') }}">
             <input type="hidden" name="sync_token" value="{{ old('sync_token') }}">
             <input type="hidden" name="sync_source" value="{{ old('sync_source', 'live') }}">
@@ -184,7 +231,7 @@
                                             <p class="mt-1 text-xs text-brand-white/50">{{ $form->description }}</p>
                                         @endif
                                     </div>
-                                    <span class="rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider {{ $completed ? 'border-green-500/20 bg-green-500/10 text-green-300' : 'border-amber-500/20 bg-amber-500/10 text-amber-200' }}">{{ $nativeCompleted ? 'Inbuilt Done' : ($googleCompleted ? 'Google Done' : 'Pending') }}</span>
+                                    <span class="rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider {{ $completed ? 'merch-badge-success' : 'merch-badge-pending' }}">{{ $nativeCompleted ? 'Inbuilt Done' : ($googleCompleted ? 'Google Done' : 'Pending') }}</span>
                                 </div>
                                 <div class="mt-3 flex flex-wrap gap-2">
                                     @if($form->google_enabled && $form->google_form_url)
@@ -527,6 +574,7 @@
             </form>
         @endforeach
 
+        @endif
     </main>
 
     <script>

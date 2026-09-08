@@ -17,12 +17,14 @@
                 </svg>
                 <div class="min-w-0 flex-1">
                     <p class="text-xs font-bold uppercase tracking-wider">⚠️ Outstanding Outlets Carried Over</p>
-                    <p class="mt-0.5 text-xs text-amber-200/90">You have <strong>{{ $carriedOverCount }}</strong> uncompleted outlet visit(s) automatically carried over to today's schedule.</p>
+                    <p class="mt-0.5 text-xs text-amber-200/90">You have <strong>{{ $carriedOverCount }}</strong> pending carryover visit(s) from earlier PJP dates.</p>
                 </div>
                 <button type="button" @click="activeTab = 'schedule'" class="rounded-lg bg-amber-500/20 px-3 py-1.5 text-xs font-bold text-amber-200 hover:bg-amber-500/30">View Schedule</button>
             </div>
         </div>
     @endif
+
+    @include('merchandisers.partials.carryover-tasks')
 
     <div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_19rem]">
         <div class="min-w-0 space-y-5">

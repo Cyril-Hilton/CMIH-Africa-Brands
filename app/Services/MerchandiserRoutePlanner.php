@@ -177,6 +177,19 @@ class MerchandiserRoutePlanner
         );
     }
 
+    public function pendingCarryOvers(User $user, Carbon $date): EloquentCollection
+    {
+        return MerchandiserOutletAssignment::with('outlet')
+            ->where('user_id', $user->id)
+            ->whereIn('outlet_id', $this->routeableOutletsFor($user)->pluck('id'))
+            ->where('assigned_date', '<', $date->toDateString())
+            ->whereIn('status', [MerchandiserOutletAssignment::STATUS_CARRY_OVER, 'carried_over'])
+            ->whereNull('visit_id')
+            ->whereNull('completed_at')
+            ->orderBy('assigned_date')->orderBy('sequence')->orderBy('id')
+            ->get();
+    }
+
     public function assignmentsForPeriod(User $user, Carbon $start, Carbon $end): EloquentCollection
     {
         $this->ensurePeriod($user, $start, $end);
