@@ -21,7 +21,15 @@
         'Outlet' => collect($perfectStoreSummary['outlets'] ?? []),
         'Category' => collect($perfectStoreSummary['categories'] ?? []),
     ];
-    $drillUrl = function (string $level, array $row) use ($activeAdminTab, $merchTenant) {
+    $isClientPerformance = $clientWorkspace ?? false;
+    $performanceUrl = $isClientPerformance
+        ? route('merchandisers.client.dashboard', ['view' => $clientView, 'tenant' => $merchTenant['code']])
+        : route('merchandisers.admin.tab', ['adminTab' => $activeAdminTab, 'tenant' => $merchTenant['code']]);
+    $selectedLevel = request('performance_level');
+    if ($isClientPerformance && isset($hierarchyGroups[$selectedLevel])) {
+        $hierarchyGroups = [$selectedLevel => $hierarchyGroups[$selectedLevel]];
+    }
+    $drillUrl = function (string $level, array $row) use ($activeAdminTab, $merchTenant, $isClientPerformance, $clientView) {
         $query = request()->query();
         $query['tenant'] = $merchTenant['code'];
         $id = $row['id'] ?? null;
@@ -44,14 +52,28 @@
             $query['performance_category'] = $row['name'];
         }
 
+        if ($isClientPerformance) {
+            $query['view'] = $clientView;
+            unset($query['performance_level']);
+            return route('merchandisers.client.dashboard', $query).'#client-performance';
+        }
         return route('merchandisers.admin.tab', ['adminTab' => $activeAdminTab]).'?'.http_build_query($query);
     };
 @endphp
 
 @if(in_array($activeAdminTab, $performanceTabs, true))
     <div class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-5 shadow-sm space-y-4">
-        <form method="GET" action="{{ route('merchandisers.admin.tab', ['adminTab' => $activeAdminTab, 'tenant' => $merchTenant['code']]) }}" class="grid gap-3 lg:grid-cols-9">
+        @if($isClientPerformance && isset($hierarchyGroups[$selectedLevel]))
+            <h2 class="text-lg font-bold">{{ $selectedLevel }} Performance</h2>
+        @endif
+        <form method="GET" action="{{ $performanceUrl }}" class="grid gap-3 lg:grid-cols-9" @if($isClientPerformance) data-no-silent @endif>
             <input type="hidden" name="tenant" value="{{ $merchTenant['code'] }}">
+            @if($isClientPerformance)
+                <input type="hidden" name="view" value="{{ $clientView }}">
+                @if(isset($hierarchyGroups[$selectedLevel]))
+                    <input type="hidden" name="performance_level" value="{{ $selectedLevel }}">
+                @endif
+            @endif
             <label class="space-y-1 lg:col-span-1">
                 <span class="text-[10px] uppercase tracking-widest text-slate-600 dark:text-slate-400 font-bold">Region</span>
                 <select name="performance_region_id" class="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-xs text-slate-900 dark:text-white font-semibold">
@@ -128,7 +150,7 @@
             </label>
             <div class="flex gap-2 lg:col-span-9">
                 <button type="submit" class="rounded-xl bg-brand-red px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-white hover:bg-red-700 transition">Apply Filters</button>
-                <a href="{{ route('merchandisers.admin.tab', ['adminTab' => $activeAdminTab, 'tenant' => $merchTenant['code']]) }}" class="rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition">Reset</a>
+                <a href="{{ $performanceUrl }}" class="rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition">Reset</a>
             </div>
         </form>
 
@@ -147,7 +169,7 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                     @foreach($hierarchyGroups as $level => $rows)
-                        @forelse($rows->take(4) as $row)
+                        @forelse(($isClientPerformance ? $rows : $rows->take(4)) as $row)
                             <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
                                 <td class="py-3 pr-3 font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{{ $level }}</td>
                                 <td class="py-3 pr-3 font-bold text-slate-900 dark:text-white">
@@ -160,6 +182,9 @@
                                 <td class="py-3 px-2 text-right font-bold text-amber-700 dark:text-amber-300">{{ number_format((int) ($row['collapsed'] ?? 0)) }}</td>
                             </tr>
                         @empty
+                            @if($isClientPerformance)
+                                <tr><td colspan="12" class="py-4 text-sm">No {{ strtolower($level) }} performance data for the selected filters.</td></tr>
+                            @endif
                         @endforelse
                     @endforeach
                 </tbody>

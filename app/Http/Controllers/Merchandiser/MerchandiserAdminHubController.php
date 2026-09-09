@@ -1466,8 +1466,10 @@ class MerchandiserAdminHubController extends Controller
     public function clientDashboard(Request $request)
     {
         $this->guardRoleDashboard('client');
+        $view = $request->query('view', 'executive');
+        abort_unless(in_array($view, ['executive', 'category-kpi', 'user-performance', 'price-promo'], true), 404);
 
-        return $this->dashboard($request, 'client-dashboard', true);
+        return $this->dashboard($request, $view, true);
     }
 
     public function overviewChartPeriod(Request $request, string $period)

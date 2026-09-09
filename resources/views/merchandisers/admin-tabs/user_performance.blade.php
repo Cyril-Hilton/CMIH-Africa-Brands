@@ -11,7 +11,7 @@
                             </div>
                             <div class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 overflow-x-auto">
                                 @foreach(['daily' => 'fa-calendar-day', 'weekly' => 'fa-calendar-week', 'monthly' => 'fa-chart-pie', 'yearly' => 'fa-trophy'] as $pKey => $pIcon)
-                                    <a href="{{ route('merchandisers.admin.tab', ['tenant' => $merchTenant['code'], 'adminTab' => 'user-performance', 'perf_period' => $pKey]) }}"
+                                    <a href="{{ $adminTabUrl('user-performance', ['perf_period' => $pKey]) }}"
                                        class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 {{ $perfPeriod === $pKey ? 'bg-brand-red text-white shadow-sm' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700' }}">
                                         <i class="fa-solid {{ $pIcon }}" aria-hidden="true"></i> {{ ucfirst($pKey) }}
                                     </a>

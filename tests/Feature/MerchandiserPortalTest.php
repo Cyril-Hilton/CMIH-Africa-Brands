@@ -756,7 +756,7 @@ class MerchandiserPortalTest extends TestCase
         $this->actingAs($client)
             ->get(route('merchandisers.client.dashboard'))
             ->assertOk()
-            ->assertSee('Client Score');
+            ->assertSee('Executive Performance Summary');
         $this->actingAs($client)
             ->get(route('merchandisers.supervisor.dashboard'))
             ->assertForbidden();

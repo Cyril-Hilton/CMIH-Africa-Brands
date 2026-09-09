@@ -8,15 +8,24 @@
 <head>
     @php
         $activeAdminTab = $activeTab ?? request('tab', 'overview');
+        $clientWorkspace = auth()->user()->isMerchandiserClient()
+            || request()->routeIs('merchandisers.client.*') || $activeAdminTab === 'client-dashboard';
+        $clientView = $activeAdminTab === 'client-dashboard' ? 'executive' : $activeAdminTab;
+        $clientNavUrl = fn (string $view, array $params = []) => route('merchandisers.client.dashboard', array_merge(
+            request()->only(['performance_region_id', 'performance_kd_id', 'performance_supervisor_id', 'performance_merchandiser_id', 'performance_outlet_id', 'performance_channel', 'performance_category', 'clock_from', 'clock_to', 'perf_period']),
+            ['tenant' => $merchTenant['code'], 'view' => $view === 'client-dashboard' ? 'executive' : $view], $params));
         $adminTabUrl = fn (string $tab, array $params = []) => route('merchandisers.admin.tab', array_merge([
             'adminTab' => $tab,
             'tenant' => $merchTenant['code'],
         ], $params));
+        if ($clientWorkspace) {
+            $adminTabUrl = $clientNavUrl;
+        }
     @endphp
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $merchTenant['name'] }} Admin Hub | CMIH Africa</title>
+    <title>{{ $merchTenant['name'] }} {{ $clientWorkspace ? 'Client Portal' : 'Admin Hub' }} | CMIH Africa</title>
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/logo/favicon.png') }}">
     <link rel="apple-touch-icon" sizes="192x192" href="{{ asset('images/logo/icon-192.png') }}">
@@ -702,7 +711,7 @@
                     <form method="POST" action="{{ route('merchandisers.profile.photo.update') }}" enctype="multipart/form-data" class="relative group my-1">
                         @csrf
                         <div class="relative mx-auto h-20 w-20 shrink-0 overflow-hidden rounded-full border-2 border-white/50 shadow-xl transition-transform group-hover:scale-105 cursor-pointer"
-                             @click="window.location.href = @js($adminTabUrl('profile'))">
+                             @if(! $clientWorkspace) @click="window.location.href = @js($adminTabUrl('profile'))" @endif>
                             <img src="{{ auth()->user()->profilePhotoUrl() }}"
                                  alt="{{ auth()->user()->name }}"
                                  onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ urlencode(auth()->user()->name ?: 'User') }}&color=FFFFFF&background={{ ltrim($merchTenant['primary'] ?? '0F0E9A', '#') }}&bold=true';"
@@ -715,7 +724,7 @@
                         </label>
                     </form>
                     <h3 class="mt-2.5 text-sm font-extrabold text-white truncate max-w-[200px] leading-tight cursor-pointer hover:text-sky-300 transition"
-                        @click="window.location.href = @js($adminTabUrl('profile'))">
+                        @if(! $clientWorkspace) @click="window.location.href = @js($adminTabUrl('profile'))" @endif>
                         {{ auth()->user()->name }}
                     </h3>
                     <div class="mt-1.5 flex items-center justify-center">
@@ -734,6 +743,15 @@
 
             <!-- Navigation Container -->
             <nav class="px-3 py-2 space-y-1 shrink-0">
+                @if($clientWorkspace)
+                    <p class="px-3 py-2 text-[9px] font-extrabold uppercase tracking-widest text-white/50">Reports &amp; Analytics</p>
+                    @foreach(['executive' => ['Executive Summary', 'fa-chart-simple'], 'category-kpi' => ['Category KPIs', 'fa-chart-pie'], 'user-performance' => ['User Performance', 'fa-chart-column'], 'price-promo' => ['Price & Promo', 'fa-coins']] as $view => [$label, $icon])
+                        <a href="{{ $clientNavUrl($view) }}" @click="sidebarOpen = false" data-client-navigation @if($clientView === $view) aria-current="page" @endif
+                           class="nav-item flex items-center gap-3 rounded-lg px-3.5 py-3 text-xs font-bold text-white {{ $clientView === $view ? 'active bg-white/15' : 'hover:bg-white/10' }}">
+                            <i class="fa-solid {{ $icon }}" aria-hidden="true"></i><span>{{ $label }}</span>
+                        </a>
+                    @endforeach
+                @else
                 @if(auth()->user()->isMerchandiserSupervisor() || auth()->user()->isMerchandiserClient())
                     <div class="px-3 pb-1.5 pt-2">
                         <p class="text-[9px] font-extrabold uppercase tracking-[0.25em] text-white/50">Workspace</p>
@@ -911,6 +929,7 @@
                         <span class="truncate">Client / TM Dashboard</span>
                     </button>
                 @endif
+                @endif
             </nav>
 
             <!-- Bottom Logout Footer -->
@@ -962,7 +981,7 @@
                             <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Live System
                         </span>
                         <!-- Pending badge -->
-                        @if(($totalPending ?? 0) > 0)
+                        @if(! $clientWorkspace && ($totalPending ?? 0) > 0)
                         <button @click="window.location.href = @js($adminTabUrl('notifications'))" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300 text-xs font-bold animate-pulse hover:bg-red-500/20 transition">
                             <i class="fa-solid fa-bell text-xs"></i> {{ $totalPending ?? 0 }} pending
                         </button>
@@ -986,7 +1005,7 @@
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800/80">
                     <div>
                         <nav class="flex items-center gap-2 text-xs font-semibold text-slate-400 mb-1">
-                            <span class="font-extrabold uppercase tracking-wider text-slate-400">Admin Hub</span>
+                            <span class="font-extrabold uppercase tracking-wider text-slate-400">{{ $clientWorkspace ? 'Client Portal' : 'Admin Hub' }}</span>
                             <svg class="w-3.5 h-3.5 text-slate-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
                             <span class="text-slate-600 dark:text-slate-300 font-bold uppercase tracking-wider" x-text="activeTab.replace('-', ' ')"></span>
                         </nav>
@@ -1028,7 +1047,9 @@
                     </div>
                 @endif
 
-                @include('merchandisers.admin-tabs.performance_filters')
+                @if(! $clientWorkspace)
+                    @include('merchandisers.admin-tabs.performance_filters')
+                @endif
 
                 <!-- ═══════════════════════════════════════════════════════════
                      TAB: PERFECT STORE KPI COMMAND CENTER
@@ -1088,7 +1109,15 @@
                 {{-- ═══════════════════════════════════════════════════
                      TAB: PERFECT STORE EXECUTIVE SUMMARY
                 ════════════════════════════════════════════════════ --}}
-                                @if($activeAdminTab === 'executive')
+                @if($clientWorkspace)
+                    <nav aria-label="Client dashboard views" class="mb-5 flex flex-wrap gap-2">
+                        @foreach(['executive' => 'Dashboard & Health', 'user-performance' => 'Team Performance', 'category-kpi' => 'Perfect Store KPIs'] as $view => $label)
+                            <a href="{{ $clientNavUrl($view) }}" data-client-navigation @if($clientView === $view) aria-current="page" @endif
+                               class="rounded-lg border px-4 py-3 text-xs font-bold {{ $clientView === $view ? 'merch-primary-button' : 'bg-white text-slate-900' }}">{{ $label }}</a>
+                        @endforeach
+                    </nav>
+                @endif
+                                @if($activeAdminTab === 'executive' || ($clientWorkspace && $activeAdminTab === 'client-dashboard'))
                     @include('merchandisers.admin-tabs.executive')
                 @endif
 
@@ -1110,6 +1139,17 @@
 
                 @if($activeAdminTab === 'profile')
                     @include('merchandisers.partials.profile')
+                @endif
+
+                @if($clientWorkspace)
+                    <nav aria-label="Performance sections" class="flex flex-wrap gap-3 my-5">
+                        @foreach(($clientView === 'user-performance' ? ['Merchandiser' => 'Merchandiser Performance', 'Supervisor' => 'Supervisor Performance'] : ['Region' => 'Regional Performance', 'KD' => 'KD Performance', 'Outlet' => 'Perfect Store Attendance']) as $level => $label)
+                            <a href="{{ $clientNavUrl($clientView, ['performance_level' => $level]) }}#client-performance" data-client-navigation class="rounded-lg border px-4 py-3 text-sm font-bold">{{ $label }}</a>
+                        @endforeach
+                    </nav>
+                    <section id="client-performance" style="scroll-margin-top: 100px">
+                        @include('merchandisers.admin-tabs.performance_filters')
+                    </section>
                 @endif
 
             </main>
@@ -1901,7 +1941,7 @@ function focusMerchandiserOnMap(merchandiserId) {
 function initAdminMap() {
     const mapEl = document.getElementById('admin-map');
     if (!mapEl || mapInitialized) return;
-    if (typeof google === 'undefined' || !google.maps) {
+    if (typeof google === 'undefined' || typeof google.maps?.Map !== 'function') {
         initLeafletAdminMap(mapEl);
         return;
     }
@@ -2200,7 +2240,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
-@if($activeAdminTab === 'executive')
+@if($activeAdminTab === 'executive' || ($clientWorkspace && $activeAdminTab === 'client-dashboard'))
 <script>
 (function () {
     const chartDefaults = {
