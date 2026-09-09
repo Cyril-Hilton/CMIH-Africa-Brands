@@ -1047,9 +1047,7 @@
                     </div>
                 @endif
 
-                @if(! $clientWorkspace)
-                    @include('merchandisers.admin-tabs.performance_filters')
-                @endif
+
 
                 <!-- ═══════════════════════════════════════════════════════════
                      TAB: PERFECT STORE KPI COMMAND CENTER

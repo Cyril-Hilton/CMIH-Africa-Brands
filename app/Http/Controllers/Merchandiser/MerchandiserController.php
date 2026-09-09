@@ -912,7 +912,6 @@ class MerchandiserController extends Controller
         // An explicit pending task, or its open attendance, retains the original PJP date.
         $activeAttendance = MerchandiserAttendance::where('user_id', $user->id)
             ->where('outlet_id', $outlet->id)
-            ->whereNotNull('route_assignment_id')
             ->whereNull('clock_out_time')
             ->latest('clock_in_time')->first();
         $requestedId = request()->input('carryover_assignment_id');
@@ -1063,10 +1062,25 @@ class MerchandiserController extends Controller
             ->first();
 
         if ($openActiveAttendance) {
-            $activeOutletName = $openActiveAttendance->outlet->name ?? 'another outlet';
-            return back()->withErrors([
-                'outlet_id' => "Sequential Visit Flow Enforced: You are currently clocked in at {$activeOutletName}. You must complete your visit and clock out of {$activeOutletName} before clocking into {$outlet->name}!"
-            ])->withInput();
+            if ((int) $openActiveAttendance->outlet_id === (int) $outlet->id) {
+                if ($routeAssignment && ! $openActiveAttendance->route_assignment_id) {
+                    $openActiveAttendance->update(['route_assignment_id' => $routeAssignment->id]);
+                }
+                return back()->withErrors(['outlet_id' => 'You are already clocked in at this outlet. Complete the visit, then clock out.'])->withInput();
+            }
+
+            // Auto-close stale unclosed attendances from previous calendar days so field agents are not blocked
+            $openClockInTime = $openActiveAttendance->clock_in_time ? Carbon::parse($openActiveAttendance->clock_in_time)->timezone($timezone) : null;
+            if ($openClockInTime && $openClockInTime->lt($effectiveLocalTime->copy()->startOfDay())) {
+                $openActiveAttendance->update([
+                    'clock_out_time' => $openClockInTime->copy()->endOfDay(),
+                ]);
+            } else {
+                $activeOutletName = $openActiveAttendance->outlet->name ?? 'another outlet';
+                return back()->withErrors([
+                    'outlet_id' => "Sequential Visit Flow Enforced: You are currently clocked in at {$activeOutletName}. You must complete your visit and clock out of {$activeOutletName} before clocking into {$outlet->name}!"
+                ])->withInput();
+            }
         }
 
         // 2. Geofence Distance check
@@ -1368,8 +1382,22 @@ class MerchandiserController extends Controller
         $aiCaptureCategories = $this->requiredAiCaptureCategories();
 
         $isCarryOver = $this->isCarryOverVisit($routeAssignment, $today);
-        $carryOverAttendance = $isCarryOver ? MerchandiserAttendance::where('user_id', $user->id)
-            ->where('route_assignment_id', $routeAssignment->id)->whereNull('clock_out_time')->first() : null;
+        $carryOverAttendance = null;
+        if ($isCarryOver && $routeAssignment) {
+            $carryOverAttendance = MerchandiserAttendance::where('user_id', $user->id)
+                ->where('outlet_id', $outlet->id)
+                ->where(function ($query) use ($routeAssignment) {
+                    $query->where('route_assignment_id', $routeAssignment->id)
+                        ->orWhereNull('route_assignment_id');
+                })
+                ->whereNull('clock_out_time')
+                ->latest('clock_in_time')
+                ->first();
+
+            if ($carryOverAttendance && ! $carryOverAttendance->route_assignment_id) {
+                $carryOverAttendance->update(['route_assignment_id' => $routeAssignment->id]);
+            }
+        }
 
         return view('merchandisers.visit', compact(
             'outlet',
@@ -1597,8 +1625,19 @@ class MerchandiserController extends Controller
         $hasOutletClockIn = MerchandiserAttendance::where('user_id', $user->id)
             ->where('outlet_id', $outlet->id)
             ->when($this->isCarryOverVisit($routeAssignment, $visitDate),
-                fn ($query) => $query->where('route_assignment_id', $routeAssignment->id)->whereNull('clock_out_time'),
-                fn ($query) => $query->whereBetween('clock_in_time', [$visitDate->copy()->startOfDay(), $visitDate->copy()->endOfDay()]))
+                fn ($query) => $query->where(function ($q) use ($routeAssignment) {
+                    if ($routeAssignment?->id) {
+                        $q->where('route_assignment_id', $routeAssignment->id)
+                          ->orWhereNull('route_assignment_id');
+                    } else {
+                        $q->whereNull('route_assignment_id');
+                    }
+                })->whereNull('clock_out_time'),
+                fn ($query) => $query->whereBetween('clock_in_time', [
+                    $visitDate->copy()->startOfDay(),
+                    $visitDate->copy()->endOfDay(),
+                ])
+            )
             ->exists();
 
         if ($this->isCarryOverVisit($routeAssignment, $visitDate) && $routeAssignment->visit_id) {

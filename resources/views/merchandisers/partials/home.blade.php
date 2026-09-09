@@ -10,16 +10,16 @@
         };
     @endphp
     @if(($carriedOverCount ?? 0) > 0)
-        <div class="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-amber-300">
+        <div class="rounded-xl border border-amber-400/50 dark:border-amber-600 bg-amber-100 dark:bg-amber-950/40 p-4 text-amber-950 dark:text-amber-100 shadow-xs">
             <div class="flex items-center gap-3">
-                <svg class="h-5 w-5 shrink-0 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg class="h-5 w-5 shrink-0 text-amber-700 dark:text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
                 <div class="min-w-0 flex-1">
-                    <p class="text-xs font-bold uppercase tracking-wider">⚠️ Outstanding Outlets Carried Over</p>
-                    <p class="mt-0.5 text-xs text-amber-200/90">You have <strong>{{ $carriedOverCount }}</strong> pending carryover visit(s) from earlier PJP dates.</p>
+                    <p class="text-xs font-black uppercase tracking-wider text-amber-900 dark:text-amber-200">⚠️ Outstanding Outlets Carried Over</p>
+                    <p class="mt-0.5 text-xs text-amber-900/90 dark:text-amber-200/90 font-semibold">You have <strong>{{ $carriedOverCount }}</strong> pending carryover visit(s) from earlier PJP dates.</p>
                 </div>
-                <button type="button" @click="activeTab = 'schedule'" class="rounded-lg bg-amber-500/20 px-3 py-1.5 text-xs font-bold text-amber-200 hover:bg-amber-500/30">View Schedule</button>
+                <button type="button" @click="activeTab = 'schedule'" class="rounded-lg bg-amber-600 dark:bg-amber-500 px-3 py-1.5 text-xs font-extrabold text-white hover:bg-amber-700 transition">View Schedule</button>
             </div>
         </div>
     @endif

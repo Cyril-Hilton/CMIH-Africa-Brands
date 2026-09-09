@@ -1303,6 +1303,9 @@
                     </div>
                     @endif
                     </div><!-- End Broadcast & Sharing Sub-Tab -->
+                    <div class="mt-8">
+                        @include('merchandisers.admin-tabs.performance_filters')
+                    </div>
                     </div><!-- End Clock Overview Region -->
                 </div><!-- End Active Tab Overview Container -->
 
