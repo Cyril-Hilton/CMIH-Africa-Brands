@@ -5571,5 +5571,82 @@ class MerchandiserPortalTest extends TestCase
         $this->assertEquals('auto-closed', $staleAttendance->status);
         $this->assertStringContainsString('Auto-closed by system', $staleAttendance->auto_close_reason);
     }
+
+    #[Test]
+    public function rejected_clock_in_leaves_previous_stale_attendance_unchanged(): void
+    {
+        $agent = User::create([
+            'name' => 'Rejected Geofence Agent',
+            'email' => 'geofence-rejected@cmih.africa',
+            'contact_email' => 'geofence-rejected@personal.com',
+            'phone' => '87654322',
+            'password' => Hash::make('Pass123!'),
+            'access_role' => User::MERCHANDISER_ROLE,
+            'status' => 'active',
+        ]);
+
+        $yesterday = Carbon::now('Africa/Accra')->subDay();
+
+        $region = Region::create([
+            'name' => 'Geofence Region Test',
+            'code' => 'REG-GEO-1',
+        ]);
+
+        $kd = KeyDistributor::create([
+            'name' => 'Geofence KD Test',
+            'code' => 'KD-GEO-1',
+            'region_id' => $region->id,
+            'status' => 'active',
+        ]);
+
+        $agent->forceFill(['kd_id' => $kd->id])->save();
+
+        $outlet1 = Outlet::create([
+            'name' => 'Outlet 1 Stale Geo',
+            'code' => 'OUT-GEO-1',
+            'kd_id' => $kd->id,
+            'latitude' => 5.6037,
+            'longitude' => -0.1870,
+            'status' => 'active',
+        ]);
+
+        $outlet2 = Outlet::create([
+            'name' => 'Outlet 2 Far Geo',
+            'code' => 'OUT-GEO-2',
+            'kd_id' => $kd->id,
+            'latitude' => 5.6037,
+            'longitude' => -0.1870,
+            'status' => 'active',
+        ]);
+
+        $staleAttendance = MerchandiserAttendance::create([
+            'user_id' => $agent->id,
+            'outlet_id' => $outlet1->id,
+            'clock_in_type' => 'outlet',
+            'clock_in_time' => $yesterday->copy()->setTime(9, 0),
+            'clock_out_time' => null,
+            'latitude' => 5.6037,
+            'longitude' => -0.1870,
+            'distance_from_outlet' => 0,
+            'status' => 'on-time',
+        ]);
+
+        $this->assignOutletForToday($agent, $outlet2);
+
+        // Agent attempts to clock into outlet 2 from 500km away (geofence rejection)
+        $response = $this->actingAs($agent)->post(route('merchandisers.clock-in'), [
+            'outlet_id' => $outlet2->id,
+            'latitude' => 6.6037,
+            'longitude' => -1.1870,
+        ]);
+
+        $response->assertSessionHasErrors(['outlet_id']);
+
+        $staleAttendance->refresh();
+        $this->assertNull($staleAttendance->clock_out_time);
+        $this->assertNotEquals('auto-closed', $staleAttendance->status);
+        $this->assertEquals('on-time', $staleAttendance->status);
+        $this->assertNull($staleAttendance->auto_close_reason);
+    }
 }
 

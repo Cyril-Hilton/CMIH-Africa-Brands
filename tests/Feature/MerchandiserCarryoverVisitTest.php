@@ -50,6 +50,19 @@ class MerchandiserCarryoverVisitTest extends TestCase
         return route('merchandisers.visit', ['outlet' => $this->outlet, 'carryover_assignment_id' => $this->task->id]);
     }
 
+    public function test_rejected_carryover_clockin_does_not_auto_close_previous_attendance(): void
+    {
+        $other = Outlet::create(['name' => 'Previous Outlet', 'code' => 'PREVIOUS', 'kd_id' => $this->outlet->kd_id]);
+        $previous = MerchandiserAttendance::create([
+            'user_id' => $this->agent->id, 'outlet_id' => $other->id,
+            'clock_in_time' => now()->subDay(), 'clock_in_type' => 'outlet',
+            'latitude' => 5.1, 'longitude' => -0.1, 'distance_from_outlet' => 0, 'status' => 'on-time',
+        ]);
+        $this->post(route('merchandisers.clock-in'), array_replace($this->clockPayload(), ['latitude' => 0, 'longitude' => 0]))
+            ->assertSessionHasErrors('outlet_id');
+        $this->assertNull($previous->fresh()->clock_out_time, 'A rejected clock-in must not close the previous attendance.');
+    }
+
     public function test_legacy_same_outlet_open_attendance_can_resume_and_complete_carryover(): void
     {
         $attendance = MerchandiserAttendance::create([

@@ -1061,6 +1061,9 @@ class MerchandiserController extends Controller
             ->latest('clock_in_time')
             ->first();
 
+        $staleAttendanceToClose = null;
+        $staleClockInTime = null;
+
         if ($openActiveAttendance) {
             if ((int) $openActiveAttendance->outlet_id === (int) $outlet->id) {
                 if ($routeAssignment && ! $openActiveAttendance->route_assignment_id) {
@@ -1072,12 +1075,8 @@ class MerchandiserController extends Controller
             // Auto-close stale unclosed attendances from previous calendar days so field agents are not blocked
             $openClockInTime = $openActiveAttendance->clock_in_time ? Carbon::parse($openActiveAttendance->clock_in_time)->timezone($timezone) : null;
             if ($openClockInTime && $openClockInTime->lt($effectiveLocalTime->copy()->startOfDay())) {
-                $openActiveAttendance->update([
-                    'clock_out_time' => $openClockInTime->copy()->endOfDay(),
-                    'visit_duration_minutes' => 0,
-                    'status' => 'auto-closed',
-                    'auto_close_reason' => 'Auto-closed by system: Field agent started new visit without manual clock-out.',
-                ]);
+                $staleAttendanceToClose = $openActiveAttendance;
+                $staleClockInTime = $openClockInTime;
             } else {
                 $activeOutletName = $openActiveAttendance->outlet->name ?? 'another outlet';
                 return back()->withErrors([
@@ -1102,6 +1101,16 @@ class MerchandiserController extends Controller
             return back()->withErrors([
                 'outlet_id' => "Geofencing Error: You are too far from the outlet. You must be within {$allowedRadius} meters. Your calculated distance is " . round($distance, 1) . " meters."
             ])->withInput();
+        }
+
+        // Auto-close stale attendance only AFTER all validations (including geofence) pass
+        if ($staleAttendanceToClose && $staleClockInTime) {
+            $staleAttendanceToClose->update([
+                'clock_out_time' => $staleClockInTime->copy()->endOfDay(),
+                'visit_duration_minutes' => 0,
+                'status' => 'auto-closed',
+                'auto_close_reason' => 'Auto-closed by system: Field agent started new visit without manual clock-out.',
+            ]);
         }
 
         // 3. Save attendance record
