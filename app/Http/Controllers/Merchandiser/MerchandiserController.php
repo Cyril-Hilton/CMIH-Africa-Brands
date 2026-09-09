@@ -1074,6 +1074,9 @@ class MerchandiserController extends Controller
             if ($openClockInTime && $openClockInTime->lt($effectiveLocalTime->copy()->startOfDay())) {
                 $openActiveAttendance->update([
                     'clock_out_time' => $openClockInTime->copy()->endOfDay(),
+                    'visit_duration_minutes' => 0,
+                    'status' => 'auto-closed',
+                    'auto_close_reason' => 'Auto-closed by system: Field agent started new visit without manual clock-out.',
                 ]);
             } else {
                 $activeOutletName = $openActiveAttendance->outlet->name ?? 'another outlet';

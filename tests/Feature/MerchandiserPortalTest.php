@@ -5451,4 +5451,125 @@ class MerchandiserPortalTest extends TestCase
         $response->assertRedirect(route('merchandisers.login'));
         $this->assertGuest();
     }
+
+    #[Test]
+    public function client_default_executive_summary_renders_kpi_summary_cards(): void
+    {
+        $client = User::create([
+            'name' => 'Client Default Test',
+            'email' => 'client-default@cmih.africa',
+            'contact_email' => 'client-default@personal.com',
+            'phone' => '12345678',
+            'password' => Hash::make('Pass123!'),
+            'access_role' => User::MERCHANDISER_CLIENT_ROLE,
+            'status' => 'active',
+        ]);
+
+        $response = $this->actingAs($client)->get(route('merchandisers.client.dashboard'));
+
+        $response->assertOk();
+        $response->assertSee('Active Agents');
+        $response->assertSee('Pending Pairing');
+        $response->assertSee('Clock-Ins');
+        $response->assertSee('PCM / PJP');
+        $response->assertSee('Approvals Queue');
+        $response->assertSee('OSA');
+    }
+
+    #[Test]
+    public function supervisor_dashboard_includes_performance_filter_section(): void
+    {
+        $supervisor = User::create([
+            'name' => 'Supervisor Filter Test',
+            'email' => 'supervisor-filter@cmih.africa',
+            'contact_email' => 'supervisor-filter@personal.com',
+            'phone' => '12345678',
+            'password' => Hash::make('Pass123!'),
+            'access_role' => User::MERCHANDISER_SUPERVISOR_ROLE,
+            'status' => 'active',
+        ]);
+
+        $response = $this->actingAs($supervisor)->get(route('merchandisers.supervisor.dashboard'));
+
+        $response->assertOk();
+        $response->assertSee('Apply Filters');
+    }
+
+    #[Test]
+    public function stale_past_attendance_auto_closed_with_zero_duration_and_audit_reason(): void
+    {
+        $agent = User::create([
+            'name' => 'Stale Attendance Agent',
+            'email' => 'stale-agent@cmih.africa',
+            'contact_email' => 'stale-agent@personal.com',
+            'phone' => '87654321',
+            'password' => Hash::make('Pass123!'),
+            'access_role' => User::MERCHANDISER_ROLE,
+            'status' => 'active',
+        ]);
+
+        $yesterday = Carbon::now('Africa/Accra')->subDay();
+
+        $region = Region::create([
+            'name' => 'Stale Region Test',
+            'code' => 'REG-STALE-1',
+        ]);
+
+        $kd = KeyDistributor::create([
+            'name' => 'Stale KD Test',
+            'code' => 'KD-STALE-1',
+            'region_id' => $region->id,
+            'status' => 'active',
+        ]);
+
+        $agent->forceFill(['kd_id' => $kd->id])->save();
+
+        $outlet1 = Outlet::create([
+            'name' => 'Outlet 1 Stale',
+            'code' => 'OUT-STALE-1',
+            'kd_id' => $kd->id,
+            'latitude' => 5.6037,
+            'longitude' => -0.1870,
+            'status' => 'active',
+        ]);
+
+        $outlet2 = Outlet::create([
+            'name' => 'Outlet 2 New',
+            'code' => 'OUT-STALE-2',
+            'kd_id' => $kd->id,
+            'latitude' => 5.6037,
+            'longitude' => -0.1870,
+            'status' => 'active',
+        ]);
+
+        $staleAttendance = MerchandiserAttendance::create([
+            'user_id' => $agent->id,
+            'outlet_id' => $outlet1->id,
+            'clock_in_type' => 'outlet',
+            'clock_in_time' => $yesterday->copy()->setTime(9, 0),
+            'clock_out_time' => null,
+            'latitude' => 5.6037,
+            'longitude' => -0.1870,
+            'distance_from_outlet' => 0,
+            'status' => 'on-time',
+        ]);
+
+        $this->assignOutletForToday($agent, $outlet2);
+
+        // Agent now clocks into outlet 2 today
+        $response = $this->actingAs($agent)->post(route('merchandisers.clock-in'), [
+            'outlet_id' => $outlet2->id,
+            'latitude' => 5.6037,
+            'longitude' => -0.1870,
+        ]);
+
+        $response->assertRedirect();
+
+        $staleAttendance->refresh();
+        $this->assertNotNull($staleAttendance->clock_out_time);
+        $this->assertEquals(0, $staleAttendance->visit_duration_minutes);
+        $this->assertEquals('auto-closed', $staleAttendance->status);
+        $this->assertStringContainsString('Auto-closed by system', $staleAttendance->auto_close_reason);
+    }
 }
+

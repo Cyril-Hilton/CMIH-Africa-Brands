@@ -279,8 +279,10 @@
                         @endforelse
                     </div>
                 </div>
-            </div><!-- End Subtab 5 -->
-
+            <!-- Performance Level Filters Section (Moved Below Content) -->
+            <div class="mt-8">
+                @include('merchandisers.admin-tabs.performance_filters')
+            </div>
         </div>
     @endif
 

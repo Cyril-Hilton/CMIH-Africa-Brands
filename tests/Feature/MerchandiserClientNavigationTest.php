@@ -10,6 +10,20 @@ class MerchandiserClientNavigationTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_client_executive_summary_contains_operational_summary_cards(): void
+    {
+        $client = User::factory()->create(['access_role' => 'merchandiser_client', 'status' => 'active']);
+        $this->actingAs($client)->get(route('merchandisers.client.dashboard'))
+            ->assertOk()->assertSee('Active Agents')->assertSee('Pending Pairing')->assertSee('Approvals Queue');
+    }
+
+    public function test_supervisor_dashboard_retains_performance_filters_below_content(): void
+    {
+        $admin = User::factory()->create(['access_role' => 'super_admin', 'status' => 'active']);
+        $this->actingAs($admin)->get(route('merchandisers.admin.tab', ['adminTab' => 'supervisor-dashboard']))
+            ->assertOk()->assertSee('Apply Filters');
+    }
+
     public function test_clients_have_only_reference_sidebar_links_and_each_destination_renders(): void
     {
         $client = User::factory()->create(['access_role' => 'merchandiser_client', 'status' => 'active']);

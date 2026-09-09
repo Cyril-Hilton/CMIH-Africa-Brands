@@ -17,7 +17,7 @@ class MerchandiserAttendance extends Model
         'client_recorded_at', 'sync_token', 'sync_source', 'synced_at',
         'latitude', 'longitude', 'distance_from_outlet',
         'clock_out_latitude', 'clock_out_longitude', 'clock_out_distance_from_outlet',
-        'visit_duration_minutes', 'status'
+        'visit_duration_minutes', 'status', 'auto_close_reason', 'notes'
     ];
 
     protected $casts = [

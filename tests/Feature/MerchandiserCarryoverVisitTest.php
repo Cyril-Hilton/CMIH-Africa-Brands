@@ -50,6 +50,21 @@ class MerchandiserCarryoverVisitTest extends TestCase
         return route('merchandisers.visit', ['outlet' => $this->outlet, 'carryover_assignment_id' => $this->task->id]);
     }
 
+    public function test_legacy_same_outlet_open_attendance_can_resume_and_complete_carryover(): void
+    {
+        $attendance = MerchandiserAttendance::create([
+            'user_id' => $this->agent->id, 'outlet_id' => $this->outlet->id,
+            'clock_in_time' => Carbon::parse('2026-09-07 10:00:00'),
+            'clock_in_type' => 'outlet', 'latitude' => 5.1, 'longitude' => -0.1, 'status' => 'on-time', 'distance_from_outlet' => 0,
+        ]);
+        $this->get($this->visitUrl())->assertOk()->assertDontSee('Clock In to Outlet');
+        $this->assertSame($this->task->id, $attendance->fresh()->route_assignment_id);
+        $this->post(route('merchandisers.visit.store', $this->outlet), $this->visitPayload())->assertSessionHasNoErrors();
+        $this->post(route('merchandisers.clock-out'), $this->clockPayload())->assertSessionHasNoErrors();
+        $this->assertSame('completed', $this->task->fresh()->status);
+        $this->assertNotNull($attendance->fresh()->clock_out_time);
+    }
+
     private function clockPayload(): array
     {
         return ['outlet_id' => $this->outlet->id, 'carryover_assignment_id' => $this->task->id, 'latitude' => 5.1, 'longitude' => -0.1];
