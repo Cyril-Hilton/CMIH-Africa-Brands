@@ -376,7 +376,7 @@
                                             class="w-full rounded-xl border border-brand-white/10 bg-brand-black/50 px-3 py-2 text-xs text-brand-white file:mr-3 file:rounded-lg file:border-0 file:bg-sky-500 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-white">
                                         <button type="button" @click="runAiDetection('{{ $category }}', '{{ $categoryKey }}')" :disabled="isCategoryDetecting('{{ $categoryKey }}')"
                                             class="rounded-xl bg-sky-500 px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.2em] text-white transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-50">
-                                            <span x-show="!isCategoryDetecting('{{ $categoryKey }}')">Run AI</span>
+                                            <span x-show="!isCategoryDetecting('{{ $categoryKey }}')">Submit</span>
                                             <span x-show="isCategoryDetecting('{{ $categoryKey }}')">Processing</span>
                                         </button>
                                     </div>

@@ -211,9 +211,8 @@
             </section>
 
             <!-- Interactive Performance Analytics Charts Section -->
-            <div class="grid gap-5 lg:grid-cols-2">
-                <!-- Chart 1: Visit Execution Trend (Linear Line Chart with Daily/Weekly/Monthly/Yearly Filters) -->
-                <section x-data="{ trendPeriod: 'weekly' }" class="merch-card rounded-2xl p-5 border border-sky-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-3">
+            <!-- Visit Execution Trend (Linear Line Chart with Daily/Weekly/Monthly/Yearly Filters) -->
+            <section x-data="{ trendPeriod: 'weekly' }" class="merch-card rounded-2xl p-5 border border-sky-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-3">
                     <div class="flex flex-col gap-2.5">
                         <div class="min-w-0">
                             <h2 class="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2 whitespace-nowrap truncate">
@@ -234,40 +233,13 @@
                     <div class="relative h-60 w-full pt-2">
                         <canvas id="homeWeeklyTrendChart"></canvas>
                     </div>
-                </section>
-
-                <!-- Chart 2: Perfect Store KPI Performance Breakdown (Multi-Color Bar Chart with Daily/Weekly/Monthly/Yearly Filters) -->
-                <section x-data="{ kpiPeriod: 'monthly' }" class="merch-card rounded-2xl p-5 border border-sky-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-3">
-                    <div class="flex flex-col gap-2.5">
-                        <div class="min-w-0">
-                            <h2 class="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2 whitespace-nowrap truncate">
-                                <span class="text-emerald-600"><i class="fa-solid fa-chart-column"></i></span> Perfect Store KPI Breakdown
-                            </h2>
-                            <p class="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">Score vs configured target (%)</p>
-                        </div>
-                        <!-- Daily / Weekly / Monthly / Yearly Filter Pills -->
-                        <div class="flex items-center justify-start overflow-x-auto scrollbar-none pt-0.5">
-                            <div class="inline-flex shrink-0 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/80 p-0.5 shadow-2xs">
-                                <button type="button" @click="kpiPeriod = 'daily'; switchKpiPeriod('daily')" :class="kpiPeriod === 'daily' ? 'bg-[#0F0E9A] text-white shadow-xs font-black' : 'text-slate-600 dark:text-slate-400 font-bold hover:text-slate-900 dark:hover:text-white'" class="rounded-lg px-2.5 py-1 text-[10px] uppercase transition">Daily</button>
-                                <button type="button" @click="kpiPeriod = 'weekly'; switchKpiPeriod('weekly')" :class="kpiPeriod === 'weekly' ? 'bg-[#0F0E9A] text-white shadow-xs font-black' : 'text-slate-600 dark:text-slate-400 font-bold hover:text-slate-900 dark:hover:text-white'" class="rounded-lg px-2.5 py-1 text-[10px] uppercase transition">Weekly</button>
-                                <button type="button" @click="kpiPeriod = 'monthly'; switchKpiPeriod('monthly')" :class="kpiPeriod === 'monthly' ? 'bg-[#0F0E9A] text-white shadow-xs font-black' : 'text-slate-600 dark:text-slate-400 font-bold hover:text-slate-900 dark:hover:text-white'" class="rounded-lg px-2.5 py-1 text-[10px] uppercase transition">Monthly</button>
-                                <button type="button" @click="kpiPeriod = 'yearly'; switchKpiPeriod('yearly')" :class="kpiPeriod === 'yearly' ? 'bg-[#0F0E9A] text-white shadow-xs font-black' : 'text-slate-600 dark:text-slate-400 font-bold hover:text-slate-900 dark:hover:text-white'" class="rounded-lg px-2.5 py-1 text-[10px] uppercase transition">Yearly</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="relative h-60 w-full pt-2">
-                        <canvas id="homeKpiBarChart"></canvas>
-                    </div>
-                </section>
-            </div>
+            </section>
 
             <script>
             var homeTrendChart = null;
-            var homeKpiBarChart = null;
 
-            var homeChartDatasets = @json($homeChartDatasets ?? ['trend' => [], 'kpi' => []]);
+            var homeChartDatasets = @json($homeChartDatasets ?? ['trend' => []]);
             var trendDataSets = homeChartDatasets.trend || {};
-            var kpiDataSets = homeChartDatasets.kpi || {};
 
             function switchTrendPeriod(period) {
                 if (!homeTrendChart) return;
@@ -278,15 +250,6 @@
                 homeTrendChart.data.datasets[1].data = data.target;
                 homeTrendChart.options.scales.y.max = data.max;
                 homeTrendChart.update();
-            }
-
-            function switchKpiPeriod(period) {
-                if (!homeKpiBarChart) return;
-                var data = kpiDataSets[period];
-                if (!data) return;
-                homeKpiBarChart.data.labels = data.labels || homeKpiBarChart.data.labels;
-                homeKpiBarChart.data.datasets[0].data = data.values || [];
-                homeKpiBarChart.update();
             }
 
             document.addEventListener('DOMContentLoaded', function() {
@@ -341,43 +304,6 @@
                         });
                     }
 
-                    // 2. Perfect Store KPI Breakdown (Multi-Color Bar Chart)
-                    var barCtx = document.getElementById('homeKpiBarChart');
-                    if (barCtx && !homeKpiBarChart) {
-                        homeKpiBarChart = new Chart(barCtx.getContext('2d'), {
-                            type: 'bar',
-                            data: {
-                                labels: ['OSA', 'NPD', 'MHS', 'Planogram', 'Facing', 'SOS'],
-                                datasets: [
-                                    {
-                                        label: 'Actual Score (%)',
-                                    data: (kpiDataSets.weekly || { values: [] }).values,
-                                        backgroundColor: [
-                                            '#10B981', // Emerald
-                                            '#2563EB', // Royal Blue
-                                            '#7C3AED', // Violet
-                                            '#F59E0B', // Amber
-                                            '#06B6D4', // Cyan
-                                            '#E11D48'  // Rose
-                                        ],
-                                        borderRadius: 8,
-                                        borderSkipped: false,
-                                    }
-                                ]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                plugins: {
-                                    legend: { display: false }
-                                },
-                                scales: {
-                                    y: { beginAtZero: true, max: 100, ticks: { callback: function(v){ return v + '%'; } } },
-                                    x: { grid: { display: false } }
-                                }
-                            }
-                        });
-                    }
                 }
 
                 initHomeCharts();

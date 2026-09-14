@@ -401,6 +401,17 @@ class MerchandiserController extends Controller
                 'carried_over',
             ], true))
             ->values();
+        $upcomingAssignments = $routePlanner->assignmentsForPeriod(
+            $user,
+            Carbon::today($timezone)->addDay()->startOfDay(),
+            Carbon::today($timezone)->addDays(14)->endOfDay()
+        )
+            ->reject(fn (MerchandiserOutletAssignment $assignment) => in_array($assignment->status, [
+                MerchandiserOutletAssignment::STATUS_COLLAPSED,
+                MerchandiserOutletAssignment::STATUS_CARRY_OVER,
+                'carried_over',
+            ], true))
+            ->values();
         $assignmentsByDate = $activeWeekAssignments->groupBy(
             fn (MerchandiserOutletAssignment $assignment) => $assignment->assigned_date?->toDateString()
         );
@@ -681,7 +692,7 @@ class MerchandiserController extends Controller
             'announcements', 'notifications', 'clockWindow', 'outletAttendanceByOutlet', 'scoredOutletIdsToday', 'merchMetrics',
             'pendingOutletsToday', 'pcmClockinToday', 'todaysAssignments',
             'googleForms', 'googleFormCompletionIds', 'nativeFormCompletionIds',
-            'selectedDay', 'dayLabels', 'dayOutletCounts', 'currentIsoDay', 'dailyPerformanceChart', 'scheduleLabel',
+            'selectedDay', 'dayLabels', 'dayOutletCounts', 'currentIsoDay', 'dailyPerformanceChart', 'scheduleLabel', 'upcomingAssignments',
             'merchTenant', 'merchKpiRadarValues', 'merchKpiRadarTargets', 'configuredKpiTargets', 'homeChartDatasets', 'carriedOverCount', 'carriedOverAssignments', 'carryOverOpenAttendance'
         ));
     }
@@ -2869,7 +2880,7 @@ class MerchandiserController extends Controller
         $now = Carbon::now($timezone);
         $yearStart = $now->copy()->startOfYear()->startOfDay();
         $yearEnd = $now->copy()->endOfYear()->endOfDay();
-        $visits = MerchandiserVisit::with('visitSkus.sku')
+        $visits = MerchandiserVisit::query()
             ->where('user_id', $user->id)
             ->whereBetween('created_at', [$yearStart, $yearEnd])
             ->get();
@@ -2894,40 +2905,6 @@ class MerchandiserController extends Controller
             'monthly' => [$now->copy()->startOfMonth()->startOfDay(), $now->copy()->endOfMonth()->endOfDay()],
             'yearly' => [$yearStart, $yearEnd],
         ];
-
-        $kpiDatasets = [];
-        foreach ($periodRanges as $period => [$from, $to]) {
-            $periodVisits = $visits->filter(fn ($visit) => $inRange($visit, $from, $to, 'created_at'))->values();
-            $periodAssignments = $assignments
-                ->filter(fn ($assignment) => $inRange($assignment, $from, $to, 'assigned_date'))
-                ->values();
-            $latestVisitsByOutlet = $periodVisits
-                ->sortByDesc('created_at')
-                ->groupBy(fn ($visit) => (string) $visit->outlet_id);
-            $storeMetrics = PerfectStoreCalculator::computeMerchandiserMetrics($user, $latestVisitsByOutlet);
-            $visitSkus = $periodVisits->flatMap->visitSkus;
-            $osaCaptures = $visitSkus->filter(fn ($capture) => (bool) $capture->sku?->track_osa);
-            $npdCaptures = $visitSkus->filter(fn ($capture) => (bool) $capture->sku?->track_npd);
-            $mhsCaptures = $visitSkus->filter(fn ($capture) => (bool) $capture->sku?->track_mhs);
-
-            $kpiDatasets[$period] = [
-                'labels' => ['OSA', 'NPD', 'MHS', 'Planogram', 'Facing', 'SOS'],
-                'values' => [
-                    $this->boundedPercent(
-                        $osaCaptures->filter(fn ($capture) => (int) $capture->osa_quantity >= max(1, (int) $capture->sku?->osa_drop_size))->count(),
-                        $osaCaptures->count()
-                    ),
-                    $this->boundedPercent($npdCaptures->filter(fn ($capture) => (bool) $capture->npd_present)->count(), $npdCaptures->count()),
-                    $this->boundedPercent(
-                        $mhsCaptures->filter(fn ($capture) => (int) $capture->osa_quantity >= max(1, (int) $capture->sku?->mhs_drop_size))->count(),
-                        $mhsCaptures->count()
-                    ),
-                    (float) ($storeMetrics['planogram_pct'] ?? 0),
-                    (float) ($storeMetrics['facing_pct'] ?? 0),
-                    (float) ($storeMetrics['sos_pct'] ?? 0),
-                ],
-            ];
-        }
 
         $trendPoint = function (Carbon $from, Carbon $to) use ($visits, $assignments, $inRange): array {
             return [
@@ -3009,7 +2986,6 @@ class MerchandiserController extends Controller
 
         return [
             'trend' => $trendDatasets,
-            'kpi' => $kpiDatasets,
         ];
     }
 

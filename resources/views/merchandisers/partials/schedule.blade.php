@@ -29,6 +29,30 @@
         <a href="{{ route('merchandisers.dashboard', ['day' => '7']) }}" class="p-2 text-brand-ash hover:text-brand-white text-sm font-bold">&rarr;</a>
     </div>
 
+    <section class="merch-card overflow-hidden" aria-labelledby="upcoming-schedule-heading">
+        <div class="flex items-start justify-between gap-4 border-b border-brand-white/10 px-4 py-3">
+            <div>
+                <h3 id="upcoming-schedule-heading" class="text-sm font-bold text-brand-white">Upcoming Schedule</h3>
+                <p class="mt-1 text-[11px] text-brand-ash">Your next PJP outlet visits, created from your assigned route.</p>
+            </div>
+            <span class="shrink-0 rounded-full border border-brand-white/10 bg-brand-white/5 px-2.5 py-1 text-[10px] font-bold text-brand-ash">Next 14 days</span>
+        </div>
+        <div class="divide-y divide-brand-white/10">
+            @forelse(($upcomingAssignments ?? collect())->take(8) as $assignment)
+                <div class="flex items-center gap-3 px-4 py-3">
+                    <span class="w-20 shrink-0 text-[10px] font-bold text-brand-ash">{{ $assignment->assigned_date?->format('D, d M') }}</span>
+                    <div class="min-w-0 flex-1">
+                        <p class="truncate text-sm font-bold text-brand-white">{{ $assignment->outlet?->name }}</p>
+                        <p class="mt-0.5 truncate text-[10px] text-brand-ash">{{ $assignment->outlet?->code }}{{ $assignment->outlet?->address ? ' - '.$assignment->outlet->address : '' }}</p>
+                    </div>
+                    <span class="shrink-0 rounded-full border border-sky-400/30 bg-sky-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-sky-200">Scheduled</span>
+                </div>
+            @empty
+                <p class="px-4 py-8 text-center text-xs text-brand-ash">No upcoming PJP outlets are scheduled yet.</p>
+            @endforelse
+        </div>
+    </section>
+
     @php
         $scheduleAssignmentsByOutlet = $todaysAssignments->keyBy('outlet_id');
     @endphp

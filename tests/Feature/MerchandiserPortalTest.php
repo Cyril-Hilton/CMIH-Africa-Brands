@@ -518,6 +518,8 @@ class MerchandiserPortalTest extends TestCase
         $this->assertStringContainsString('"yearly":{"labels":["Q1","Q2","Q3"', $html);
         $this->assertStringContainsString('"completed":[0,1,1,0],"target":[0,1,1,0]', $html);
         $this->assertStringNotContainsString('310,340,325,290', $html);
+        $this->assertStringNotContainsString('Perfect Store KPI Breakdown', $html);
+        $this->assertStringNotContainsString('homeKpiBarChart', $html);
 
         Carbon::setTestNow();
     }
@@ -5561,6 +5563,7 @@ class MerchandiserPortalTest extends TestCase
             'outlet_id' => $outlet2->id,
             'latitude' => 5.6037,
             'longitude' => -0.1870,
+            'client_recorded_at' => Carbon::now('Africa/Accra')->setTime(10, 0)->toIso8601String(),
         ]);
 
         $response->assertRedirect();
@@ -5638,6 +5641,7 @@ class MerchandiserPortalTest extends TestCase
             'outlet_id' => $outlet2->id,
             'latitude' => 6.6037,
             'longitude' => -1.1870,
+            'client_recorded_at' => Carbon::now('Africa/Accra')->setTime(10, 0)->toIso8601String(),
         ]);
 
         $response->assertSessionHasErrors(['outlet_id']);
@@ -5649,4 +5653,3 @@ class MerchandiserPortalTest extends TestCase
         $this->assertNull($staleAttendance->auto_close_reason);
     }
 }
-

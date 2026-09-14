@@ -473,25 +473,25 @@
                                     </div>
                                 </div>
 
-                                <div x-data="{ outletSubTab: 'list' }" class="space-y-6">
+                                <div x-data="{ outletSubTab: 'stats' }" class="space-y-6">
                                     <!-- Sub-Tab Header Navigation Bar (Responsive Mobile Vertical Stack / Desktop Horizontal Tabs) -->
                                     <div class="grid grid-cols-1 sm:flex sm:items-center gap-2 border-b border-sky-200 dark:border-slate-800 pb-3">
-                                        <button type="button" @click="outletSubTab = 'list'"
-                                                :style="outletSubTab === 'list' ? 'background-color: #155EEF !important; color: #ffffff !important;' : 'background-color: #E0F2FE !important; color: #0C4A6E !important; border: 1px solid #BAE6FD !important;'"
-                                                :class="outletSubTab === 'list' ? 'shadow-md font-black' : 'hover:bg-sky-200 font-bold'"
-                                                class="w-full sm:w-auto px-4 py-3 sm:py-2.5 rounded-xl text-xs uppercase tracking-wider transition flex items-center justify-center sm:justify-start gap-2 text-center sm:text-left">
-                                            <span>Assigned Outlets List</span>
-                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold"
-                                                  :style="outletSubTab === 'list' ? 'background-color: rgba(255,255,255,0.25) !important; color: #ffffff !important;' : 'background-color: #0284C7 !important; color: #ffffff !important;'">
-                                                {{ $merchMetrics['assigned_outlets_today'] }}
-                                            </span>
-                                        </button>
-
                                         <button type="button" @click="outletSubTab = 'stats'"
                                                 :style="outletSubTab === 'stats' ? 'background-color: #155EEF !important; color: #ffffff !important;' : 'background-color: #E0F2FE !important; color: #0C4A6E !important; border: 1px solid #BAE6FD !important;'"
                                                 :class="outletSubTab === 'stats' ? 'shadow-md font-black' : 'hover:bg-sky-200 font-bold'"
                                                 class="w-full sm:w-auto px-4 py-3 sm:py-2.5 rounded-xl text-xs uppercase tracking-wider transition flex items-center justify-center sm:justify-start gap-2 text-center sm:text-left">
                                             <span>Field Stats Summary</span>
+                                        </button>
+
+                                        <button type="button" @click="outletSubTab = 'list'"
+                                                :style="outletSubTab === 'list' ? 'background-color: #155EEF !important; color: #ffffff !important;' : 'background-color: #E0F2FE !important; color: #0C4A6E !important; border: 1px solid #BAE6FD !important;'"
+                                                :class="outletSubTab === 'list' ? 'shadow-md font-black' : 'hover:bg-sky-200 font-bold'"
+                                                class="w-full sm:w-auto px-4 py-3 sm:py-2.5 rounded-xl text-xs uppercase tracking-wider transition flex items-center justify-center sm:justify-start gap-2 text-center sm:text-left">
+                                            <span>Pending Visits</span>
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold"
+                                                  :style="outletSubTab === 'list' ? 'background-color: rgba(255,255,255,0.25) !important; color: #ffffff !important;' : 'background-color: #0284C7 !important; color: #ffffff !important;'">
+                                                {{ $merchMetrics['assigned_outlets_today'] }}
+                                            </span>
                                         </button>
 
                                         <button type="button" @click="outletSubTab = 'register'"
@@ -573,7 +573,69 @@
                                             $assignmentsByOutlet = $todaysAssignments->keyBy('outlet_id');
                                         @endphp
 
-                                        <div class="space-y-4">
+                                        <div class="overflow-x-auto rounded-2xl border border-sky-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                                            <table class="min-w-[820px] w-full text-left text-xs">
+                                                <thead class="border-b border-sky-200 bg-[#F0F9FF] text-[10px] font-black uppercase tracking-wider text-[#0C4A6E] dark:border-slate-800 dark:bg-slate-800 dark:text-sky-200">
+                                                    <tr>
+                                                        <th class="px-4 py-3">Outlet</th>
+                                                        <th class="px-4 py-3 text-center">Scheduled</th>
+                                                        <th class="px-4 py-3 text-center">Clocked In</th>
+                                                        <th class="px-4 py-3 text-center">Scored</th>
+                                                        <th class="px-4 py-3">Visit Status</th>
+                                                        <th class="px-4 py-3 text-right">Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                                                    @forelse($outlets as $outlet)
+                                                        @php
+                                                            $timezone = auth()->user()->merchandiserRegion->timezone ?? 'Africa/Accra';
+                                                            $localNow = \Carbon\Carbon::now($timezone);
+                                                            $routeAssignment = $assignmentsByOutlet->get($outlet->id);
+                                                            $attendance = $outletAttendanceByOutlet->get($outlet->id);
+                                                            $hasClockedIn = (bool) $attendance;
+                                                            $hasScored = $routeAssignment?->status === 'completed'
+                                                                || (bool) ($routeAssignment?->visit_id)
+                                                                || $scoredOutletIdsToday->contains($outlet->id);
+                                                            $visitOpen = $localNow->betweenIncluded($clockWindow['start_at'], $clockWindow['end_at']);
+                                                            $statusLabel = $hasScored ? 'Completed' : ($hasClockedIn ? 'Pending Score' : 'Not Visited');
+                                                            $statusClass = $hasScored
+                                                                ? 'bg-emerald-100 text-emerald-800'
+                                                                : ($hasClockedIn ? 'bg-amber-100 text-amber-900' : 'bg-slate-100 text-slate-700');
+                                                        @endphp
+                                                        <tr x-show="outletSearch === '' || @js(strtolower($outlet->name.' '.$outlet->code.' '.$outlet->address)).includes(outletSearch.toLowerCase())" class="hover:bg-sky-50/60 dark:hover:bg-slate-800/60">
+                                                            <td class="px-4 py-3">
+                                                                <p class="font-bold text-slate-900 dark:text-white">{{ $outlet->name }}</p>
+                                                                <p class="mt-1 text-[10px] text-slate-500 dark:text-slate-400">{{ $outlet->code }}{{ $outlet->address ? ' - '.$outlet->address : '' }}</p>
+                                                            </td>
+                                                            <td class="px-4 py-3 text-center"><span class="font-black text-emerald-600">Yes</span></td>
+                                                            <td class="px-4 py-3 text-center"><span class="font-black {{ $hasClockedIn ? 'text-emerald-600' : 'text-slate-400' }}">{{ $hasClockedIn ? 'Yes' : 'No' }}</span></td>
+                                                            <td class="px-4 py-3 text-center"><span class="font-black {{ $hasScored ? 'text-emerald-600' : 'text-slate-400' }}">{{ $hasScored ? 'Yes' : 'No' }}</span></td>
+                                                            <td class="px-4 py-3"><span class="inline-flex rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider {{ $statusClass }}">{{ $statusLabel }}</span></td>
+                                                            <td class="px-4 py-3 text-right">
+                                                                @if($hasClockedIn)
+                                                                    <a href="{{ route('merchandisers.visit', $outlet) }}" class="inline-flex rounded-lg bg-[#155EEF] px-3 py-2 text-[10px] font-black uppercase tracking-wider text-white hover:bg-blue-700">Open Visit</a>
+                                                                @elseif($visitOpen)
+                                                                    <form method="POST" action="{{ route('merchandisers.clock-in') }}" class="inline-block" data-clock-form data-clock-verb="Clocking in">
+                                                                        @csrf
+                                                                        <input type="hidden" name="outlet_id" value="{{ $outlet->id }}">
+                                                                        <input type="hidden" name="clock_in_type" value="outlet">
+                                                                        <input type="hidden" name="latitude" class="user-lat-input">
+                                                                        <input type="hidden" name="longitude" class="user-lng-input">
+                                                                        <button type="submit" data-clock-submit class="rounded-lg bg-[#155EEF] px-3 py-2 text-[10px] font-black uppercase tracking-wider text-white hover:bg-blue-700">Clock In</button>
+                                                                    </form>
+                                                                @else
+                                                                    <span class="text-[10px] font-bold text-slate-400">Window closed</span>
+                                                                @endif
+                                                            </td>
+                                                        </tr>
+                                                    @empty
+                                                        <tr><td colspan="6" class="px-4 py-10 text-center text-sm font-medium text-slate-500">No scheduled outlet visits for this date.</td></tr>
+                                                    @endforelse
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        <div class="hidden space-y-4" aria-hidden="true">
                                             @forelse($outlets as $outlet)
                                                 @php
                                                     $timezone = auth()->user()->merchandiserRegion->timezone ?? 'Africa/Accra';
