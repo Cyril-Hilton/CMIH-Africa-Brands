@@ -246,6 +246,7 @@ class MerchandiserAdminHubController extends Controller
         $posmAvailabilityData = collect();
         $brandPerformanceData = collect();
         $merchandiserCoverageTable = collect();
+        $clientPerformanceTrend = ['labels' => [], 'overall' => [], 'brands' => []];
 
         if ($activeTab === 'overview') {
             $currentMonthStart = now()->startOfMonth();
@@ -350,7 +351,11 @@ class MerchandiserAdminHubController extends Controller
 
             $brandPerformanceData = collect($perfectStoreSummary['brands'] ?? []);
 
+            // Every client-facing SKU result must originate from the currently selected visit set.
+            $filteredVisitIds = $recentVisits->pluck('id');
             $leastAvailableSkus = MerchandiserVisitSku::with('sku')
+                ->when($filteredVisitIds->isEmpty(), fn ($query) => $query->whereRaw('1 = 0'))
+                ->when($filteredVisitIds->isNotEmpty(), fn ($query) => $query->whereIn('visit_id', $filteredVisitIds))
                 ->select('sku_id', DB::raw('COUNT(*) as total_checks'), DB::raw('SUM(CASE WHEN osa_quantity >= 1 THEN 1 ELSE 0 END) as available_checks'))
                 ->groupBy('sku_id')
                 ->havingRaw('total_checks > 0')
@@ -373,48 +378,37 @@ class MerchandiserAdminHubController extends Controller
                     ];
                 });
 
-            if ($leastAvailableSkus->isEmpty()) {
-                $sampleSkus = Sku::take(5)->get();
-                $leastAvailableSkus = $sampleSkus->map(function ($sku, $idx) {
-                    $pcts = [45.0, 58.2, 62.5, 71.0, 78.4];
-                    $pct = $pcts[$idx % count($pcts)];
-                    return [
-                        'sku_code' => $sku->code ?? ('SKU-00'.($idx + 1)),
-                        'sku_name' => $sku->name ?? ('Product SKU '.($idx + 1)),
-                        'category' => $sku->category ?? 'General',
-                        'out_of_stock_count' => (10 - $idx * 2),
-                        'total_checks' => 20,
-                        'availability_pct' => $pct,
-                        'status' => $pct < 50 ? 'Critical' : ($pct < 80 ? 'Low' : 'Good'),
-                    ];
-                });
-            }
-
             $posmItems = [
                 'Branded Shelf', 'Hangers', 'Shelf Talkers', 'Parasol',
                 'Wobblers', 'Buntings', 'Display Tables', 'Counter Tops'
             ];
-            $posmLedgerGrouped = PosmLedger::select('item_name', DB::raw('SUM(quantity_in) as total_in'), DB::raw('SUM(quantity_out) as total_out'))
+            $posmLedgerGrouped = PosmLedger::select('item_name', DB::raw('MAX(item_type) as item_type'), DB::raw('MAX(client_brand) as client_brand'), DB::raw('SUM(quantity_in) as total_in'), DB::raw('SUM(quantity_out) as total_out'))
+                ->whereIn('created_by', $tenantMerchandiserIds)
+                ->whereBetween('created_at', [$perfectStoreFrom->copy()->startOfDay(), $perfectStoreTo->copy()->endOfDay()])
                 ->groupBy('item_name')
                 ->get()
                 ->keyBy(fn ($item) => strtolower(trim($item->item_name)));
 
             $posmAvailabilityData = collect($posmItems)->map(function ($item) use ($posmLedgerGrouped) {
                 $match = $posmLedgerGrouped->get(strtolower($item));
-                $in = (int) ($match?->total_in ?? 100);
-                $out = (int) ($match?->total_out ?? 85);
-                $pct = $in > 0 ? min(100.0, round(($out / $in) * 100, 1)) : 85.0;
+                $in = (int) ($match?->total_in ?? 0);
+                $out = (int) ($match?->total_out ?? 0);
+                $pct = $in > 0 ? min(100.0, round(($out / $in) * 100, 1)) : null;
                 return [
                     'posm_item' => $item,
-                    'type_brand' => 'Main Brand',
+                    'type_brand' => $match?->client_brand ?: ($match?->item_type ?: 'Not recorded'),
                     'availability_pct' => $pct,
-                    'status' => $pct >= 80 ? 'Available' : 'Limited',
+                    'status' => $pct === null ? 'Not recorded' : ($pct >= 80 ? 'Available' : 'Limited'),
                 ];
             });
 
-            $merchandiserCoverageTable = $activeMerchList->map(function (User $merch) use ($visitsByUserId) {
+            $merchandiserCoverageTable = $activeMerchList->map(function (User $merch) use ($visitsByUserId, $perfectStoreFrom, $perfectStoreTo, $performanceFilters) {
                 $userVisits = $visitsByUserId->get((int) $merch->id, collect());
-                $scheduled = MerchandiserOutletAssignment::where('user_id', $merch->id)->count();
+                $scheduled = MerchandiserOutletAssignment::where('user_id', $merch->id)
+                    ->whereBetween('assigned_date', [$perfectStoreFrom->toDateString(), $perfectStoreTo->toDateString()])
+                    ->where('status', '!=', MerchandiserOutletAssignment::STATUS_COLLAPSED)
+                    ->when(filled($performanceFilters['outlet_id'] ?? null), fn ($query) => $query->where('outlet_id', (int) $performanceFilters['outlet_id']))
+                    ->count();
                 $attended = $userVisits->count();
                 $coveragePct = $scheduled > 0 ? min(100.0, round(($attended / $scheduled) * 100, 1)) : ($attended > 0 ? 100.0 : 0.0);
                 return [
@@ -425,6 +419,22 @@ class MerchandiserAdminHubController extends Controller
                     'status' => $coveragePct >= 80 ? 'Good' : 'Needs Attention',
                 ];
             });
+
+            if (in_array($activeTab, ['executive', 'client-dashboard'], true)) {
+                for ($offset = 4; $offset >= 0; $offset--) {
+                    $periodStart = now()->subMonths($offset)->startOfMonth();
+                    $periodEnd = $periodStart->copy()->endOfMonth();
+                    $periodSummary = $this->cachedPerfectStoreSummary($periodStart, $periodEnd, $tenantCode, $performanceFilters);
+                    $clientPerformanceTrend['labels'][] = $periodStart->format('M');
+                    $clientPerformanceTrend['overall'][] = (float) ($periodSummary['overview']['perfect_store_score'] ?? 0);
+                    foreach (collect($periodSummary['brands'] ?? []) as $brand) {
+                        $name = $brand['brand_name'] ?? $brand['name'] ?? null;
+                        if ($name) {
+                            $clientPerformanceTrend['brands'][$name][] = (float) ($brand['overall_score'] ?? $brand['perfect_store_score'] ?? 0);
+                        }
+                    }
+                }
+            }
         }
 
         [$outletCreatedFrom, $outletCreatedTo] = $this->outletCreatedRange($request);
@@ -1445,29 +1455,19 @@ class MerchandiserAdminHubController extends Controller
         // ── ShelfWatch: Price & Promo ─────────────────────────────────────────
         $pricePromoData    = collect();
         $posmCompliance    = 0.0;
-        $pricingCompliance = 0.0;
-        if (in_array($activeTab, ['price-promo'], true)) {
+        $pricingCompliance = null;
+        if (in_array($activeTab, ['price-promo', 'executive'], true)) {
             // POSM: visits that have at least one POSM photo = compliant
-            $totalVisitsPP = MerchandiserVisit::whereIn('user_id', $tenantMerchandiserIds)->whereBetween('created_at', [$coverageStart, $coverageEnd])->count();
-            $withPosm = DB::table('merchandiser_visits as v')
-                ->whereIn('v.user_id', $tenantMerchandiserIds)
-                ->whereExists(fn($q) => $q->from('merchandiser_visit_skus as vs')->whereColumn('vs.visit_id', 'v.id')->whereNotNull('vs.photo_path'))
-                ->whereBetween('v.created_at', [$coverageStart, $coverageEnd])
-                ->count();
+            $selectedVisits = $recentVisits ?? collect();
+            $selectedSkuChecks = $selectedVisits->flatMap(fn (MerchandiserVisit $visit) => $visit->visitSkus);
+            $totalVisitsPP = $selectedVisits->count();
+            $withPosm = $selectedSkuChecks->filter(fn (MerchandiserVisitSku $row) => filled($row->photo_path))->pluck('visit_id')->unique()->count();
             $posmCompliance = $this->boundedPercent($withPosm, $totalVisitsPP);
             // Price compliance: visits where price was recorded
-            $withPrice = DB::table('merchandiser_visit_skus as vs')
-                ->join('merchandiser_visits as v', 'v.id', '=', 'vs.visit_id')
-                ->whereIn('v.user_id', $tenantMerchandiserIds)
-                ->whereNotNull('vs.shelf_price')
-                ->whereBetween('v.created_at', [$coverageStart, $coverageEnd])
-                ->count();
-            $totalSkuChecks = DB::table('merchandiser_visit_skus as vs')
-                ->join('merchandiser_visits as v', 'v.id', '=', 'vs.visit_id')
-                ->whereIn('v.user_id', $tenantMerchandiserIds)
-                ->whereBetween('v.created_at', [$coverageStart, $coverageEnd])
-                ->count();
-            $pricingCompliance = $this->boundedPercent($withPrice, $totalSkuChecks);
+            $withPrice = $selectedSkuChecks->filter(fn (MerchandiserVisitSku $row) => $row->shelf_price !== null)->count();
+            $pricingCompliance = $selectedSkuChecks->isNotEmpty()
+                ? $this->boundedPercent($withPrice, $selectedSkuChecks->count())
+                : null;
             // By KD promo performance
             $pricePromoData = DB::table('merchandiser_visits as v')
                 ->join('outlets as o', 'o.id', '=', 'v.outlet_id')
@@ -1533,7 +1533,7 @@ class MerchandiserAdminHubController extends Controller
             'userPerformance', 'supervisorPerformance', 'perfPeriod', 'perfRole', 'perfTrendChart',
             'pricePromoData', 'posmCompliance', 'pricingCompliance',
             'perfectStoreKdData', 'perfectStoreMerchandiserData', 'perfectStoreMilestones', 'categorySosData',
-            'leastAvailableSkus', 'posmAvailabilityData', 'brandPerformanceData', 'merchandiserCoverageTable',
+            'leastAvailableSkus', 'posmAvailabilityData', 'brandPerformanceData', 'merchandiserCoverageTable', 'clientPerformanceTrend',
             'roleDashboard', 'totalPending'
         ));
     }

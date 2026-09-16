@@ -1,10 +1,19 @@
 @php
     $formatPct = fn ($value) => $value === null ? 'N/A' : number_format((float) $value, 1).'%';
+    $regionalChartRows = collect($perfectStoreKdData ?? collect())->map(function ($row) {
+        return [
+            'region' => $row['region_name'] ?? 'National',
+            'osa' => $row['osa'] ?? null,
+            'coverage' => $row['coverage'] ?? null,
+            'planogram' => $row['planogram'] ?? null,
+            'overall' => $row['overall_score'] ?? null,
+        ];
+    })->values();
 @endphp
 
 <div class="perfect-store-tab space-y-6">
 
-    @include('merchandisers.admin-tabs.client_top_filters', ['showStoreFilter' => true])
+    @include('merchandisers.admin-tabs.client_top_filters', ['showStoreFilter' => true, 'showPeriodFilter' => false, 'showDateRangeFilter' => true])
 
     <!-- Navigator Header & Filter Row (Navigator 2) -->
     <div class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
@@ -150,12 +159,16 @@
                                 {{ $posmRow['type_brand'] }}
                             </td>
                             <td class="py-3.5 px-4 text-right tabular-nums font-black text-sm">
-                                @php $avail = (float)($posmRow['availability_pct'] ?? 85.0); @endphp
+                                @php $avail = $posmRow['availability_pct'] ?? null; @endphp
                                 <div class="inline-flex items-center gap-2">
-                                    <div class="w-24 h-2.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden hidden sm:block">
-                                        <div class="h-full rounded-full {{ $avail >= 80 ? 'bg-emerald-500' : 'bg-amber-500' }}" style="width: {{ $avail }}%"></div>
-                                    </div>
-                                    <span class="{{ $avail >= 80 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400' }}">{{ number_format($avail, 1) }}%</span>
+                                    @if($avail !== null)
+                                        <div class="w-24 h-2.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden hidden sm:block">
+                                            <div class="h-full rounded-full {{ $avail >= 80 ? 'bg-emerald-500' : 'bg-amber-500' }}" style="width: {{ $avail }}%"></div>
+                                        </div>
+                                        <span class="{{ $avail >= 80 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400' }}">{{ number_format($avail, 1) }}%</span>
+                                    @else
+                                        <span class="text-slate-400">N/A</span>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
@@ -173,6 +186,24 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     if (typeof Chart === 'undefined') return;
+    const kdRows = @json($regionalChartRows);
+    const regional = Object.values(kdRows.reduce((groups, row) => {
+        const group = groups[row.region] || { name: row.region, rows: [] };
+        group.rows.push(row);
+        groups[row.region] = group;
+        return groups;
+    }, {})).map(group => ({
+        name: group.name,
+        osa: average(group.rows.map(row => row.osa)),
+        coverage: average(group.rows.map(row => row.coverage)),
+        planogram: average(group.rows.map(row => row.planogram)),
+        overall: average(group.rows.map(row => row.overall)),
+    }));
+    function average(values) {
+        const numeric = values.filter(value => value !== null && value !== undefined);
+        return numeric.length ? numeric.reduce((total, value) => total + Number(value), 0) / numeric.length : null;
+    }
+    const regionalLabels = regional.map(row => row.name);
 
     // Chart 1: Regional OSA Performance
     const ctxOsa = document.getElementById('regionalOsaChart');
@@ -180,10 +211,10 @@ document.addEventListener('DOMContentLoaded', function() {
         new Chart(ctxOsa, {
             type: 'bar',
             data: {
-                labels: ['Greater Accra', 'Ashanti', 'Western', 'Northern'],
+                labels: regionalLabels,
                 datasets: [{
                     label: 'OSA %',
-                    data: [88, 85, 79, 91],
+                    data: regional.map(row => row.osa),
                     backgroundColor: '#3B82F6',
                     borderRadius: 8
                 }]
@@ -203,10 +234,10 @@ document.addEventListener('DOMContentLoaded', function() {
         new Chart(ctxKpi, {
             type: 'bar',
             data: {
-                labels: ['Greater Accra', 'Ashanti', 'Western', 'Northern'],
+                labels: regionalLabels,
                 datasets: [
-                    { label: 'Coverage', data: [92, 90, 84, 94], backgroundColor: '#10B981', borderRadius: 6 },
-                    { label: 'Planogram', data: [75, 70, 68, 80], backgroundColor: '#F59E0B', borderRadius: 6 }
+                    { label: 'Coverage', data: regional.map(row => row.coverage), backgroundColor: '#10B981', borderRadius: 6 },
+                    { label: 'Planogram', data: regional.map(row => row.planogram), backgroundColor: '#F59E0B', borderRadius: 6 }
                 ]
             },
             options: {
@@ -223,10 +254,10 @@ document.addEventListener('DOMContentLoaded', function() {
         new Chart(ctxBrand, {
             type: 'bar',
             data: {
-                labels: ['Greater Accra', 'Ashanti', 'Western', 'Northern'],
+                labels: regionalLabels,
                 datasets: [{
                     label: 'Brand Avg',
-                    data: [82, 78, 74, 85],
+                    data: regional.map(row => row.overall),
                     backgroundColor: '#8B5CF6',
                     borderRadius: 8
                 }]

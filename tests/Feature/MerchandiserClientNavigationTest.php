@@ -77,10 +77,10 @@ class MerchandiserClientNavigationTest extends TestCase
         $this->get(route('merchandisers.client.dashboard', ['tenant' => 'ggbl']))->assertOk()->assertSee('data-merch-tenant="ggbl"', false);
     }
 
-    public function test_performance_sections_and_filters_remain_in_the_client_workspace(): void
+    public function test_client_navigator_filters_follow_the_reference_guide(): void
     {
         $client = User::factory()->create(['access_role' => 'merchandiser_client', 'status' => 'active']);
-        foreach (['executive', 'regional-kd', 'category-kpi', 'brand-execution'] as $view) {
+        foreach (['executive', 'brand-execution'] as $view) {
             $response = $this->actingAs($client)->get(route('merchandisers.client.dashboard', [
                 'view' => $view, 'perf_period' => 'month',
             ]));
@@ -88,5 +88,35 @@ class MerchandiserClientNavigationTest extends TestCase
             $response->assertDontSee('id="client-performance"', false);
             $response->assertSee('name="perf_period"', false);
         }
+
+        $regional = $this->actingAs($client)->get(route('merchandisers.client.dashboard', ['view' => 'regional-kd']));
+        $regional->assertOk()
+            ->assertDontSee('name="perf_period"', false)
+            ->assertSee('name="performance_outlet_id"', false)
+            ->assertSee('name="clock_from"', false)
+            ->assertSee('name="clock_to"', false);
+
+        $category = $this->actingAs($client)->get(route('merchandisers.client.dashboard', ['view' => 'category-kpi']));
+        $category->assertOk()
+            ->assertDontSee('name="perf_period"', false)
+            ->assertDontSee('name="performance_outlet_id"', false)
+            ->assertSee('name="performance_region_id"', false)
+            ->assertSee('name="performance_kd_id"', false);
+    }
+
+    public function test_client_chart_templates_use_live_datasets_not_demo_values(): void
+    {
+        $executive = file_get_contents(resource_path('views/merchandisers/admin-tabs/executive.blade.php'));
+        $regional = file_get_contents(resource_path('views/merchandisers/admin-tabs/regional_kd.blade.php'));
+        $category = file_get_contents(resource_path('views/merchandisers/admin-tabs/category_kpi.blade.php'));
+
+        $this->assertStringContainsString("type: 'line'", $executive);
+        $this->assertStringContainsString('trendLabels', $executive);
+        $this->assertStringContainsString('brandSeries', $executive);
+        $this->assertStringContainsString('regionalChartRows', $regional);
+        $this->assertStringContainsString('categoryChartRows', $category);
+        $this->assertStringNotContainsString('Key Brand A', $executive);
+        $this->assertStringNotContainsString("data: [82.0, 100.0, 100.0, 100.0]", $category);
+        $this->assertStringNotContainsString("data: [88, 85, 79, 91]", $regional);
     }
 }

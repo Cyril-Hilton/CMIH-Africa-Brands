@@ -1,16 +1,26 @@
 @php
     $overview = $perfectStoreSummary['overview'] ?? [];
     $formatPct = fn ($value) => $value === null ? 'N/A' : number_format((float) $value, 1).'%';
-    $osaScore = $overview['osa'] ?? 85.1;
-    $sosScore = $overview['sos'] ?? 65.6;
-    $npdScore = $overview['npd'] ?? 86.2;
-    $plnScore = $overview['planogram'] ?? 50.3;
+    $osaScore = $overview['osa'] ?? null;
+    $sosScore = $overview['sos'] ?? null;
+    $npdScore = $overview['npd'] ?? null;
+    $plnScore = $overview['planogram'] ?? null;
+    $categoryRows = collect($categorySosData ?? collect());
+    $categoryChartRows = $categoryRows->map(function ($row) {
+        return [
+            'category' => $row->category,
+            'osa' => $row->osa_pct,
+            'sos' => $row->sos_pct,
+            'planogram' => $row->planogram_pct,
+        ];
+    })->values();
+    $gaugeValue = fn ($value) => max(0, min(100, (float) ($value ?? 0)));
     $isAdmin = auth()->user()?->isMerchandiserPortalAdmin() ?? false;
 @endphp
 
 <div class="perfect-store-tab space-y-6">
 
-    @include('merchandisers.admin-tabs.client_top_filters')
+    @include('merchandisers.admin-tabs.client_top_filters', ['showPeriodFilter' => false])
 
     <!-- Navigator Header (Navigator 3) -->
     <div class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
@@ -34,10 +44,10 @@
             <div class="relative w-28 h-28 my-2 flex items-center justify-center">
                 <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                     <path class="text-slate-100 dark:text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                    <path class="text-amber-500 stroke-current" stroke-dasharray="{{ $osaScore }}, 100" stroke-width="3.5" stroke-linecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        <path class="text-amber-500 stroke-current" stroke-dasharray="{{ $gaugeValue($osaScore) }}, 100" stroke-width="3.5" stroke-linecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                 </svg>
                 <div class="absolute flex flex-col items-center justify-center">
-                    <span class="text-2xl font-black text-slate-900 dark:text-white tabular-nums">{{ number_format((float)$osaScore, 1) }}%</span>
+                    <span class="text-2xl font-black text-slate-900 dark:text-white tabular-nums">{{ $formatPct($osaScore) }}</span>
                 </div>
             </div>
             <p class="text-[10px] text-amber-600 dark:text-amber-400 font-extrabold mt-1"><i class="fa-solid fa-bullseye mr-1"></i>KPI: On-Shelf Availability (OSA Threshold)</p>
@@ -49,10 +59,10 @@
             <div class="relative w-28 h-28 my-2 flex items-center justify-center">
                 <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                     <path class="text-slate-100 dark:text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                    <path class="text-emerald-500 stroke-current" stroke-dasharray="{{ $sosScore }}, 100" stroke-width="3.5" stroke-linecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        <path class="text-emerald-500 stroke-current" stroke-dasharray="{{ $gaugeValue($sosScore) }}, 100" stroke-width="3.5" stroke-linecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                 </svg>
                 <div class="absolute flex flex-col items-center justify-center">
-                    <span class="text-2xl font-black text-slate-900 dark:text-white tabular-nums">{{ number_format((float)$sosScore, 1) }}%</span>
+                    <span class="text-2xl font-black text-slate-900 dark:text-white tabular-nums">{{ $formatPct($sosScore) }}</span>
                 </div>
             </div>
             <p class="text-[10px] text-emerald-600 dark:text-emerald-400 font-extrabold mt-1"><i class="fa-solid fa-bullseye mr-1"></i>KPI: Share of Shelf (SoS Target)</p>
@@ -64,10 +74,10 @@
             <div class="relative w-28 h-28 my-2 flex items-center justify-center">
                 <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                     <path class="text-slate-100 dark:text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                    <path class="text-rose-500 stroke-current" stroke-dasharray="{{ $npdScore }}, 100" stroke-width="3.5" stroke-linecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        <path class="text-rose-500 stroke-current" stroke-dasharray="{{ $gaugeValue($npdScore) }}, 100" stroke-width="3.5" stroke-linecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                 </svg>
                 <div class="absolute flex flex-col items-center justify-center">
-                    <span class="text-2xl font-black text-slate-900 dark:text-white tabular-nums">{{ number_format((float)$npdScore, 1) }}%</span>
+                    <span class="text-2xl font-black text-slate-900 dark:text-white tabular-nums">{{ $formatPct($npdScore) }}</span>
                 </div>
             </div>
             <p class="text-[10px] text-rose-600 dark:text-rose-400 font-extrabold mt-1"><i class="fa-solid fa-bullseye mr-1"></i>KPI: New Product Launches</p>
@@ -79,10 +89,10 @@
             <div class="relative w-28 h-28 my-2 flex items-center justify-center">
                 <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                     <path class="text-slate-100 dark:text-slate-800" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                    <path class="text-teal-500 stroke-current" stroke-dasharray="{{ $plnScore }}, 100" stroke-width="3.5" stroke-linecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        <path class="text-teal-500 stroke-current" stroke-dasharray="{{ $gaugeValue($plnScore) }}, 100" stroke-width="3.5" stroke-linecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                 </svg>
                 <div class="absolute flex flex-col items-center justify-center">
-                    <span class="text-2xl font-black text-slate-900 dark:text-white tabular-nums">{{ number_format((float)$plnScore, 1) }}%</span>
+                    <span class="text-2xl font-black text-slate-900 dark:text-white tabular-nums">{{ $formatPct($plnScore) }}</span>
                 </div>
             </div>
             <p class="text-[10px] text-teal-600 dark:text-teal-400 font-extrabold mt-1"><i class="fa-solid fa-bullseye mr-1"></i>KPI: Planogram Score / Floor Threshold</p>
@@ -150,6 +160,8 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     if (typeof Chart === 'undefined') return;
+    const categoryRows = @json($categoryChartRows);
+    const labels = categoryRows.map(row => row.category);
 
     // Chart 1: Category Level OSA
     const ctxOsa = document.getElementById('categoryLevelOsaChart');
@@ -157,10 +169,10 @@ document.addEventListener('DOMContentLoaded', function() {
         new Chart(ctxOsa, {
             type: 'bar',
             data: {
-                labels: ['Beauty & Wellbeing', 'Nutrition', 'Home Care', 'Personal Care'],
+                labels,
                 datasets: [{
                     label: 'Category OSA %',
-                    data: [82.0, 100.0, 100.0, 100.0],
+                    data: categoryRows.map(row => row.osa),
                     backgroundColor: '#F59E0B',
                     borderRadius: 8
                 }]
@@ -180,10 +192,10 @@ document.addEventListener('DOMContentLoaded', function() {
         new Chart(ctxSos, {
             type: 'bar',
             data: {
-                labels: ['Beauty & Wellbeing', 'Nutrition', 'Home Care', 'Personal Care'],
+                labels,
                 datasets: [{
                     label: 'Category SoS %',
-                    data: [71.2, 68.7, 64.5, 75.0],
+                    data: categoryRows.map(row => row.sos),
                     backgroundColor: '#10B981',
                     borderRadius: 8
                 }]
@@ -203,10 +215,10 @@ document.addEventListener('DOMContentLoaded', function() {
         new Chart(ctxPln, {
             type: 'bar',
             data: {
-                labels: ['Beauty & Wellbeing', 'Nutrition', 'Home Care', 'Personal Care'],
+                labels,
                 datasets: [{
                     label: 'Category Planogram %',
-                    data: [85.0, 92.0, 61.5, 100.0],
+                    data: categoryRows.map(row => row.planogram),
                     backgroundColor: '#14B8A6',
                     borderRadius: 8
                 }]

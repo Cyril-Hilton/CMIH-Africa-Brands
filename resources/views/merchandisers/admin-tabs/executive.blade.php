@@ -1,7 +1,10 @@
 @php
     $overview = $perfectStoreSummary['overview'] ?? [];
     $formatPct = fn ($value) => $value === null ? 'N/A' : number_format((float) $value, 1).'%';
-    $overallScore = $overview['perfect_store_score'] ?? 68.0;
+    $overallScore = $overview['perfect_store_score'] ?? null;
+    $overallGauge = max(0, min(100, (float) ($overallScore ?? 0)));
+    $categoryOsaRows = collect($categorySosData ?? collect())->filter(fn ($row) => $row->osa_pct !== null)->values();
+    $trend = $clientPerformanceTrend ?? ['labels' => [], 'overall' => [], 'brands' => []];
 @endphp
 
 <div class="perfect-store-tab space-y-6">
@@ -33,10 +36,10 @@
                 <div class="relative w-36 h-36 flex items-center justify-center">
                     <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                         <path class="text-indigo-950" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                        <path class="text-indigo-400 stroke-current transition-all duration-1000 ease-out" stroke-dasharray="{{ $overallScore }}, 100" stroke-width="3.5" stroke-linecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        <path class="text-indigo-400 stroke-current transition-all duration-1000 ease-out" stroke-dasharray="{{ $overallGauge }}, 100" stroke-width="3.5" stroke-linecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                     </svg>
                     <div class="absolute flex flex-col items-center justify-center text-center">
-                        <span class="text-3xl sm:text-4xl font-black text-white tabular-nums tracking-tight">{{ number_format((float)$overallScore, 0) }}%</span>
+                        <span class="text-3xl sm:text-4xl font-black text-white tabular-nums tracking-tight">{{ $overallScore === null ? 'N/A' : number_format((float)$overallScore, 0).'%' }}</span>
                         <span class="text-[9px] uppercase tracking-wider text-indigo-300 font-bold">Compliant</span>
                     </div>
                 </div>
@@ -44,7 +47,7 @@
 
             <div class="pt-3 border-t border-indigo-500/20 flex items-center justify-between text-xs text-indigo-200">
                 <span>{{ $overview['scored'] ?? 0 }} scored visit(s)</span>
-                <span class="font-bold text-emerald-400"><i class="fa-solid fa-arrow-trend-up mr-1"></i>+2.4% vs last month</span>
+                <span class="font-bold text-indigo-200">Selected period</span>
             </div>
         </div>
 
@@ -57,7 +60,7 @@
                         <i class="fa-solid fa-crosshairs text-xs"></i>
                     </div>
                 </div>
-                <p class="text-2xl font-black mt-2 text-emerald-900 dark:text-emerald-100 tabular-nums">{{ $formatPct($overview['coverage'] ?? 92.0) }}</p>
+                <p class="text-2xl font-black mt-2 text-emerald-900 dark:text-emerald-100 tabular-nums">{{ $formatPct($overview['coverage'] ?? null) }}</p>
                 <p class="text-[10px] font-bold mt-1 text-emerald-700 dark:text-emerald-400 opacity-85">Target 100%</p>
             </div>
 
@@ -68,7 +71,7 @@
                         <i class="fa-solid fa-box-open text-xs"></i>
                     </div>
                 </div>
-                <p class="text-2xl font-black mt-2 text-blue-900 dark:text-blue-100 tabular-nums">{{ $formatPct($overview['osa'] ?? 89.0) }}</p>
+                <p class="text-2xl font-black mt-2 text-blue-900 dark:text-blue-100 tabular-nums">{{ $formatPct($overview['osa'] ?? null) }}</p>
                 <p class="text-[10px] font-bold mt-1 text-blue-700 dark:text-blue-400 opacity-85">On-Shelf Availability</p>
             </div>
 
@@ -79,7 +82,7 @@
                         <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
                     </div>
                 </div>
-                <p class="text-2xl font-black mt-2 text-purple-900 dark:text-purple-100 tabular-nums">{{ $formatPct($overview['npd'] ?? 72.0) }}</p>
+                <p class="text-2xl font-black mt-2 text-purple-900 dark:text-purple-100 tabular-nums">{{ $formatPct($overview['npd'] ?? null) }}</p>
                 <p class="text-[10px] font-bold mt-1 text-purple-700 dark:text-purple-400 opacity-85">New Product Launch</p>
             </div>
 
@@ -90,7 +93,7 @@
                         <i class="fa-solid fa-star text-xs"></i>
                     </div>
                 </div>
-                <p class="text-2xl font-black mt-2 text-amber-900 dark:text-amber-100 tabular-nums">{{ $formatPct($overview['mhs'] ?? 68.0) }}</p>
+                <p class="text-2xl font-black mt-2 text-amber-900 dark:text-amber-100 tabular-nums">{{ $formatPct($overview['mhs'] ?? null) }}</p>
                 <p class="text-[10px] font-bold mt-1 text-amber-700 dark:text-amber-400 opacity-85">Must Have Score</p>
             </div>
 
@@ -101,7 +104,7 @@
                         <i class="fa-solid fa-chart-pie text-xs"></i>
                     </div>
                 </div>
-                <p class="text-2xl font-black mt-2 text-rose-900 dark:text-rose-100 tabular-nums">{{ $formatPct($overview['sos'] ?? 90.0) }}</p>
+                <p class="text-2xl font-black mt-2 text-rose-900 dark:text-rose-100 tabular-nums">{{ $formatPct($overview['sos'] ?? null) }}</p>
                 <p class="text-[10px] font-bold mt-1 text-rose-700 dark:text-rose-400 opacity-85">Share of Shelf</p>
             </div>
 
@@ -112,7 +115,7 @@
                         <i class="fa-solid fa-ruler-combined text-xs"></i>
                     </div>
                 </div>
-                <p class="text-2xl font-black mt-2 text-cyan-900 dark:text-cyan-100 tabular-nums">{{ $formatPct($overview['planogram'] ?? 66.0) }}</p>
+                <p class="text-2xl font-black mt-2 text-cyan-900 dark:text-cyan-100 tabular-nums">{{ $formatPct($overview['planogram'] ?? null) }}</p>
                 <p class="text-[10px] font-bold mt-1 text-cyan-700 dark:text-cyan-400 opacity-85">Compliance Target 100%</p>
             </div>
 
@@ -124,8 +127,8 @@
                     </div>
                 </div>
                 <div class="flex items-baseline justify-between mt-2">
-                    <p class="text-2xl font-black text-teal-900 dark:text-teal-100 tabular-nums">85.0%</p>
-                    <span class="text-[10px] font-bold text-teal-700 dark:text-teal-300">Promotions active &amp; verified</span>
+                    <p class="text-2xl font-black text-teal-900 dark:text-teal-100 tabular-nums">{{ $formatPct($pricingCompliance ?? null) }}</p>
+                    <span class="text-[10px] font-bold text-teal-700 dark:text-teal-300">SKU checks with a recorded price</span>
                 </div>
             </div>
         </div>
@@ -231,26 +234,19 @@
                 </div>
 
                 <div class="space-y-4 my-2">
-                    @php
-                        $catOsaSamples = [
-                            ['name' => 'Home Care', 'pct' => 92.5, 'color' => 'bg-emerald-500'],
-                            ['name' => 'Laundry Care', 'pct' => 89.1, 'color' => 'bg-blue-500'],
-                            ['name' => 'Nutrition', 'pct' => 78.4, 'color' => 'bg-amber-500'],
-                            ['name' => 'Skin Care', 'pct' => 95.0, 'color' => 'bg-teal-500'],
-                            ['name' => 'Skin Cleansing', 'pct' => 88.0, 'color' => 'bg-cyan-500'],
-                        ];
-                    @endphp
-                    @foreach($catOsaSamples as $cat)
+                    @forelse($categoryOsaRows as $index => $cat)
                         <div>
                             <div class="flex items-center justify-between text-xs font-extrabold mb-1">
-                                <span class="text-slate-800 dark:text-slate-200">{{ $cat['name'] }}</span>
-                                <span class="tabular-nums text-slate-900 dark:text-white">{{ $cat['pct'] }}%</span>
+                                <span class="text-slate-800 dark:text-slate-200">{{ $cat->category }}</span>
+                                <span class="tabular-nums text-slate-900 dark:text-white">{{ number_format((float) $cat->osa_pct, 1) }}%</span>
                             </div>
                             <div class="w-full h-3 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                                <div class="{{ $cat['color'] }} h-full rounded-full transition-all duration-700" style="width: {{ $cat['pct'] }}%"></div>
+                                <div class="{{ ['bg-emerald-500', 'bg-blue-500', 'bg-amber-500', 'bg-teal-500', 'bg-cyan-500'][$index % 5] }} h-full rounded-full transition-all duration-700" style="width: {{ max(0, min(100, (float) $cat->osa_pct)) }}%"></div>
                             </div>
                         </div>
-                    @endforeach
+                    @empty
+                        <p class="py-8 text-center text-xs text-slate-400">No category OSA records for this selection.</p>
+                    @endforelse
                 </div>
             </div>
             <p class="mt-4 text-[10px] text-slate-500 dark:text-slate-400 font-semibold border-t border-slate-100 dark:border-slate-800 pt-3">
@@ -263,6 +259,9 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     if (typeof Chart === 'undefined') return;
+    const trendLabels = @json($trend['labels'] ?? []);
+    const trendScores = @json($trend['overall'] ?? []);
+    const brandSeries = @json($trend['brands'] ?? []);
 
     // Chart 1: Perfect Store Trend Chart
     const ctxTrend = document.getElementById('perfectStoreTrendChart');
@@ -270,10 +269,10 @@ document.addEventListener('DOMContentLoaded', function() {
         new Chart(ctxTrend, {
             type: 'line',
             data: {
-                labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5'],
+                labels: trendLabels,
                 datasets: [{
                     label: 'Perfect Store Score',
-                    data: [62, 65, 71, 68, 75],
+                    data: trendScores,
                     borderColor: '#3B82F6',
                     backgroundColor: 'rgba(59, 130, 246, 0.1)',
                     fill: true,
@@ -286,7 +285,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
-                    y: { min: 40, max: 100, ticks: { callback: v => v + '%' } }
+                    y: { min: 0, max: 100, ticks: { callback: v => v + '%' } }
                 }
             }
         });
@@ -298,18 +297,21 @@ document.addEventListener('DOMContentLoaded', function() {
         new Chart(ctxBrand, {
             type: 'line',
             data: {
-                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
-                datasets: [
-                    { label: 'Key Brand A', data: [85, 82, 88, 90, 89], borderColor: '#10B981', tension: 0.3 },
-                    { label: 'Key Brand B', data: [70, 75, 73, 79, 81], borderColor: '#F59E0B', tension: 0.3 },
-                    { label: 'Key Brand C', data: [60, 62, 65, 64, 68], borderColor: '#EF4444', tension: 0.3 }
-                ]
+                labels: trendLabels,
+                datasets: Object.entries(brandSeries).map(([label, data], index) => ({
+                    label,
+                    data,
+                    borderColor: ['#10B981', '#F59E0B', '#EF4444', '#3B82F6', '#8B5CF6'][index % 5],
+                    tension: 0.3,
+                    borderWidth: 3,
+                    fill: false
+                }))
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
-                    y: { min: 40, max: 100, ticks: { callback: v => v + '%' } }
+                    y: { min: 0, max: 100, ticks: { callback: v => v + '%' } }
                 }
             }
         });

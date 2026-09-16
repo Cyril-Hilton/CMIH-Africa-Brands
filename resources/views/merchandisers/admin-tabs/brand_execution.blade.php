@@ -53,9 +53,9 @@
                             <td class="py-3.5 px-3 text-right tabular-nums text-rose-600 dark:text-rose-400 font-bold">{{ $formatPct($brandRow['sos'] ?? null) }}</td>
                             <td class="py-3.5 px-3 text-right tabular-nums text-cyan-600 dark:text-cyan-400 font-bold">{{ $formatPct($brandRow['planogram'] ?? null) }}</td>
                             <td class="py-3.5 px-4 text-center">
-                                @php $score = (float)($brandRow['overall_score'] ?? $brandRow['perfect_store_score'] ?? 80); @endphp
+                                @php $score = $brandRow['overall_score'] ?? $brandRow['perfect_store_score'] ?? null; @endphp
                                 <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black {{ $score >= 80 ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' : ($score >= 60 ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30' : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30') }}">
-                                    <span>{{ number_format($score, 1) }}%</span>
+                                    <span>{{ $score === null ? 'N/A' : number_format((float) $score, 1).'%' }}</span>
                                 </div>
                             </td>
                         </tr>
