@@ -58,9 +58,9 @@ class MerchandiserAdminHubRenderTest extends TestCase
                 $response->assertSee('name="tenant" value="ggbl"', false);
             }
             if (in_array($tab, ['supervisors', 'user-performance'], true)) {
-                $response->assertSee(route('merchandisers.admin.tab', [
+                $response->assertSee(str_replace('&', '&amp;', route('merchandisers.admin.tab', [
                     'tenant' => 'ggbl', 'adminTab' => $tab, 'perf_period' => 'daily',
-                ]));
+                ])), false);
             }
         }
     }

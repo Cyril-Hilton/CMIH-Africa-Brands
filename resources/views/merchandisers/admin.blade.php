@@ -1142,6 +1142,10 @@
                     @include('merchandisers.admin-tabs.brand_execution')
                 @endif
 
+                @if($activeAdminTab === 'user-performance')
+                    @include('merchandisers.admin-tabs.user_performance')
+                @endif
+
                 @if($activeAdminTab === 'price-promo')
                     @include('merchandisers.admin-tabs.price_promo')
                 @endif

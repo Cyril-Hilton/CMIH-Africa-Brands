@@ -20,7 +20,7 @@
                     <i class="fa-solid fa-layer-group"></i> Category Performance Navigator
                 </span>
                 <h2 class="text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-wide">Category Performance &amp; Share of Shelf</h2>
-                <p class="text-xs text-slate-500 dark:text-slate-400 font-semibold mt-1">Add Filter for Region and KD to inspect performance per product category.</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400 font-semibold mt-1">Category Level KPIs: Add Filter for Region and KD to inspect performance per product category.</p>
             </div>
         </div>
     </div>
