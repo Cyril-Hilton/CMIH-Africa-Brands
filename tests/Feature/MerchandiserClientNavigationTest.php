@@ -80,25 +80,13 @@ class MerchandiserClientNavigationTest extends TestCase
     public function test_performance_sections_and_filters_remain_in_the_client_workspace(): void
     {
         $client = User::factory()->create(['access_role' => 'merchandiser_client', 'status' => 'active']);
-        foreach (['Region', 'KD', 'Outlet', 'Merchandiser', 'Supervisor'] as $level) {
-            $view = in_array($level, ['Merchandiser', 'Supervisor'], true) ? 'brand-execution' : 'executive';
+        foreach (['executive', 'regional-kd', 'category-kpi', 'brand-execution'] as $view) {
             $response = $this->actingAs($client)->get(route('merchandisers.client.dashboard', [
-                'view' => $view, 'performance_level' => $level, 'performance_channel' => 'Modern Trade',
+                'view' => $view, 'perf_period' => 'month',
             ]));
-            $response->assertOk()->assertSee($level.' Performance');
-            $dom = new \DOMDocument();
-            @$dom->loadHTML($response->getContent());
-            $xpath = new \DOMXPath($dom);
-            $form = $xpath->query('//*[@id="client-performance"]//form')->item(0);
-            $this->assertNotNull($form);
-            $this->assertStringContainsString('/merchandisers/client/dashboard', $form->getAttribute('action'));
-            foreach (['view' => $view, 'performance_level' => $level, 'tenant' => 'unilever'] as $name => $value) {
-                $this->assertSame($value, $xpath->query('.//input[@name="'.$name.'"]', $form)->item(0)->getAttribute('value'));
-            }
-            $sidebarLink = $xpath->query('//*[@id="merchandiser-admin-sidebar"]//nav//a')->item(0);
-            parse_str(str_replace('&amp;', '&', parse_url($sidebarLink->getAttribute('href'), PHP_URL_QUERY) ?? ''), $query);
-            $this->assertSame('Modern Trade', $query['performance_channel'] ?? null);
-            $this->assertSame('unilever', $query['tenant'] ?? null);
+            $response->assertOk();
+            $response->assertDontSee('id="client-performance"', false);
+            $response->assertSee('name="perf_period"', false);
         }
     }
 }

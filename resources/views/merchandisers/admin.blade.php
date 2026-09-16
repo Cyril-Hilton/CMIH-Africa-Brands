@@ -1158,16 +1158,7 @@
                     @include('merchandisers.partials.profile')
                 @endif
 
-                @if($clientWorkspace)
-                    <nav aria-label="Performance sections" class="flex flex-wrap gap-3 my-5">
-                        @foreach((in_array($clientView, ['brand-execution', 'user-performance'], true) ? ['Merchandiser' => 'Merchandiser Performance', 'Supervisor' => 'Supervisor Performance'] : ['Region' => 'Regional Performance', 'KD' => 'KD Performance', 'Outlet' => 'Perfect Store Attendance']) as $level => $label)
-                            <a href="{{ $clientNavUrl($clientView, ['performance_level' => $level]) }}#client-performance" data-client-navigation class="rounded-lg border px-4 py-3 text-sm font-bold">{{ $label }}</a>
-                        @endforeach
-                    </nav>
-                    <section id="client-performance" style="scroll-margin-top: 100px">
-                        @include('merchandisers.admin-tabs.performance_filters')
-                    </section>
-                @endif
+
 
             </main>
 
