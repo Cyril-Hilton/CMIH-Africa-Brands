@@ -313,7 +313,11 @@ class MerchandiserAdminHubController extends Controller
                 $kdVisits = $visitsByKdId->get((int) $kd->id, collect());
                 $calcMetrics = \App\Services\PerfectStoreCalculator::computeKdMetrics($kd, $kdVisits);
                 $summaryMetrics = $summaryKdMap->get((int) $kd->id, []);
-                $overall = $summaryMetrics['perfect_store_score'] ?? $calcMetrics['overall_score'] ?? 0.0;
+                // Scheduled outlets without a scored audit must not dilute a regional
+                // average as though their performance were an actual zero.
+                $overall = (int) ($summaryMetrics['scored'] ?? 0) > 0
+                    ? ($summaryMetrics['perfect_store_score'] ?? $calcMetrics['overall_score'] ?? null)
+                    : null;
 
                 return [
                     'kd_id' => $kd->id,
@@ -456,11 +460,26 @@ class MerchandiserAdminHubController extends Controller
                     $periodEnd = $periodStart->copy()->endOfMonth();
                     $periodSummary = $this->cachedPerfectStoreSummary($periodStart, $periodEnd, $tenantCode, $performanceFilters);
                     $clientPerformanceTrend['labels'][] = $periodStart->format('M');
-                    $clientPerformanceTrend['overall'][] = (float) ($periodSummary['overview']['perfect_store_score'] ?? 0);
+                    // A month with no scored visits is missing data, not a zero score.
+                    $clientPerformanceTrend['overall'][] = (int) ($periodSummary['overview']['scored'] ?? 0) > 0
+                        ? (float) ($periodSummary['overview']['perfect_store_score'] ?? 0)
+                        : null;
+
+                    // Keep every brand series aligned with the visible month labels.
+                    foreach ($clientPerformanceTrend['brands'] as &$series) {
+                        $series[] = null;
+                    }
+                    unset($series);
+
                     foreach (collect($periodSummary['brands'] ?? []) as $brand) {
                         $name = $brand['brand_name'] ?? $brand['name'] ?? null;
                         if ($name) {
-                            $clientPerformanceTrend['brands'][$name][] = (float) ($brand['overall_score'] ?? $brand['perfect_store_score'] ?? 0);
+                            if (! array_key_exists($name, $clientPerformanceTrend['brands'])) {
+                                $clientPerformanceTrend['brands'][$name] = array_fill(0, count($clientPerformanceTrend['labels']), null);
+                            }
+
+                            $clientPerformanceTrend['brands'][$name][array_key_last($clientPerformanceTrend['brands'][$name])] =
+                                (float) ($brand['overall_score'] ?? $brand['perfect_store_score'] ?? 0);
                         }
                     }
                 }

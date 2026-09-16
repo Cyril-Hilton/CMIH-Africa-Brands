@@ -63,10 +63,10 @@
         <div class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
             <div class="flex items-center justify-between mb-4">
                 <div>
-                    <p class="text-[10px] uppercase font-extrabold tracking-widest text-slate-500 dark:text-slate-400">Brand Distribution</p>
-                    <h4 class="text-sm font-bold text-slate-900 dark:text-white">Regional Brand Scores</h4>
+                    <p class="text-[10px] uppercase font-extrabold tracking-widest text-slate-500 dark:text-slate-400">Regional Comparison</p>
+                    <h4 class="text-sm font-bold text-slate-900 dark:text-white">Regional Perfect Store Scores</h4>
                 </div>
-                <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800">Brand Avg</span>
+                <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800">Overall %</span>
             </div>
             <div class="h-56 relative">
                 <canvas id="regionalBrandChart"></canvas>
@@ -348,7 +348,7 @@
             });
         }
 
-        // Chart 3: Regional Brand Scores
+        // Chart 3: Regional Perfect Store Scores
         const ctxBrand = document.getElementById('regionalBrandChart');
         if (ctxBrand) {
             new Chart(ctxBrand, {
@@ -356,7 +356,7 @@
                 data: {
                     labels: regionalLabels,
                     datasets: [{
-                        label: 'Brand Avg',
+                        label: 'Perfect Store Score %',
                         data: regional.map(row => row.overall),
                         backgroundColor: '#8B5CF6',
                         borderRadius: 8

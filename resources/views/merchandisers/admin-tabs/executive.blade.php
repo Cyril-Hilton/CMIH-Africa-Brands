@@ -3,6 +3,11 @@
     $formatPct = fn ($value) => $value === null ? 'N/A' : number_format((float) $value, 1).'%';
     $overallScore = $overview['perfect_store_score'] ?? null;
     $overallGauge = max(0, min(100, (float) ($overallScore ?? 0)));
+    $complianceTarget = 85;
+    $complianceGap = $overallScore === null ? null : max(0, $complianceTarget - $overallGauge);
+    $complianceState = $overallScore === null
+        ? 'Awaiting audits'
+        : ($overallGauge >= $complianceTarget ? 'On target' : 'Below target');
     $rawCats = collect($categorySosData ?? []);
     if ($rawCats->isEmpty() && !empty($perfectStoreSummary['categories'])) {
         $rawCats = collect($perfectStoreSummary['categories']);
@@ -30,41 +35,51 @@
     <div class="grid grid-cols-1 xl:grid-cols-12 gap-5 items-stretch">
         
         <!-- Left Big Score Card: Overall Perfect Store Compliance Dial -->
-        <div class="xl:col-span-4 merch-card rounded-2xl p-6 border border-indigo-200 dark:border-indigo-800/60 bg-gradient-to-br from-indigo-900 via-slate-900 to-indigo-950 text-white shadow-xl flex flex-col justify-between relative overflow-hidden">
-            <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-indigo-500/20 rounded-full blur-2xl pointer-events-none"></div>
+        <div class="xl:col-span-4 merch-card rounded-2xl p-6 border border-slate-700 bg-[#151719] text-white shadow-xl flex flex-col justify-between relative overflow-hidden">
+            <div class="absolute top-0 inset-x-0 h-1 bg-red-500"></div>
             <div>
                 <div class="flex items-center justify-between">
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-indigo-500/25 text-indigo-200 border border-indigo-400/30">
-                        <i class="fa-solid fa-gauge-high text-indigo-300"></i> Overall Score
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-white/10 text-slate-100 border border-white/15">
+                        <i class="fa-solid fa-gauge-high text-red-400"></i> Overall Score
                     </span>
-                    <span class="text-[11px] font-semibold text-indigo-200/90">Monthly Target 85%</span>
+                    <span class="text-[11px] font-semibold text-slate-300">Target {{ $complianceTarget }}%</span>
                 </div>
                 <h3 class="text-lg font-bold text-white mt-3 leading-snug">Executive Performance Summary — Perfect Store Compliance / Client Score</h3>
                 @if(($overview['scored'] ?? 0) === 0)
-                    <p class="text-xs text-indigo-200/70 mt-0.5">No brand-scoped audits for this range.</p>
+                    <p class="text-xs text-slate-400 mt-0.5">No brand-scoped audits for this range.</p>
                 @else
-                    <p class="text-xs text-indigo-200/70 mt-0.5">Aggregated audit index across all stores</p>
+                    <p class="text-xs text-slate-400 mt-0.5">Aggregated from completed store audits</p>
                 @endif
             </div>
 
-            <div class="my-6 flex items-center justify-center gap-6">
-                <div class="relative w-36 h-36 flex items-center justify-center">
+            <div class="my-6 flex items-center justify-center gap-7">
+                <div class="relative w-40 h-40 flex items-center justify-center">
                     <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                        <!-- Outer Ring Background Track -->
-                        <circle cx="18" cy="18" r="15.9155" stroke="rgba(255, 255, 255, 0.15)" stroke-width="3.5" fill="none" />
-                        <!-- Active Progress Arc -->
-                        <circle cx="18" cy="18" r="15.9155" stroke="#38bdf8" stroke-width="3.5" stroke-linecap="round" fill="none" stroke-dasharray="{{ $overallGauge }} 100" class="transition-all duration-1000 ease-out" />
+                        <defs>
+                            <filter id="compliance-ring-glow" x="-50%" y="-50%" width="200%" height="200%">
+                                <feGaussianBlur stdDeviation="0.75" result="blur" />
+                                <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                            </filter>
+                        </defs>
+                        <circle cx="18" cy="18" r="15.9155" stroke="#30353b" stroke-width="3" fill="none" />
+                        <circle cx="18" cy="18" r="12.4" stroke="#25292e" stroke-width="1.25" fill="none" />
+                        <circle cx="18" cy="18" r="15.9155" stroke="#ef4444" stroke-width="3" stroke-linecap="round" fill="none" stroke-dasharray="{{ $overallGauge }} 100" filter="url(#compliance-ring-glow)" class="transition-all duration-1000 ease-out" />
                     </svg>
                     <div class="absolute inset-0 z-10 flex flex-col items-center justify-center text-center pointer-events-none">
-                        <span class="text-3xl sm:text-4xl font-black text-white tabular-nums tracking-tight drop-shadow-md">{{ $overallScore === null ? 'N/A' : number_format((float)$overallScore, 0).'%' }}</span>
-                        <span class="text-[9px] uppercase tracking-wider text-sky-300 font-extrabold mt-0.5">COMPLIANT</span>
+                        <span class="text-4xl font-black text-white tabular-nums tracking-tight">{{ $overallScore === null ? 'N/A' : number_format((float)$overallScore, 0).'%' }}</span>
+                        <span class="text-[9px] uppercase tracking-wider text-red-300 font-extrabold mt-1">{{ $complianceState }}</span>
                     </div>
+                </div>
+                <div class="min-w-0 space-y-2 text-xs">
+                    <div class="text-slate-400 uppercase tracking-wider text-[9px] font-bold">Score status</div>
+                    <div class="font-bold text-white">{{ $complianceState }}</div>
+                    <div class="text-slate-400">{{ $complianceGap === null ? 'Awaiting scored visits' : ($complianceGap > 0 ? number_format($complianceGap, 1).' pts to target' : 'Target achieved') }}</div>
                 </div>
             </div>
 
-            <div class="pt-3 border-t border-indigo-500/25 flex items-center justify-between text-xs text-indigo-200">
+            <div class="pt-3 border-t border-white/10 flex items-center justify-between text-xs text-slate-300">
                 <span>{{ $overview['scored'] ?? 0 }} scored visit(s)</span>
-                <span class="font-bold text-indigo-200">Selected period</span>
+                <span class="font-bold text-slate-200">Selected period</span>
             </div>
         </div>
 
@@ -165,6 +180,7 @@
             </div>
             <div class="h-64 relative">
                 <canvas id="perfectStoreTrendChart"></canvas>
+                <div id="perfectStoreTrendEmpty" class="hidden absolute inset-0 items-center justify-center text-center text-xs font-semibold text-slate-400">No scored audits are available for this period.</div>
             </div>
         </div>
 
@@ -179,6 +195,7 @@
             </div>
             <div class="h-64 relative">
                 <canvas id="brandTrendsChart"></canvas>
+                <div id="brandTrendsEmpty" class="hidden absolute inset-0 items-center justify-center text-center text-xs font-semibold text-slate-400">No brand audit results are available for this period.</div>
             </div>
         </div>
     </div>
@@ -322,10 +339,21 @@
         const trendLabels = @json($trend['labels'] ?? []);
         const trendScores = @json($trend['overall'] ?? []);
         const brandSeries = @json($trend['brands'] ?? []);
+        const hasValues = values => values.some(value => value !== null && value !== undefined);
+        const setEmptyState = (canvasId, emptyId, hasData) => {
+            const canvas = document.getElementById(canvasId);
+            const empty = document.getElementById(emptyId);
+            if (!canvas || !empty) return;
+            canvas.classList.toggle('hidden', !hasData);
+            empty.classList.toggle('hidden', hasData);
+            empty.classList.toggle('flex', !hasData);
+        };
 
         // Chart 1: Perfect Store Trend Chart
         const ctxTrend = document.getElementById('perfectStoreTrendChart');
-        if (ctxTrend) {
+        const hasTrendData = hasValues(trendScores);
+        setEmptyState('perfectStoreTrendChart', 'perfectStoreTrendEmpty', hasTrendData);
+        if (ctxTrend && hasTrendData) {
             new Chart(ctxTrend, {
                 type: 'line',
                 data: {
@@ -353,7 +381,9 @@
 
         // Chart 2: Brand Trends Chart
         const ctxBrand = document.getElementById('brandTrendsChart');
-        if (ctxBrand) {
+        const hasBrandData = Object.values(brandSeries).some(hasValues);
+        setEmptyState('brandTrendsChart', 'brandTrendsEmpty', hasBrandData);
+        if (ctxBrand && hasBrandData) {
             new Chart(ctxBrand, {
                 type: 'line',
                 data: {

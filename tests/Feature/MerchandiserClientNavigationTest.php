@@ -117,8 +117,20 @@ class MerchandiserClientNavigationTest extends TestCase
         $this->assertStringContainsString("type: 'line'", $executive);
         $this->assertStringContainsString('trendLabels', $executive);
         $this->assertStringContainsString('brandSeries', $executive);
+        $this->assertStringContainsString('No scored audits are available for this period.', $executive);
+        $this->assertStringContainsString('No brand audit results are available for this period.', $executive);
+        $this->assertStringContainsString('Regional Perfect Store Scores', $regional);
         $this->assertStringContainsString('regionalChartRows', $regional);
         $this->assertStringContainsString('categoryChartRows', $category);
+        foreach (['perfectStoreTrendChart', 'brandTrendsChart'] as $canvasId) {
+            $this->assertStringContainsString($canvasId, $executive);
+        }
+        foreach (['regionalOsaChart', 'regionalKpiChart', 'regionalBrandChart'] as $canvasId) {
+            $this->assertStringContainsString($canvasId, $regional);
+        }
+        foreach (['categoryLevelOsaChart', 'categoryLevelSosChart', 'categoryLevelPlanogramChart'] as $canvasId) {
+            $this->assertStringContainsString($canvasId, $category);
+        }
         $this->assertStringNotContainsString('Key Brand A', $executive);
         $this->assertStringNotContainsString("data: [82.0, 100.0, 100.0, 100.0]", $category);
         $this->assertStringNotContainsString("data: [88, 85, 79, 91]", $regional);
