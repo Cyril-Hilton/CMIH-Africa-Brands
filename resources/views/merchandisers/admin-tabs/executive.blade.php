@@ -6,6 +6,8 @@
 
 <div class="perfect-store-tab space-y-6">
 
+    @include('merchandisers.admin-tabs.client_top_filters')
+
     <!-- Top Execution Header: Overall Perfect Store Compliance Dial + 7 KPI Cards (Navigator 1) -->
     <div class="grid grid-cols-1 xl:grid-cols-12 gap-5 items-stretch">
         

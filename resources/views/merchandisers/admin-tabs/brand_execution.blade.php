@@ -5,6 +5,8 @@
 
 <div class="perfect-store-tab space-y-6">
 
+    @include('merchandisers.admin-tabs.client_top_filters')
+
     <!-- Navigator Header (Navigator 4) -->
     <div class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
