@@ -189,7 +189,10 @@
             </div>
             <div class="flex items-center gap-2 flex-1 max-w-md min-w-[200px]">
                 <div class="relative w-full">
-                    <input type="text" x-model="search" placeholder="Search category rows..." class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 pl-3 pr-8 py-1.5 text-xs text-slate-900 dark:text-white font-medium focus:ring-0">
+                    <input type="text" x-model="search" placeholder="Search category rows..." class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 pl-3 pr-12 py-1.5 text-xs text-slate-900 dark:text-white font-medium focus:ring-0">
+                    <span x-show="search.length > 0" class="absolute right-7 top-1/2 -translate-y-1/2 text-emerald-500 text-xs">
+                        <i class="fa-solid fa-circle-notch fa-spin"></i>
+                    </span>
                     <button x-show="search.length > 0" @click="search = ''" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs">
                         <i class="fa-solid fa-xmark"></i>
                     </button>

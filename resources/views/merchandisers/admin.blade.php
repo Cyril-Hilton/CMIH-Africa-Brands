@@ -676,6 +676,25 @@
         </div>
     </div>
 
+    <!-- Global Client Portal Loading Spinner & Blur Overlay -->
+    <div id="client-portal-loader" class="fixed inset-0 z-[9999] hidden flex-col items-center justify-center bg-slate-950/60 backdrop-blur-md transition-all duration-300 opacity-0 pointer-events-none">
+        <div class="flex flex-col items-center gap-4 p-8 rounded-3xl bg-white/95 dark:bg-slate-900/95 border border-slate-200/80 dark:border-slate-800 shadow-2xl backdrop-blur-2xl max-w-xs text-center transform scale-95 transition-all duration-300">
+            <div class="relative w-16 h-16 flex items-center justify-center">
+                <!-- Outer spinning ring -->
+                <div class="absolute inset-0 rounded-full border-4 border-indigo-500/20 dark:border-indigo-400/20"></div>
+                <div class="absolute inset-0 rounded-full border-4 border-transparent border-t-indigo-600 dark:border-t-indigo-400 border-r-indigo-600 dark:border-r-indigo-400 animate-spin"></div>
+                <!-- Inner icon -->
+                <div class="w-9 h-9 rounded-full bg-indigo-500/10 dark:bg-indigo-400/10 flex items-center justify-center">
+                    <i class="fa-solid fa-sync text-indigo-600 dark:text-indigo-400 text-sm animate-spin"></i>
+                </div>
+            </div>
+            <div>
+                <h4 id="loader-title" class="text-sm font-extrabold text-slate-900 dark:text-white tracking-wide">Filtering Portal Data...</h4>
+                <p id="loader-subtitle" class="text-[11px] text-slate-500 dark:text-slate-400 font-semibold mt-1">Updating live audit metrics &amp; scores</p>
+            </div>
+        </div>
+    </div>
+
     <!-- ── Layout Shell ──────────────────────────────────────────────────── -->
     <div class="flex h-full min-h-0 w-full overflow-hidden">
 
@@ -2485,6 +2504,70 @@ document.addEventListener('DOMContentLoaded', () => {
 })();
 </script>
 @endif
+
+<script>
+(function() {
+    function getLoaderEl() {
+        return document.getElementById('client-portal-loader');
+    }
+
+    window.showClientPortalLoader = function(title, subtitle) {
+        const loader = getLoaderEl();
+        if (!loader) return;
+        const titleEl = document.getElementById('loader-title');
+        const subtitleEl = document.getElementById('loader-subtitle');
+        if (titleEl && title) titleEl.textContent = title;
+        if (subtitleEl && subtitle) subtitleEl.textContent = subtitle;
+
+        loader.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
+        loader.classList.add('flex', 'opacity-100');
+        
+        if (window._clientLoaderTimeout) clearTimeout(window._clientLoaderTimeout);
+        window._clientLoaderTimeout = setTimeout(function() {
+            window.hideClientPortalLoader();
+        }, 8000);
+    };
+
+    window.hideClientPortalLoader = function() {
+        const loader = getLoaderEl();
+        if (!loader) return;
+        loader.classList.remove('opacity-100');
+        loader.classList.add('opacity-0', 'pointer-events-none');
+        setTimeout(function() {
+            loader.classList.remove('flex');
+            loader.classList.add('hidden');
+        }, 200);
+    };
+
+    window.submitFilterForm = function(el, title, subtitle) {
+        window.showClientPortalLoader(
+            title || 'Filtering Live Data...',
+            subtitle || 'Updating KPI cards, charts, and audit metrics'
+        );
+        if (el && el.form) {
+            el.form.submit();
+        }
+    };
+
+    window.addEventListener('pageshow', function() {
+        window.hideClientPortalLoader();
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        window.hideClientPortalLoader();
+
+        // Attach click listeners to all navigation links
+        document.querySelectorAll('a[data-client-navigation], a.nav-item').forEach(function(link) {
+            link.addEventListener('click', function(e) {
+                const href = link.getAttribute('href');
+                if (href && !href.startsWith('#') && !href.startsWith('javascript:')) {
+                    window.showClientPortalLoader('Loading Navigator...', 'Fetching brand execution dashboard');
+                }
+            });
+        });
+    });
+})();
+</script>
 
 </body>
 </html>
