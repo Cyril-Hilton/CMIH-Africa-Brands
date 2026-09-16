@@ -676,23 +676,14 @@
         </div>
     </div>
 
-    <!-- Global Client Portal Loading Spinner & Blur Overlay -->
-    <div id="client-portal-loader" class="fixed inset-0 z-[9999] hidden flex-col items-center justify-center bg-slate-950/60 backdrop-blur-md transition-all duration-300 opacity-0 pointer-events-none">
-        <div class="flex flex-col items-center gap-4 p-8 rounded-3xl bg-white/95 dark:bg-slate-900/95 border border-slate-200/80 dark:border-slate-800 shadow-2xl backdrop-blur-2xl max-w-xs text-center transform scale-95 transition-all duration-300">
-            <div class="relative w-16 h-16 flex items-center justify-center">
-                <!-- Outer spinning ring -->
-                <div class="absolute inset-0 rounded-full border-4 border-indigo-500/20 dark:border-indigo-400/20"></div>
-                <div class="absolute inset-0 rounded-full border-4 border-transparent border-t-indigo-600 dark:border-t-indigo-400 border-r-indigo-600 dark:border-r-indigo-400 animate-spin"></div>
-                <!-- Inner icon -->
-                <div class="w-9 h-9 rounded-full bg-indigo-500/10 dark:bg-indigo-400/10 flex items-center justify-center">
-                    <i class="fa-solid fa-sync text-indigo-600 dark:text-indigo-400 text-sm animate-spin"></i>
-                </div>
-            </div>
-            <div>
-                <h4 id="loader-title" class="text-sm font-extrabold text-slate-900 dark:text-white tracking-wide">Filtering Portal Data...</h4>
-                <p id="loader-subtitle" class="text-[11px] text-slate-500 dark:text-slate-400 font-semibold mt-1">Updating live audit metrics &amp; scores</p>
-            </div>
+    <!-- Global Client Portal Top Loading Bar & Floating Badge Loader -->
+    <div id="client-top-loading-bar" class="fixed top-0 left-0 right-0 z-[10000] h-1 bg-gradient-to-r from-indigo-500 via-sky-400 to-indigo-600 transition-all duration-500 transform -translate-y-full opacity-0 pointer-events-none"></div>
+
+    <div id="client-loader-badge" class="fixed bottom-6 right-6 z-[10000] hidden items-center gap-3 px-4 py-2.5 rounded-2xl bg-slate-900/95 text-white shadow-2xl border border-slate-700/80 backdrop-blur-xl transition-all duration-300 opacity-0 transform translate-y-3 pointer-events-none">
+        <div class="relative w-5 h-5 flex items-center justify-center">
+            <i class="fa-solid fa-circle-notch fa-spin text-sky-400 text-sm"></i>
         </div>
+        <span id="client-loader-text" class="text-xs font-bold text-slate-100 tracking-wide">Updating live dashboard...</span>
     </div>
 
     <!-- ── Layout Shell ──────────────────────────────────────────────────── -->
@@ -2507,43 +2498,61 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <script>
 (function() {
-    function getLoaderEl() {
-        return document.getElementById('client-portal-loader');
-    }
+    function getBar() { return document.getElementById('client-top-loading-bar'); }
+    function getBadge() { return document.getElementById('client-loader-badge'); }
+    function getText() { return document.getElementById('client-loader-text'); }
+    function getMain() { return document.getElementById('merchandiser-admin-main'); }
 
-    window.showClientPortalLoader = function(title, subtitle) {
-        const loader = getLoaderEl();
-        if (!loader) return;
-        const titleEl = document.getElementById('loader-title');
-        const subtitleEl = document.getElementById('loader-subtitle');
-        if (titleEl && title) titleEl.textContent = title;
-        if (subtitleEl && subtitle) subtitleEl.textContent = subtitle;
+    window.showClientPortalLoader = function(message) {
+        const bar = getBar();
+        const badge = getBadge();
+        const text = getText();
+        const main = getMain();
 
-        loader.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
-        loader.classList.add('flex', 'opacity-100');
-        
+        if (text) text.textContent = message || 'Updating dashboard data...';
+
+        if (bar) {
+            bar.classList.remove('-translate-y-full', 'opacity-0');
+            bar.classList.add('translate-y-0', 'opacity-100');
+        }
+        if (badge) {
+            badge.classList.remove('hidden', 'opacity-0', 'translate-y-3');
+            badge.classList.add('flex', 'opacity-100', 'translate-y-0');
+        }
+        if (main) {
+            main.classList.add('opacity-70', 'transition-opacity', 'duration-300');
+        }
+
         if (window._clientLoaderTimeout) clearTimeout(window._clientLoaderTimeout);
         window._clientLoaderTimeout = setTimeout(function() {
             window.hideClientPortalLoader();
-        }, 8000);
+        }, 4000);
     };
 
     window.hideClientPortalLoader = function() {
-        const loader = getLoaderEl();
-        if (!loader) return;
-        loader.classList.remove('opacity-100');
-        loader.classList.add('opacity-0', 'pointer-events-none');
-        setTimeout(function() {
-            loader.classList.remove('flex');
-            loader.classList.add('hidden');
-        }, 200);
+        const bar = getBar();
+        const badge = getBadge();
+        const main = getMain();
+
+        if (bar) {
+            bar.classList.remove('translate-y-0', 'opacity-100');
+            bar.classList.add('-translate-y-full', 'opacity-0');
+        }
+        if (badge) {
+            badge.classList.remove('opacity-100', 'translate-y-0');
+            badge.classList.add('opacity-0', 'translate-y-3');
+            setTimeout(function() {
+                badge.classList.remove('flex');
+                badge.classList.add('hidden');
+            }, 300);
+        }
+        if (main) {
+            main.classList.remove('opacity-70');
+        }
     };
 
-    window.submitFilterForm = function(el, title, subtitle) {
-        window.showClientPortalLoader(
-            title || 'Filtering Live Data...',
-            subtitle || 'Updating KPI cards, charts, and audit metrics'
-        );
+    window.submitFilterForm = function(el, message) {
+        window.showClientPortalLoader(message || 'Filtering live audit data...');
         if (el && el.form) {
             el.form.submit();
         }
@@ -2556,12 +2565,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('DOMContentLoaded', function() {
         window.hideClientPortalLoader();
 
-        // Attach click listeners to all navigation links
         document.querySelectorAll('a[data-client-navigation], a.nav-item').forEach(function(link) {
             link.addEventListener('click', function(e) {
                 const href = link.getAttribute('href');
                 if (href && !href.startsWith('#') && !href.startsWith('javascript:')) {
-                    window.showClientPortalLoader('Loading Navigator...', 'Fetching brand execution dashboard');
+                    window.showClientPortalLoader('Loading dashboard view...');
                 }
             });
         });

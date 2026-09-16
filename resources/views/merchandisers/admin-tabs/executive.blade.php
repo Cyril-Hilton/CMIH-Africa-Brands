@@ -30,16 +30,16 @@
     <div class="grid grid-cols-1 xl:grid-cols-12 gap-5 items-stretch">
         
         <!-- Left Big Score Card: Overall Perfect Store Compliance Dial -->
-        <div class="xl:col-span-4 merch-card rounded-2xl p-6 border border-indigo-200 dark:border-indigo-800/60 bg-gradient-to-br from-indigo-900/90 via-slate-900 to-indigo-950 text-white shadow-lg flex flex-col justify-between relative overflow-hidden">
+        <div class="xl:col-span-4 merch-card rounded-2xl p-6 border border-indigo-200 dark:border-indigo-800/60 bg-gradient-to-br from-indigo-900 via-slate-900 to-indigo-950 text-white shadow-xl flex flex-col justify-between relative overflow-hidden">
             <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-indigo-500/20 rounded-full blur-2xl pointer-events-none"></div>
             <div>
                 <div class="flex items-center justify-between">
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                        <i class="fa-solid fa-gauge-high"></i> Overall Score
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-indigo-500/25 text-indigo-200 border border-indigo-400/30">
+                        <i class="fa-solid fa-gauge-high text-indigo-300"></i> Overall Score
                     </span>
-                    <span class="text-[11px] font-semibold text-indigo-300/80">Monthly Target 85%</span>
+                    <span class="text-[11px] font-semibold text-indigo-200/90">Monthly Target 85%</span>
                 </div>
-                <h3 class="text-lg font-bold text-white mt-3">Executive Performance Summary — Perfect Store Compliance / Client Score</h3>
+                <h3 class="text-lg font-bold text-white mt-3 leading-snug">Executive Performance Summary — Perfect Store Compliance / Client Score</h3>
                 @if(($overview['scored'] ?? 0) === 0)
                     <p class="text-xs text-indigo-200/70 mt-0.5">No brand-scoped audits for this range.</p>
                 @else
@@ -50,17 +50,19 @@
             <div class="my-6 flex items-center justify-center gap-6">
                 <div class="relative w-36 h-36 flex items-center justify-center">
                     <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                        <path class="text-indigo-950" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                        <path class="text-indigo-400 stroke-current transition-all duration-1000 ease-out" stroke-dasharray="{{ $overallGauge }}, 100" stroke-width="3.5" stroke-linecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        <!-- Outer Ring Background Track -->
+                        <circle cx="18" cy="18" r="15.9155" stroke="rgba(255, 255, 255, 0.15)" stroke-width="3.5" fill="none" />
+                        <!-- Active Progress Arc -->
+                        <circle cx="18" cy="18" r="15.9155" stroke="#38bdf8" stroke-width="3.5" stroke-linecap="round" fill="none" stroke-dasharray="{{ $overallGauge }} 100" class="transition-all duration-1000 ease-out" />
                     </svg>
                     <div class="absolute inset-0 z-10 flex flex-col items-center justify-center text-center pointer-events-none">
                         <span class="text-3xl sm:text-4xl font-black text-white tabular-nums tracking-tight drop-shadow-md">{{ $overallScore === null ? 'N/A' : number_format((float)$overallScore, 0).'%' }}</span>
-                        <span class="text-[9px] uppercase tracking-wider text-indigo-300 font-bold">Compliant</span>
+                        <span class="text-[9px] uppercase tracking-wider text-sky-300 font-extrabold mt-0.5">COMPLIANT</span>
                     </div>
                 </div>
             </div>
 
-            <div class="pt-3 border-t border-indigo-500/20 flex items-center justify-between text-xs text-indigo-200">
+            <div class="pt-3 border-t border-indigo-500/25 flex items-center justify-between text-xs text-indigo-200">
                 <span>{{ $overview['scored'] ?? 0 }} scored visit(s)</span>
                 <span class="font-bold text-indigo-200">Selected period</span>
             </div>
