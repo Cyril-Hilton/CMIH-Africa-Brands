@@ -119,7 +119,11 @@ class MerchandiserClientNavigationTest extends TestCase
         $this->assertStringContainsString('brandSeries', $executive);
         $this->assertStringContainsString('No scored audits are available for this period.', $executive);
         $this->assertStringContainsString('No brand audit results are available for this period.', $executive);
-        $this->assertStringContainsString('Regional Perfect Store Scores', $regional);
+        $this->assertStringContainsString('Regional Brand Scores', $regional);
+        $this->assertStringContainsString('regionalBrandScores', $regional);
+        foreach (['Coverage', 'OSA', 'NPD', 'MHS', 'Planogram', 'Facings', 'SoS'] as $kpi) {
+            $this->assertStringContainsString("label: '{$kpi}'", $regional);
+        }
         $this->assertStringContainsString('regionalChartRows', $regional);
         $this->assertStringContainsString('categoryChartRows', $category);
         foreach (['perfectStoreTrendChart', 'brandTrendsChart'] as $canvasId) {

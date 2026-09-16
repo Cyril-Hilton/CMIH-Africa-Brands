@@ -245,6 +245,7 @@ class MerchandiserAdminHubController extends Controller
         $leastAvailableSkus = collect();
         $posmAvailabilityData = collect();
         $brandPerformanceData = collect();
+        $regionalBrandScores = collect();
         $merchandiserCoverageTable = collect();
         $clientPerformanceTrend = ['labels' => [], 'overall' => [], 'brands' => []];
 
@@ -294,7 +295,7 @@ class MerchandiserAdminHubController extends Controller
         } elseif (in_array($activeTab, ['perfect-store', 'supervisor-dashboard', 'client-dashboard', 'executive', 'regional-kd', 'category-kpi', 'brand-execution', 'user-performance', 'price-promo'], true)) {
             $perfectStoreSummary = $this->cachedPerfectStoreSummary($perfectStoreFrom, $perfectStoreTo, $tenantCode, $performanceFilters);
             $categorySosData = app(PerfectStoreKpiService::class)->categoryKpis($perfectStoreFrom, $perfectStoreTo, $tenantCode, $performanceFilters);
-            $allKds = KeyDistributor::whereIn('id', $tenantKdIds)
+            $allKds = KeyDistributor::with('region')->whereIn('id', $tenantKdIds)
                 ->when(filled($performanceFilters['region_id'] ?? null), fn ($query) => $query->where('region_id', (int) $performanceFilters['region_id']))
                 ->when(filled($performanceFilters['kd_id'] ?? null), fn ($query) => $query->whereKey((int) $performanceFilters['kd_id']))
                 ->orderBy('name')
@@ -384,6 +385,29 @@ class MerchandiserAdminHubController extends Controller
             })->values();
 
             $brandPerformanceData = collect($perfectStoreSummary['brands'] ?? []);
+
+            if ($activeTab === 'regional-kd') {
+                // This chart must be based on actual brand KPI rollups, not a
+                // renamed regional total. The same active filters apply to each
+                // region so the chart remains comparable with the table below it.
+                $regionalBrandScores = $allKds
+                    ->filter(fn (KeyDistributor $kd) => $kd->region_id !== null)
+                    ->groupBy('region_id')
+                    ->map(function ($regionKds, $regionId) use ($perfectStoreFrom, $perfectStoreTo, $tenantCode, $performanceFilters) {
+                        $regionFilters = [...$performanceFilters, 'region_id' => (int) $regionId];
+                        $regionSummary = $this->cachedPerfectStoreSummary($perfectStoreFrom, $perfectStoreTo, $tenantCode, $regionFilters);
+                        $brandScores = collect($regionSummary['brands'] ?? [])
+                            ->map(fn ($brand) => $brand['overall_score'] ?? $brand['perfect_store_score'] ?? null)
+                            ->filter(fn ($score) => is_numeric($score));
+
+                        return [
+                            'region' => $regionKds->first()?->region?->name ?? 'Region #'.$regionId,
+                            'score' => $brandScores->isNotEmpty() ? round((float) $brandScores->avg(), 1) : null,
+                        ];
+                    })
+                    ->sortBy('region')
+                    ->values();
+            }
 
             // Every client-facing SKU result must originate from the currently selected visit set.
             $filteredVisitIds = $recentVisits->pluck('id');
@@ -1582,7 +1606,7 @@ class MerchandiserAdminHubController extends Controller
             'userPerformance', 'supervisorPerformance', 'perfPeriod', 'perfRole', 'perfTrendChart',
             'pricePromoData', 'posmCompliance', 'pricingCompliance',
             'perfectStoreKdData', 'perfectStoreMerchandiserData', 'perfectStoreMilestones', 'categorySosData',
-            'leastAvailableSkus', 'posmAvailabilityData', 'brandPerformanceData', 'merchandiserCoverageTable', 'clientPerformanceTrend',
+            'leastAvailableSkus', 'posmAvailabilityData', 'brandPerformanceData', 'regionalBrandScores', 'merchandiserCoverageTable', 'clientPerformanceTrend',
             'roleDashboard', 'totalPending'
         ));
     }

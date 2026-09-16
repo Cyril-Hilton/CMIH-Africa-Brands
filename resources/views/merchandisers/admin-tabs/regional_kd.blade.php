@@ -4,11 +4,16 @@
         return [
             'region' => $row['region_name'] ?? 'National',
             'osa' => $row['osa'] ?? null,
+            'npd' => $row['npd'] ?? null,
+            'mhs' => $row['mhs'] ?? null,
             'coverage' => $row['coverage'] ?? null,
             'planogram' => $row['planogram'] ?? null,
+            'facing' => $row['facing'] ?? null,
+            'sos' => $row['sos'] ?? null,
             'overall' => $row['overall_score'] ?? null,
         ];
     })->values();
+    $regionalBrandScoreRows = collect($regionalBrandScores ?? collect())->values();
 @endphp
 
 <div class="perfect-store-tab space-y-6">
@@ -63,10 +68,10 @@
         <div class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
             <div class="flex items-center justify-between mb-4">
                 <div>
-                    <p class="text-[10px] uppercase font-extrabold tracking-widest text-slate-500 dark:text-slate-400">Regional Comparison</p>
-                    <h4 class="text-sm font-bold text-slate-900 dark:text-white">Regional Perfect Store Scores</h4>
+                    <p class="text-[10px] uppercase font-extrabold tracking-widest text-slate-500 dark:text-slate-400">Brand Distribution</p>
+                    <h4 class="text-sm font-bold text-slate-900 dark:text-white">Regional Brand Scores</h4>
                 </div>
-                <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800">Overall %</span>
+                <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800">Brand Avg</span>
             </div>
             <div class="h-56 relative">
                 <canvas id="regionalBrandChart"></canvas>
@@ -287,6 +292,7 @@
     function initRegionalCharts() {
         if (typeof Chart === 'undefined') return;
         const kdRows = @json($regionalChartRows);
+        const regionalBrandScores = @json($regionalBrandScoreRows);
         const regional = Object.values(kdRows.reduce((groups, row) => {
             const group = groups[row.region] || { name: row.region, rows: [] };
             group.rows.push(row);
@@ -296,7 +302,11 @@
             name: group.name,
             osa: average(group.rows.map(row => row.osa)),
             coverage: average(group.rows.map(row => row.coverage)),
+            npd: average(group.rows.map(row => row.npd)),
+            mhs: average(group.rows.map(row => row.mhs)),
             planogram: average(group.rows.map(row => row.planogram)),
+            facing: average(group.rows.map(row => row.facing)),
+            sos: average(group.rows.map(row => row.sos)),
             overall: average(group.rows.map(row => row.overall)),
         }));
         function average(values) {
@@ -337,27 +347,33 @@
                     labels: regionalLabels,
                     datasets: [
                         { label: 'Coverage', data: regional.map(row => row.coverage), backgroundColor: '#10B981', borderRadius: 6 },
-                        { label: 'Planogram', data: regional.map(row => row.planogram), backgroundColor: '#F59E0B', borderRadius: 6 }
+                        { label: 'OSA', data: regional.map(row => row.osa), backgroundColor: '#3B82F6', borderRadius: 6 },
+                        { label: 'NPD', data: regional.map(row => row.npd), backgroundColor: '#8B5CF6', borderRadius: 6 },
+                        { label: 'MHS', data: regional.map(row => row.mhs), backgroundColor: '#F59E0B', borderRadius: 6 },
+                        { label: 'Planogram', data: regional.map(row => row.planogram), backgroundColor: '#14B8A6', borderRadius: 6 },
+                        { label: 'Facings', data: regional.map(row => row.facing), backgroundColor: '#EC4899', borderRadius: 6 },
+                        { label: 'SoS', data: regional.map(row => row.sos), backgroundColor: '#EF4444', borderRadius: 6 }
                     ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, font: { size: 9 } } } },
                     scales: { y: { min: 0, max: 100 } }
                 }
             });
         }
 
-        // Chart 3: Regional Perfect Store Scores
+        // Chart 3: Regional Brand Scores
         const ctxBrand = document.getElementById('regionalBrandChart');
         if (ctxBrand) {
             new Chart(ctxBrand, {
                 type: 'bar',
                 data: {
-                    labels: regionalLabels,
+                    labels: regionalBrandScores.map(row => row.region),
                     datasets: [{
-                        label: 'Perfect Store Score %',
-                        data: regional.map(row => row.overall),
+                        label: 'Brand Avg %',
+                        data: regionalBrandScores.map(row => row.score),
                         backgroundColor: '#8B5CF6',
                         borderRadius: 8
                     }]
