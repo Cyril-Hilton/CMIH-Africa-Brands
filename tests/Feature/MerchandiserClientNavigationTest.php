@@ -87,6 +87,8 @@ class MerchandiserClientNavigationTest extends TestCase
             $response->assertOk();
             $response->assertDontSee('id="client-performance"', false);
             $response->assertSee('name="perf_period"', false);
+            $response->assertDontSee('name="clock_from"', false);
+            $response->assertDontSee('name="clock_to"', false);
         }
 
         $regional = $this->actingAs($client)->get(route('merchandisers.client.dashboard', ['view' => 'regional-kd']));
@@ -100,6 +102,8 @@ class MerchandiserClientNavigationTest extends TestCase
         $category->assertOk()
             ->assertDontSee('name="perf_period"', false)
             ->assertDontSee('name="performance_outlet_id"', false)
+            ->assertDontSee('name="clock_from"', false)
+            ->assertDontSee('name="clock_to"', false)
             ->assertSee('name="performance_region_id"', false)
             ->assertSee('name="performance_kd_id"', false);
     }

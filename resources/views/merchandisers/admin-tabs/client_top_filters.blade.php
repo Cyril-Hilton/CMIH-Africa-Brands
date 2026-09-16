@@ -5,7 +5,8 @@
     $currentView = $clientView ?? $activeAdminTab ?? 'executive';
     $showStore = $showStoreFilter ?? false;
     $showPeriod = $showPeriodFilter ?? true;
-    $showDateRange = $showDateRangeFilter ?? true;
+    // Only the Regional & KD navigator calls for an explicit date range.
+    $showDateRange = $showDateRangeFilter ?? false;
 @endphp
 
 <div class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm mb-6">
