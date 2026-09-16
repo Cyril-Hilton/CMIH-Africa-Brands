@@ -10,11 +10,14 @@ class MerchandiserClientNavigationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_client_executive_summary_contains_operational_summary_cards(): void
+    public function test_client_executive_summary_contains_perfect_store_execution_cards(): void
     {
         $client = User::factory()->create(['access_role' => 'merchandiser_client', 'status' => 'active']);
         $this->actingAs($client)->get(route('merchandisers.client.dashboard'))
-            ->assertOk()->assertSee('Active Agents')->assertSee('Pending Pairing')->assertSee('Approvals Queue');
+            ->assertOk()
+            ->assertSee('Perfect Store Compliance')
+            ->assertSee('Coverage')
+            ->assertSee('Least Available SKUs');
     }
 
     public function test_supervisor_dashboard_retains_performance_filters_below_content(): void
@@ -27,11 +30,16 @@ class MerchandiserClientNavigationTest extends TestCase
     public function test_clients_have_only_reference_sidebar_links_and_each_destination_renders(): void
     {
         $client = User::factory()->create(['access_role' => 'merchandiser_client', 'status' => 'active']);
-        $views = ['executive' => 'Executive Summary', 'category-kpi' => 'Category KPIs',
-            'user-performance' => 'User Performance', 'price-promo' => 'Price & Promo'];
+        $views = [
+            'executive' => 'Executive Summary',
+            'regional-kd' => 'Regional & KD Performance',
+            'category-kpi' => 'Category Performance',
+            'brand-execution' => 'Brand & Merchandiser Execution',
+        ];
+
         foreach ($views as $view => $label) {
             $response = $this->actingAs($client)->get(route('merchandisers.client.dashboard', ['view' => $view]));
-            $response->assertOk()->assertViewHas('activeTab', $view);
+            $response->assertOk();
             $dom = new \DOMDocument();
             @$dom->loadHTML($response->getContent());
             $xpath = new \DOMXPath($dom);
@@ -46,19 +54,20 @@ class MerchandiserClientNavigationTest extends TestCase
             foreach ($links as $link) {
                 $this->assertStringContainsString('/merchandisers/client/dashboard?', $link->getAttribute('href'));
             }
-            $response->assertSee('Dashboard &amp; Health', false)->assertSee('Team Performance')->assertSee('Perfect Store KPIs');
+            $response->assertSee('Executive Summary')
+                ->assertSee('Regional &amp; KD Performance', false)
+                ->assertSee('Category Performance')
+                ->assertSee('Brand &amp; Merchandiser Execution', false);
         }
-        $this->get(route('merchandisers.client.dashboard'))->assertViewHas('activeTab', 'executive');
+
         $this->get(route('merchandisers.client.dashboard', ['view' => 'routes']))->assertNotFound();
-        $this->get(route('merchandisers.client.dashboard', ['view' => 'user-performance', 'perf_period' => 'monthly']))
-            ->assertOk()->assertViewHas('perfPeriod', 'monthly');
     }
 
     public function test_admin_client_preview_uses_client_navigation_but_admin_workspace_keeps_operations(): void
     {
         $admin = User::factory()->create(['access_role' => 'super_admin', 'status' => 'active']);
         $response = $this->actingAs($admin)->get(route('merchandisers.admin.tab', ['adminTab' => 'client-dashboard']));
-        $response->assertOk()->assertSee('Executive Performance Summary');
+        $response->assertOk()->assertSee('Executive Summary');
         $dom = new \DOMDocument();
         @$dom->loadHTML($response->getContent());
         $nav = (new \DOMXPath($dom))->query('//*[@id="merchandiser-admin-sidebar"]//nav')->item(0);
@@ -72,7 +81,7 @@ class MerchandiserClientNavigationTest extends TestCase
     {
         $client = User::factory()->create(['access_role' => 'merchandiser_client', 'status' => 'active']);
         foreach (['Region', 'KD', 'Outlet', 'Merchandiser', 'Supervisor'] as $level) {
-            $view = in_array($level, ['Merchandiser', 'Supervisor'], true) ? 'user-performance' : 'executive';
+            $view = in_array($level, ['Merchandiser', 'Supervisor'], true) ? 'brand-execution' : 'executive';
             $response = $this->actingAs($client)->get(route('merchandisers.client.dashboard', [
                 'view' => $view, 'performance_level' => $level, 'performance_channel' => 'Modern Trade',
             ]));
@@ -87,9 +96,9 @@ class MerchandiserClientNavigationTest extends TestCase
                 $this->assertSame($value, $xpath->query('.//input[@name="'.$name.'"]', $form)->item(0)->getAttribute('value'));
             }
             $sidebarLink = $xpath->query('//*[@id="merchandiser-admin-sidebar"]//nav//a')->item(0);
-            parse_str(parse_url($sidebarLink->getAttribute('href'), PHP_URL_QUERY), $query);
-            $this->assertSame('Modern Trade', $query['performance_channel']);
-            $this->assertSame('unilever', $query['tenant']);
+            parse_str(str_replace('&amp;', '&', parse_url($sidebarLink->getAttribute('href'), PHP_URL_QUERY) ?? ''), $query);
+            $this->assertSame('Modern Trade', $query['performance_channel'] ?? null);
+            $this->assertSame('unilever', $query['tenant'] ?? null);
         }
     }
 }

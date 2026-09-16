@@ -5470,11 +5470,8 @@ class MerchandiserPortalTest extends TestCase
         $response = $this->actingAs($client)->get(route('merchandisers.client.dashboard'));
 
         $response->assertOk();
-        $response->assertSee('Active Agents');
-        $response->assertSee('Pending Pairing');
-        $response->assertSee('Clock-Ins');
-        $response->assertSee('PCM / PJP');
-        $response->assertSee('Approvals Queue');
+        $response->assertSee('Perfect Store Compliance');
+        $response->assertSee('Coverage');
         $response->assertSee('OSA');
     }
 

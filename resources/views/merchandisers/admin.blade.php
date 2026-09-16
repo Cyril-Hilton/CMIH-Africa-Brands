@@ -12,7 +12,7 @@
             || request()->routeIs('merchandisers.client.*') || $activeAdminTab === 'client-dashboard';
         $clientView = $activeAdminTab === 'client-dashboard' ? 'executive' : $activeAdminTab;
         $clientNavUrl = fn (string $view, array $params = []) => route('merchandisers.client.dashboard', array_merge(
-            request()->only(['performance_region_id', 'performance_kd_id', 'performance_supervisor_id', 'performance_merchandiser_id', 'performance_outlet_id', 'performance_channel', 'performance_category', 'clock_from', 'clock_to', 'perf_period']),
+            array_filter(request()->only(['performance_region_id', 'performance_kd_id', 'performance_supervisor_id', 'performance_merchandiser_id', 'performance_outlet_id', 'performance_channel', 'performance_category', 'clock_from', 'clock_to', 'perf_period']), fn ($v) => $v !== null && $v !== ''),
             ['tenant' => $merchTenant['code'], 'view' => $view === 'client-dashboard' ? 'executive' : $view], $params));
         $adminTabUrl = fn (string $tab, array $params = []) => route('merchandisers.admin.tab', array_merge([
             'adminTab' => $tab,
@@ -744,8 +744,13 @@
             <!-- Navigation Container -->
             <nav class="px-3 py-2 space-y-1 shrink-0">
                 @if($clientWorkspace)
-                    <p class="px-3 py-2 text-[9px] font-extrabold uppercase tracking-widest text-white/50">Reports &amp; Analytics</p>
-                    @foreach(['executive' => ['Executive Summary', 'fa-chart-simple'], 'category-kpi' => ['Category KPIs', 'fa-chart-pie'], 'user-performance' => ['User Performance', 'fa-chart-column'], 'price-promo' => ['Price & Promo', 'fa-coins']] as $view => [$label, $icon])
+                    <p class="px-3 py-2 text-[9px] font-extrabold uppercase tracking-widest text-white/50">Client Portal Navigators</p>
+                    @foreach([
+                        'executive' => ['Executive Summary', 'fa-chart-simple'],
+                        'regional-kd' => ['Regional & KD Performance', 'fa-map-location-dot'],
+                        'category-kpi' => ['Category Performance', 'fa-layer-group'],
+                        'brand-execution' => ['Brand & Merchandiser Execution', 'fa-award']
+                    ] as $view => [$label, $icon])
                         <a href="{{ $clientNavUrl($view) }}" @click="sidebarOpen = false" data-client-navigation @if($clientView === $view) aria-current="page" @endif
                            class="nav-item flex items-center gap-3 rounded-lg px-3.5 py-3 text-xs font-bold text-white {{ $clientView === $view ? 'active bg-white/15' : 'hover:bg-white/10' }}">
                             <i class="fa-solid {{ $icon }}" aria-hidden="true"></i><span>{{ $label }}</span>
@@ -1109,29 +1114,39 @@
                 ════════════════════════════════════════════════════ --}}
                 @if($clientWorkspace)
                     <nav aria-label="Client dashboard views" class="mb-5 flex flex-wrap gap-2">
-                        @foreach(['executive' => 'Dashboard & Health', 'user-performance' => 'Team Performance', 'category-kpi' => 'Perfect Store KPIs'] as $view => $label)
+                        @foreach([
+                            'executive' => 'Executive Summary',
+                            'regional-kd' => 'Regional & KD Performance',
+                            'category-kpi' => 'Category Performance',
+                            'brand-execution' => 'Brand & Merchandiser Execution'
+                        ] as $view => $label)
                             <a href="{{ $clientNavUrl($view) }}" data-client-navigation @if($clientView === $view) aria-current="page" @endif
-                               class="rounded-lg border px-4 py-3 text-xs font-bold {{ $clientView === $view ? 'merch-primary-button' : 'bg-white text-slate-900' }}">{{ $label }}</a>
+                               class="rounded-lg border px-4 py-3 text-xs font-bold {{ $clientView === $view ? 'merch-primary-button' : 'bg-white text-slate-900 dark:bg-slate-800 dark:text-slate-100 border-slate-200 dark:border-slate-700' }}">{{ $label }}</a>
                         @endforeach
                     </nav>
                 @endif
-                                @if($activeAdminTab === 'executive' || ($clientWorkspace && $activeAdminTab === 'client-dashboard'))
+
+                @if($activeAdminTab === 'executive' || ($clientWorkspace && $clientView === 'executive'))
                     @include('merchandisers.admin-tabs.executive')
                 @endif
 
-                                @if($activeAdminTab === 'category-kpi')
+                @if($activeAdminTab === 'regional-kd' || ($clientWorkspace && $clientView === 'regional-kd'))
+                    @include('merchandisers.admin-tabs.regional_kd')
+                @endif
+
+                @if($activeAdminTab === 'category-kpi' || ($clientWorkspace && $clientView === 'category-kpi'))
                     @include('merchandisers.admin-tabs.category_kpi')
                 @endif
 
-                                @if($activeAdminTab === 'user-performance')
-                    @include('merchandisers.admin-tabs.user_performance')
+                @if($activeAdminTab === 'brand-execution' || ($clientWorkspace && ($clientView === 'brand-execution' || $clientView === 'user-performance')))
+                    @include('merchandisers.admin-tabs.brand_execution')
                 @endif
 
-                                @if($activeAdminTab === 'price-promo')
+                @if($activeAdminTab === 'price-promo')
                     @include('merchandisers.admin-tabs.price_promo')
                 @endif
 
-                                @if(in_array($activeAdminTab, ['supervisor-dashboard', 'client-dashboard'], true))
+                @if(! $clientWorkspace && in_array($activeAdminTab, ['supervisor-dashboard', 'client-dashboard'], true))
                     @include('merchandisers.admin-tabs.role_dashboards')
                 @endif
 
@@ -1141,7 +1156,7 @@
 
                 @if($clientWorkspace)
                     <nav aria-label="Performance sections" class="flex flex-wrap gap-3 my-5">
-                        @foreach(($clientView === 'user-performance' ? ['Merchandiser' => 'Merchandiser Performance', 'Supervisor' => 'Supervisor Performance'] : ['Region' => 'Regional Performance', 'KD' => 'KD Performance', 'Outlet' => 'Perfect Store Attendance']) as $level => $label)
+                        @foreach((in_array($clientView, ['brand-execution', 'user-performance'], true) ? ['Merchandiser' => 'Merchandiser Performance', 'Supervisor' => 'Supervisor Performance'] : ['Region' => 'Regional Performance', 'KD' => 'KD Performance', 'Outlet' => 'Perfect Store Attendance']) as $level => $label)
                             <a href="{{ $clientNavUrl($clientView, ['performance_level' => $level]) }}#client-performance" data-client-navigation class="rounded-lg border px-4 py-3 text-sm font-bold">{{ $label }}</a>
                         @endforeach
                     </nav>

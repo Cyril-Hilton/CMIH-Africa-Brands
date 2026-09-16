@@ -1,5 +1,5 @@
 @php
-    $performanceTabs = ['overview', 'perfect-store', 'executive', 'category-kpi', 'user-performance', 'price-promo', 'supervisor-dashboard', 'client-dashboard'];
+    $performanceTabs = ['overview', 'perfect-store', 'executive', 'regional-kd', 'category-kpi', 'brand-execution', 'user-performance', 'price-promo', 'supervisor-dashboard', 'client-dashboard'];
     $filters = $performanceFilters ?? [];
     $options = $performanceFilterOptions ?? [];
     $pct = fn ($value) => $value === null ? 'N/A' : number_format((float) $value, 1).'%';
