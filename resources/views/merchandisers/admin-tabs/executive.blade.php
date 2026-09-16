@@ -53,8 +53,8 @@
                         <path class="text-indigo-950" stroke-width="3.5" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                         <path class="text-indigo-400 stroke-current transition-all duration-1000 ease-out" stroke-dasharray="{{ $overallGauge }}, 100" stroke-width="3.5" stroke-linecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                     </svg>
-                    <div class="absolute flex flex-col items-center justify-center text-center">
-                        <span class="text-3xl sm:text-4xl font-black text-white tabular-nums tracking-tight">{{ $overallScore === null ? 'N/A' : number_format((float)$overallScore, 0).'%' }}</span>
+                    <div class="absolute inset-0 z-10 flex flex-col items-center justify-center text-center pointer-events-none">
+                        <span class="text-3xl sm:text-4xl font-black text-white tabular-nums tracking-tight drop-shadow-md">{{ $overallScore === null ? 'N/A' : number_format((float)$overallScore, 0).'%' }}</span>
                         <span class="text-[9px] uppercase tracking-wider text-indigo-300 font-bold">Compliant</span>
                     </div>
                 </div>
@@ -182,10 +182,10 @@
     </div>
 
     <!-- Bottom Tables & Charts Section (Navigator 1) -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 w-full min-w-0 items-start">
+    <div class="flex flex-col lg:flex-row gap-5 w-full min-w-0 items-start">
         
         <!-- Table: Least Available SKUs -->
-        <div class="lg:col-span-7 w-full min-w-0 merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm overflow-hidden flex flex-col justify-between"
+        <div class="w-full lg:w-7/12 min-w-0 merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm overflow-hidden flex flex-col justify-between"
              x-data="{
                  search: '',
                  selectedCol: 'all',
@@ -277,7 +277,7 @@
         </div>
 
         <!-- Category OSA Performance Progress Chart -->
-        <div class="lg:col-span-5 w-full min-w-0 merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm flex flex-col justify-between">
+        <div class="w-full lg:w-5/12 min-w-0 merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm flex flex-col justify-between">
             <div class="w-full min-w-0">
                 <div class="flex items-center justify-between mb-4">
                     <div>
@@ -311,64 +311,72 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    if (typeof Chart === 'undefined') return;
-    const trendLabels = @json($trend['labels'] ?? []);
-    const trendScores = @json($trend['overall'] ?? []);
-    const brandSeries = @json($trend['brands'] ?? []);
+(function() {
+    function initExecutiveCharts() {
+        if (typeof Chart === 'undefined') return;
+        const trendLabels = @json($trend['labels'] ?? []);
+        const trendScores = @json($trend['overall'] ?? []);
+        const brandSeries = @json($trend['brands'] ?? []);
 
-    // Chart 1: Perfect Store Trend Chart
-    const ctxTrend = document.getElementById('perfectStoreTrendChart');
-    if (ctxTrend) {
-        new Chart(ctxTrend, {
-            type: 'line',
-            data: {
-                labels: trendLabels,
-                datasets: [{
-                    label: 'Perfect Store Score',
-                    data: trendScores,
-                    borderColor: '#3B82F6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    fill: true,
-                    tension: 0.3,
-                    borderWidth: 3
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    y: { min: 0, max: 100, ticks: { callback: v => v + '%' } }
+        // Chart 1: Perfect Store Trend Chart
+        const ctxTrend = document.getElementById('perfectStoreTrendChart');
+        if (ctxTrend) {
+            new Chart(ctxTrend, {
+                type: 'line',
+                data: {
+                    labels: trendLabels,
+                    datasets: [{
+                        label: 'Perfect Store Score',
+                        data: trendScores,
+                        borderColor: '#3B82F6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        borderWidth: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { min: 0, max: 100, ticks: { callback: v => v + '%' } }
+                    }
                 }
-            }
-        });
+            });
+        }
+
+        // Chart 2: Brand Trends Chart
+        const ctxBrand = document.getElementById('brandTrendsChart');
+        if (ctxBrand) {
+            new Chart(ctxBrand, {
+                type: 'line',
+                data: {
+                    labels: trendLabels,
+                    datasets: Object.entries(brandSeries).map(([label, data], index) => ({
+                        label,
+                        data,
+                        borderColor: ['#10B981', '#F59E0B', '#EF4444', '#3B82F6', '#8B5CF6'][index % 5],
+                        tension: 0.3,
+                        borderWidth: 3,
+                        fill: false
+                    }))
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { min: 0, max: 100, ticks: { callback: v => v + '%' } }
+                    }
+                }
+            });
+        }
     }
 
-    // Chart 2: Brand Trends Chart
-    const ctxBrand = document.getElementById('brandTrendsChart');
-    if (ctxBrand) {
-        new Chart(ctxBrand, {
-            type: 'line',
-            data: {
-                labels: trendLabels,
-                datasets: Object.entries(brandSeries).map(([label, data], index) => ({
-                    label,
-                    data,
-                    borderColor: ['#10B981', '#F59E0B', '#EF4444', '#3B82F6', '#8B5CF6'][index % 5],
-                    tension: 0.3,
-                    borderWidth: 3,
-                    fill: false
-                }))
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: { min: 0, max: 100, ticks: { callback: v => v + '%' } }
-                }
-            }
-        });
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initExecutiveCharts);
+    } else {
+        initExecutiveCharts();
     }
-});
+})();
 </script>

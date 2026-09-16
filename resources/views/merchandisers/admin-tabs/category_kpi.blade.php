@@ -249,78 +249,86 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    if (typeof Chart === 'undefined') return;
-    const categoryRows = @json($categoryChartRows);
-    const labels = categoryRows.map(row => row.category);
+(function() {
+    function initCategoryCharts() {
+        if (typeof Chart === 'undefined') return;
+        const categoryRows = @json($categoryChartRows);
+        const labels = categoryRows.map(row => row.category);
 
-    // Chart 1: Category Level OSA
-    const ctxOsa = document.getElementById('categoryLevelOsaChart');
-    if (ctxOsa) {
-        new Chart(ctxOsa, {
-            type: 'bar',
-            data: {
-                labels,
-                datasets: [{
-                    label: 'Category OSA %',
-                    data: categoryRows.map(row => row.osa),
-                    backgroundColor: '#F59E0B',
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: { y: { min: 0, max: 100 } }
-            }
-        });
+        // Chart 1: Category Level OSA
+        const ctxOsa = document.getElementById('categoryLevelOsaChart');
+        if (ctxOsa) {
+            new Chart(ctxOsa, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Category OSA %',
+                        data: categoryRows.map(row => row.osa),
+                        backgroundColor: '#F59E0B',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { min: 0, max: 100 } }
+                }
+            });
+        }
+
+        // Chart 2: Category Level SoS
+        const ctxSos = document.getElementById('categoryLevelSosChart');
+        if (ctxSos) {
+            new Chart(ctxSos, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Category SoS %',
+                        data: categoryRows.map(row => row.sos),
+                        backgroundColor: '#10B981',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { min: 0, max: 100 } }
+                }
+            });
+        }
+
+        // Chart 3: Category Level Planogram
+        const ctxPln = document.getElementById('categoryLevelPlanogramChart');
+        if (ctxPln) {
+            new Chart(ctxPln, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Category Planogram %',
+                        data: categoryRows.map(row => row.planogram),
+                        backgroundColor: '#14B8A6',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { min: 0, max: 100 } }
+                }
+            });
+        }
     }
 
-    // Chart 2: Category Level SoS
-    const ctxSos = document.getElementById('categoryLevelSosChart');
-    if (ctxSos) {
-        new Chart(ctxSos, {
-            type: 'bar',
-            data: {
-                labels,
-                datasets: [{
-                    label: 'Category SoS %',
-                    data: categoryRows.map(row => row.sos),
-                    backgroundColor: '#10B981',
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: { y: { min: 0, max: 100 } }
-            }
-        });
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initCategoryCharts);
+    } else {
+        initCategoryCharts();
     }
-
-    // Chart 3: Category Level Planogram
-    const ctxPln = document.getElementById('categoryLevelPlanogramChart');
-    if (ctxPln) {
-        new Chart(ctxPln, {
-            type: 'bar',
-            data: {
-                labels,
-                datasets: [{
-                    label: 'Category Planogram %',
-                    data: categoryRows.map(row => row.planogram),
-                    backgroundColor: '#14B8A6',
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: { y: { min: 0, max: 100 } }
-            }
-        });
-    }
-});
+})();
 </script>

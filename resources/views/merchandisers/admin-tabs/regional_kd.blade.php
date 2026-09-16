@@ -277,91 +277,99 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    if (typeof Chart === 'undefined') return;
-    const kdRows = @json($regionalChartRows);
-    const regional = Object.values(kdRows.reduce((groups, row) => {
-        const group = groups[row.region] || { name: row.region, rows: [] };
-        group.rows.push(row);
-        groups[row.region] = group;
-        return groups;
-    }, {})).map(group => ({
-        name: group.name,
-        osa: average(group.rows.map(row => row.osa)),
-        coverage: average(group.rows.map(row => row.coverage)),
-        planogram: average(group.rows.map(row => row.planogram)),
-        overall: average(group.rows.map(row => row.overall)),
-    }));
-    function average(values) {
-        const numeric = values.filter(value => value !== null && value !== undefined);
-        return numeric.length ? numeric.reduce((total, value) => total + Number(value), 0) / numeric.length : null;
-    }
-    const regionalLabels = regional.map(row => row.name);
+(function() {
+    function initRegionalCharts() {
+        if (typeof Chart === 'undefined') return;
+        const kdRows = @json($regionalChartRows);
+        const regional = Object.values(kdRows.reduce((groups, row) => {
+            const group = groups[row.region] || { name: row.region, rows: [] };
+            group.rows.push(row);
+            groups[row.region] = group;
+            return groups;
+        }, {})).map(group => ({
+            name: group.name,
+            osa: average(group.rows.map(row => row.osa)),
+            coverage: average(group.rows.map(row => row.coverage)),
+            planogram: average(group.rows.map(row => row.planogram)),
+            overall: average(group.rows.map(row => row.overall)),
+        }));
+        function average(values) {
+            const numeric = values.filter(value => value !== null && value !== undefined);
+            return numeric.length ? numeric.reduce((total, value) => total + Number(value), 0) / numeric.length : null;
+        }
+        const regionalLabels = regional.map(row => row.name);
 
-    // Chart 1: Regional OSA Performance
-    const ctxOsa = document.getElementById('regionalOsaChart');
-    if (ctxOsa) {
-        new Chart(ctxOsa, {
-            type: 'bar',
-            data: {
-                labels: regionalLabels,
-                datasets: [{
-                    label: 'OSA %',
-                    data: regional.map(row => row.osa),
-                    backgroundColor: '#3B82F6',
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: { y: { min: 0, max: 100 } }
-            }
-        });
+        // Chart 1: Regional OSA Performance
+        const ctxOsa = document.getElementById('regionalOsaChart');
+        if (ctxOsa) {
+            new Chart(ctxOsa, {
+                type: 'bar',
+                data: {
+                    labels: regionalLabels,
+                    datasets: [{
+                        label: 'OSA %',
+                        data: regional.map(row => row.osa),
+                        backgroundColor: '#3B82F6',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { min: 0, max: 100 } }
+                }
+            });
+        }
+
+        // Chart 2: Regional KPI Performance
+        const ctxKpi = document.getElementById('regionalKpiChart');
+        if (ctxKpi) {
+            new Chart(ctxKpi, {
+                type: 'bar',
+                data: {
+                    labels: regionalLabels,
+                    datasets: [
+                        { label: 'Coverage', data: regional.map(row => row.coverage), backgroundColor: '#10B981', borderRadius: 6 },
+                        { label: 'Planogram', data: regional.map(row => row.planogram), backgroundColor: '#F59E0B', borderRadius: 6 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { min: 0, max: 100 } }
+                }
+            });
+        }
+
+        // Chart 3: Regional Brand Scores
+        const ctxBrand = document.getElementById('regionalBrandChart');
+        if (ctxBrand) {
+            new Chart(ctxBrand, {
+                type: 'bar',
+                data: {
+                    labels: regionalLabels,
+                    datasets: [{
+                        label: 'Brand Avg',
+                        data: regional.map(row => row.overall),
+                        backgroundColor: '#8B5CF6',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { min: 0, max: 100 } }
+                }
+            });
+        }
     }
 
-    // Chart 2: Regional KPI Performance
-    const ctxKpi = document.getElementById('regionalKpiChart');
-    if (ctxKpi) {
-        new Chart(ctxKpi, {
-            type: 'bar',
-            data: {
-                labels: regionalLabels,
-                datasets: [
-                    { label: 'Coverage', data: regional.map(row => row.coverage), backgroundColor: '#10B981', borderRadius: 6 },
-                    { label: 'Planogram', data: regional.map(row => row.planogram), backgroundColor: '#F59E0B', borderRadius: 6 }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: { y: { min: 0, max: 100 } }
-            }
-        });
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initRegionalCharts);
+    } else {
+        initRegionalCharts();
     }
-
-    // Chart 3: Regional Brand Scores
-    const ctxBrand = document.getElementById('regionalBrandChart');
-    if (ctxBrand) {
-        new Chart(ctxBrand, {
-            type: 'bar',
-            data: {
-                labels: regionalLabels,
-                datasets: [{
-                    label: 'Brand Avg',
-                    data: regional.map(row => row.overall),
-                    backgroundColor: '#8B5CF6',
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: { y: { min: 0, max: 100 } }
-            }
-        });
-    }
-});
+})();
 </script>
