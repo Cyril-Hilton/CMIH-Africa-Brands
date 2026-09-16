@@ -308,9 +308,29 @@ class MerchandiserAdminHubController extends Controller
                 ->get();
 
             $visitsByKdId = $recentVisits->groupBy(fn($v) => (int) ($v->outlet?->kd_id ?? 0));
-            $perfectStoreKdData = $allKds->map(function (KeyDistributor $kd) use ($visitsByKdId) {
+            $summaryKdMap = collect($perfectStoreSummary['kds'] ?? [])->keyBy(fn ($item) => (int) ($item['kd_id'] ?? $item['id'] ?? 0));
+            $perfectStoreKdData = $allKds->map(function (KeyDistributor $kd) use ($visitsByKdId, $summaryKdMap) {
                 $kdVisits = $visitsByKdId->get((int) $kd->id, collect());
-                return \App\Services\PerfectStoreCalculator::computeKdMetrics($kd, $kdVisits);
+                $calcMetrics = \App\Services\PerfectStoreCalculator::computeKdMetrics($kd, $kdVisits);
+                $summaryMetrics = $summaryKdMap->get((int) $kd->id, []);
+                $overall = $summaryMetrics['perfect_store_score'] ?? $calcMetrics['overall_score'] ?? 0.0;
+
+                return [
+                    'kd_id' => $kd->id,
+                    'kd_name' => $kd->name,
+                    'region_name' => $kd->region?->name ?? ($summaryMetrics['region_name'] ?? 'National'),
+                    'coverage' => $summaryMetrics['coverage'] ?? null,
+                    'osa' => $summaryMetrics['osa'] ?? null,
+                    'npd' => $summaryMetrics['npd'] ?? null,
+                    'mhs' => $summaryMetrics['mhs'] ?? null,
+                    'planogram' => $summaryMetrics['planogram'] ?? $calcMetrics['planogram_pct'] ?? null,
+                    'facing' => $summaryMetrics['facing'] ?? $calcMetrics['facing_pct'] ?? null,
+                    'sos' => $summaryMetrics['sos'] ?? $calcMetrics['sos_pct'] ?? null,
+                    'overall_score' => $overall,
+                    'perfect_store_score' => $overall,
+                    'status' => $calcMetrics['status'] ?? 'Needs Attention',
+                    'store_count' => $calcMetrics['store_count'] ?? 0,
+                ];
             })->sortByDesc('overall_score')->values();
 
             $visitsByUserId = $recentVisits->groupBy(fn($v) => (int) $v->user_id);
@@ -320,13 +340,23 @@ class MerchandiserAdminHubController extends Controller
                 ->tap(fn ($query) => $this->applyPerformanceUserFilters($query, $performanceFilters))
                 ->orderBy('name')
                 ->get();
-            $perfectStoreMerchandiserData = $activeMerchList->map(function (User $merch) use ($visitsByUserId) {
+            $summaryMerchMap = collect($perfectStoreSummary['merchandisers'] ?? [])->keyBy(fn ($item) => (int) ($item['user_id'] ?? $item['id'] ?? 0));
+            $perfectStoreMerchandiserData = $activeMerchList->map(function (User $merch) use ($visitsByUserId, $summaryMerchMap) {
                 $userVisits = $visitsByUserId->get((int) $merch->id, collect());
                 $metrics = \App\Services\PerfectStoreCalculator::computeMerchandiserMetrics($merch, $userVisits);
+                $summaryMetrics = $summaryMerchMap->get((int) $merch->id, []);
                 $metrics['user_name'] = $merch->name;
                 $metrics['supervisor_name'] = $merch->supervisor?->name ?? 'Unassigned';
                 $metrics['kd_name'] = $merch->merchandiserKd?->name ?? 'Unassigned';
                 $metrics['region_name'] = $merch->merchandiserKd?->region?->name ?? 'National';
+                $metrics['coverage'] = $summaryMetrics['coverage'] ?? null;
+                $metrics['osa'] = $summaryMetrics['osa'] ?? null;
+                $metrics['npd'] = $summaryMetrics['npd'] ?? null;
+                $metrics['mhs'] = $summaryMetrics['mhs'] ?? null;
+                $metrics['planogram'] = $summaryMetrics['planogram'] ?? $metrics['planogram_pct'] ?? null;
+                $metrics['facing'] = $summaryMetrics['facing'] ?? $metrics['facing_pct'] ?? null;
+                $metrics['sos'] = $summaryMetrics['sos'] ?? $metrics['sos_pct'] ?? null;
+                $metrics['overall_score'] = $summaryMetrics['perfect_store_score'] ?? $metrics['overall_score'] ?? 0.0;
                 return $metrics;
             })->sortByDesc('overall_score')->values();
 

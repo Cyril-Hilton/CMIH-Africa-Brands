@@ -75,7 +75,25 @@
     </div>
 
     <!-- Table 1: KD Performance Table (Navigator 2) -->
-    <div class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm overflow-hidden">
+    <div class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm overflow-hidden"
+         x-data="{
+             search: '',
+             selectedCol: 'all',
+             totalCount: {{ count($perfectStoreKdData ?? []) }},
+             matches(kd, region, osa, npd, mhs, sos, facing, score) {
+                 if (!this.search.trim()) return true;
+                 const q = this.search.toLowerCase().trim();
+                 if (this.selectedCol === 'kd') return kd.toLowerCase().includes(q);
+                 if (this.selectedCol === 'region') return region.toLowerCase().includes(q);
+                 if (this.selectedCol === 'osa') return osa.toLowerCase().includes(q);
+                 if (this.selectedCol === 'npd') return npd.toLowerCase().includes(q);
+                 if (this.selectedCol === 'mhs') return mhs.toLowerCase().includes(q);
+                 if (this.selectedCol === 'sos') return sos.toLowerCase().includes(q);
+                 if (this.selectedCol === 'facing') return facing.toLowerCase().includes(q);
+                 if (this.selectedCol === 'score') return score.toLowerCase().includes(q);
+                 return kd.toLowerCase().includes(q) || region.toLowerCase().includes(q) || osa.toLowerCase().includes(q) || score.toLowerCase().includes(q);
+             }
+         }">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
             <div>
                 <p class="text-[10px] uppercase font-extrabold tracking-widest text-slate-500 dark:text-slate-400">Distributor Scorecard</p>
@@ -84,6 +102,38 @@
             <span class="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 self-start sm:self-auto">
                 {{ count($perfectStoreKdData ?? []) }} Key Distributors
             </span>
+        </div>
+
+        <!-- Filter Table Bar (Matching Image 3) -->
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 text-xs">
+            <div class="flex flex-wrap items-center gap-2.5 min-w-0">
+                <span class="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 dark:text-slate-400">FILTER TABLE</span>
+                <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
+                    <span x-text="totalCount"></span> rows shown
+                </span>
+                <select x-model="selectedCol" class="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 font-bold focus:ring-0">
+                    <option value="all">All columns</option>
+                    <option value="kd">KD Name</option>
+                    <option value="region">Region</option>
+                    <option value="osa">OSA</option>
+                    <option value="npd">NPD</option>
+                    <option value="mhs">MHS</option>
+                    <option value="sos">SOS</option>
+                    <option value="facing">Facings</option>
+                    <option value="score">Compliance Score</option>
+                </select>
+            </div>
+            <div class="flex items-center gap-2 flex-1 max-w-md min-w-[200px]">
+                <div class="relative w-full">
+                    <input type="text" x-model="search" placeholder="Search visible rows..." class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 pl-3 pr-8 py-1.5 text-xs text-slate-900 dark:text-white font-medium focus:ring-0">
+                    <button x-show="search.length > 0" @click="search = ''" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <button @click="search = ''; selectedCol = 'all'" class="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-extrabold text-[10px] uppercase tracking-wider transition">
+                    CLEAR
+                </button>
+            </div>
         </div>
 
         <div class="overflow-x-auto">
@@ -101,18 +151,27 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60 font-semibold text-slate-900 dark:text-white">
                     @forelse(($perfectStoreKdData ?? collect()) as $kdRow)
-                        <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
+                        @php
+                            $kdName = $kdRow['kd_name'] ?? $kdRow['name'] ?? '';
+                            $regName = $kdRow['region_name'] ?? 'National';
+                            $osaVal = $formatPct($kdRow['osa'] ?? null);
+                            $npdVal = $formatPct($kdRow['npd'] ?? null);
+                            $mhsVal = $formatPct($kdRow['mhs'] ?? null);
+                            $sosVal = $formatPct($kdRow['sos'] ?? null);
+                            $facingVal = $formatPct($kdRow['facing'] ?? null);
+                            $score = (float)($kdRow['overall_score'] ?? $kdRow['perfect_store_score'] ?? 0);
+                        @endphp
+                        <tr x-show="matches('{{ addslashes($kdName) }}', '{{ addslashes($regName) }}', '{{ $osaVal }}', '{{ $npdVal }}', '{{ $mhsVal }}', '{{ $sosVal }}', '{{ $facingVal }}', '{{ number_format($score, 1) }}')" class="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
                             <td class="py-3.5 px-4">
-                                <p class="font-extrabold text-slate-900 dark:text-white text-sm">{{ $kdRow['kd_name'] ?? $kdRow['name'] }}</p>
-                                <p class="text-[10px] text-slate-400">{{ $kdRow['region_name'] ?? 'National' }}</p>
+                                <p class="font-extrabold text-slate-900 dark:text-white text-sm">{{ $kdName }}</p>
+                                <p class="text-[10px] text-slate-400">{{ $regName }}</p>
                             </td>
-                            <td class="py-3.5 px-3 text-right tabular-nums text-blue-600 dark:text-blue-400 font-bold">{{ $formatPct($kdRow['osa'] ?? null) }}</td>
-                            <td class="py-3.5 px-3 text-right tabular-nums text-purple-600 dark:text-purple-400 font-bold">{{ $formatPct($kdRow['npd'] ?? null) }}</td>
-                            <td class="py-3.5 px-3 text-right tabular-nums text-amber-600 dark:text-amber-400 font-bold">{{ $formatPct($kdRow['mhs'] ?? null) }}</td>
-                            <td class="py-3.5 px-3 text-right tabular-nums text-rose-600 dark:text-rose-400 font-bold">{{ $formatPct($kdRow['sos'] ?? null) }}</td>
-                            <td class="py-3.5 px-3 text-right tabular-nums text-indigo-600 dark:text-indigo-400 font-bold">{{ $formatPct($kdRow['facing'] ?? null) }}</td>
+                            <td class="py-3.5 px-3 text-right tabular-nums text-blue-600 dark:text-blue-400 font-bold">{{ $osaVal }}</td>
+                            <td class="py-3.5 px-3 text-right tabular-nums text-purple-600 dark:text-purple-400 font-bold">{{ $npdVal }}</td>
+                            <td class="py-3.5 px-3 text-right tabular-nums text-amber-600 dark:text-amber-400 font-bold">{{ $mhsVal }}</td>
+                            <td class="py-3.5 px-3 text-right tabular-nums text-rose-600 dark:text-rose-400 font-bold">{{ $sosVal }}</td>
+                            <td class="py-3.5 px-3 text-right tabular-nums text-indigo-600 dark:text-indigo-400 font-bold">{{ $facingVal }}</td>
                             <td class="py-3.5 px-4 text-center">
-                                @php $score = (float)($kdRow['overall_score'] ?? 0); @endphp
                                 <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black {{ $score >= 80 ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' : ($score >= 60 ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30' : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30') }}">
                                     <span>{{ number_format($score, 1) }}%</span>
                                 </div>
@@ -129,15 +188,49 @@
     </div>
 
     <!-- Table 2: POSM Availability Table (Navigator 2) -->
-    <div class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm overflow-hidden">
+    <div class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm overflow-hidden"
+         x-data="{
+             search: '',
+             selectedCol: 'all',
+             matches(item, brand, avail) {
+                 if (!this.search.trim()) return true;
+                 const q = this.search.toLowerCase().trim();
+                 if (this.selectedCol === 'item') return item.toLowerCase().includes(q);
+                 if (this.selectedCol === 'brand') return brand.toLowerCase().includes(q);
+                 return item.toLowerCase().includes(q) || brand.toLowerCase().includes(q);
+             }
+         }">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
             <div>
-                <span class="text-[10px] uppercase font-extrabold tracking-widest text-slate-500 dark:text-slate-400">FILTER BY REGION, KD, OUTLET</span>
+                <span class="text-[10px] uppercase font-extrabold tracking-widest text-slate-500 dark:text-slate-400">POSM SUMMARY</span>
                 <h3 class="text-lg font-bold text-slate-900 dark:text-white">POSM &amp; Promotional Materials Availability</h3>
             </div>
             <span class="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase bg-cyan-50 dark:bg-cyan-950/50 text-cyan-600 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-800 self-start sm:self-auto">
                 POSM Placement Rates
             </span>
+        </div>
+
+        <!-- Filter Table Bar -->
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 text-xs">
+            <div class="flex items-center gap-2 min-w-0">
+                <span class="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 dark:text-slate-400">FILTER TABLE</span>
+                <select x-model="selectedCol" class="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 font-bold focus:ring-0">
+                    <option value="all">All columns</option>
+                    <option value="item">POSM Item</option>
+                    <option value="brand">Type / Brand</option>
+                </select>
+            </div>
+            <div class="flex items-center gap-2 flex-1 max-w-md min-w-[200px]">
+                <div class="relative w-full">
+                    <input type="text" x-model="search" placeholder="Search POSM materials..." class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 pl-3 pr-8 py-1.5 text-xs text-slate-900 dark:text-white font-medium focus:ring-0">
+                    <button x-show="search.length > 0" @click="search = ''" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <button @click="search = ''; selectedCol = 'all'" class="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-extrabold text-[10px] uppercase tracking-wider transition">
+                    CLEAR
+                </button>
+            </div>
         </div>
 
         <div class="overflow-x-auto">
@@ -151,7 +244,7 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60 font-semibold text-slate-900 dark:text-white">
                     @forelse(($posmAvailabilityData ?? collect()) as $posmRow)
-                        <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
+                        <tr x-show="matches('{{ addslashes($posmRow['posm_item']) }}', '{{ addslashes($posmRow['type_brand']) }}', '{{ $posmRow['availability_pct'] ?? '' }}')" class="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
                             <td class="py-3.5 px-4 font-extrabold text-slate-900 dark:text-white text-sm">
                                 <i class="fa-solid fa-layer-group text-slate-400 mr-2"></i>{{ $posmRow['posm_item'] }}
                             </td>

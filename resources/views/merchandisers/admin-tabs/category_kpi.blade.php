@@ -5,13 +5,24 @@
     $sosScore = $overview['sos'] ?? null;
     $npdScore = $overview['npd'] ?? null;
     $plnScore = $overview['planogram'] ?? null;
-    $categoryRows = collect($categorySosData ?? collect());
-    $categoryChartRows = $categoryRows->map(function ($row) {
+    $rawCategoryData = collect($categorySosData ?? []);
+    if ($rawCategoryData->isEmpty() && !empty($perfectStoreSummary['categories'])) {
+        $rawCategoryData = collect($perfectStoreSummary['categories']);
+    }
+    $categoryChartRows = $rawCategoryData->map(function ($row) {
+        if (is_array($row)) {
+            return [
+                'category' => $row['name'] ?? $row['category'] ?? 'Category',
+                'osa' => $row['osa'] ?? $row['osa_pct'] ?? null,
+                'sos' => $row['sos'] ?? $row['sos_pct'] ?? null,
+                'planogram' => $row['planogram'] ?? $row['planogram_pct'] ?? null,
+            ];
+        }
         return [
-            'category' => $row->category,
-            'osa' => $row->osa_pct,
-            'sos' => $row->sos_pct,
-            'planogram' => $row->planogram_pct,
+            'category' => $row->category ?? $row->name ?? 'Category',
+            'osa' => $row->osa_pct ?? $row->osa ?? null,
+            'sos' => $row->sos_pct ?? $row->sos ?? null,
+            'planogram' => $row->planogram_pct ?? $row->planogram ?? null,
         ];
     })->values();
     $gaugeValue = fn ($value) => max(0, min(100, (float) ($value ?? 0)));
@@ -142,6 +153,86 @@
             <div class="h-60 relative">
                 <canvas id="categoryLevelPlanogramChart"></canvas>
             </div>
+        </div>
+    </div>
+
+    <!-- Category Compliance & Breakdown Table (Navigator 3) -->
+    <div class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm overflow-hidden"
+         x-data="{
+             search: '',
+             selectedCol: 'all',
+             matches(cat, osa, sos, planogram) {
+                 if (!this.search.trim()) return true;
+                 const q = this.search.toLowerCase().trim();
+                 if (this.selectedCol === 'cat') return cat.toLowerCase().includes(q);
+                 return cat.toLowerCase().includes(q) || osa.toLowerCase().includes(q) || sos.toLowerCase().includes(q);
+             }
+         }">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div>
+                <p class="text-[10px] uppercase font-extrabold tracking-widest text-slate-500 dark:text-slate-400">Category Breakdown</p>
+                <h3 class="text-lg font-bold text-slate-900 dark:text-white">Product Category Execution Metrics</h3>
+            </div>
+            <span class="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 self-start sm:self-auto">
+                {{ count($categoryChartRows) }} Categories Tracked
+            </span>
+        </div>
+
+        <!-- Filter Table Bar -->
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 text-xs">
+            <div class="flex items-center gap-2 min-w-0">
+                <span class="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 dark:text-slate-400">FILTER TABLE</span>
+                <select x-model="selectedCol" class="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 font-bold focus:ring-0">
+                    <option value="all">All columns</option>
+                    <option value="cat">Category</option>
+                </select>
+            </div>
+            <div class="flex items-center gap-2 flex-1 max-w-md min-w-[200px]">
+                <div class="relative w-full">
+                    <input type="text" x-model="search" placeholder="Search category rows..." class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 pl-3 pr-8 py-1.5 text-xs text-slate-900 dark:text-white font-medium focus:ring-0">
+                    <button x-show="search.length > 0" @click="search = ''" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <button @click="search = ''; selectedCol = 'all'" class="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-extrabold text-[10px] uppercase tracking-wider transition">
+                    CLEAR
+                </button>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead class="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-extrabold">
+                    <tr>
+                        <th class="py-3 px-4">Category</th>
+                        <th class="py-3 px-3 text-right">OSA %</th>
+                        <th class="py-3 px-3 text-right">SoS %</th>
+                        <th class="py-3 px-4 text-right">Planogram %</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60 font-semibold text-slate-900 dark:text-white">
+                    @forelse($categoryChartRows as $catRow)
+                        @php
+                            $catName = $catRow['category'] ?? 'Category';
+                            $osaVal = $formatPct($catRow['osa'] ?? null);
+                            $sosVal = $formatPct($catRow['sos'] ?? null);
+                            $plnVal = $formatPct($catRow['planogram'] ?? null);
+                        @endphp
+                        <tr x-show="matches('{{ addslashes($catName) }}', '{{ $osaVal }}', '{{ $sosVal }}', '{{ $plnVal }}')" class="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
+                            <td class="py-3.5 px-4 font-extrabold text-slate-900 dark:text-white text-sm">
+                                <i class="fa-solid fa-layer-group text-emerald-500 mr-2"></i>{{ $catName }}
+                            </td>
+                            <td class="py-3.5 px-3 text-right tabular-nums font-bold text-amber-600 dark:text-amber-400">{{ $osaVal }}</td>
+                            <td class="py-3.5 px-3 text-right tabular-nums font-bold text-emerald-600 dark:text-emerald-400">{{ $sosVal }}</td>
+                            <td class="py-3.5 px-4 text-right tabular-nums font-bold text-teal-600 dark:text-teal-400">{{ $plnVal }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="4" class="py-8 text-center text-slate-400 font-normal">No category performance records found for this period.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
     </div>
 

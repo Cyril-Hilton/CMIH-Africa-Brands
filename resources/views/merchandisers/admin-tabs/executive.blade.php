@@ -3,7 +3,22 @@
     $formatPct = fn ($value) => $value === null ? 'N/A' : number_format((float) $value, 1).'%';
     $overallScore = $overview['perfect_store_score'] ?? null;
     $overallGauge = max(0, min(100, (float) ($overallScore ?? 0)));
-    $categoryOsaRows = collect($categorySosData ?? collect())->filter(fn ($row) => $row->osa_pct !== null)->values();
+    $rawCats = collect($categorySosData ?? []);
+    if ($rawCats->isEmpty() && !empty($perfectStoreSummary['categories'])) {
+        $rawCats = collect($perfectStoreSummary['categories']);
+    }
+    $categoryOsaRows = $rawCats->map(function ($cat) {
+        if (is_array($cat)) {
+            return (object)[
+                'category' => $cat['name'] ?? $cat['category'] ?? 'General',
+                'osa_pct' => $cat['osa'] ?? $cat['osa_pct'] ?? null,
+            ];
+        }
+        return (object)[
+            'category' => $cat->category ?? $cat->name ?? 'General',
+            'osa_pct' => $cat->osa_pct ?? $cat->osa ?? null,
+        ];
+    })->filter(fn ($row) => $row->osa_pct !== null)->values();
     $trend = $clientPerformanceTrend ?? ['labels' => [], 'overall' => [], 'brands' => []];
 @endphp
 
@@ -167,21 +182,57 @@
     </div>
 
     <!-- Bottom Tables & Charts Section (Navigator 1) -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 w-full min-w-0 items-start">
         
         <!-- Table: Least Available SKUs -->
-        <div class="lg:col-span-7 merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm overflow-hidden flex flex-col justify-between">
-            <div>
-                <div class="flex items-center justify-between mb-4">
+        <div class="lg:col-span-7 w-full min-w-0 merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm overflow-hidden flex flex-col justify-between"
+             x-data="{
+                 search: '',
+                 selectedCol: 'all',
+                 matches(sku, cat, status) {
+                     if (!this.search.trim()) return true;
+                     const q = this.search.toLowerCase().trim();
+                     if (this.selectedCol === 'sku') return sku.toLowerCase().includes(q);
+                     if (this.selectedCol === 'cat') return cat.toLowerCase().includes(q);
+                     if (this.selectedCol === 'status') return status.toLowerCase().includes(q);
+                     return sku.toLowerCase().includes(q) || cat.toLowerCase().includes(q) || status.toLowerCase().includes(q);
+                 }
+             }">
+            <div class="w-full min-w-0">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                     <div>
                         <p class="text-[10px] uppercase font-extrabold tracking-widest text-slate-500 dark:text-slate-400">Stock Out Risk</p>
                         <h4 class="text-base font-bold text-slate-900 dark:text-white">Least Available SKUs (Table Form)</h4>
                     </div>
-                    <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800">Priority Replenish</span>
+                    <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 self-start sm:self-auto">Priority Replenish</span>
                 </div>
                 
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-xs">
+                <!-- Table Filter Toolbar -->
+                <div class="flex flex-wrap items-center justify-between gap-2.5 mb-4 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 text-xs">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <span class="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 dark:text-slate-400">FILTER TABLE</span>
+                        <select x-model="selectedCol" class="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1 text-xs text-slate-800 dark:text-slate-200 font-bold focus:ring-0">
+                            <option value="all">All columns</option>
+                            <option value="sku">SKU Code / Name</option>
+                            <option value="cat">Category</option>
+                            <option value="status">Status</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2 flex-1 max-w-xs min-w-[150px]">
+                        <div class="relative w-full">
+                            <input type="text" x-model="search" placeholder="Search visible rows..." class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 pl-2.5 pr-7 py-1 text-xs text-slate-900 dark:text-white font-medium focus:ring-0">
+                            <button x-show="search.length > 0" @click="search = ''" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                        <button @click="search = ''; selectedCol = 'all'" class="px-2.5 py-1 rounded-xl bg-red-600 hover:bg-red-700 text-white font-extrabold text-[10px] uppercase tracking-wider transition">
+                            CLEAR
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto w-full min-w-0">
+                    <table class="w-full text-left text-xs min-w-[480px]">
                         <thead class="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-extrabold">
                             <tr>
                                 <th class="py-2.5 px-3">SKU Code / Name</th>
@@ -192,8 +243,11 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60 font-semibold text-slate-900 dark:text-white">
-                            @forelse(($leastAvailableSkus ?? collect())->take(6) as $skuRow)
-                                <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
+                            @forelse(($leastAvailableSkus ?? collect())->take(10) as $skuRow)
+                                @php
+                                    $st = ($skuRow['availability_pct'] ?? 100) < 50 ? 'CRITICAL' : (($skuRow['availability_pct'] ?? 100) < 80 ? 'LOW' : 'GOOD');
+                                @endphp
+                                <tr x-show="matches('{{ addslashes($skuRow['sku_name'].' '.$skuRow['sku_code']) }}', '{{ addslashes($skuRow['category']) }}', '{{ $st }}')" class="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
                                     <td class="py-3 px-3">
                                         <p class="font-extrabold text-slate-900 dark:text-white">{{ $skuRow['sku_name'] }}</p>
                                         <p class="text-[10px] text-slate-400 font-mono">{{ $skuRow['sku_code'] }}</p>
@@ -223,8 +277,8 @@
         </div>
 
         <!-- Category OSA Performance Progress Chart -->
-        <div class="lg:col-span-5 merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm flex flex-col justify-between">
-            <div>
+        <div class="lg:col-span-5 w-full min-w-0 merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm flex flex-col justify-between">
+            <div class="w-full min-w-0">
                 <div class="flex items-center justify-between mb-4">
                     <div>
                         <p class="text-[10px] uppercase font-extrabold tracking-widest text-slate-500 dark:text-slate-400">Category Breakdown</p>
@@ -237,8 +291,8 @@
                     @forelse($categoryOsaRows as $index => $cat)
                         <div>
                             <div class="flex items-center justify-between text-xs font-extrabold mb-1">
-                                <span class="text-slate-800 dark:text-slate-200">{{ $cat->category }}</span>
-                                <span class="tabular-nums text-slate-900 dark:text-white">{{ number_format((float) $cat->osa_pct, 1) }}%</span>
+                                <span class="text-slate-800 dark:text-slate-200 truncate mr-2">{{ $cat->category }}</span>
+                                <span class="tabular-nums text-slate-900 dark:text-white shrink-0">{{ number_format((float) $cat->osa_pct, 1) }}%</span>
                             </div>
                             <div class="w-full h-3 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                                 <div class="{{ ['bg-emerald-500', 'bg-blue-500', 'bg-amber-500', 'bg-teal-500', 'bg-cyan-500'][$index % 5] }} h-full rounded-full transition-all duration-700" style="width: {{ max(0, min(100, (float) $cat->osa_pct)) }}%"></div>

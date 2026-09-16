@@ -5,7 +5,7 @@
     $currentView = $clientView ?? $activeAdminTab ?? 'executive';
     $showStore = $showStoreFilter ?? false;
     $showPeriod = $showPeriodFilter ?? true;
-    $showDateRange = $showDateRangeFilter ?? false;
+    $showDateRange = $showDateRangeFilter ?? true;
 @endphp
 
 <div class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm mb-6">
@@ -28,7 +28,7 @@
         </div>
         @endif
 
-        <!-- Right: Dropdown Filters (Region, KD, Store) -->
+        <!-- Right: Dropdown Filters (Region, KD, Store, Date From/To) -->
         <div class="flex flex-wrap items-center gap-2.5 min-w-0">
             <!-- Region Filter -->
             <div class="flex items-center gap-1.5 min-w-0">
@@ -68,11 +68,11 @@
             @if($showDateRange)
                 <div class="flex items-center gap-1.5">
                     <span class="text-[10px] uppercase font-extrabold text-slate-500 dark:text-slate-400 tracking-wider">From:</span>
-                    <input type="date" name="clock_from" value="{{ request('clock_from') }}" onchange="this.form.submit()" class="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-2 py-1.5 text-xs text-slate-900 dark:text-white font-bold focus:ring-0">
+                    <input type="date" name="clock_from" value="{{ request('clock_from') ?? ($clockFromInput ?? '') }}" onchange="this.form.submit()" class="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-2.5 py-1.5 text-xs text-slate-900 dark:text-white font-bold focus:ring-0">
                 </div>
                 <div class="flex items-center gap-1.5">
                     <span class="text-[10px] uppercase font-extrabold text-slate-500 dark:text-slate-400 tracking-wider">To:</span>
-                    <input type="date" name="clock_to" value="{{ request('clock_to') }}" onchange="this.form.submit()" class="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-2 py-1.5 text-xs text-slate-900 dark:text-white font-bold focus:ring-0">
+                    <input type="date" name="clock_to" value="{{ request('clock_to') ?? ($clockToInput ?? '') }}" onchange="this.form.submit()" class="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-2.5 py-1.5 text-xs text-slate-900 dark:text-white font-bold focus:ring-0">
                 </div>
             @endif
 

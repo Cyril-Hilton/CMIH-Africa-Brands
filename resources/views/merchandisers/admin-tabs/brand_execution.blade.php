@@ -21,7 +21,17 @@
     </div>
 
     <!-- Table 1: Brands Performance Table (Navigator 4) -->
-    <div class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm overflow-hidden">
+    <div class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm overflow-hidden"
+         x-data="{
+             search: '',
+             selectedCol: 'all',
+             matches(brand, osa, sos, planogram, score) {
+                 if (!this.search.trim()) return true;
+                 const q = this.search.toLowerCase().trim();
+                 if (this.selectedCol === 'brand') return brand.toLowerCase().includes(q);
+                 return brand.toLowerCase().includes(q) || osa.toLowerCase().includes(q) || score.toLowerCase().includes(q);
+             }
+         }">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
             <div>
                 <p class="text-[10px] uppercase font-extrabold tracking-widest text-slate-500 dark:text-slate-400">Brand Execution Index</p>
@@ -30,6 +40,28 @@
             <span class="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800 self-start sm:self-auto">
                 Brands Summary
             </span>
+        </div>
+
+        <!-- Filter Table Bar -->
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 text-xs">
+            <div class="flex items-center gap-2 min-w-0">
+                <span class="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 dark:text-slate-400">FILTER TABLE</span>
+                <select x-model="selectedCol" class="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 font-bold focus:ring-0">
+                    <option value="all">All columns</option>
+                    <option value="brand">Brand Name</option>
+                </select>
+            </div>
+            <div class="flex items-center gap-2 flex-1 max-w-md min-w-[200px]">
+                <div class="relative w-full">
+                    <input type="text" x-model="search" placeholder="Search visible rows..." class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 pl-3 pr-8 py-1.5 text-xs text-slate-900 dark:text-white font-medium focus:ring-0">
+                    <button x-show="search.length > 0" @click="search = ''" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <button @click="search = ''; selectedCol = 'all'" class="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-extrabold text-[10px] uppercase tracking-wider transition">
+                    CLEAR
+                </button>
+            </div>
         </div>
 
         <div class="overflow-x-auto">
@@ -45,17 +77,24 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60 font-semibold text-slate-900 dark:text-white">
                     @forelse($brandsData as $brandRow)
-                        <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
+                        @php
+                            $bName = $brandRow['brand_name'] ?? $brandRow['name'] ?? 'Brand';
+                            $osaVal = $formatPct($brandRow['osa'] ?? null);
+                            $sosVal = $formatPct($brandRow['sos'] ?? null);
+                            $plnVal = $formatPct($brandRow['planogram'] ?? null);
+                            $score = $brandRow['overall_score'] ?? $brandRow['perfect_store_score'] ?? null;
+                            $scoreStr = $score === null ? 'N/A' : number_format((float) $score, 1).'%';
+                        @endphp
+                        <tr x-show="matches('{{ addslashes($bName) }}', '{{ $osaVal }}', '{{ $sosVal }}', '{{ $plnVal }}', '{{ $scoreStr }}')" class="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
                             <td class="py-3.5 px-4 font-extrabold text-slate-900 dark:text-white text-sm">
-                                <i class="fa-solid fa-tag text-purple-500 mr-2"></i>{{ $brandRow['brand_name'] ?? $brandRow['name'] ?? 'Brand' }}
+                                <i class="fa-solid fa-tag text-purple-500 mr-2"></i>{{ $bName }}
                             </td>
-                            <td class="py-3.5 px-3 text-right tabular-nums text-blue-600 dark:text-blue-400 font-bold">{{ $formatPct($brandRow['osa'] ?? null) }}</td>
-                            <td class="py-3.5 px-3 text-right tabular-nums text-rose-600 dark:text-rose-400 font-bold">{{ $formatPct($brandRow['sos'] ?? null) }}</td>
-                            <td class="py-3.5 px-3 text-right tabular-nums text-cyan-600 dark:text-cyan-400 font-bold">{{ $formatPct($brandRow['planogram'] ?? null) }}</td>
+                            <td class="py-3.5 px-3 text-right tabular-nums text-blue-600 dark:text-blue-400 font-bold">{{ $osaVal }}</td>
+                            <td class="py-3.5 px-3 text-right tabular-nums text-rose-600 dark:text-rose-400 font-bold">{{ $sosVal }}</td>
+                            <td class="py-3.5 px-3 text-right tabular-nums text-cyan-600 dark:text-cyan-400 font-bold">{{ $plnVal }}</td>
                             <td class="py-3.5 px-4 text-center">
-                                @php $score = $brandRow['overall_score'] ?? $brandRow['perfect_store_score'] ?? null; @endphp
-                                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black {{ $score >= 80 ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' : ($score >= 60 ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30' : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30') }}">
-                                    <span>{{ $score === null ? 'N/A' : number_format((float) $score, 1).'%' }}</span>
+                                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black {{ ($score ?? 0) >= 80 ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' : (($score ?? 0) >= 60 ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30' : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30') }}">
+                                    <span>{{ $scoreStr }}</span>
                                 </div>
                             </td>
                         </tr>
@@ -73,8 +112,18 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
         
         <!-- Table 2: Merchandiser Attendance & Outlet Schedule Coverage -->
-        <div class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm overflow-hidden">
-            <div class="flex items-center justify-between mb-4">
+        <div class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm overflow-hidden"
+             x-data="{
+                 search: '',
+                 selectedCol: 'all',
+                 matches(name, att, sched, cov) {
+                     if (!this.search.trim()) return true;
+                     const q = this.search.toLowerCase().trim();
+                     if (this.selectedCol === 'name') return name.toLowerCase().includes(q);
+                     return name.toLowerCase().includes(q) || att.toLowerCase().includes(q) || sched.toLowerCase().includes(q);
+                 }
+             }">
+            <div class="flex items-center justify-between mb-3">
                 <div>
                     <p class="text-[10px] uppercase font-extrabold tracking-widest text-slate-500 dark:text-slate-400">First Table</p>
                     <h3 class="text-base font-bold text-slate-900 dark:text-white">Merchandiser's Attendance &amp; Outlet Schedule Coverage</h3>
@@ -82,6 +131,28 @@
                 <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
                     Coverage
                 </span>
+            </div>
+
+            <!-- Filter Table Bar -->
+            <div class="flex flex-wrap items-center justify-between gap-2.5 mb-3 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 text-xs">
+                <div class="flex items-center gap-2 min-w-0">
+                    <span class="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 dark:text-slate-400">FILTER</span>
+                    <select x-model="selectedCol" class="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1 text-xs text-slate-800 dark:text-slate-200 font-bold focus:ring-0">
+                        <option value="all">All columns</option>
+                        <option value="name">Name</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-2 flex-1 max-w-xs min-w-[140px]">
+                    <div class="relative w-full">
+                        <input type="text" x-model="search" placeholder="Search merchandiser..." class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 pl-2.5 pr-7 py-1 text-xs text-slate-900 dark:text-white font-medium focus:ring-0">
+                        <button x-show="search.length > 0" @click="search = ''" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                    <button @click="search = ''; selectedCol = 'all'" class="px-2.5 py-1 rounded-xl bg-red-600 hover:bg-red-700 text-white font-extrabold text-[10px] uppercase tracking-wider transition">
+                        CLEAR
+                    </button>
+                </div>
             </div>
 
             <div class="overflow-x-auto">
@@ -95,8 +166,8 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60 font-semibold text-slate-900 dark:text-white">
-                        @forelse(($merchandiserCoverageTable ?? collect())->take(8) as $covRow)
-                            <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
+                        @forelse(($merchandiserCoverageTable ?? collect()) as $covRow)
+                            <tr x-show="matches('{{ addslashes($covRow['user_name']) }}', '{{ addslashes($covRow['attendance']) }}', '{{ addslashes($covRow['outlet_schedule']) }}', '{{ number_format((float)$covRow['coverage_pct'], 1) }}')" class="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
                                 <td class="py-3 px-3 font-extrabold text-slate-900 dark:text-white">{{ $covRow['user_name'] }}</td>
                                 <td class="py-3 px-3 text-slate-600 dark:text-slate-300">{{ $covRow['attendance'] }}</td>
                                 <td class="py-3 px-3 text-slate-600 dark:text-slate-300">{{ $covRow['outlet_schedule'] }}</td>
@@ -115,8 +186,20 @@
         </div>
 
         <!-- Table 3: Merchandiser KPI Performance -->
-        <div class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm overflow-hidden">
-            <div class="flex items-center justify-between mb-4">
+        <div class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm overflow-hidden"
+             x-data="{
+                 search: '',
+                 selectedCol: 'all',
+                 matches(name, reg, kd, score) {
+                     if (!this.search.trim()) return true;
+                     const q = this.search.toLowerCase().trim();
+                     if (this.selectedCol === 'name') return name.toLowerCase().includes(q);
+                     if (this.selectedCol === 'region') return reg.toLowerCase().includes(q);
+                     if (this.selectedCol === 'kd') return kd.toLowerCase().includes(q);
+                     return name.toLowerCase().includes(q) || reg.toLowerCase().includes(q) || kd.toLowerCase().includes(q);
+                 }
+             }">
+            <div class="flex items-center justify-between mb-3">
                 <div>
                     <p class="text-[10px] uppercase font-extrabold tracking-widest text-slate-500 dark:text-slate-400">Second Table</p>
                     <h3 class="text-base font-bold text-slate-900 dark:text-white">Merchandiser's KPI Performance</h3>
@@ -124,6 +207,30 @@
                 <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
                     KPI Performance
                 </span>
+            </div>
+
+            <!-- Filter Table Bar -->
+            <div class="flex flex-wrap items-center justify-between gap-2.5 mb-3 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 text-xs">
+                <div class="flex items-center gap-2 min-w-0">
+                    <span class="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 dark:text-slate-400">FILTER</span>
+                    <select x-model="selectedCol" class="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1 text-xs text-slate-800 dark:text-slate-200 font-bold focus:ring-0">
+                        <option value="all">All columns</option>
+                        <option value="name">Name</option>
+                        <option value="region">Region</option>
+                        <option value="kd">KD</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-2 flex-1 max-w-xs min-w-[140px]">
+                    <div class="relative w-full">
+                        <input type="text" x-model="search" placeholder="Search merchandiser..." class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 pl-2.5 pr-7 py-1 text-xs text-slate-900 dark:text-white font-medium focus:ring-0">
+                        <button x-show="search.length > 0" @click="search = ''" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                    <button @click="search = ''; selectedCol = 'all'" class="px-2.5 py-1 rounded-xl bg-red-600 hover:bg-red-700 text-white font-extrabold text-[10px] uppercase tracking-wider transition">
+                        CLEAR
+                    </button>
+                </div>
             </div>
 
             <div class="overflow-x-auto">
@@ -137,13 +244,18 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60 font-semibold text-slate-900 dark:text-white">
-                        @forelse(($perfectStoreMerchandiserData ?? collect())->take(8) as $merchKpiRow)
-                            <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
-                                <td class="py-3 px-3 font-extrabold text-slate-900 dark:text-white">{{ $merchKpiRow['user_name'] ?? $merchKpiRow['name'] }}</td>
-                                <td class="py-3 px-3 text-slate-600 dark:text-slate-300">{{ $merchKpiRow['region_name'] ?? 'National' }}</td>
-                                <td class="py-3 px-3 text-slate-600 dark:text-slate-300">{{ $merchKpiRow['kd_name'] ?? 'Unassigned' }}</td>
+                        @forelse(($perfectStoreMerchandiserData ?? collect()) as $merchKpiRow)
+                            @php
+                                $mName = $merchKpiRow['user_name'] ?? $merchKpiRow['name'] ?? 'Agent';
+                                $mReg = $merchKpiRow['region_name'] ?? 'National';
+                                $mKd = $merchKpiRow['kd_name'] ?? 'Unassigned';
+                                $kpiScore = (float)($merchKpiRow['overall_score'] ?? 0);
+                            @endphp
+                            <tr x-show="matches('{{ addslashes($mName) }}', '{{ addslashes($mReg) }}', '{{ addslashes($mKd) }}', '{{ number_format($kpiScore, 1) }}')" class="hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
+                                <td class="py-3 px-3 font-extrabold text-slate-900 dark:text-white">{{ $mName }}</td>
+                                <td class="py-3 px-3 text-slate-600 dark:text-slate-300">{{ $mReg }}</td>
+                                <td class="py-3 px-3 text-slate-600 dark:text-slate-300">{{ $mKd }}</td>
                                 <td class="py-3 px-3 text-right tabular-nums font-black text-sm">
-                                    @php $kpiScore = (float)($merchKpiRow['overall_score'] ?? 0); @endphp
                                     <span class="{{ $kpiScore >= 80 ? 'text-emerald-600 dark:text-emerald-400' : ($kpiScore >= 60 ? 'text-amber-600 dark:text-amber-400' : 'text-rose-600 dark:text-rose-400') }}">
                                         {{ number_format($kpiScore, 1) }}%
                                     </span>
