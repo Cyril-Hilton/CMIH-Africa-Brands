@@ -3930,14 +3930,24 @@ class MerchandiserAdminHubController extends Controller
             ];
         }
 
-        $from = Carbon::now($timezone)->startOfWeek()->startOfDay();
-        $to = Carbon::now($timezone)->endOfWeek()->endOfDay();
+        $now = Carbon::now($timezone);
+        $period = $request->query('perf_period', 'month');
 
-        return [
-            $from,
-            $to,
-            'This Week ('.$from->format('d M').' - '.$to->format('d M Y').')',
-        ];
+        if ($period === 'day') {
+            $from = $now->copy()->startOfDay();
+            $to = $now->copy()->endOfDay();
+            $label = $from->format('l, d M Y');
+        } elseif ($period === 'week') {
+            $from = $now->copy()->startOfWeek()->startOfDay();
+            $to = $now->copy()->endOfWeek()->endOfDay();
+            $label = 'This Week ('.$from->format('d M').' - '.$to->format('d M Y').')';
+        } else {
+            $from = $now->copy()->startOfMonth()->startOfDay();
+            $to = $now->copy()->endOfMonth()->endOfDay();
+            $label = $from->format('F Y');
+        }
+
+        return [$from, $to, $label];
     }
 
     private function parseClockDate(?string $value, Carbon $fallback, string $timezone): Carbon

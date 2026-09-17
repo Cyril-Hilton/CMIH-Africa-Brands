@@ -2,7 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\Merchandiser\MerchandiserAdminHubController;
 use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -87,8 +90,13 @@ class MerchandiserClientNavigationTest extends TestCase
             $response->assertOk();
             $response->assertDontSee('id="client-performance"', false);
             $response->assertSee('name="perf_period"', false);
-            $response->assertDontSee('name="clock_from"', false);
-            $response->assertDontSee('name="clock_to"', false);
+            if ($view === 'executive') {
+                $response->assertSee('name="clock_from"', false);
+                $response->assertSee('name="clock_to"', false);
+            } else {
+                $response->assertDontSee('name="clock_from"', false);
+                $response->assertDontSee('name="clock_to"', false);
+            }
         }
 
         $regional = $this->actingAs($client)->get(route('merchandisers.client.dashboard', ['view' => 'regional-kd']));
@@ -138,5 +146,34 @@ class MerchandiserClientNavigationTest extends TestCase
         $this->assertStringNotContainsString('Key Brand A', $executive);
         $this->assertStringNotContainsString("data: [82.0, 100.0, 100.0, 100.0]", $category);
         $this->assertStringNotContainsString("data: [88, 85, 79, 91]", $regional);
+    }
+
+    public function test_perfect_store_period_selector_and_custom_dates_resolve_real_ranges(): void
+    {
+        $controller = app(MerchandiserAdminHubController::class);
+        $method = new \ReflectionMethod($controller, 'perfectStoreRange');
+        $method->setAccessible(true);
+        $timezone = 'Africa/Accra';
+        $fallback = Carbon::now($timezone);
+
+        [$dayFrom, $dayTo] = $method->invoke($controller, Request::create('/', 'GET', ['perf_period' => 'day']), $fallback, $fallback, $timezone);
+        $this->assertTrue($dayFrom->isSameDay(Carbon::now($timezone)));
+        $this->assertTrue($dayTo->isSameDay(Carbon::now($timezone)));
+
+        [$weekFrom, $weekTo] = $method->invoke($controller, Request::create('/', 'GET', ['perf_period' => 'week']), $fallback, $fallback, $timezone);
+        $this->assertTrue($weekFrom->isSameDay(Carbon::now($timezone)->startOfWeek()));
+        $this->assertTrue($weekTo->isSameDay(Carbon::now($timezone)->endOfWeek()));
+
+        [$monthFrom, $monthTo] = $method->invoke($controller, Request::create('/', 'GET', ['perf_period' => 'month']), $fallback, $fallback, $timezone);
+        $this->assertTrue($monthFrom->isSameDay(Carbon::now($timezone)->startOfMonth()));
+        $this->assertTrue($monthTo->isSameDay(Carbon::now($timezone)->endOfMonth()));
+
+        [$customFrom, $customTo] = $method->invoke($controller, Request::create('/', 'GET', [
+            'perf_period' => 'month',
+            'clock_from' => '2026-08-01',
+            'clock_to' => '2026-08-15',
+        ]), Carbon::parse('2026-08-01', $timezone)->startOfDay(), Carbon::parse('2026-08-15', $timezone)->endOfDay(), $timezone);
+        $this->assertSame('2026-08-01', $customFrom->toDateString());
+        $this->assertSame('2026-08-15', $customTo->toDateString());
     }
 }

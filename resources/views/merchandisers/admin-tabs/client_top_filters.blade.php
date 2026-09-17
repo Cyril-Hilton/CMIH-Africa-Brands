@@ -77,7 +77,7 @@
                 </div>
             @endif
 
-            @if(filled($filters['region_id'] ?? null) || filled($filters['kd_id'] ?? null) || filled($filters['outlet_id'] ?? null))
+            @if(filled($filters['region_id'] ?? null) || filled($filters['kd_id'] ?? null) || filled($filters['outlet_id'] ?? null) || request()->filled('clock_from') || request()->filled('clock_to'))
                 <a href="{{ route('merchandisers.client.dashboard', ['view' => $currentView, 'tenant' => $merchTenant['code'] ?? 'unilever']) }}" onclick="if(window.showClientPortalLoader) window.showClientPortalLoader('Resetting filters...')" class="px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-[11px] font-bold text-slate-600 dark:text-slate-300 hover:text-rose-500 transition">
                     <i class="fa-solid fa-xmark mr-1"></i>Clear
                 </a>
