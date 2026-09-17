@@ -335,7 +335,8 @@
 <script>
 (function() {
     function initExecutiveCharts() {
-        if (typeof Chart === 'undefined') return;
+        if (typeof Chart === 'undefined' || window.__clientExecutiveChartsInitialized) return;
+        window.__clientExecutiveChartsInitialized = true;
         const trendLabels = @json($trend['labels'] ?? []);
         const trendScores = @json($trend['overall'] ?? []);
         const brandSeries = @json($trend['brands'] ?? []);
@@ -408,10 +409,18 @@
         }
     }
 
+    function scheduleExecutiveCharts() {
+        if (typeof Chart !== 'undefined') {
+            initExecutiveCharts();
+            return;
+        }
+        window.addEventListener('cmih:charts-ready', initExecutiveCharts, { once: true });
+    }
+
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initExecutiveCharts);
+        document.addEventListener('DOMContentLoaded', scheduleExecutiveCharts);
     } else {
-        initExecutiveCharts();
+        scheduleExecutiveCharts();
     }
 })();
 </script>

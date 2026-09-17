@@ -254,7 +254,8 @@
 <script>
 (function() {
     function initCategoryCharts() {
-        if (typeof Chart === 'undefined') return;
+        if (typeof Chart === 'undefined' || window.__clientCategoryChartsInitialized) return;
+        window.__clientCategoryChartsInitialized = true;
         const categoryRows = @json($categoryChartRows);
         const labels = categoryRows.map(row => row.category);
 
@@ -328,10 +329,18 @@
         }
     }
 
+    function scheduleCategoryCharts() {
+        if (typeof Chart !== 'undefined') {
+            initCategoryCharts();
+            return;
+        }
+        window.addEventListener('cmih:charts-ready', initCategoryCharts, { once: true });
+    }
+
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initCategoryCharts);
+        document.addEventListener('DOMContentLoaded', scheduleCategoryCharts);
     } else {
-        initCategoryCharts();
+        scheduleCategoryCharts();
     }
 })();
 </script>

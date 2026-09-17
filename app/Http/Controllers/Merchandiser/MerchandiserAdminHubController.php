@@ -479,11 +479,14 @@ class MerchandiserAdminHubController extends Controller
             });
 
             if (in_array($activeTab, ['executive', 'client-dashboard'], true)) {
-                for ($offset = 4; $offset >= 0; $offset--) {
-                    $periodStart = now()->subMonths($offset)->startOfMonth();
-                    $periodEnd = $periodStart->copy()->endOfMonth();
+                $trendMonth = $perfectStoreFrom->copy()->startOfMonth();
+                $trendLastMonth = $perfectStoreTo->copy()->startOfMonth();
+
+                while ($trendMonth->lte($trendLastMonth)) {
+                    $periodStart = $trendMonth->copy()->max($perfectStoreFrom);
+                    $periodEnd = $trendMonth->copy()->endOfMonth()->min($perfectStoreTo);
                     $periodSummary = $this->cachedPerfectStoreSummary($periodStart, $periodEnd, $tenantCode, $performanceFilters);
-                    $clientPerformanceTrend['labels'][] = $periodStart->format('M');
+                    $clientPerformanceTrend['labels'][] = $trendMonth->format('M Y');
                     // A month with no scored visits is missing data, not a zero score.
                     $clientPerformanceTrend['overall'][] = (int) ($periodSummary['overview']['scored'] ?? 0) > 0
                         ? (float) ($periodSummary['overview']['perfect_store_score'] ?? 0)
@@ -506,6 +509,8 @@ class MerchandiserAdminHubController extends Controller
                                 (float) ($brand['overall_score'] ?? $brand['perfect_store_score'] ?? 0);
                         }
                     }
+
+                    $trendMonth->addMonth();
                 }
             }
         }

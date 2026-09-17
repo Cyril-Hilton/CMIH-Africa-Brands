@@ -290,7 +290,8 @@
 <script>
 (function() {
     function initRegionalCharts() {
-        if (typeof Chart === 'undefined') return;
+        if (typeof Chart === 'undefined' || window.__clientRegionalChartsInitialized) return;
+        window.__clientRegionalChartsInitialized = true;
         const kdRows = @json($regionalChartRows);
         const regionalBrandScores = @json($regionalBrandScoreRows);
         const regional = Object.values(kdRows.reduce((groups, row) => {
@@ -388,10 +389,18 @@
         }
     }
 
+    function scheduleRegionalCharts() {
+        if (typeof Chart !== 'undefined') {
+            initRegionalCharts();
+            return;
+        }
+        window.addEventListener('cmih:charts-ready', initRegionalCharts, { once: true });
+    }
+
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initRegionalCharts);
+        document.addEventListener('DOMContentLoaded', scheduleRegionalCharts);
     } else {
-        initRegionalCharts();
+        scheduleRegionalCharts();
     }
 })();
 </script>

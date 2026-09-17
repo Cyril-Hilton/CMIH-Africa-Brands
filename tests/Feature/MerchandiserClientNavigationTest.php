@@ -3,6 +3,14 @@
 namespace Tests\Feature;
 
 use App\Http\Controllers\Merchandiser\MerchandiserAdminHubController;
+use App\Models\Brand;
+use App\Models\KeyDistributor;
+use App\Models\MerchandiserOutletAssignment;
+use App\Models\MerchandiserVisit;
+use App\Models\MerchandiserVisitSku;
+use App\Models\Outlet;
+use App\Models\Region;
+use App\Models\Sku;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -12,6 +20,12 @@ use Tests\TestCase;
 class MerchandiserClientNavigationTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        parent::tearDown();
+    }
 
     public function test_client_executive_summary_contains_perfect_store_execution_cards(): void
     {
@@ -121,6 +135,7 @@ class MerchandiserClientNavigationTest extends TestCase
         $executive = file_get_contents(resource_path('views/merchandisers/admin-tabs/executive.blade.php'));
         $regional = file_get_contents(resource_path('views/merchandisers/admin-tabs/regional_kd.blade.php'));
         $category = file_get_contents(resource_path('views/merchandisers/admin-tabs/category_kpi.blade.php'));
+        $adminLayout = file_get_contents(resource_path('views/merchandisers/admin.blade.php'));
 
         $this->assertStringContainsString("type: 'line'", $executive);
         $this->assertStringContainsString('trendLabels', $executive);
@@ -134,6 +149,12 @@ class MerchandiserClientNavigationTest extends TestCase
         }
         $this->assertStringContainsString('regionalChartRows', $regional);
         $this->assertStringContainsString('categoryChartRows', $category);
+        $this->assertStringContainsString("vendor/chart.umd.min.js", $adminLayout);
+        $this->assertStringContainsString('cmih:charts-ready', $adminLayout);
+        foreach ([$executive, $regional, $category] as $chartTemplate) {
+            $this->assertStringContainsString('cmih:charts-ready', $chartTemplate);
+            $this->assertStringContainsString('ChartsInitialized', $chartTemplate);
+        }
         foreach (['perfectStoreTrendChart', 'brandTrendsChart'] as $canvasId) {
             $this->assertStringContainsString($canvasId, $executive);
         }
@@ -175,5 +196,120 @@ class MerchandiserClientNavigationTest extends TestCase
         ]), Carbon::parse('2026-08-01', $timezone)->startOfDay(), Carbon::parse('2026-08-15', $timezone)->endOfDay(), $timezone);
         $this->assertSame('2026-08-01', $customFrom->toDateString());
         $this->assertSame('2026-08-15', $customTo->toDateString());
+    }
+
+    public function test_live_audit_rows_feed_client_cards_charts_and_tables_for_the_selected_range(): void
+    {
+        Carbon::setTestNow('2026-09-17 12:00:00');
+
+        $client = User::factory()->create([
+            'access_role' => 'merchandiser_client',
+            'status' => 'active',
+            'merchandiser_tenant' => 'unilever',
+        ]);
+        $region = Region::create(['name' => 'Live Data Region', 'timezone' => 'Africa/Accra']);
+        $kd = KeyDistributor::create(['name' => 'Live Data KD', 'region_id' => $region->id]);
+        $merchandiser = User::factory()->create([
+            'name' => 'Live Data Merchandiser',
+            'access_role' => User::MERCHANDISER_ROLE,
+            'status' => 'active',
+            'merchandiser_tenant' => 'unilever',
+            'kd_id' => $kd->id,
+            'region_id' => $region->id,
+        ]);
+        $outlet = Outlet::create([
+            'name' => 'Live Data Outlet',
+            'code' => 'LIVE-DATA-OUTLET',
+            'kd_id' => $kd->id,
+        ]);
+        $brand = Brand::create([
+            'name' => 'Live Data Brand',
+            'slug' => 'live-data-brand',
+            'logo_path' => 'images/brand-platform/unilever.png',
+        ]);
+        $sku = Sku::create([
+            'name' => 'Live Data SKU',
+            'brand_id' => $brand->id,
+            'category' => 'Live Data Category',
+            'track_osa' => true,
+            'osa_drop_size' => 1,
+            'track_npd' => true,
+            'npd_drop_size' => 1,
+            'track_mhs' => true,
+            'mhs_drop_size' => 1,
+            'facing_target' => 2,
+            'track_planogram' => true,
+        ]);
+        $auditDate = Carbon::parse('2026-08-10 10:00:00', 'Africa/Accra');
+        $visit = MerchandiserVisit::create([
+            'user_id' => $merchandiser->id,
+            'outlet_id' => $outlet->id,
+        ]);
+        $visit->forceFill(['created_at' => $auditDate, 'updated_at' => $auditDate])->save();
+        MerchandiserOutletAssignment::create([
+            'user_id' => $merchandiser->id,
+            'outlet_id' => $outlet->id,
+            'visit_id' => $visit->id,
+            'assigned_date' => $auditDate->toDateString(),
+            'status' => MerchandiserOutletAssignment::STATUS_COMPLETED,
+            'completed_at' => $auditDate,
+        ]);
+        MerchandiserVisitSku::create([
+            'visit_id' => $visit->id,
+            'sku_id' => $sku->id,
+            'osa_quantity' => 1,
+            'npd_present' => true,
+            'facing' => 2,
+            'facing_target_snapshot' => 2,
+            'category_unilever_facings' => 6,
+            'category_total_facings' => 10,
+            'share_of_shelf' => 60,
+            'planogram_compliant' => true,
+            'shelf_price' => 12.50,
+        ]);
+
+        $query = [
+            'tenant' => 'unilever',
+            'clock_from' => '2026-08-01',
+            'clock_to' => '2026-08-31',
+        ];
+
+        $executive = $this->actingAs($client)->get(route('merchandisers.client.dashboard', [...$query, 'view' => 'executive']));
+        $executive->assertOk()
+            ->assertSee('100.0%')
+            ->assertSee('Live Data SKU')
+            ->assertSee('Live Data Category')
+            ->assertSee('Aug 2026');
+        $executiveHtml = $executive->getContent();
+        $this->assertStringContainsString('Live Data Brand', $executiveHtml);
+        preg_match('/const trendScores = (\[[^;]*\]);/', $executiveHtml, $trendMatch);
+        preg_match('/const brandSeries = (\{[^;]*\});/', $executiveHtml, $brandMatch);
+        $trendScores = json_decode($trendMatch[1] ?? '[]', true);
+        $brandSeries = json_decode($brandMatch[1] ?? '{}', true);
+        $this->assertNotEmpty($trendScores);
+        $this->assertIsNumeric($trendScores[0]);
+        $this->assertNotEmpty($brandSeries['Live Data Brand'] ?? []);
+        $this->assertIsNumeric($brandSeries['Live Data Brand'][0]);
+
+        $regional = $this->actingAs($client)->get(route('merchandisers.client.dashboard', [...$query, 'view' => 'regional-kd']));
+        $regional->assertOk()
+            ->assertSee('Live Data KD')
+            ->assertSee('Live Data Region');
+        $this->assertStringContainsString('"region":"Live Data Region"', $regional->getContent());
+        $this->assertStringContainsString('"osa":100', $regional->getContent());
+
+        $category = $this->actingAs($client)->get(route('merchandisers.client.dashboard', [...$query, 'view' => 'category-kpi']));
+        $category->assertOk()
+            ->assertSee('Live Data Category')
+            ->assertSee('100.0%');
+        $this->assertStringContainsString('"category":"Live Data Category"', $category->getContent());
+        $this->assertStringContainsString('"osa":100', $category->getContent());
+
+        $brandExecution = $this->actingAs($client)->get(route('merchandisers.client.dashboard', [...$query, 'view' => 'brand-execution']));
+        $brandExecution->assertOk()
+            ->assertSee('Live Data Brand')
+            ->assertSee('Live Data Merchandiser')
+            ->assertSee('Live Data Region')
+            ->assertSee('Live Data KD');
     }
 }
