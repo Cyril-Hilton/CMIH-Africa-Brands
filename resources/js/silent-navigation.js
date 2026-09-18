@@ -44,6 +44,7 @@ const isPaginationLink = (link) => {
 };
 
 const isFilterLink = (link) => {
+    if (link.hasAttribute('data-no-silent') || link.hasAttribute('data-client-navigation')) return false;
     if (link.hasAttribute('data-silent-link')) return true;
     if (link.origin !== window.location.origin || link.pathname !== window.location.pathname) return false;
 

@@ -70,6 +70,8 @@ class MerchandiserClientNavigationTest extends TestCase
             $this->assertSame($label, trim($xpath->query('.//a[@aria-current="page"]', $nav)->item(0)->textContent));
             foreach ($links as $link) {
                 $this->assertStringContainsString('/merchandisers/client/dashboard?', $link->getAttribute('href'));
+                $this->assertTrue($link->hasAttribute('data-client-navigation'));
+                $this->assertTrue($link->hasAttribute('data-no-silent'));
             }
             $response->assertSee('Executive Summary')
                 ->assertSee('Regional &amp; KD Performance', false)
@@ -136,6 +138,7 @@ class MerchandiserClientNavigationTest extends TestCase
         $regional = file_get_contents(resource_path('views/merchandisers/admin-tabs/regional_kd.blade.php'));
         $category = file_get_contents(resource_path('views/merchandisers/admin-tabs/category_kpi.blade.php'));
         $adminLayout = file_get_contents(resource_path('views/merchandisers/admin.blade.php'));
+        $silentNavigation = file_get_contents(resource_path('js/silent-navigation.js'));
 
         $this->assertStringContainsString("type: 'line'", $executive);
         $this->assertStringContainsString('trendLabels', $executive);
@@ -151,6 +154,8 @@ class MerchandiserClientNavigationTest extends TestCase
         $this->assertStringContainsString('categoryChartRows', $category);
         $this->assertStringContainsString("vendor/chart.umd.min.js", $adminLayout);
         $this->assertStringContainsString('cmih:charts-ready', $adminLayout);
+        $this->assertStringContainsString('data-client-navigation data-no-silent', $adminLayout);
+        $this->assertStringContainsString("link.hasAttribute('data-no-silent') || link.hasAttribute('data-client-navigation')", $silentNavigation);
         foreach ([$executive, $regional, $category] as $chartTemplate) {
             $this->assertStringContainsString('cmih:charts-ready', $chartTemplate);
             $this->assertStringContainsString('ChartsInitialized', $chartTemplate);

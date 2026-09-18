@@ -759,7 +759,7 @@
                         'category-kpi' => ['Category Performance', 'fa-layer-group'],
                         'brand-execution' => ['Brand & Merchandiser Execution', 'fa-award']
                     ] as $view => [$label, $icon])
-                        <a href="{{ $clientNavUrl($view) }}" @click="sidebarOpen = false" data-client-navigation @if($clientView === $view) aria-current="page" @endif
+                        <a href="{{ $clientNavUrl($view) }}" @click="sidebarOpen = false" data-client-navigation data-no-silent @if($clientView === $view) aria-current="page" @endif
                            class="nav-item flex items-center gap-3 rounded-lg px-3.5 py-3 text-xs font-bold text-white {{ $clientView === $view ? 'active bg-white/15' : 'hover:bg-white/10' }}">
                             <i class="fa-solid {{ $icon }}" aria-hidden="true"></i><span>{{ $label }}</span>
                         </a>
@@ -1128,7 +1128,7 @@
                             'category-kpi' => 'Category Performance',
                             'brand-execution' => 'Brand & Merchandiser Execution'
                         ] as $view => $label)
-                            <a href="{{ $clientNavUrl($view) }}" data-client-navigation @if($clientView === $view) aria-current="page" @endif
+                            <a href="{{ $clientNavUrl($view) }}" data-client-navigation data-no-silent @if($clientView === $view) aria-current="page" @endif
                                class="rounded-lg border px-4 py-3 text-xs font-bold {{ $clientView === $view ? 'merch-primary-button' : 'bg-white text-slate-900 dark:bg-slate-800 dark:text-slate-100 border-slate-200 dark:border-slate-700' }}">{{ $label }}</a>
                         @endforeach
                     </nav>
