@@ -5186,7 +5186,7 @@ class MerchandiserPortalTest extends TestCase
             ->get(route('merchandisers.admin.tab', ['adminTab' => 'overview']))
             ->assertOk()
             ->assertSee('data-perfect-store-overview-charts', false)
-            ->assertSee('This Week')
+            ->assertSee('August 2026')
             ->assertSee('KPI Chart Agent')
             ->assertSee('Chart KD');
 

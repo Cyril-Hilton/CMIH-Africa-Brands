@@ -99,20 +99,18 @@ class MerchandiserClientNavigationTest extends TestCase
     public function test_client_navigator_filters_follow_the_reference_guide(): void
     {
         $client = User::factory()->create(['access_role' => 'merchandiser_client', 'status' => 'active']);
-        foreach (['executive', 'brand-execution'] as $view) {
+        foreach (['executive', 'category-kpi', 'brand-execution'] as $view) {
             $response = $this->actingAs($client)->get(route('merchandisers.client.dashboard', [
                 'view' => $view, 'perf_period' => 'month',
             ]));
             $response->assertOk();
             $response->assertDontSee('id="client-performance"', false);
-            $response->assertSee('name="perf_period"', false);
-            if ($view === 'executive') {
-                $response->assertSee('name="clock_from"', false);
-                $response->assertSee('name="clock_to"', false);
-            } else {
-                $response->assertDontSee('name="clock_from"', false);
-                $response->assertDontSee('name="clock_to"', false);
-            }
+            $response->assertSee('name="perf_period"', false)
+                ->assertSee('value="six_months"', false)
+                ->assertSee('name="clock_from"', false)
+                ->assertSee('name="clock_to"', false)
+                ->assertSee('name="performance_region_id"', false)
+                ->assertSee('name="performance_kd_id"', false);
         }
 
         $regional = $this->actingAs($client)->get(route('merchandisers.client.dashboard', ['view' => 'regional-kd']));
@@ -124,10 +122,10 @@ class MerchandiserClientNavigationTest extends TestCase
 
         $category = $this->actingAs($client)->get(route('merchandisers.client.dashboard', ['view' => 'category-kpi']));
         $category->assertOk()
-            ->assertDontSee('name="perf_period"', false)
+            ->assertSee('name="perf_period"', false)
             ->assertDontSee('name="performance_outlet_id"', false)
-            ->assertDontSee('name="clock_from"', false)
-            ->assertDontSee('name="clock_to"', false)
+            ->assertSee('name="clock_from"', false)
+            ->assertSee('name="clock_to"', false)
             ->assertSee('name="performance_region_id"', false)
             ->assertSee('name="performance_kd_id"', false);
     }
@@ -193,6 +191,10 @@ class MerchandiserClientNavigationTest extends TestCase
         [$monthFrom, $monthTo] = $method->invoke($controller, Request::create('/', 'GET', ['perf_period' => 'month']), $fallback, $fallback, $timezone);
         $this->assertTrue($monthFrom->isSameDay(Carbon::now($timezone)->startOfMonth()));
         $this->assertTrue($monthTo->isSameDay(Carbon::now($timezone)->endOfMonth()));
+
+        [$sixMonthFrom, $sixMonthTo] = $method->invoke($controller, Request::create('/', 'GET'), $fallback, $fallback, $timezone, 'six_months');
+        $this->assertTrue($sixMonthFrom->isSameDay(Carbon::now($timezone)->subMonthsNoOverflow(5)->startOfMonth()));
+        $this->assertTrue($sixMonthTo->isSameDay(Carbon::now($timezone)));
 
         [$customFrom, $customTo] = $method->invoke($controller, Request::create('/', 'GET', [
             'perf_period' => 'month',
@@ -316,5 +318,20 @@ class MerchandiserClientNavigationTest extends TestCase
             ->assertSee('Live Data Merchandiser')
             ->assertSee('Live Data Region')
             ->assertSee('Live Data KD');
+
+        $defaultQuery = ['tenant' => 'unilever'];
+        $this->actingAs($client)->get(route('merchandisers.client.dashboard', [...$defaultQuery, 'view' => 'executive']))
+            ->assertOk()
+            ->assertSee('Live Data Brand')
+            ->assertSee('Aug 2026')
+            ->assertSee('value="2026-04-01"', false)
+            ->assertSee('value="2026-09-17"', false);
+        $this->actingAs($client)->get(route('merchandisers.client.dashboard', [...$defaultQuery, 'view' => 'category-kpi']))
+            ->assertOk()
+            ->assertSee('Live Data Category');
+        $this->actingAs($client)->get(route('merchandisers.client.dashboard', [...$defaultQuery, 'view' => 'brand-execution']))
+            ->assertOk()
+            ->assertSee('Live Data Brand')
+            ->assertSee('Live Data Merchandiser');
     }
 }

@@ -160,16 +160,26 @@ class MerchandiserAdminHubController extends Controller
         // Clock-in range for the dashboard KPI, chart, and PCM/PJP log review.
         $clockTimezone = 'Africa/Accra';
         [$clockFrom, $clockTo] = $this->clockInRange($request, $clockTimezone);
+        $perfectStoreDefaultPeriod = in_array($activeTab, [
+            'client-dashboard',
+            'executive',
+            'regional-kd',
+            'category-kpi',
+            'brand-execution',
+        ], true) ? 'six_months' : 'month';
         [$perfectStoreFrom, $perfectStoreTo, $perfectStoreRangeLabel] = $this->perfectStoreRange(
             $request,
             $clockFrom,
             $clockTo,
-            $clockTimezone
+            $clockTimezone,
+            $perfectStoreDefaultPeriod
         );
         $today = Carbon::today($clockTimezone)->toDateString();
         $clockFromInput = $clockFrom->toDateString();
         $clockToInput = $clockTo->toDateString();
         $clockRangeLabel = $this->clockRangeLabel($clockFrom, $clockTo);
+        $perfectStoreFromInput = $perfectStoreFrom->toDateString();
+        $perfectStoreToInput = $perfectStoreTo->toDateString();
 
         $todayPcmClockins = collect();
         $todayPjpClockins = collect();
@@ -1573,7 +1583,8 @@ class MerchandiserAdminHubController extends Controller
             'liveLocationCount',
             'attendanceChart', 'topPerformers',
             'clockFromInput', 'clockToInput', 'clockRangeLabel',
-            'perfectStoreSummary', 'perfectStoreRangeLabel',
+            'perfectStoreSummary', 'perfectStoreRangeLabel', 'perfectStoreDefaultPeriod',
+            'perfectStoreFromInput', 'perfectStoreToInput',
             'performanceFilters', 'performanceFilterOptions',
             'perfectStoreTargets', 'perfectStoreWeights',
             'clockAttendanceCount', 'clockPcmCount', 'clockPjpCount',
@@ -3925,7 +3936,8 @@ class MerchandiserAdminHubController extends Controller
         Request $request,
         Carbon $clockFrom,
         Carbon $clockTo,
-        string $timezone
+        string $timezone,
+        string $defaultPeriod = 'month'
     ): array {
         if ($request->filled('clock_from') || $request->filled('clock_to')) {
             return [
@@ -3936,7 +3948,7 @@ class MerchandiserAdminHubController extends Controller
         }
 
         $now = Carbon::now($timezone);
-        $period = $request->query('perf_period', 'month');
+        $period = $request->query('perf_period', $defaultPeriod);
 
         if ($period === 'day') {
             $from = $now->copy()->startOfDay();
@@ -3946,6 +3958,10 @@ class MerchandiserAdminHubController extends Controller
             $from = $now->copy()->startOfWeek()->startOfDay();
             $to = $now->copy()->endOfWeek()->endOfDay();
             $label = 'This Week ('.$from->format('d M').' - '.$to->format('d M Y').')';
+        } elseif ($period === 'six_months') {
+            $from = $now->copy()->subMonthsNoOverflow(5)->startOfMonth()->startOfDay();
+            $to = $now->copy()->endOfDay();
+            $label = 'Last 6 Months ('.$from->format('d M Y').' - '.$to->format('d M Y').')';
         } else {
             $from = $now->copy()->startOfMonth()->startOfDay();
             $to = $now->copy()->endOfMonth()->endOfDay();
