@@ -2288,7 +2288,7 @@ function initAgencyMap() {
 
     agencyInfoWindow = new google.maps.InfoWindow();
 
-    if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+    if (window.CmihPlacesAutocomplete) {
         const acFields = [
             { input: 'promo_location_ac', lat: 'promo_lat', lng: 'promo_lng', addr: 'promo_address' },
         ];
@@ -2314,7 +2314,7 @@ function initAgencyMap() {
                     hint.style.color = '#0a9d70';
                 }
             };
-            const ac = new google.maps.places.Autocomplete(el, { types: ['establishment', 'geocode'] });
+            const ac = new window.CmihPlacesAutocomplete(el, { types: ['establishment', 'geocode'] });
             el.addEventListener('input', markPending);
             el.addEventListener('keydown', event => {
                 if (event.key !== 'Enter') return;
@@ -2467,7 +2467,7 @@ function openVenueModal(assignmentId, staffName, currentVenue) {
     }
     modal.style.display = 'flex';
 
-    if (!window._venueModalAcInited && typeof google !== 'undefined' && google.maps && google.maps.places) {
+    if (!window._venueModalAcInited && window.CmihPlacesAutocomplete) {
         const el = document.getElementById('venue_modal_location');
         const markVenuePending = () => {
             document.getElementById('venue_modal_address').value = '';
@@ -2479,7 +2479,7 @@ function openVenueModal(assignmentId, staffName, currentVenue) {
                 hint.style.color = '#64748b';
             }
         };
-        const ac = new google.maps.places.Autocomplete(el, { types: ['establishment', 'geocode'] });
+        const ac = new window.CmihPlacesAutocomplete(el, { types: ['establishment', 'geocode'] });
         el.addEventListener('input', markVenuePending);
         el.addEventListener('keydown', event => {
             if (event.key !== 'Enter') return;

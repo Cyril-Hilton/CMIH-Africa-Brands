@@ -44,7 +44,8 @@
                 gtag('config', '{{ config('services.ga4.id') }}');
             </script>
         @endif
-    </head>
+    <script src="{{ asset('js/location-chain.js') }}?v=20261009-2"></script>
+</head>
     <body class="bg-brand-black text-brand-white font-sans antialiased">
         <div class="min-h-screen flex flex-col bg-inked">
             @if(! request()->routeIs('brands-platform.*'))
@@ -77,7 +78,7 @@
                         if (input.dataset.googlePlacesReady === '1') return;
                         if (typeof google !== 'undefined' && google.maps && google.maps.places) {
                             input.dataset.googlePlacesReady = '1';
-                            new google.maps.places.Autocomplete(input, { types: ['geocode', 'establishment'] });
+                            new window.CmihPlacesAutocomplete(input, { types: ['geocode', 'establishment'] });
                             input.addEventListener('keydown', event => {
                                 if (event.key !== 'Enter') return;
                                 const pacContainer = document.querySelector('.pac-container');
