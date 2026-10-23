@@ -49,7 +49,7 @@ class DepartmentController extends Controller
             return;
         }
 
-        abort(403, '🔒 Access Denied. You do not belong to the ' . ucfirst($deptName) . ' department.');
+        abort(403, ' Access Denied. You do not belong to the ' . ucfirst($deptName) . ' department.');
     }
 
     // ─── CVO Helper ───────────────────────────────────────────────────────────
@@ -395,7 +395,7 @@ class DepartmentController extends Controller
                     route('portal.finance')
                 );
             }
-            return back()->with('status', '📤 Claim submitted to Finance for verification.');
+            return back()->with('status', ' Claim submitted to Finance for verification.');
         } else {
             // Notify CVO Users
             $cvoUsers = User::internalStaff()->where('status', 'active')
@@ -411,7 +411,7 @@ class DepartmentController extends Controller
                     route('portal.cvo')
                 );
             }
-            return back()->with('status', '📤 Claim submitted directly to CVO for approval.');
+            return back()->with('status', ' Claim submitted directly to CVO for approval.');
         }
     }
 
@@ -444,7 +444,7 @@ class DepartmentController extends Controller
                     );
                 }
 
-                return back()->with('status', '✅ Claim verified and approved by Finance. Sent to CVO.');
+                return back()->with('status', ' Claim verified and approved by Finance. Sent to CVO.');
             }
 
             if ($action === 'reject') {
@@ -483,7 +483,7 @@ class DepartmentController extends Controller
 
         // Finance can only Pay, Flag, or Reject AFTER CVO has approved
         if ($claim->status !== 'CVO Approved') {
-            return back()->withErrors(['error' => '⚠️ This claim requires CVO approval first before Finance can action it.']);
+            return back()->withErrors(['error' => ' This claim requires CVO approval first before Finance can action it.']);
         }
 
         $validActions = ['flag' => 'Flagged', 'reject' => 'Rejected', 'pay' => 'Paid', 'return' => 'Returned for Correction'];
@@ -534,12 +534,12 @@ class DepartmentController extends Controller
 
         if ($action === 'approve') {
             $claim->update(['status' => 'CVO Approved']);
-            return back()->with('status', '✅ Claim approved by CVO. Finance can now process it.');
+            return back()->with('status', ' Claim approved by CVO. Finance can now process it.');
         }
 
         if ($action === 'reject') {
             $claim->update(['status' => 'Rejected']);
-            return back()->with('status', '✗ Claim rejected by CVO.');
+            return back()->with('status', ' Claim rejected by CVO.');
         }
 
         if ($action === 'return') {
@@ -547,7 +547,7 @@ class DepartmentController extends Controller
                 'status' => 'Returned for Correction',
                 'notes' => $request->input('notes'),
             ]);
-            return back()->with('status', '🔄 Claim returned by CVO for correction.');
+            return back()->with('status', ' Claim returned by CVO for correction.');
         }
 
         return back()->withErrors(['error' => 'Invalid CVO action.']);
@@ -608,7 +608,7 @@ class DepartmentController extends Controller
                     route('portal.finance')
                 );
             }
-            return back()->with('status', '📤 Claim resubmitted to Finance for verification.');
+            return back()->with('status', ' Claim resubmitted to Finance for verification.');
         } else {
             // Notify CVO Users
             $cvoUsers = User::internalStaff()->where('status', 'active')
@@ -624,7 +624,7 @@ class DepartmentController extends Controller
                     route('portal.cvo')
                 );
             }
-            return back()->with('status', '📤 Claim resubmitted directly to CVO.');
+            return back()->with('status', ' Claim resubmitted directly to CVO.');
         }
     }
 
@@ -1076,7 +1076,7 @@ class DepartmentController extends Controller
                     route('portal.finance')
                 );
             }
-            return back()->with('status', '📤 Supplier invoice submitted to Finance for verification.');
+            return back()->with('status', ' Supplier invoice submitted to Finance for verification.');
         } else {
             // Notify CVO Users
             $cvoUsers = User::internalStaff()->where('status', 'active')
@@ -1092,7 +1092,7 @@ class DepartmentController extends Controller
                     route('portal.cvo')
                 );
             }
-            return back()->with('status', '📤 Supplier invoice submitted directly to CVO for approval.');
+            return back()->with('status', ' Supplier invoice submitted directly to CVO for approval.');
         }
     }
 
@@ -1122,7 +1122,7 @@ class DepartmentController extends Controller
                     );
                 }
 
-                return back()->with('status', '✅ Invoice verified and approved by Finance. Sent to CVO.');
+                return back()->with('status', ' Invoice verified and approved by Finance. Sent to CVO.');
             }
 
             if ($action === 'reject') {
@@ -1161,7 +1161,7 @@ class DepartmentController extends Controller
 
         // Finance can only Pay, Flag, or Reject AFTER CVO has approved
         if ($invoice->status !== 'CVO Approved') {
-            return back()->withErrors(['error' => '⚠️ This invoice requires CVO approval first before Finance can action it.']);
+            return back()->withErrors(['error' => ' This invoice requires CVO approval first before Finance can action it.']);
         }
 
         $validActions = ['flag' => 'Flagged', 'reject' => 'Rejected', 'pay' => 'Paid', 'return' => 'Returned for Correction'];
@@ -1198,12 +1198,12 @@ class DepartmentController extends Controller
 
         if ($action === 'approve') {
             $invoice->update(['status' => 'CVO Approved']);
-            return back()->with('status', '✅ Invoice approved by CVO. Finance can now process it.');
+            return back()->with('status', ' Invoice approved by CVO. Finance can now process it.');
         }
 
         if ($action === 'reject') {
             $invoice->update(['status' => 'Rejected']);
-            return back()->with('status', '✗ Invoice rejected by CVO.');
+            return back()->with('status', ' Invoice rejected by CVO.');
         }
 
         if ($action === 'return') {
@@ -1211,7 +1211,7 @@ class DepartmentController extends Controller
                 'status' => 'Returned for Correction',
                 'notes' => $request->input('notes'),
             ]);
-            return back()->with('status', '🔄 Invoice returned by CVO for correction.');
+            return back()->with('status', ' Invoice returned by CVO for correction.');
         }
 
         return back()->withErrors(['error' => 'Invalid CVO action.']);
@@ -1290,7 +1290,7 @@ class DepartmentController extends Controller
                     route('portal.finance')
                 );
             }
-            return back()->with('status', '📤 Invoice resubmitted to Finance for verification.');
+            return back()->with('status', ' Invoice resubmitted to Finance for verification.');
         } else {
             // Notify CVO Users
             $cvoUsers = User::internalStaff()->where('status', 'active')
@@ -1306,7 +1306,7 @@ class DepartmentController extends Controller
                     route('portal.cvo')
                 );
             }
-            return back()->with('status', '📤 Invoice resubmitted directly to CVO.');
+            return back()->with('status', ' Invoice resubmitted directly to CVO.');
         }
     }
 
@@ -1419,7 +1419,7 @@ class DepartmentController extends Controller
             $user->id
         );
 
-        return back()->with('status', '📤 Salary advance request submitted to HR for review.');
+        return back()->with('status', ' Salary advance request submitted to HR for review.');
     }
 
     /**
@@ -1469,7 +1469,7 @@ class DepartmentController extends Controller
             $user->id
         );
 
-        return back()->with('status', '📤 Salary advance request resubmitted to HR for review.');
+        return back()->with('status', ' Salary advance request resubmitted to HR for review.');
     }
 
     /**
@@ -1516,7 +1516,7 @@ class DepartmentController extends Controller
                 $user->id
             );
 
-            return back()->with('status', '✅ HR approved loan terms and forwarded request to Finance.');
+            return back()->with('status', ' HR approved loan terms and forwarded request to Finance.');
         }
 
         if ($action === 'return_for_correction') {
@@ -1535,7 +1535,7 @@ class DepartmentController extends Controller
                 route('portal.finance.advances.index')
             );
 
-            return back()->with('status', '🔄 Request returned to user for correction by HR.');
+            return back()->with('status', ' Request returned to user for correction by HR.');
         }
 
         $advance->update([
@@ -1553,7 +1553,7 @@ class DepartmentController extends Controller
             route('portal.finance.advances.index')
         );
 
-        return back()->with('status', '✗ Salary advance request rejected by HR.');
+        return back()->with('status', ' Salary advance request rejected by HR.');
     }
 
     /**
@@ -1579,7 +1579,7 @@ class DepartmentController extends Controller
             'updated_by' => $user->id,
         ]);
 
-        return back()->with('status', '⚙️ Dynamic Loan Policy updated successfully.');
+        return back()->with('status', ' Dynamic Loan Policy updated successfully.');
     }
 
     /**
@@ -1619,7 +1619,7 @@ class DepartmentController extends Controller
                 route('portal.finance.advances.index')
             );
 
-            return back()->with('status', '💰 Loan approved & marked as paid out! Repayment tracking is now active.');
+            return back()->with('status', ' Loan approved & marked as paid out! Repayment tracking is now active.');
         }
 
         if ($action === 'send_to_cvo') {
@@ -1635,7 +1635,7 @@ class DepartmentController extends Controller
                 $user->id
             );
 
-            return back()->with('status', '✅ Forwarded salary advance to CVO for review.');
+            return back()->with('status', ' Forwarded salary advance to CVO for review.');
         }
 
         if ($action === 'correction') {
@@ -1644,7 +1644,7 @@ class DepartmentController extends Controller
                 'finance_feedback' => $request->feedback,
             ]);
 
-            return back()->with('status', '🔄 Request returned to user for correction.');
+            return back()->with('status', ' Request returned to user for correction.');
         }
 
         $advance->update([
@@ -1652,7 +1652,7 @@ class DepartmentController extends Controller
             'finance_feedback' => $request->feedback,
         ]);
 
-        return back()->with('status', '✗ Salary advance request rejected.');
+        return back()->with('status', ' Salary advance request rejected.');
     }
 
     /**
@@ -1688,7 +1688,7 @@ class DepartmentController extends Controller
                 $request->user()->id
             );
 
-            return back()->with('status', '🎉 Salary advance approved by CVO and returned to Finance for payment payout.');
+            return back()->with('status', ' Salary advance approved by CVO and returned to Finance for payment payout.');
         }
 
         if ($action === 'return_to_finance') {
@@ -1699,7 +1699,7 @@ class DepartmentController extends Controller
                 'finance_feedback' => $request->feedback,
             ]);
 
-            return back()->with('status', '🔄 Salary advance request returned to Finance for verification.');
+            return back()->with('status', ' Salary advance request returned to Finance for verification.');
         }
 
         if ($action === 'return_for_correction') {
@@ -1710,7 +1710,7 @@ class DepartmentController extends Controller
                 'cvo_reviewed_at' => now(),
             ]);
 
-            return back()->with('status', '🔄 Request returned to user for correction by CVO.');
+            return back()->with('status', ' Request returned to user for correction by CVO.');
         }
 
         $advance->update([
@@ -1720,7 +1720,7 @@ class DepartmentController extends Controller
             'cvo_reviewed_at' => now(),
         ]);
 
-        return back()->with('status', '✗ Salary advance request rejected by CVO.');
+        return back()->with('status', ' Salary advance request rejected by CVO.');
     }
 
     /**
@@ -1781,6 +1781,6 @@ class DepartmentController extends Controller
             route('portal.finance.advances.index')
         );
 
-        return back()->with('status', '💳 Repayment recorded successfully.');
+        return back()->with('status', ' Repayment recorded successfully.');
     }
 }

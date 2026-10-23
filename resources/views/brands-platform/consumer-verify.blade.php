@@ -44,7 +44,7 @@
                 <!-- SUCCESS SCREEN -->
                 <section class="phone-screen active" style="background:#fff; color:var(--bink); overflow-y:auto;">
                     <div class="phone-page success-center" style="padding-bottom: 90px;">
-                        <div class="success-circle" style="width:72px; height:72px; border-radius:50%; display:grid; place-items:center; margin:auto; background:var(--bs); color:var(--bink); font-size:32px; font-weight:950; margin-top: 20px;">✓</div>
+                        <div class="success-circle" style="width:72px; height:72px; border-radius:50%; display:grid; place-items:center; margin:auto; background:var(--bs); color:var(--bink); font-size:32px; font-weight:950; margin-top: 20px;"><x-ui-icon name="check" /></div>
                         <h3 style="margin-top:16px; font-family:var(--display,Arial); font-size:26px; font-weight:900; line-height: 1.1;">Registration Complete</h3>
                         <p style="font-size:11px; color:#78898c; line-height:1.45; margin-top:6px;">Your registration has been verified and your activation reward is ready.</p>
                         
@@ -62,7 +62,7 @@
                         </div>
 
                         <p style="font-size:10px; color:#666; margin-top:12px; line-height:1.4;">
-                            ✉️ A copy of your code &amp; barcode has been sent to <b>{{ $entry->email ?: $entry->phone }}</b> so you can redeem it anytime!
+                            <x-ui-icon name="mail" /> A copy of your code &amp; barcode has been sent to <b>{{ $entry->email ?: $entry->phone }}</b> so you can redeem it anytime!
                         </p>
 
                         <div class="phone-bottom">

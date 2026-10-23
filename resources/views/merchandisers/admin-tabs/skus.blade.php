@@ -224,7 +224,7 @@
                                                 <button type="button" @click="editing = !editing" class="rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition">
                                                     Edit
                                                 </button>
-                                                <form method="POST" action="{{ route('merchandisers.admin.skus.destroy', $sku) }}" onsubmit="return confirm('Remove this SKU from the AI catalog?');">
+                                                <form method="POST" action="{{ route('merchandisers.admin.skus.destroy', $sku) }}" data-confirm="Remove this SKU from the AI catalog?">
                                                     @csrf @method('DELETE')
                                                     <button type="submit" class="rounded-lg bg-red-100 dark:bg-red-500/20 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-red-700 dark:text-red-300 hover:bg-red-200 transition">
                                                         Delete

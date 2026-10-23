@@ -1,7 +1,7 @@
 @php
     $overview = $perfectStoreSummary['overview'] ?? [];
     $formatPct = fn ($value) => $value === null ? 'N/A' : number_format((float) $value, 1).'%';
-    $overallScore = $overview['perfect_store_score'] ?? null;
+    $overallScore = ($overview['scored'] ?? 0) > 0 ? ($overview['perfect_store_score'] ?? null) : null;
     $overallGauge = max(0, min(100, (float) ($overallScore ?? 0)));
     $complianceTarget = 85;
     $complianceGap = $overallScore === null ? null : max(0, $complianceTarget - $overallGauge);
@@ -289,7 +289,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="py-8 text-center text-slate-400 font-normal">All SKUs are performing within optimal availability levels.</td>
+                                    <td colspan="5" class="py-8 text-center text-slate-400 font-normal">{{ ($overview['scored'] ?? 0) > 0 ? 'All observed SKUs are performing within optimal availability levels.' : 'No SKU availability observations for this selection.' }}</td>
                                 </tr>
                             @endforelse
                         </tbody>

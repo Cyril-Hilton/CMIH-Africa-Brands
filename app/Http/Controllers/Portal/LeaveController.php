@@ -320,7 +320,7 @@ class LeaveController extends Controller
         ]);
         $this->notifyLeaveApplicantStatus($leave->fresh(), 'Returned for Correction', $reason);
 
-        return back()->with('status', '🔄 Leave request returned to user for correction.');
+        return back()->with('status', ' Leave request returned to user for correction.');
     }
 
     /**
@@ -388,7 +388,7 @@ class LeaveController extends Controller
         $this->notifyLeaveApprovalNeeded($leave);
         $this->notifyLeaveCoverSelected($leave);
 
-        return back()->with('status', '📤 Leave request successfully corrected and resubmitted.');
+        return back()->with('status', ' Leave request successfully corrected and resubmitted.');
     }
 
     protected function requiresLineManagerApproval(User $user): bool

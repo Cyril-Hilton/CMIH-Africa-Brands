@@ -80,6 +80,7 @@ Route::prefix('brands')->name('brands-platform.')->group(function () {
 
 Route::middleware(['auth', 'active'])->prefix('brands')->name('brands-platform.')->group(function () {
     Route::get('/admin/console', [BrandsPlatformController::class, 'admin'])->name('admin');
+    Route::get('/admin/activity-export', [BrandsPlatformController::class, 'exportActivityLogs'])->name('admin.activity-export');
     Route::get('/admin/staff-feed', [BrandsPlatformController::class, 'staffFeed'])->name('admin.staff-feed');
     Route::post('/admin/brands', [BrandsPlatformController::class, 'storeBrand'])->name('admin.brands.store');
     Route::post('/admin/{brand}/activations', [BrandsPlatformController::class, 'storeActivation'])->name('admin.activations.store');

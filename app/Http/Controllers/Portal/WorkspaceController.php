@@ -112,7 +112,7 @@ class WorkspaceController extends Controller
         // Check permission: owner or collaborator
         $isCollaborator = $workspace->collaborators()->where('user_id', $user->id)->exists();
         if ($workspace->created_by !== $user->id && !$isCollaborator && $workspace->current_holder_id !== $user->id && !$user->hasRole('super_admin')) {
-            abort(403, '🔒 Access Denied. You are not authorized to view this document.');
+            abort(403, ' Access Denied. You are not authorized to view this document.');
         }
 
         // Fetch user's permission level
@@ -142,7 +142,7 @@ class WorkspaceController extends Controller
         // Guard: owner or editor collaborator
         $isEditor = $workspace->collaborators()->where('user_id', $user->id)->where('permission', 'edit')->exists();
         if ($workspace->created_by !== $user->id && !$isEditor && !$user->hasRole('super_admin')) {
-            abort(403, '🔒 Access Denied. You only have view permissions for this document.');
+            abort(403, ' Access Denied. You only have view permissions for this document.');
         }
 
         $users = User::internalStaff()
@@ -164,7 +164,7 @@ class WorkspaceController extends Controller
         // Guard: owner or editor collaborator
         $isEditor = $workspace->collaborators()->where('user_id', $user->id)->where('permission', 'edit')->exists();
         if ($workspace->created_by !== $user->id && !$isEditor && !$user->hasRole('super_admin')) {
-            abort(403, '🔒 Access Denied. You only have view permissions for this document.');
+            abort(403, ' Access Denied. You only have view permissions for this document.');
         }
 
         $request->validate([
@@ -203,7 +203,7 @@ class WorkspaceController extends Controller
         $user = Auth::user();
 
         if ($workspace->created_by !== $user->id && !$user->hasRole('super_admin')) {
-            abort(403, '🔒 Access Denied. Only the creator can delete this document.');
+            abort(403, ' Access Denied. Only the creator can delete this document.');
         }
 
         if ($workspace->file_path) {
@@ -226,7 +226,7 @@ class WorkspaceController extends Controller
 
         // Only the owner can manage collaborators
         if ($workspace->created_by !== $user->id && !$user->hasRole('super_admin')) {
-            abort(403, '🔒 Access Denied. Only the document owner can manage collaborators.');
+            abort(403, ' Access Denied. Only the document owner can manage collaborators.');
         }
 
         $validated = $request->validate([
@@ -255,7 +255,7 @@ class WorkspaceController extends Controller
         $user = Auth::user();
 
         if ($workspace->created_by !== $user->id && $workspace->current_holder_id !== $user->id && !$user->hasRole('super_admin')) {
-            abort(403, '🔒 Access Denied. Only the owner or current holder can route this document.');
+            abort(403, ' Access Denied. Only the owner or current holder can route this document.');
         }
 
         $request->validate([
@@ -318,7 +318,7 @@ class WorkspaceController extends Controller
         $user = Auth::user();
 
         if ($workspace->current_holder_id !== $user->id && !$user->hasRole('super_admin')) {
-            abort(403, '🔒 Access Denied. Only the current holder can perform workflow actions.');
+            abort(403, ' Access Denied. Only the current holder can perform workflow actions.');
         }
 
         $request->validate([

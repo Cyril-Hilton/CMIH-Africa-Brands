@@ -3,7 +3,7 @@
         <div class="flex flex-wrap items-center justify-between gap-4">
             <div>
                 <p class="text-xs uppercase tracking-[0.3em] text-brand-ash">Financial Tools</p>
-                <h2 class="text-3xl font-display text-brand-white">💰 Salary Advances & Repayment Ledger</h2>
+                <h2 class="text-3xl font-display text-brand-white"><x-ui-icon name="wallet" /> Salary Advances & Repayment Ledger</h2>
             </div>
             <a href="{{ route('portal.finance') }}" class="rounded-full border border-brand-white/20 px-4 py-2 text-xs uppercase tracking-[0.3em] text-brand-white/70 hover:bg-brand-white/10 transition-all">
                 Reimbursements & Claims
@@ -45,7 +45,8 @@
             this.resubmitActionUrl = '{{ url('/portal/finance/advances') }}/' + advance.id + '/resubmit';
             this.openResubmitModal = true;
         }
-    }" class="space-y-6">
+    }" class="relative" data-finance-dialogs-root>
+        <div class="space-y-6">
 
         @php
             $cvoPendingCount = $pendingCvoAdvances->count();
@@ -57,7 +58,7 @@
         @if ($isFinanceStaff && $financePendingCount > 0)
             <div class="glass-panel rounded-2xl p-6 border border-amber-500/20 bg-amber-500/5">
                 <div class="flex items-center justify-between gap-4 mb-4">
-                    <h3 class="text-sm font-bold uppercase tracking-widest text-amber-400">⏳ Finance Cash Availability & Payout Queue</h3>
+                    <h3 class="text-sm font-bold uppercase tracking-widest text-amber-400"><x-ui-icon name="clock" /> Finance Cash Availability & Payout Queue</h3>
                     <span class="text-xs text-brand-white/50">HR approved loans waiting for payout disbursement</span>
                 </div>
                 <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -75,7 +76,7 @@
                                 <p>HR Approved Monthly Deduction: <strong class="text-brand-white">GH₵ {{ number_format($item->effectiveMonthlyDeduction(), 2) }}</strong></p>
                                 <p>Start Date: <strong class="text-brand-white">{{ $item->repayment_start_date ? $item->repayment_start_date->format('M Y') : 'Next Month' }}</strong></p>
                                 @if($item->hrReviewer)
-                                    <p class="text-[10px] text-emerald-400">✓ Reviewed by HR ({{ $item->hrReviewer->name }})</p>
+                                    <p class="text-[10px] text-emerald-400"><x-ui-icon name="check" /> Reviewed by HR ({{ $item->hrReviewer->name }})</p>
                                 @endif
                             </div>
 
@@ -85,7 +86,7 @@
                                     @csrf
                                     <input type="hidden" name="action" value="approve_and_disburse">
                                     <button type="submit" class="rounded bg-emerald-500 hover:bg-emerald-400 px-3 py-1.5 text-[10px] uppercase font-bold text-black transition-all shadow-md">
-                                        💰 Approve & Mark Paid Out
+                                        <x-ui-icon name="wallet" /> Approve & Mark Paid Out
                                     </button>
                                 </form>
 
@@ -124,7 +125,7 @@
 
         @if ($isCVO && $cvoPendingCount > 0)
             <div class="glass-panel rounded-2xl p-6 border border-purple-500/20 bg-purple-500/5">
-                <h3 class="text-sm font-bold uppercase tracking-widest text-purple-400 mb-4">👑 CVO / Executive Approval Queue</h3>
+                <h3 class="text-sm font-bold uppercase tracking-widest text-purple-400 mb-4"><x-ui-icon name="spark" /> CVO / Executive Approval Queue</h3>
                 <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     @foreach ($pendingCvoAdvances as $item)
                         <div class="p-4 rounded-xl border border-brand-white/10 bg-brand-black/40 space-y-3">
@@ -136,7 +137,7 @@
                                 <span class="text-xs font-bold text-purple-400">GH₵ {{ number_format($item->amount, 2) }}</span>
                             </div>
                             <p class="text-xs text-brand-white/80 leading-relaxed italic">"{{ $item->reason }}"</p>
-                            <p class="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">✓ Verified by HR & Finance</p>
+                            <p class="text-[10px] text-emerald-400 font-semibold flex items-center gap-1"><x-ui-icon name="check" /> Verified by HR & Finance</p>
 
                             <div class="pt-2 border-t border-brand-white/5 flex flex-wrap gap-2">
                                 <form method="POST" action="{{ route('portal.finance.advances.cvo-action', $item) }}">
@@ -181,7 +182,7 @@
             <div class="glass-panel rounded-2xl p-6 border border-emerald-500/20 bg-emerald-500/5 space-y-4">
                 <div class="flex items-center justify-between">
                     <div>
-                        <h3 class="text-sm font-bold uppercase tracking-widest text-emerald-400">💳 Active Loan Ledger & Repayment Collector</h3>
+                        <h3 class="text-sm font-bold uppercase tracking-widest text-emerald-400"><x-ui-icon name="spark" /> Active Loan Ledger & Repayment Collector</h3>
                         <p class="text-xs text-brand-white/50">Record monthly deductions or manual repayments until balance reaches zero.</p>
                     </div>
                 </div>
@@ -221,7 +222,7 @@
                                     <td class="px-4 py-3">
                                         @if($activeLoan->isFullyPaid())
                                             <span class="rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 text-[10px] font-bold uppercase">
-                                                Fully Paid 🎉
+                                                Fully Paid <x-ui-icon name="spark" />
                                             </span>
                                         @else
                                             <span class="rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 text-[10px] font-bold uppercase">
@@ -353,7 +354,7 @@
                     get maxAdvance() { return this.salary * this.maxMultiplier; }
                  }">
                 <div class="mb-4">
-                    <h3 class="text-sm font-semibold uppercase tracking-[0.15em] text-brand-white">💰 Request Salary Advance / Loan</h3>
+                    <h3 class="text-sm font-semibold uppercase tracking-[0.15em] text-brand-white"><x-ui-icon name="wallet" /> Request Salary Advance / Loan</h3>
                     <p class="text-[11px] text-brand-white/50 mt-1">Request short-term financing up to {{ number_format($maxMultiplier, 1) }}x your registered monthly salary per active HR policy.</p>
                 </div>
 
@@ -377,7 +378,7 @@
                         <input id="amount" name="amount" type="number" step="0.01" min="0.01" :max="maxAdvance" x-model="amount" required 
                                class="mt-1 w-full rounded-md border border-brand-white/10 bg-brand-black/40 text-brand-white px-3 py-2 text-sm focus:outline-none focus:border-amber-500" placeholder="0.00" />
                         <p x-show="amount > maxAdvance" class="text-[10px] text-brand-red mt-1 font-semibold">
-                            ⚠️ Requested amount exceeds your HR policy limit of GH₵ <span x-text="maxAdvance.toLocaleString()"></span>
+                            <x-ui-icon name="alert" /> Requested amount exceeds your HR policy limit of GH₵ <span x-text="maxAdvance.toLocaleString()"></span>
                         </p>
                     </div>
 
@@ -411,7 +412,7 @@
 
             <!-- Ledger/Log of requests -->
             <div class="glass-panel rounded-2xl p-6 border border-brand-white/10 bg-brand-white/5">
-                <h3 class="text-sm font-semibold uppercase tracking-[0.15em] text-brand-white mb-4">📄 Salary Advance Applications Ledger</h3>
+                <h3 class="text-sm font-semibold uppercase tracking-[0.15em] text-brand-white mb-4"><x-ui-icon name="file" /> Salary Advance Applications Ledger</h3>
                 
                 <div class="space-y-4 max-h-[500px] overflow-y-auto pr-1">
                     @forelse ($advances as $advance)
@@ -433,7 +434,7 @@
                                 'pending_cvo' => 'Pending CVO Review',
                                 'repayment_active' => 'Active Loan (Repaying)',
                                 'disbursed' => 'Paid Out (Active)',
-                                'fully_paid' => 'Fully Paid Off 🎉',
+                                'fully_paid' => 'Fully Paid Off ',
                                 'returned_for_correction' => 'Returned for Correction',
                                 'rejected' => 'Rejected',
                             ];
@@ -467,7 +468,7 @@
                                     
                                     @if ($advance->user_id === auth()->id() || auth()->user()->hasRole('super_admin'))
                                         <button @click="triggerResubmit({{ json_encode($advance) }})" class="mt-3 px-3 py-1 rounded bg-orange-500 text-brand-black text-[10px] font-bold hover:bg-orange-400 transition uppercase tracking-wider">
-                                            ✏️ Correct & Resubmit to HR
+                                            <x-ui-icon name="edit" /> Correct & Resubmit to HR
                                         </button>
                                     @endif
                                 </div>
@@ -498,9 +499,7 @@
                      resubmitAmount = resubmitAdvanceData.amount || '';
                  }
              })">
-            <button @click="openResubmitModal = false" class="absolute top-4 right-4 text-brand-white/60 hover:text-brand-white text-lg transition-colors focus:outline-none">
-                ✕
-            </button>
+            <button aria-label="Close" @click="openResubmitModal = false" class="absolute top-4 right-4 text-brand-white/60 hover:text-brand-white text-lg transition-colors focus:outline-none"><x-ui-icon name="close" /></button>
             
             <h3 class="text-lg font-semibold text-brand-white mb-2">Correct & Resubmit Salary Advance</h3>
             <p class="text-xs text-brand-ash mb-4">Modify and correct your requested advance below to submit back to HR.</p>
@@ -520,7 +519,7 @@
                     <x-input-label for="resubmit_amount" :value="__('Loan Amount Requested (GH₵)')" />
                     <input id="resubmit_amount" name="amount" type="number" step="0.01" min="0.01" :max="maxAdvance" x-model="resubmitAmount" required 
                            class="mt-1 w-full rounded-md border border-brand-white/10 bg-brand-black text-brand-white px-3 py-2 text-sm focus:outline-none focus:border-amber-500" />
-                    <p x-show="resubmitAmount > maxAdvance" class="text-[10px] text-brand-red mt-1 font-semibold">⚠️ Requested amount exceeds your maximum limit of GH₵ <span x-text="maxAdvance"></span></p>
+                    <p x-show="resubmitAmount > maxAdvance" class="text-[10px] text-brand-red mt-1 font-semibold"><x-ui-icon name="alert" /> Requested amount exceeds your maximum limit of GH₵ <span x-text="maxAdvance"></span></p>
                 </div>
 
                 <!-- Repayment Style -->
@@ -558,4 +557,5 @@
             </form>
         </div>
     </div>
+</div>{{-- Shared dialog state scope --}}
 </x-app-layout>

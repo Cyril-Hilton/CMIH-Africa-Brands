@@ -49,7 +49,7 @@
         <div class="grid gap-6 md:grid-cols-3">
             <div class="glass-panel rounded-2xl p-6 border border-brand-white/10 bg-brand-white/5 relative overflow-hidden">
                 <div class="absolute top-0 right-0 p-4 opacity-10 text-2xl">
-                    📅
+                    <x-ui-icon name="calendar" />
                 </div>
                 <p class="text-xs uppercase tracking-[0.2em] text-brand-ash">Remaining Balance</p>
                 <p class="mt-3 text-4xl font-semibold text-brand-white">{{ $user->leave_balance }} Days</p>
@@ -92,7 +92,7 @@
         <!-- Manager Approvals Section -->
         @if($pendingApprovals->isNotEmpty())
             <div class="glass-panel rounded-2xl p-6 border border-brand-white/10 bg-brand-white/5">
-                <h3 class="text-lg font-semibold text-brand-white mb-4">✍️ Leave Applications Pending Your Review</h3>
+                <h3 class="text-lg font-semibold text-brand-white mb-4"><x-ui-icon name="edit" /> Leave Applications Pending Your Review</h3>
                 <div class="space-y-4">
                     @foreach($pendingApprovals as $approval)
                         <div class="p-4 rounded-xl border border-brand-white/10 bg-brand-white/5 flex flex-wrap items-start justify-between gap-4">
@@ -101,7 +101,7 @@
                                     <p class="text-sm font-semibold text-brand-white">{{ $approval->user->name }}</p>
                                     @if($approval->lineManager && $approval->line_manager_id !== $user->id && $user->isPeerLineManagerOf((int) $approval->line_manager_id))
                                         <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border border-amber-400/30 bg-amber-400/10 text-amber-300">
-                                            ↗ On behalf of {{ $approval->lineManager->name }}
+                                            <x-ui-icon name="arrow" /> On behalf of {{ $approval->lineManager->name }}
                                         </span>
                                     @endif
                                 </div>
@@ -163,7 +163,7 @@
         <div class="space-y-6">
             <!-- Leave Application Form -->
             <div class="glass-panel rounded-2xl p-6 border border-brand-white/10 bg-brand-white/5">
-                <h3 class="text-lg font-semibold text-brand-white mb-4">➕ Request Leave Time-Off</h3>
+                <h3 class="text-lg font-semibold text-brand-white mb-4"><x-ui-icon name="plus" /> Request Leave Time-Off</h3>
                 <form method="POST" action="{{ route('portal.leaves.store') }}" class="space-y-4">
                     @csrf
 
@@ -257,7 +257,7 @@
 
             <!-- Historical Requests List -->
             <div class="glass-panel rounded-2xl p-6 border border-brand-white/10 bg-brand-white/5">
-                <h3 class="text-lg font-semibold text-brand-white mb-4">📜 Leave History & Ledgers</h3>
+                <h3 class="text-lg font-semibold text-brand-white mb-4"><x-ui-icon name="file" /> Leave History & Ledgers</h3>
                 <div class="overflow-x-auto">
                     <table class="w-full min-w-[500px] text-left text-sm text-brand-white/70">
                         <thead class="text-xs uppercase tracking-[0.2em] text-brand-ash border-b border-brand-white/10">
@@ -310,7 +310,7 @@
                                             @endphp
                                             <button type="button" x-on:click="triggerResubmit({{ \Illuminate\Support\Js::from($resubmitPayload) }})"
                                                     class="px-2 py-0.5 rounded bg-cyan-500 text-brand-black text-[10px] font-bold hover:bg-cyan-400 transition uppercase tracking-wider">
-                                                ✏️ Correct
+                                                <x-ui-icon name="edit" /> Correct
                                             </button>
                                         @endif
                                     </td>
@@ -349,9 +349,7 @@
                      document.getElementById('resubmit_comments').value = resubmitData.comments ? resubmitData.comments.replace('Returned for Correction: ', '') : '';
                  }
              })">
-            <button @click="openResubmitModal = false" class="absolute top-4 right-4 text-brand-white/60 hover:text-brand-white text-lg transition-colors focus:outline-none">
-                ✕
-            </button>
+            <button aria-label="Close" @click="openResubmitModal = false" class="absolute top-4 right-4 text-brand-white/60 hover:text-brand-white text-lg transition-colors focus:outline-none"><x-ui-icon name="close" /></button>
             
             <h3 class="text-lg font-semibold text-brand-white mb-2">Correct & Resubmit Leave Request</h3>
             <p class="text-xs text-brand-ash mb-4">Modify and correct your leave request details below.</p>

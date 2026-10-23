@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->web(append: [
             \App\Http\Middleware\AddSecurityHeaders::class,
+            \App\Http\Middleware\FormatSpreadsheetDownloads::class,
             \App\Http\Middleware\UpdateLastSeen::class,
             \App\Http\Middleware\LogSlowRequests::class,
         ]);

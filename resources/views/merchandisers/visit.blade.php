@@ -44,7 +44,7 @@
                     <div class="flex items-center gap-1 shrink-0">
                         <span class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold
                             {{ $step['n'] < $visitStep ? 'bg-emerald-500 text-white' : ($step['n'] === $visitStep ? 'bg-brand-red text-white ring-2 ring-brand-red/30' : 'bg-brand-white/10 text-brand-ash') }}">
-                            {{ $step['n'] < $visitStep ? '✓' : $step['n'] }}
+                            {{ $step['n'] < $visitStep ? '' : $step['n'] }}
                         </span>
                         <span class="text-[9px] font-semibold hidden sm:inline
                             {{ $step['n'] < $visitStep ? 'text-emerald-400' : ($step['n'] === $visitStep ? 'text-brand-white' : 'text-brand-ash') }}">
@@ -175,7 +175,7 @@
 
             <!-- POSM Checklist -->
             <div class="glass-panel rounded-2xl p-5 border border-brand-white/10 bg-brand-black/40 space-y-4">
-                <h3 class="text-lg font-display text-brand-white tracking-wider">📦 POSM Checklist</h3>
+                <h3 class="text-lg font-display text-brand-white tracking-wider"><x-ui-icon name="box" /> POSM Checklist</h3>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="rounded-xl border border-brand-white/5 bg-brand-white/5 p-4 flex items-center justify-between">
                         <div>
@@ -322,7 +322,7 @@
 
             <!-- SKU Stock Execution Metrics -->
             <div class="glass-panel rounded-2xl p-5 border border-brand-white/10 bg-brand-black/40 space-y-4">
-                <h3 class="text-lg font-display text-brand-white tracking-wider">📊 SKU Stock & Execution Metrics</h3>
+                <h3 class="text-lg font-display text-brand-white tracking-wider"><x-ui-icon name="chart" /> SKU Stock & Execution Metrics</h3>
                 <input type="hidden" name="sku_entry_mode" x-model="skuEntryMode">
                 <input type="hidden" name="ai_predictions_json" :value="aiDetectionResult ? JSON.stringify(aiDetectionResult) : ''">
 
@@ -531,7 +531,7 @@
 
             <!-- KD Order Generation Form -->
             <div class="glass-panel rounded-2xl p-5 border border-brand-white/10 bg-brand-black/40 space-y-4">
-                <h3 class="text-lg font-display text-brand-white tracking-wider">🛒 KD Order Placement</h3>
+                <h3 class="text-lg font-display text-brand-white tracking-wider"><x-ui-icon name="cart" /> KD Order Placement</h3>
                 <p class="text-xs text-brand-white/50">Specify the order quantity (in Cartons/Crates) to be forwarded to Key Distributor <strong>{{ auth()->user()->merchandiserKd->name ?? 'N/A' }}</strong>. Leave empty if no order is required.</p>
                 
                 <div class="overflow-x-auto">

@@ -882,6 +882,7 @@ class BrandsPlatformTest extends TestCase
             'brand_id' => $brand->id,
             'user_id' => $staff->id,
             'role' => BrandStaffAssignment::ROLE_SUPPORT,
+            'permissions' => ['can_export' => true],
             'assigned_by' => $admin->id,
         ]);
 
@@ -911,7 +912,7 @@ class BrandsPlatformTest extends TestCase
         $this->actingAs($staff)
             ->get(route('brands-platform.export', [$brand->slug, 'promoter']))
             ->assertOk()
-            ->assertHeader('content-type', 'text/csv; charset=utf-8');
+            ->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     }
 
     public function test_agency_team_management_grant_and_archive_privileges(): void

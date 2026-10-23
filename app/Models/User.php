@@ -294,10 +294,6 @@ class User extends Authenticatable
             return true;
         }
 
-        if (in_array(strtolower(trim($this->name)), ['cyril hilton', 'cyril hilton wemegah', 'curtis barnor', 'curtis banor'], true)) {
-            return true;
-        }
-
         $isCvo = ($this->position_title === 'CVO' || $this->job_level === 'CVO' || strtolower(trim($this->position_title ?? '')) === 'cvo');
         if ($isCvo) {
             return true;
@@ -450,7 +446,7 @@ class User extends Authenticatable
         }
 
         // 2. superadmin edits managers and everyone
-        if ($viewer->access_role === 'super_admin' || in_array(strtolower(trim($viewer->name)), ['cyril hilton', 'cyril hilton wemegah', 'curtis barnor', 'curtis banor'], true)) {
+        if ($viewer->access_role === 'super_admin') {
             return true;
         }
 
@@ -651,7 +647,7 @@ class User extends Authenticatable
 
     public function isLineManager(): bool
     {
-        if ($this->isCvoOrSuperAdmin() || $this->isCyrilHilton()) {
+        if ($this->isCvoOrSuperAdmin()) {
             return true;
         }
 

@@ -147,9 +147,12 @@
                             <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
                                 @forelse(($perfectStoreMerchandiserData ?? collect()) as $row)
                                     @php
+                                        $hasSchedule = (int) ($row['scheduled'] ?? 0) > 0;
+                                        $hasVisits = (int) ($row['visited'] ?? 0) > 0;
                                         $coverageVal = (float) ($row['coverage_pct'] ?? 0);
                                         $statusClass = $coverageVal >= 80 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-300' : ($coverageVal >= 50 ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border-rose-300');
-                                        $statusLabel = $coverageVal >= 80 ? 'On Track' : ($coverageVal >= 50 ? 'Attention' : 'Critical');
+                                        $statusLabel = ! $hasSchedule ? 'No Schedule' : ($coverageVal >= 80 ? 'On Track' : ($coverageVal >= 50 ? 'Attention' : 'Critical'));
+                                        if (! $hasSchedule) $statusClass = 'bg-slate-100 text-slate-700 border-slate-300';
                                     @endphp
                                     <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
                                         <td class="px-5 py-3.5">
@@ -173,13 +176,13 @@
                                             {{ $row['visited'] ?? 0 }}
                                         </td>
                                         <td class="px-5 py-3.5 text-right font-black text-emerald-700 dark:text-emerald-300 text-xs">
-                                            {{ $formatPct($row['coverage_pct'] ?? 0) }}
+                                            {{ $formatPct($hasSchedule ? ($row['coverage_pct'] ?? 0) : null) }}
                                         </td>
                                         <td class="px-5 py-3.5 text-right font-black text-slate-900 dark:text-white text-xs">
-                                            {{ $formatPct($row['overall_score'] ?? 0) }}
+                                            {{ $formatPct($hasVisits ? ($row['overall_score'] ?? null) : null) }}
                                         </td>
                                         <td class="px-5 py-3.5 text-center text-xs text-slate-600 dark:text-slate-400 font-semibold">
-                                            {{ $row['clock_in_time'] ?? '08:00 AM' }}
+                                            {{ $row['clock_in_time'] ?? 'Not Recorded' }}
                                         </td>
                                         <td class="px-5 py-3.5 text-center">
                                             <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-extrabold border {{ $statusClass }}">

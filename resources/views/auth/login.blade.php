@@ -35,9 +35,6 @@
                 <x-input-label for="password" :value="__('Password')" />
                 <div class="relative w-full">
                     <x-text-input id="password" type="password" name="password" required autocomplete="current-password" placeholder="Enter your password" class="pr-10" />
-                    <button type="button" onclick="togglePasswordVisibility('password', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-brand-white/50 hover:text-brand-white transition-colors" aria-label="Toggle password visibility">
-                        <i class="fa-solid fa-eye"></i>
-                    </button>
                 </div>
                 <p class="text-[10px] text-brand-ash mt-1">New passwords must be more than 8 characters and include a letter, number, and symbol.</p>
                 <x-input-error :messages="$errors->get('password')" class="mt-2" />
@@ -72,7 +69,7 @@
         <div class="pt-6 border-t border-brand-white/10 mt-6">
             <a href="{{ route('merchandisers.login') }}" class="group flex items-center justify-between gap-3 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-2.5 text-xs font-semibold text-amber-400 hover:bg-amber-500/10 hover:border-amber-500/40 transition-all duration-300">
                 <span class="flex items-center gap-2">
-                    <span>✨</span> Merchandiser Portal Access
+                    <span><x-ui-icon name="spark" /></span> Merchandiser Portal Access
                 </span>
                 <span class="transform translate-x-0 group-hover:translate-x-1 transition-transform duration-300 text-sm">→</span>
             </a>

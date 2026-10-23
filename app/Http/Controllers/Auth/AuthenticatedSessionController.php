@@ -54,12 +54,22 @@ class AuthenticatedSessionController extends Controller
 
         $welcomeMsg = 'Welcome back to the portal, ' . ($user->name ?: 'User') . '!';
 
-        if ($request->filled('redirect_to')) {
-            return redirect()->to($request->input('redirect_to'))->with('status', $welcomeMsg);
+        $destination = $request->input('redirect_to');
+        if (is_string($destination) && strlen($destination) <= 2048) {
+            $decoded = rawurldecode($destination);
+            $sameOrigin = str_starts_with($destination, $request->getSchemeAndHttpHost().'/');
+            $relative = str_starts_with($destination, '/') && ! str_starts_with($decoded, '//');
+            if (($sameOrigin || $relative) && ! preg_match('/[\x00-\x20]/', $decoded) && ! str_contains($decoded, '\\')) {
+                return redirect()->to($destination)->with('status', $welcomeMsg);
+            }
         }
 
         if ($request->session()->has('url.intended')) {
             return redirect()->intended()->with('status', $welcomeMsg);
+        }
+
+        if ($user->isMerchandiserClient()) {
+            return redirect()->route('merchandisers.client.dashboard');
         }
 
         if ($user->isMerchandiserSupervisor()) {

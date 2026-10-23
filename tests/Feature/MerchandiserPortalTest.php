@@ -633,7 +633,10 @@ class MerchandiserPortalTest extends TestCase
 
         $this->get(route('merchandisers.supervisor.dashboard'))
             ->assertOk()
-            ->assertSee('Supervisor Leaderboard');
+            ->assertSee('Supervisor Leaderboard')
+            ->assertSee('No Schedule')
+            ->assertSee('Not Recorded')
+            ->assertDontSee('08:00 AM');
     }
 
     #[Test]
@@ -3474,7 +3477,7 @@ class MerchandiserPortalTest extends TestCase
     }
 
     #[Test]
-    public function ai_detection_uses_gemini_when_openai_fails()
+    public function ai_detection_prefers_gemini_before_openai()
     {
         Storage::fake('public');
         Http::fake([
@@ -3574,10 +3577,9 @@ class MerchandiserPortalTest extends TestCase
         $pollResponse->assertJsonPath('status', 'completed');
         $pollResponse->assertJsonPath('provider', 'gemini');
         $pollResponse->assertJsonPath('detections.0.quantity', 6);
-        $pollResponse->assertJsonPath('attempts.0.provider', 'openai');
-        $pollResponse->assertJsonPath('attempts.0.status', 'provider_error');
-        $pollResponse->assertJsonPath('attempts.1.provider', 'gemini');
-        $pollResponse->assertJsonPath('attempts.1.status', 'completed');
+        $pollResponse->assertJsonPath('attempts.0.provider', 'gemini');
+        $pollResponse->assertJsonPath('attempts.0.status', 'completed');
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), 'api.openai.com'));
     }
     #[Test]
     public function brands_admin_can_manage_sku_reference_images_for_ai_catalog()
@@ -4895,8 +4897,8 @@ class MerchandiserPortalTest extends TestCase
         $response = $this->get(route('merchandisers.admin.export', 'merchandisers') . '?format=csv');
 
         $response->assertStatus(200);
-        $response->assertHeader('Content-Type', 'text/csv; charset=utf-8');
-        $response->assertHeader('Content-Disposition', 'attachment; filename="merchandiser_merchandisers_' . now()->format('Y-m-d') . '.csv"');
+        $response->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        $response->assertHeader('Content-Disposition', 'attachment; filename="merchandiser_merchandisers_' . now()->format('Y-m-d') . '.xlsx"');
     }
 
     #[Test]
@@ -5497,6 +5499,7 @@ class MerchandiserPortalTest extends TestCase
     #[Test]
     public function stale_past_attendance_auto_closed_with_zero_duration_and_audit_reason(): void
     {
+        $this->travelTo(Carbon::create(2026, 10, 23, 10, 0, 0, 'Africa/Accra'));
         $agent = User::create([
             'name' => 'Stale Attendance Agent',
             'email' => 'stale-agent@cmih.africa',
@@ -5575,6 +5578,7 @@ class MerchandiserPortalTest extends TestCase
     #[Test]
     public function rejected_clock_in_leaves_previous_stale_attendance_unchanged(): void
     {
+        $this->travelTo(Carbon::create(2026, 10, 23, 10, 0, 0, 'Africa/Accra'));
         $agent = User::create([
             'name' => 'Rejected Geofence Agent',
             'email' => 'geofence-rejected@cmih.africa',

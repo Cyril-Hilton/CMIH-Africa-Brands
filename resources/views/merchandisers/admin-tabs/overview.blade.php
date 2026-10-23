@@ -1111,24 +1111,24 @@
                                     <span class="text-base"><i class="fa-solid fa-file-arrow-down text-emerald-500"></i></span>
                                     <h4 class="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white">Export Merchandiser Portal Data</h4>
                                 </div>
-                                <p class="text-xs text-slate-500 dark:text-slate-400 mb-4 font-medium">Select operations data to download as CSV, Excel-compatible, or PDF reports.</p>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mb-4 font-medium">Download formatted Excel workbooks or PDF reports.</p>
                                 
                                 <div class="grid gap-4 sm:grid-cols-3">
                                     <!-- CSV Column -->
                                     <div class="space-y-2">
                                         <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-1.5">
-                                            <span class="text-[10px] uppercase font-bold text-slate-700 dark:text-slate-300 tracking-wider">CSV Formats</span>
-                                            <span class="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">.CSV</span>
+                                            <span class="text-[10px] uppercase font-bold text-slate-700 dark:text-slate-300 tracking-wider">Excel Records</span>
+                                            <span class="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">.XLSX</span>
                                         </div>
-                                        <a href="{{ route('merchandisers.admin.export', ['type' => 'merchandisers', 'tenant' => $merchTenant['code'], 'format' => 'csv']) }}" class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white transition group">
+                                        <a href="{{ route('merchandisers.admin.export', ['type' => 'merchandisers', 'tenant' => $merchTenant['code'], 'format' => 'excel']) }}" class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white transition group">
                                             <span><i class="fa-solid fa-user text-sky-500"></i> Merchandisers List</span>
                                             <span class="text-slate-400 group-hover:translate-x-0.5 transition-transform">↓</span>
                                         </a>
-                                        <a href="{{ route('merchandisers.admin.export', ['type' => 'attendance', 'tenant' => $merchTenant['code'], 'format' => 'csv']) }}" class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white transition group">
+                                        <a href="{{ route('merchandisers.admin.export', ['type' => 'attendance', 'tenant' => $merchTenant['code'], 'format' => 'excel']) }}" class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white transition group">
                                             <span><i class="fa-solid fa-calendar-days text-sky-400"></i> Attendance Logs</span>
                                             <span class="text-slate-400 group-hover:translate-x-0.5 transition-transform">↓</span>
                                         </a>
-                                        <a href="{{ route('merchandisers.admin.export', ['type' => 'assets', 'tenant' => $merchTenant['code'], 'format' => 'csv']) }}" class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white transition group">
+                                        <a href="{{ route('merchandisers.admin.export', ['type' => 'assets', 'tenant' => $merchTenant['code'], 'format' => 'excel']) }}" class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white transition group">
                                             <span><i class="fa-solid fa-folder text-indigo-500"></i> POSM &amp; Field Gear</span>
                                             <span class="text-slate-400 group-hover:translate-x-0.5 transition-transform">↓</span>
                                         </a>

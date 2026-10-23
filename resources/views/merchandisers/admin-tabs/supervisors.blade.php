@@ -190,7 +190,7 @@
                                         @endif
                                     </div>
                                     @if($m->isMerchandiserSupervisor())
-                                        <form method="POST" action="{{ route('merchandisers.admin.supervisors.demote', $m) }}" onsubmit="return confirm('Remove supervisor privileges from {{ addslashes($m->name) }}?')">
+                                        <form method="POST" action="{{ route('merchandisers.admin.supervisors.demote', $m) }}" data-confirm="Remove supervisor privileges from {{ $m->name }}?">
                                             @csrf
                                             <button type="submit" class="admin-action-button admin-action-danger w-full sm:w-auto">Remove Supervisor</button>
                                         </form>

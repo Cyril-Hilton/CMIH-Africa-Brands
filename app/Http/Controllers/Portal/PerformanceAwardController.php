@@ -41,7 +41,7 @@ class PerformanceAwardController extends Controller
         $isHR           = in_array($userDept, ['hr_admin', 'admin'], true);
 
         if (!$isSuperOrAdmin && !$isHR) {
-            abort(403, '🔒 Access Denied. Only HR staff or administrators can lock awards.');
+            abort(403, ' Access Denied. Only HR staff or administrators can lock awards.');
         }
     }
 
@@ -119,7 +119,7 @@ class PerformanceAwardController extends Controller
         $sentCount = $this->dispatchAwardCertificates($award);
 
         $awardTypeLabel = ucwords(str_replace('_', ' ', $request->input('award_type')));
-        return back()->with('status', "🏆 {$awardTypeLabel} awards locked & certificates sent successfully to {$sentCount} recipient(s) for period: {$request->input('period')}!");
+        return back()->with('status', " {$awardTypeLabel} awards locked & certificates sent successfully to {$sentCount} recipient(s) for period: {$request->input('period')}!");
     }
 
     /**
@@ -132,7 +132,7 @@ class PerformanceAwardController extends Controller
             || $user->access_role === 'admin'
             || $user->hasFullHrAccess();
 
-        abort_unless($canResend, 403, '🔒 Access Denied. Only HR staff, Admins, and Super Admins can resend award certificates.');
+        abort_unless($canResend, 403, ' Access Denied. Only HR staff, Admins, and Super Admins can resend award certificates.');
 
         $request->validate([
             'award_type' => ['required', 'string'],
@@ -151,7 +151,7 @@ class PerformanceAwardController extends Controller
 
         $awardTypeLabel = ucwords(str_replace('_', ' ', $award->award_type));
 
-        return back()->with('status', "🏆 {$awardTypeLabel} certificates successfully resent to {$sentCount} recipient(s) for period: {$award->period}!");
+        return back()->with('status', " {$awardTypeLabel} certificates successfully resent to {$sentCount} recipient(s) for period: {$award->period}!");
     }
 
     private function dispatchAwardCertificates(PerformanceAward $award): int

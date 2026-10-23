@@ -265,13 +265,13 @@
         </div>
     @endif
 
-    {{-- ⚡ CVO Command Centre — only visible to CVO / super_admin --}}
+    {{--  CVO Command Centre — only visible to CVO / super_admin --}}
     @if ($user->isCvoOrSuperAdmin())
         <div class="mt-8">
             <p class="text-xs uppercase tracking-[0.3em] text-amber-400/70">Executive</p>
             <nav class="mt-3 space-y-2 text-xs uppercase tracking-[0.3em]">
                 <a href="{{ route('portal.cvo') }}" class="flex items-center justify-between rounded-xl px-4 py-3 transition border {{ request()->routeIs('portal.cvo') ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' : 'text-amber-400/70 hover:text-amber-300 border-transparent hover:border-amber-500/20' }}">
-                    <span>⚡ CVO Command Centre</span>
+                    <span><x-ui-icon name="bolt" /> CVO Command Centre</span>
                 </a>
             </nav>
         </div>
@@ -324,7 +324,7 @@
         <form method="POST" action="{{ route('logout') }}" class="pt-2 border-t border-brand-white/10 mt-2">
             @csrf
             <button type="submit" class="w-full text-left rounded-xl hover:bg-brand-white/10 px-3 py-1.5 text-xs uppercase tracking-[0.3em] text-brand-red font-semibold transition-all">
-                👋 Log Out
+                <x-ui-icon name="logout" /> Log Out
             </button>
         </form>
     </div>

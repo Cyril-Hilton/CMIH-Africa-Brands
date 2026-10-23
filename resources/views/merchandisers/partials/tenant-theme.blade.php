@@ -813,3 +813,11 @@
         Chart.defaults.font.family = "'Sora', sans-serif";
     }
 </script>
+
+<style>
+html[data-merch-tenant="unilever"] .merch-report-label {
+    color: #29216f !important;
+    background: #eeeaff !important;
+    border-color: #c4b5fd !important;
+}
+</style>

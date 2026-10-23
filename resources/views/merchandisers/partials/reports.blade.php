@@ -28,7 +28,7 @@
                     <span class="rounded-lg bg-brand-red/10 px-3 py-2 text-sm font-bold text-brand-red">{{ $report['value'] }}</span>
                 </div>
                 <div class="mt-auto pt-5">
-                    <a href="{{ route('merchandisers.reports.download', ['type' => $report['type']]) }}" class="merch-primary-button inline-flex min-h-10 w-full items-center justify-center rounded-lg px-4 text-xs font-bold">Download CSV</a>
+                    <a href="{{ route('merchandisers.reports.download', ['type' => $report['type']]) }}" class="merch-primary-button inline-flex min-h-10 w-full items-center justify-center rounded-lg px-4 text-xs font-bold">Download Excel</a>
                 </div>
             </article>
         @endforeach

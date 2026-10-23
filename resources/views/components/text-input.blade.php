@@ -7,7 +7,7 @@
 
 @if ($isPassword)
     <div class="relative mt-1 w-full" x-data="{ show: false }">
-        <input 
+        <input type="password"
             :type="show ? 'text' : 'password'"
             @disabled($disabled) 
             style="color: #0f172a !important; background-color: #ffffff !important; -webkit-text-fill-color: #0f172a !important;"
@@ -17,6 +17,8 @@
             type="button" 
             class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-slate-900 transition-colors"
             @click="show = !show"
+            :aria-label="show ? 'Hide password' : 'Show password'"
+            :aria-pressed="show.toString()"
         >
             <!-- Open Eye Icon (when show is false) -->
             <svg x-show="!show" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">

@@ -42,7 +42,7 @@
     </div>
 
     <div class="merch-bridge">
-        <a href="{{ route('merchandisers.login') }}" class="merch-btn">Merchandiser Sign In ↗</a>
+        <a href="{{ route('merchandisers.login') }}" class="merch-btn">Merchandiser Sign In <x-ui-icon name="arrow" /></a>
     </div>
 
     <div class="brand-zone" id="brands">

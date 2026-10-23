@@ -759,7 +759,7 @@ class DashboardController extends Controller
             }
         }
 
-        abort(403, '🔒 Access Denied. You cannot customise dashboard columns for other departments.');
+        abort(403, ' Access Denied. You cannot customise dashboard columns for other departments.');
     }
 
     private function validateWeeklyConsolidated(Request $request): array

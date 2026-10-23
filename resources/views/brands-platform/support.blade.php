@@ -47,7 +47,7 @@
             <div class="work-top" style="margin-top:15px;">
                 <div>
                     <div class="eyebrow" style="display:flex; align-items:center; gap:6px;">
-                        <span>👋 WELCOME BACK, <strong>{{ strtoupper(Auth::user()?->name ?: 'TEAM MEMBER') }}</strong></span>
+                        <span><x-ui-icon name="logout" /> WELCOME BACK, <strong>{{ strtoupper(Auth::user()?->name ?: 'TEAM MEMBER') }}</strong></span>
                         <span>&bull;</span>
                         <span>PROMOTER & BRAND ADVISOR WORKSPACE</span>
                     </div>
@@ -57,6 +57,12 @@
                 <span class="chip {{ in_array($activationWorkStatus['state'] ?? '', ['at_work','working'], true) ? 'ok' : (($activationWorkStatus['state'] ?? '') === 'closed' ? 'warn' : 'info') }}">{{ $activationWorkStatus['label'] ?? 'Open' }}</span>
             </div>
 
+            @if($errors->any())
+                <div role="alert" style="background:#fff1f2;border:1px solid #fda4af;color:#881337;border-radius:12px;padding:14px;margin-bottom:16px;">
+                    <strong>Please check your activity details.</strong>
+                    <ul style="margin:8px 0 0;padding-left:20px;">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
+                </div>
+            @endif
             @if(session('status'))
                 <div style="background:rgba(10, 157, 112, 0.15); border:1px solid #0a9d70; color:#fff; border-radius:10px; padding:12px; font-size:12px; margin-bottom:20px;">
                     {{ session('status') }}
@@ -71,7 +77,7 @@
 
             @if($errors->has('geofence'))
                 <div style="background:rgba(239, 68, 68, 0.15); border:1px solid #ef4444; color:#fca5a5; border-radius:10px; padding:12px; font-size:12px; margin-bottom:20px;">
-                    🚨 {{ $errors->first('geofence') }}
+                    <x-ui-icon name="spark" /> {{ $errors->first('geofence') }}
                 </div>
             @endif
 
@@ -90,7 +96,7 @@
             <div style="background: rgba(23, 17, 21, 0.85); border:1px solid rgba(255,255,255,0.12); border-radius:14px; padding:18px 22px; margin-bottom:20px; box-shadow:0 8px 32px rgba(0,0,0,0.3);">
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
                     <div>
-                        <div style="font-size:11px; font-weight:800; color:#ff1020; letter-spacing:0.05em; text-transform:uppercase; margin-bottom:4px;">📍 ASSIGNED WORK VENUE & GEOFENCE STATUS</div>
+                        <div style="font-size:11px; font-weight:800; color:#ff1020; letter-spacing:0.05em; text-transform:uppercase; margin-bottom:4px;"><x-ui-icon name="pin" /> ASSIGNED WORK VENUE & GEOFENCE STATUS</div>
                         <h3 style="margin:0; font-size:17px; font-weight:800; color:#ffffff;">{{ $assignedVenue }}</h3>
                         <p style="margin:2px 0 0; font-size:12px; color:rgba(255,255,255,0.65);">
                             {{ $assignedAddr }} &bull; Activation Window: <strong>{{ $shiftStart }} - {{ $shiftEnd }}</strong>
@@ -131,7 +137,7 @@
                                     <input type="hidden" name="latitude" id="clock_out_lat">
                                     <input type="hidden" name="longitude" id="clock_out_lng">
                                     <button type="button" onclick="submitGeofencedClockOut()" class="btn" style="background:#ef4444; color:#fff; border:none; padding:8px 16px; border-radius:8px; font-size:12px; font-weight:800; cursor:pointer;">
-                                        🚪 Clock Out Shift
+                                        <x-ui-icon name="logout" /> Clock Out Shift
                                     </button>
                                 </form>
                             </div>
@@ -149,7 +155,7 @@
                                 <input type="hidden" name="latitude" id="clock_in_lat">
                                 <input type="hidden" name="longitude" id="clock_in_lng">
                                 <button type="button" id="clock-in-btn" onclick="submitGeofencedClockIn()" class="btn red" style="padding:10px 20px; border-radius:8px; font-size:13px; font-weight:800; display:inline-flex; align-items:center; gap:6px;" @disabled(! $canClockNow)>
-                                    📍 Detect Live GPS & Clock In
+                                    <x-ui-icon name="pin" /> Detect Live GPS & Clock In
                                 </button>
                             </form>
                             <small id="geo-status-msg" style="display:block; color:rgba(255,255,255,0.5); font-size:11px; margin-top:4px;">{{ $canClockNow ? 'Requires location permission' : 'Clock-in opens during the activation work window.' }}</small>
@@ -163,7 +169,7 @@
                 const btn = document.getElementById('clock-in-btn');
                 const statusMsg = document.getElementById('geo-status-msg');
                 if (btn) btn.disabled = true;
-                if (statusMsg) statusMsg.innerHTML = '⌛ Detecting your GPS coordinates...';
+                if (statusMsg) statusMsg.innerHTML = ' Detecting your GPS coordinates...';
 
                 if (!navigator.geolocation) {
                     alert('Geolocation is not supported by your browser.');
@@ -180,14 +186,14 @@
                     function(err) {
                         alert('Could not acquire GPS location: ' + err.message + '. Please allow location access in your browser settings.');
                         if (btn) btn.disabled = false;
-                        if (statusMsg) statusMsg.innerHTML = '❌ Location access denied.';
+                        if (statusMsg) statusMsg.innerHTML = ' Location access denied.';
                     },
                     { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
                 );
             }
 
-            function submitGeofencedClockOut() {
-                if (!confirm('Are you sure you want to clock out of your shift?')) return;
+            async function submitGeofencedClockOut() {
+                if (!await window.cmihConfirm('Are you sure you want to clock out of your shift?', 'Clock Out')) return;
                 if (!navigator.geolocation) {
                     alert('Geolocation is not supported by your browser.');
                     return;

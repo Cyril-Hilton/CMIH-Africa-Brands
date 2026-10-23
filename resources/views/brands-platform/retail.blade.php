@@ -46,7 +46,7 @@
             <div class="work-top" style="margin-top: 15px;">
                 <div>
                     <div class="eyebrow" style="display:flex; align-items:center; gap:6px;">
-                        <span>👋 WELCOME BACK, <strong>{{ strtoupper(Auth::user()?->name ?: 'RETAIL CASHIER') }}</strong></span>
+                        <span><x-ui-icon name="logout" /> WELCOME BACK, <strong>{{ strtoupper(Auth::user()?->name ?: 'RETAIL CASHIER') }}</strong></span>
                         <span>&bull;</span>
                         <span>REDEMPTION TERMINAL</span>
                     </div>
@@ -70,7 +70,7 @@
 
             @if($errors->has('geofence'))
                 <div style="background:rgba(239, 68, 68, 0.15); border:1px solid #ef4444; color:#fca5a5; border-radius:10px; padding:12px; font-size:12px; margin-bottom:20px;">
-                    🚨 {{ $errors->first('geofence') }}
+                    <x-ui-icon name="spark" /> {{ $errors->first('geofence') }}
                 </div>
             @endif
 
@@ -86,7 +86,7 @@
             <div style="background: rgba(23, 17, 21, 0.85); border:1px solid rgba(255,255,255,0.12); border-radius:14px; padding:18px 22px; margin-bottom:20px; box-shadow:0 8px 32px rgba(0,0,0,0.3);">
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
                     <div>
-                        <div style="font-size:11px; font-weight:800; color:#ff1020; letter-spacing:0.05em; text-transform:uppercase; margin-bottom:4px;">📍 RETAIL TERMINAL VENUE & GEOFENCE STATUS</div>
+                        <div style="font-size:11px; font-weight:800; color:#ff1020; letter-spacing:0.05em; text-transform:uppercase; margin-bottom:4px;"><x-ui-icon name="pin" /> RETAIL TERMINAL VENUE & GEOFENCE STATUS</div>
                         <h3 style="margin:0; font-size:17px; font-weight:800; color:#ffffff;">{{ $assignedVenue }}</h3>
                         <p style="margin:2px 0 0; font-size:12px; color:rgba(255,255,255,0.65);">
                             {{ $assignedAddr }} &bull; Shift: <strong>{{ $shiftStart }} - {{ $shiftEnd }}</strong> (Grace: {{ $graceMins }}m | Late Penalty: GHS {{ number_format($latePenalty, 2) }})
@@ -106,7 +106,7 @@
                                     <input type="hidden" name="latitude" id="clock_out_lat">
                                     <input type="hidden" name="longitude" id="clock_out_lng">
                                     <button type="button" onclick="submitGeofencedClockOut()" class="btn" style="background:#ef4444; color:#fff; border:none; padding:8px 16px; border-radius:8px; font-size:12px; font-weight:800; cursor:pointer;">
-                                        🚪 Close Terminal Shift
+                                        <x-ui-icon name="logout" /> Close Terminal Shift
                                     </button>
                                 </form>
                             </div>
@@ -124,7 +124,7 @@
                                 <input type="hidden" name="latitude" id="clock_in_lat">
                                 <input type="hidden" name="longitude" id="clock_in_lng">
                                 <button type="button" id="clock-in-btn" onclick="submitGeofencedClockIn()" class="btn red" style="padding:10px 20px; border-radius:8px; font-size:13px; font-weight:800; display:inline-flex; align-items:center; gap:6px;">
-                                    📍 Detect Live GPS & Open Terminal
+                                    <x-ui-icon name="pin" /> Detect Live GPS & Open Terminal
                                 </button>
                             </form>
                             <small id="geo-status-msg" style="display:block; color:rgba(255,255,255,0.5); font-size:11px; margin-top:4px;">Requires location permission</small>
@@ -138,7 +138,7 @@
                 const btn = document.getElementById('clock-in-btn');
                 const statusMsg = document.getElementById('geo-status-msg');
                 if (btn) btn.disabled = true;
-                if (statusMsg) statusMsg.innerHTML = '⌛ Detecting terminal GPS coordinates...';
+                if (statusMsg) statusMsg.innerHTML = ' Detecting terminal GPS coordinates...';
 
                 if (!navigator.geolocation) {
                     alert('Geolocation is not supported by your browser.');
@@ -155,14 +155,14 @@
                     function(err) {
                         alert('Could not acquire GPS location: ' + err.message + '. Please allow location access in your browser settings.');
                         if (btn) btn.disabled = false;
-                        if (statusMsg) statusMsg.innerHTML = '❌ Location access denied.';
+                        if (statusMsg) statusMsg.innerHTML = ' Location access denied.';
                     },
                     { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
                 );
             }
 
-            function submitGeofencedClockOut() {
-                if (!confirm('Are you sure you want to close your terminal shift?')) return;
+            async function submitGeofencedClockOut() {
+                if (!await window.cmihConfirm('Are you sure you want to close your terminal shift?', 'Close Shift')) return;
                 if (!navigator.geolocation) {
                     alert('Geolocation is not supported by your browser.');
                     return;
@@ -567,13 +567,13 @@
                         </div>
 
                         <div id="scannerPlaceholder" style="display:flex; flex-direction:column; align-items:center;">
-                            <div style="font-size:44px; margin-bottom:8px;">📷</div>
+                            <div style="font-size:44px; margin-bottom:8px;"><x-ui-icon name="spark" /></div>
                             <h4 style="margin:0; font-size:15px; font-weight:800;">Scan Barcode with Phone Camera</h4>
                             <p style="margin:6px 0 16px; font-size:11px; color:rgba(255,255,255,0.6); max-width:260px; line-height:1.4;">Attendants can scan consumer barcodes directly using their mobile browser camera without extra hardware.</p>
                         </div>
 
                         <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; z-index:2; margin-top:8px;">
-                            <button type="button" id="btnStartScanner" class="btn brand" style="padding:10px 18px; font-size:11px; font-weight:900;">📷 Start Camera Scanner</button>
+                            <button type="button" id="btnStartScanner" class="btn brand" style="padding:10px 18px; font-size:11px; font-weight:900;"><x-ui-icon name="spark" /> Start Camera Scanner</button>
                             <button type="button" id="btnStopScanner" class="btn dark" style="padding:10px 18px; font-size:11px; display:none;">Stop Camera</button>
                         </div>
 
@@ -878,7 +878,7 @@
         }
         renderScanMode('done', code);
         if (statusMsg) {
-            statusMsg.textContent = '✓ Scanned Barcode: ' + code;
+            statusMsg.textContent = ' Scanned Barcode: ' + code;
             statusMsg.style.color = '#0a9d70';
         }
         setScanStatus('Scanned barcode: ' + code, 'success');

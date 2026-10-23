@@ -25,7 +25,7 @@
         {{-- ADD NEW SKU FORM                                        --}}
         {{-- ────────────────────────────────────────────────────── --}}
         <div class="glass-panel rounded-2xl p-6 border border-brand-white/10 bg-brand-white/5 h-fit space-y-5">
-            <h3 class="text-lg font-semibold text-brand-white">🆕 Add New SKU</h3>
+            <h3 class="text-lg font-semibold text-brand-white"><x-ui-icon name="plus" /> Add New SKU</h3>
 
             <form method="POST" action="{{ route('portal.merchandisers-admin.skus.store') }}" class="space-y-5">
                 @csrf
@@ -121,7 +121,7 @@
         {{-- ────────────────────────────────────────────────────── --}}
         <div class="lg:col-span-2 glass-panel rounded-2xl p-6 border border-brand-white/10 bg-brand-black/40 space-y-4">
             <div class="flex items-center justify-between gap-3 flex-wrap">
-                <h3 class="text-lg font-semibold text-brand-white">📦 Active SKUs ({{ $skus->count() }})</h3>
+                <h3 class="text-lg font-semibold text-brand-white"><x-ui-icon name="box" /> Active SKUs ({{ $skus->count() }})</h3>
                 <div class="flex gap-3 text-[10px] font-bold uppercase tracking-wider">
                     <span class="px-2 py-1 rounded-full bg-brand-red/10 border border-brand-red/20 text-brand-red">OSA</span>
                     <span class="px-2 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-300">NPD</span>
@@ -175,7 +175,7 @@
                                             Edit
                                         </button>
                                         <form method="POST" action="{{ route('portal.merchandisers-admin.skus.destroy', $sku) }}"
-                                            onsubmit="return confirm('Delete {{ $sku->name }}? This cannot be undone.');" class="inline">
+                                            data-confirm="Delete {{ $sku->name }}? This cannot be undone." class="inline">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit"
@@ -287,7 +287,7 @@
 
     {{-- Drop size tooltip / legend --}}
     <div class="mt-8 rounded-xl border border-brand-white/10 bg-brand-white/[0.03] px-5 py-4">
-        <p class="text-xs font-bold uppercase tracking-[0.2em] text-brand-ash mb-3">📐 Drop Size Explained</p>
+        <p class="text-xs font-bold uppercase tracking-[0.2em] text-brand-ash mb-3"><x-ui-icon name="image" /> Drop Size Explained</p>
         <div class="grid gap-4 sm:grid-cols-3 text-xs text-brand-white/60 leading-relaxed">
             <div>
                 <span class="font-bold text-brand-red">OSA Drop Size</span> — Minimum number of facings of this SKU required on-shelf for the product to be counted as <em>available</em> in the OSA score. If fewer than this number are detected, OSA for this SKU = 0 at that outlet.

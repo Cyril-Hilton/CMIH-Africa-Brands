@@ -120,7 +120,7 @@
         <div class="grid gap-6 lg:grid-cols-2">
             <!-- Visitor Log Form and Listing -->
             <div class="glass-panel rounded-2xl p-6 border border-brand-white/10 bg-brand-white/5">
-                <h3 class="text-sm font-semibold uppercase tracking-[0.15em] text-brand-white mb-4">🚪 Visitor Management System</h3>
+                <h3 class="text-sm font-semibold uppercase tracking-[0.15em] text-brand-white mb-4"><x-ui-icon name="logout" /> Visitor Management System</h3>
                 <form method="POST" action="{{ route('portal.hr.visitors.store') }}" class="space-y-4 mb-6">
                     @csrf
                     <div class="grid gap-4 sm:grid-cols-2">
@@ -189,7 +189,7 @@
             {{-- Employee Lifecycle Tracker: HR Manager only --}}
             @if($canDoSensitiveHr)
             <div class="glass-panel rounded-2xl p-6 border border-brand-white/10 bg-brand-white/5">
-                <h3 class="text-sm font-semibold uppercase tracking-[0.15em] text-brand-white mb-4">📊 Employee Lifecycle & Contracts</h3>
+                <h3 class="text-sm font-semibold uppercase tracking-[0.15em] text-brand-white mb-4"><x-ui-icon name="chart" /> Employee Lifecycle & Contracts</h3>
                 <div class="space-y-4">
                     @foreach($staff->take(5) as $employee)
                         <div class="rounded-xl border border-brand-white/10 bg-brand-white/5 p-4">
@@ -268,7 +268,7 @@
             <div class="flex flex-wrap items-center justify-between gap-4">
                 <div>
                     <p class="text-xs uppercase tracking-[0.3em] text-brand-ash">Dynamic HR Loan Engine</p>
-                    <h3 class="text-lg font-display text-brand-white uppercase">💵 Staff Loan Requests & Repayment Tracker</h3>
+                    <h3 class="text-lg font-display text-brand-white uppercase"><x-ui-icon name="wallet" /> Staff Loan Requests & Repayment Tracker</h3>
                     <p class="mt-1 text-xs text-brand-white/50">Review loan requests, configure dynamic payment terms, approve terms for Finance cash payout, and monitor repayment progress.</p>
                 </div>
                 <div class="rounded-xl border border-brand-white/10 bg-brand-white/5 p-3 text-right">
@@ -281,7 +281,7 @@
             {{-- Policy Settings Accordion / Form --}}
             <details class="rounded-xl border border-brand-white/10 bg-brand-black/30 p-4">
                 <summary class="cursor-pointer text-xs font-semibold uppercase tracking-wider text-brand-white hover:text-brand-red transition">
-                    ⚙️ Adjust HR Dynamic Loan Policy Rules
+                    <x-ui-icon name="gear" /> Adjust HR Dynamic Loan Policy Rules
                 </summary>
                 <form method="POST" action="{{ route('portal.hr.advances.policy') }}" class="mt-4 grid gap-4 sm:grid-cols-3 border-t border-brand-white/10 pt-4">
                     @csrf
@@ -355,7 +355,7 @@
                                             'pending_cvo' => 'Pending CVO Review',
                                             'repayment_active' => 'Active Loan (Repaying)',
                                             'disbursed' => 'Paid Out (Active)',
-                                            'fully_paid' => 'Fully Paid Off 🎉',
+                                            'fully_paid' => 'Fully Paid Off ',
                                             'returned_for_correction' => 'Returned for Correction',
                                             'rejected' => 'Rejected',
                                         ];
@@ -443,13 +443,13 @@
         @if($canDoSensitiveHr)
         <div class="glass-panel rounded-2xl p-6 border border-brand-white/10 bg-brand-white/5">
             <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
-                <h3 class="text-sm font-semibold uppercase tracking-[0.15em] text-brand-white">🏆 Appraisal Form Builder</h3>
+                <h3 class="text-sm font-semibold uppercase tracking-[0.15em] text-brand-white"><x-ui-icon name="award" /> Appraisal Form Builder</h3>
                 <div class="flex items-center gap-2">
                     <a href="{{ route('portal.import.show', ['table' => 'appraisal_metrics']) }}" class="rounded-xl bg-brand-white/5 border border-brand-white/10 hover:bg-brand-white/10 px-3.5 py-1.5 text-xs text-brand-white font-semibold transition uppercase tracking-wider">
-                        📥 Import Metrics
+                        <x-ui-icon name="download" /> Import Metrics
                     </a>
                     <a href="{{ route('portal.export', ['table' => 'appraisal_metrics']) }}" class="rounded-xl bg-brand-white/5 border border-brand-white/10 hover:bg-brand-white/10 px-3.5 py-1.5 text-xs text-brand-white font-semibold transition uppercase tracking-wider">
-                        📤 Export Metrics
+                        <x-ui-icon name="upload" /> Export Metrics
                     </a>
                 </div>
             </div>
@@ -589,7 +589,7 @@
                                 </select>
                                 <input type="text" placeholder="Width" value="${col.width}" onchange="updateCol(${index}, 'width', this.value)"
                                     class="w-16 rounded border border-brand-white/10 bg-brand-black/60 px-1 py-1 text-xs text-brand-white" />
-                                <button type="button" onclick="deleteCol(${index})" class="text-brand-red font-bold hover:text-red-400">✕</button>
+                                <button type="button" onclick="deleteCol(${index})" class="text-brand-red font-bold hover:text-red-400"></button>
                             `;
                             container.appendChild(row);
                         });
@@ -617,7 +617,7 @@
 
         {{-- ── Central Vault: HR Manager only ─────────────────────────────── --}}
         <div class="glass-panel rounded-2xl p-6 border border-brand-white/10 bg-brand-white/5">
-            <h3 class="text-sm font-semibold uppercase tracking-[0.15em] text-brand-white mb-4">📂 Central Vault (Templates & Guides)</h3>
+            <h3 class="text-sm font-semibold uppercase tracking-[0.15em] text-brand-white mb-4"><x-ui-icon name="folder" /> Central Vault (Templates & Guides)</h3>
             <div class="grid gap-4 sm:grid-cols-3">
                 @foreach([
                     ['name' => 'Onboarding Checklist Blueprint.docx', 'size' => '245 KB'],
@@ -651,7 +651,7 @@
         <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
             <div>
                 <p class="text-xs uppercase tracking-[0.3em] text-brand-ash">Phase 3</p>
-                <h3 class="text-lg font-display text-brand-white uppercase">🎟️ Visitor Pre-Ticketing</h3>
+                <h3 class="text-lg font-display text-brand-white uppercase"><x-ui-icon name="id" /> Visitor Pre-Ticketing</h3>
             </div>
         </div>
         <div class="grid gap-6 lg:grid-cols-2">
@@ -702,7 +702,7 @@
                         </div>
                     </div>
                     <button type="submit" class="w-full rounded-xl bg-brand-red hover:bg-brand-red-dark py-2.5 text-xs uppercase tracking-widest font-semibold text-white transition-all">
-                        🎟️ Create Pre-Ticket
+                        <x-ui-icon name="id" /> Create Pre-Ticket
                     </button>
                 </form>
             </div>
@@ -724,7 +724,7 @@
                                 </div>
                                 <div class="text-right shrink-0">
                                     @if($pt->status === 'arrived')
-                                        <span class="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-[10px] text-emerald-400">✅ Arrived</span>
+                                        <span class="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-[10px] text-emerald-400"><x-ui-icon name="check" /> Arrived</span>
                                     @elseif($pt->status === 'pending')
                                         <form method="POST" action="{{ route('portal.hr.pre-tickets.arrive', $pt) }}">
                                             @csrf @method('PATCH')
@@ -754,7 +754,7 @@
         <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
             <div>
                 <p class="text-xs uppercase tracking-[0.3em] text-brand-ash">Phase 3</p>
-                <h3 class="text-lg font-display text-brand-white uppercase">📞 Corporate Phone & Vendor Directory</h3>
+                <h3 class="text-lg font-display text-brand-white uppercase"><x-ui-icon name="phone" /> Corporate Phone & Vendor Directory</h3>
             </div>
         </div>
         <div class="grid gap-6 lg:grid-cols-2">
@@ -815,13 +815,13 @@
                             <div>
                                 <p class="font-semibold text-brand-white">{{ $entry->name }}</p>
                                 <p class="text-brand-ash text-[10px]">{{ $entry->job_title }} · {{ $entry->company }}</p>
-                                <p class="text-brand-ash text-[10px]">📞 {{ $entry->phone ?? '—' }} @if($entry->email) · ✉ {{ $entry->email }} @endif</p>
+                                <p class="text-brand-ash text-[10px]"><x-ui-icon name="phone" /> {{ $entry->phone ?? '—' }} @if($entry->email) ·  {{ $entry->email }} @endif</p>
                             </div>
                             <div class="flex items-center gap-2">
                                 <span class="rounded-full border border-brand-white/10 px-2 py-0.5 text-[10px] text-brand-white/50 capitalize">{{ $entry->category }}</span>
-                                <form method="POST" action="{{ route('portal.hr.directory.destroy', $entry) }}" onsubmit="return confirm('Remove entry?')">
+                                <form method="POST" action="{{ route('portal.hr.directory.destroy', $entry) }}" data-confirm="Remove entry?">
                                     @csrf @method('DELETE')
-                                    <button type="submit" class="text-brand-red/60 hover:text-brand-red transition-colors">✕</button>
+                                    <button aria-label="Close" type="submit" class="text-brand-red/60 hover:text-brand-red transition-colors"><x-ui-icon name="close" /></button>
                                 </form>
                             </div>
                         </div>

@@ -11,7 +11,7 @@
     <div class="merch-card rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-purple-500/15 text-purple-600 dark:text-purple-300 border border-purple-500/30 mb-2">
+                <span class="merch-report-label inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-purple-500/15 text-purple-600 dark:text-purple-300 border border-purple-500/30 mb-2">
                     <i class="fa-solid fa-award"></i> Brand &amp; Merchandiser Execution Navigator
                 </span>
                 <h2 class="text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-wide">Brand &amp; Merchandiser Execution</h2>
@@ -37,7 +37,7 @@
                 <p class="text-[10px] uppercase font-extrabold tracking-widest text-slate-500 dark:text-slate-400">Brand Execution Index</p>
                 <h3 class="text-lg font-bold text-slate-900 dark:text-white">Brands Performance Table</h3>
             </div>
-            <span class="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800 self-start sm:self-auto">
+            <span class="merch-report-label px-3 py-1 rounded-full text-[10px] font-extrabold uppercase bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800 self-start sm:self-auto">
                 Brands Summary
             </span>
         </div>

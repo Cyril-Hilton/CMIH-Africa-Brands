@@ -154,7 +154,7 @@
                                                                 <span class="block truncate text-xs font-bold text-slate-900 dark:text-white">{{ $assignedOutlet->name }}</span>
                                                                 <span class="block text-[10px] text-slate-600 dark:text-slate-400 font-semibold">{{ $visitDays->map(fn ($day) => $visitDayNameMap[$day] ?? null)->filter()->implode(', ') ?: 'No PJP day' }} - {{ $assignedOutlet->registeredBy?->name ?? 'Admin/System' }}</span>
                                                             </span>
-                                                            <form method="POST" action="{{ route('merchandisers.admin.outlet-assignments.destroy', ['outlet' => $assignedOutlet, 'user' => $merchandiser]) }}" onsubmit="return confirm('Remove this outlet from {{ $merchandiser->name }}?')">
+                                                            <form method="POST" action="{{ route('merchandisers.admin.outlet-assignments.destroy', ['outlet' => $assignedOutlet, 'user' => $merchandiser]) }}" data-confirm="Remove this outlet from {{ $merchandiser->name }}?">
                                                                 @csrf
                                                                 @method('DELETE')
                                                                 <button type="submit" class="rounded-lg bg-red-100 dark:bg-red-500/20 px-2 py-1 text-[10px] font-bold text-red-700 dark:text-red-300 hover:bg-red-200 transition">Remove</button>

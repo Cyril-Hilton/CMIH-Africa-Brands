@@ -114,6 +114,10 @@ class OtpLoginController extends Controller
 
         $request->session()->forget('otp_phone');
 
+        if ($user->isMerchandiserClient()) {
+            return redirect()->route('merchandisers.client.dashboard');
+        }
+
         if ($user->isMerchandiserSupervisor()) {
             return redirect()->route('merchandisers.supervisor.dashboard');
         }

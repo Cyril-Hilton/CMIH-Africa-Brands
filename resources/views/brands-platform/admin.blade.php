@@ -77,6 +77,17 @@
         .badge-unassigned { background:rgba(217,119,6,0.2);  color:#fbbf24; padding:2px 8px; border-radius:10px; font-size:9px; font-weight:900; }
         .badge-live       { background:rgba(22,163,74,0.2);  color:#4ade80; padding:3px 10px; border-radius:12px; font-size:9px; font-weight:900; }
         .badge-view       { background:rgba(245,158,11,0.2); color:#fbbf24; padding:2px 8px; border-radius:10px; font-size:9px; font-weight:900; }
+        #view-admin .big-main, #view-admin .admin-tab-content,
+        #view-admin .admin-card, #view-admin .calc-metric-card { min-width: 0; max-width: 100%; }
+        #view-admin .admin-card { overflow-x: auto; }
+        #view-admin input, #view-admin select, #view-admin textarea { min-width: 0; box-sizing: border-box; }
+        #view-admin .big-top { flex-wrap: wrap; gap: 12px; }
+        #view-admin .big-top > * { min-width: 0; }
+        @media (max-width: 700px) {
+            #view-admin .admin-tab-content [style*="grid-template-columns"] { grid-template-columns: minmax(0, 1fr) !important; }
+            #view-admin .admin-card { padding: 18px; }
+            #view-admin .admin-card h3 { overflow-wrap: anywhere; }
+        }
     </style>
 @endpush
 
@@ -334,7 +345,7 @@
                     @endif
                 </div>
 
-                <div style="display:grid; grid-template-columns:2fr 1fr; gap:20px; margin-top:20px;">
+                <div style="display:grid; grid-template-columns:minmax(0, 2fr) minmax(0, 1fr); gap:20px; margin-top:20px;">
                     {{-- ENROLL FORM --}}
                     <div class="admin-card">
                         <h3 style="margin:0 0 4px; font-size:16px; font-weight:900;">Assign Brand Account Manager</h3>
@@ -421,7 +432,7 @@
                 </div>
 
                 {{-- 6 STAT CARDS --}}
-                <div style="display:grid; grid-template-columns:repeat(6, 1fr); gap:12px; margin:20px 0;">
+                <div style="display:grid; grid-template-columns:repeat(6, minmax(0, 1fr)); gap:12px; margin:20px 0;">
                     <div class="calc-metric-card"><small>BRANDS</small><strong>{{ number_format($totalBrands) }}</strong></div>
                     <div class="calc-metric-card"><small>ACTIVATIONS</small><strong>{{ number_format($totalActivations) }}</strong></div>
                     <div class="calc-metric-card"><small>PROMOTERS</small><strong>{{ number_format($totalPromoters) }}</strong></div>
@@ -431,7 +442,7 @@
                 </div>
 
                 {{-- PRODUCTIVITY CHART & AVAILABILITY SNAPSHOT --}}
-                <div style="display:grid; grid-template-columns:2fr 1fr; gap:20px; margin-bottom:20px;">
+                <div style="display:grid; grid-template-columns:minmax(0, 2fr) minmax(0, 1fr); gap:20px; margin-bottom:20px;">
                     <div class="admin-card">
                         <h3 style="margin:0 0 4px; font-size:16px; font-weight:900;">Staff productivity</h3>
                         <p style="margin:0 0 16px; color:#bda7ad; font-size:11px;">Verified activities by role</p>
@@ -620,7 +631,7 @@
                         <h1 style="color:#ffffff; font-size:32px; font-weight:900; margin:4px 0 0;">Activity Logs</h1>
                     </div>
                     <div style="display:flex; gap:8px;">
-                        <button style="padding:9px 18px; border-radius:999px; border:1px solid #3d202a; background:#231318; color:#fff; font-size:11px; font-weight:800; cursor:pointer;">Export Logs</button>
+                        <a href="{{ route('brands-platform.admin.activity-export', request()->only('filter_brand','filter_action','search_log')) }}" data-confirm="Download the activity log as an Excel workbook?" style="padding:9px 18px; border-radius:999px; border:1px solid #3d202a; background:#231318; color:#fff; font-size:11px; font-weight:800; text-decoration:none;">Export Excel</a>
                         @if($firstBrand)
                             <a href="{{ route('brands-platform.agency', $firstBrand->slug ?: $firstBrand->id) }}"
                                 style="padding:10px 20px; border-radius:999px; border:1px solid #3d202a; background:#231318; font-size:12px; font-weight:800; color:#ffffff; text-decoration:none;">Agency Dashboard</a>

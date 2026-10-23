@@ -101,7 +101,7 @@
                     <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 border-t border-slate-200 dark:border-slate-800 pt-4">
                         <!-- Step 1: Clock In -->
                         <div class="flex flex-col items-center text-center p-2 rounded-lg bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-                            <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400 mb-1">✓ Done</span>
+                            <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400 mb-1"><x-ui-icon name="check" /> Done</span>
                             <span class="text-[10px] font-bold uppercase text-brand-white">1. Clock In</span>
                             <span class="text-[9px] text-brand-ash">Verified</span>
                         </div>
@@ -129,7 +129,7 @@
 
                         <!-- Step 5: Sign-Off -->
                         <div class="flex flex-col items-center text-center p-2 rounded-lg bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 col-span-2 sm:col-span-1">
-                            <span class="text-xs font-bold text-blue-600 dark:text-blue-400 mb-1">🏁 Final</span>
+                            <span class="text-xs font-bold text-blue-600 dark:text-blue-400 mb-1"><x-ui-icon name="flag" /> Final</span>
                             <span class="text-[10px] font-bold uppercase text-brand-white">5. Sign-Off</span>
                             <span class="text-[9px] text-brand-ash">Submitted</span>
                         </div>

@@ -19,7 +19,7 @@
                         class="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-[#0F0E9A] text-white flex items-center justify-center text-xs shadow-lg hover:scale-110 transition cursor-pointer z-10 ring-2 ring-white"
                         title="Upload / Change Avatar"
                         style="background-color: #0F0E9A !important; color: #ffffff !important;">
-                    📷
+                    <x-ui-icon name="spark" />
                 </button>
             </div>
 
@@ -147,7 +147,7 @@
             <div class="rounded-2xl p-6 border border-sky-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-6">
                 <div class="flex items-center justify-between border-b border-sky-100 dark:border-slate-800 pb-4">
                     <div>
-                        <h3 class="text-lg font-black text-slate-900 dark:text-white">💳 Banking &amp; Mobile Money Payout Details</h3>
+                        <h3 class="text-lg font-black text-slate-900 dark:text-white"><x-ui-icon name="spark" /> Banking &amp; Mobile Money Payout Details</h3>
                         <p class="text-xs text-slate-500 font-medium">Configure your preferred MoMo network or bank account for field allowances and salary payouts</p>
                     </div>
                 </div>
@@ -185,7 +185,7 @@
              class="space-y-6">
             <div class="rounded-2xl p-6 border border-sky-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-5">
                 <div class="border-b border-sky-100 dark:border-slate-800 pb-4">
-                    <h3 class="text-lg font-black text-slate-900 dark:text-white">💼 Organizational Assignment</h3>
+                    <h3 class="text-lg font-black text-slate-900 dark:text-white"><x-ui-icon name="briefcase" /> Organizational Assignment</h3>
                     <p class="text-xs text-slate-500 font-medium">Your current field hierarchy, key distributor mapping, and supervisor</p>
                 </div>
 
@@ -215,7 +215,7 @@
         <div class="rounded-2xl bg-white dark:bg-slate-900 border border-sky-200 dark:border-slate-800 w-full max-w-md p-6 space-y-4 shadow-2xl relative" @click.away="showPhotoModal = false">
             <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
                 <h3 class="text-base font-bold text-slate-900 dark:text-white">Upload Staff Profile Picture</h3>
-                <button type="button" @click="showPhotoModal = false" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+                <button aria-label="Close" type="button" @click="showPhotoModal = false" class="text-slate-400 hover:text-slate-600 font-bold"><x-ui-icon name="close" /></button>
             </div>
 
             <form method="POST" action="{{ route('merchandisers.profile.photo.update') }}" enctype="multipart/form-data" class="space-y-4">
@@ -226,7 +226,7 @@
                             <img :src="photoPreview" class="h-28 w-28 rounded-full object-cover">
                         </template>
                         <template x-if="!photoPreview">
-                            <span class="text-3xl">📷</span>
+                            <span class="text-3xl"><x-ui-icon name="spark" /></span>
                         </template>
                     </div>
                     <label class="cursor-pointer px-4 py-2 bg-[#E0F2FE] hover:bg-sky-200 rounded-xl text-xs font-bold text-[#0F0E9A] border border-sky-200 transition">

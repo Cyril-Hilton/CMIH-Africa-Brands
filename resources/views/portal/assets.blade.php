@@ -10,7 +10,7 @@
 
     @if (session('status'))
         <div class="mb-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs font-semibold text-emerald-400">
-            ✅ {{ session('status') }}
+            <x-ui-icon name="check" /> {{ session('status') }}
         </div>
     @endif
 
@@ -20,13 +20,13 @@
             <button @click="activeTab = 'it-assets'"
                     :class="activeTab === 'it-assets' ? 'bg-brand-red text-white font-bold shadow-lg shadow-brand-red/20' : 'text-brand-white/60 hover:text-white hover:bg-brand-white/5'"
                     class="rounded-xl px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.2em] transition-all flex items-center gap-2 shrink-0 cursor-pointer">
-                <span>💻 IT & Company Assets</span>
+                <span><x-ui-icon name="spark" /> IT & Company Assets</span>
                 <span class="rounded-full bg-brand-white/20 px-2 py-0.5 text-[10px]">{{ $assets->total() ?? count($assets) }}</span>
             </button>
             <button @click="activeTab = 'warehouse-posm'"
                     :class="activeTab === 'warehouse-posm' ? 'bg-brand-red text-white font-bold shadow-lg shadow-brand-red/20' : 'text-brand-white/60 hover:text-white hover:bg-brand-white/5'"
                     class="rounded-xl px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.2em] transition-all flex items-center gap-2 shrink-0 cursor-pointer">
-                <span>📦 Warehouse & POSM Inventory Ledger</span>
+                <span><x-ui-icon name="box" /> Warehouse & POSM Inventory Ledger</span>
                 <span class="rounded-full bg-brand-white/20 px-2 py-0.5 text-[10px]">{{ $posmEntries->total() ?? count($posmEntries) }}</span>
             </button>
         </div>
@@ -174,7 +174,7 @@
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                         <p class="text-xs uppercase tracking-[0.3em] text-brand-ash">Warehouse Tracking</p>
-                        <h3 class="text-xl font-display text-brand-white uppercase">📋 POSM & Materials Deployment Ledger</h3>
+                        <h3 class="text-xl font-display text-brand-white uppercase"><x-ui-icon name="clipboard" /> POSM & Materials Deployment Ledger</h3>
                         <p class="text-xs text-brand-white/60 mt-1">Real-time stock movements across Warehouse A, Warehouse B, and field deployments.</p>
                     </div>
                 </div>
@@ -278,9 +278,9 @@
                                         <td class="py-3 text-brand-white/60">{{ $entry->creator?->name ?? 'System' }}</td>
                                         <td class="py-3 text-brand-ash">{{ $entry->created_at?->format('d M H:i') }}</td>
                                         <td class="py-3 text-right">
-                                            <form method="POST" action="{{ route('portal.assets.posm.destroy', $entry) }}" onsubmit="return confirm('Remove log entry?')">
+                                            <form method="POST" action="{{ route('portal.assets.posm.destroy', $entry) }}" data-confirm="Remove log entry?">
                                                 @csrf @method('DELETE')
-                                                <button type="submit" class="text-brand-red/60 hover:text-brand-red transition-colors cursor-pointer" title="Delete log">✕</button>
+                                                <button aria-label="Close" type="submit" class="text-brand-red/60 hover:text-brand-red transition-colors cursor-pointer" title="Delete log"><x-ui-icon name="close" /></button>
                                             </form>
                                         </td>
                                     </tr>

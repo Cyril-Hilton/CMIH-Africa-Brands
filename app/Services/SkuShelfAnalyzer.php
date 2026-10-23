@@ -29,7 +29,7 @@ class SkuShelfAnalyzer
         foreach ($this->providerOrder() as $provider) {
             $result = match ($provider) {
                 'openai' => $this->analyzeWithOpenAi($prompt, $imageBytes, $mime, $skus, $expectedCategory),
-                'gemini' => $this->analyzeWithGemini($prompt, $imageBytes, $mime, $skus, $expectedCategory),
+                'gemini', 'gemini_secondary' => $this->analyzeWithGemini($provider, $prompt, $imageBytes, $mime, $skus, $expectedCategory),
                 default => null,
             };
 
@@ -68,8 +68,8 @@ class SkuShelfAnalyzer
 
         return match ($provider) {
             'openai' => ['openai'],
-            'gemini' => ['gemini'],
-            default => ['openai', 'gemini'],
+            'gemini' => ['gemini', 'gemini_secondary', 'openai'],
+            default => ['gemini', 'gemini_secondary', 'openai'],
         };
     }
 
@@ -117,9 +117,9 @@ class SkuShelfAnalyzer
         }
     }
 
-    private function analyzeWithGemini(string $prompt, string $imageBytes, string $mime, Collection $skus, ?string $expectedCategory): array
+    private function analyzeWithGemini(string $provider, string $prompt, string $imageBytes, string $mime, Collection $skus, ?string $expectedCategory): array
     {
-        if (! config('services.gemini.api_key')) {
+        if (! config($provider === 'gemini_secondary' ? 'services.gemini.secondary_api_key' : 'services.gemini.api_key')) {
             return [
                 'status' => 'not_configured',
                 'message' => 'Gemini API key is not configured.',
@@ -133,7 +133,7 @@ class SkuShelfAnalyzer
 
         $baseUrl = rtrim((string) config('services.gemini.base_url'), '/');
         $model = config('services.gemini.model');
-        $url = "{$baseUrl}/v1beta/models/{$model}:generateContent?key=" . urlencode((string) config('services.gemini.api_key'));
+        $url = "{$baseUrl}/v1beta/models/{$model}:generateContent";
         $payload = [
             'contents' => [
                 [
@@ -151,7 +151,7 @@ class SkuShelfAnalyzer
         ];
 
         try {
-            $response = $this->aiHttp()->post($url, $payload);
+            $response = $this->aiHttp()->withHeaders(['x-goog-api-key' => config($provider === 'gemini_secondary' ? 'services.gemini.secondary_api_key' : 'services.gemini.api_key')])->post($url, $payload);
 
             if ($response->failed()) {
                 return $this->providerError('gemini', $model, $response->status(), $response->body());

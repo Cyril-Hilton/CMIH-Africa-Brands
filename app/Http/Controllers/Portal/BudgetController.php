@@ -180,7 +180,7 @@ class BudgetController extends Controller
     {
         $user = $request->user();
         if (!$budget->canView($user)) {
-            abort(403, '🔒 Access Denied. You are not authorized to view this budget.');
+            abort(403, ' Access Denied. You are not authorized to view this budget.');
         }
 
         $isFinance = strtolower(trim($user->department ?? '')) === 'finance'
@@ -201,7 +201,7 @@ class BudgetController extends Controller
     {
         $user = $request->user();
         if (!$budget->canEdit($user)) {
-            abort(403, '🔒 Access Denied. You are not authorized to edit this budget.');
+            abort(403, ' Access Denied. You are not authorized to edit this budget.');
         }
 
         $tasks = Task::where('assigned_to', $budget->created_by)
@@ -224,7 +224,7 @@ class BudgetController extends Controller
     {
         $user = $request->user();
         if (!$budget->canEdit($user)) {
-            abort(403, '🔒 Access Denied. You are not authorized to edit this budget.');
+            abort(403, ' Access Denied. You are not authorized to edit this budget.');
         }
 
         $request->validate([
@@ -371,7 +371,7 @@ class BudgetController extends Controller
                 );
             }
 
-            return back()->with('status', '⚡ Budget submitted directly to CVO for approval.');
+            return back()->with('status', ' Budget submitted directly to CVO for approval.');
         } else {
             $budget->update(['status' => 'Submitted to Finance']);
 
@@ -391,7 +391,7 @@ class BudgetController extends Controller
                 );
             }
 
-            return back()->with('status', '📤 Budget submitted to Finance for approval.');
+            return back()->with('status', ' Budget submitted to Finance for approval.');
         }
     }
 
@@ -415,7 +415,7 @@ class BudgetController extends Controller
                 route('portal.finance.budgets.show', $budget),
                 $user->id
             );
-            return back()->with('status', '✅ Budget verified and approved by Finance. Sent to CVO.');
+            return back()->with('status', ' Budget verified and approved by Finance. Sent to CVO.');
         }
 
         if ($action === 'reject') {
@@ -439,12 +439,12 @@ class BudgetController extends Controller
 
         if ($action === 'approve') {
             $budget->update(['status' => 'CVO Approved']);
-            return back()->with('status', '✅ Budget approved by CVO.');
+            return back()->with('status', ' Budget approved by CVO.');
         }
 
         if ($action === 'reject') {
             $budget->update(['status' => 'Rejected']);
-            return back()->with('status', '✗ Budget rejected by CVO.');
+            return back()->with('status', ' Budget rejected by CVO.');
         }
 
         if ($action === 'send_back_finance') {
@@ -526,7 +526,7 @@ class BudgetController extends Controller
     {
         $user = $request->user();
         if (!$budget->canView($user)) {
-            abort(403, '🔒 Access Denied.');
+            abort(403, ' Access Denied.');
         }
 
         $headers = [

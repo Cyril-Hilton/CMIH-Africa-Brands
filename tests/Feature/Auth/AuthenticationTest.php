@@ -95,4 +95,33 @@ class AuthenticationTest extends TestCase
         $cookieName = \Illuminate\Support\Facades\Auth::guard('web')->getRecallerName();
         $response->assertCookie($cookieName);
     }
+    public function test_login_ignores_an_untrusted_redirect_destination(): void
+    {
+        $user = User::factory()->create(['status' => 'active', 'access_role' => 'staff']);
+        $this->post('/login', [
+            'email' => $user->email,
+            'password' => 'password',
+            'redirect_to' => 'https://untrusted.example.test/fake-portal',
+        ])->assertRedirect(route('dashboard', absolute: false));
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_merchandiser_clients_land_in_their_client_dashboard_after_sign_in(): void
+    {
+        $user = User::factory()->create(['status' => 'active', 'access_role' => 'merchandiser_client', 'merchandiser_tenant' => 'unilever']);
+        $this->post('/login', ['email' => $user->email, 'password' => 'password'])
+            ->assertRedirect(route('merchandisers.client.dashboard'));
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_merchandiser_client_otp_login_uses_the_client_dashboard_without_sending_sms(): void
+    {
+        $user = User::factory()->create(['status' => 'active', 'access_role' => 'merchandiser_client', 'merchandiser_tenant' => 'unilever', 'phone' => '233200000040']);
+        $otp = \App\Models\OtpCode::create(['user_id' => $user->id, 'phone' => $user->phone, 'code_hash' => \Illuminate\Support\Facades\Hash::make('123456'), 'expires_at' => now()->addMinutes(5)]);
+        $this->withSession(['otp_phone' => $user->phone])->post(route('login.otp.check'), ['code' => '123456'])
+            ->assertRedirect(route('merchandisers.client.dashboard'));
+        $this->assertAuthenticatedAs($user);
+        $this->assertNotNull($otp->fresh()->consumed_at);
+    }
+
 }

@@ -147,7 +147,7 @@
                                                         <input type="hidden" name="kd_id" value="{{ $kd->id }}">
                                                         <input type="hidden" name="region_id" value="{{ $kd->region_id }}">
                                                         <button type="submit" class="text-[10px] px-2 py-1.5 bg-brand-red text-white rounded-lg hover:bg-red-700 font-bold">Assign</button>
-                                                        <button type="button" @click="assigning=false" class="text-[10px] px-2 py-1.5 bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-lg">✕</button>
+                                                        <button aria-label="Close" type="button" @click="assigning=false" class="text-[10px] px-2 py-1.5 bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-lg"><x-ui-icon name="close" /></button>
                                                     </form>
                                                 </div>
                                             </td>
@@ -160,7 +160,7 @@
                                                 <div x-show="!editing" class="flex items-center justify-end gap-1.5 flex-wrap">
                                                     <button @click="assigning = !assigning; editing = false" class="text-[10px] px-2.5 py-1 rounded-lg bg-sky-100 dark:bg-sky-500/20 text-sky-800 dark:text-sky-300 border border-sky-300 dark:border-sky-500/30 hover:bg-sky-200 transition font-extrabold">Assign</button>
                                                     <button @click="editing = !editing; assigning = false" class="text-[10px] px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 transition font-bold">Edit</button>
-                                                    <form method="POST" action="{{ route('merchandisers.admin.kds.destroy', $kd) }}" onsubmit="return confirm('Remove this KD and unlink all merchandisers?')">
+                                                    <form method="POST" action="{{ route('merchandisers.admin.kds.destroy', $kd) }}" data-confirm="Remove this KD and unlink all merchandisers?">
                                                         @csrf @method('DELETE')
                                                         <button type="submit" class="text-[10px] px-2.5 py-1 rounded-lg bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-500/30 hover:bg-red-200 transition font-bold">Remove</button>
                                                     </form>
@@ -358,7 +358,7 @@
                                                         <button x-show="!editing" type="button" @click="editing = true" class="text-[10px] px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 hover:bg-slate-200 transition font-bold">Edit</button>
                                                         <button x-show="editing" type="submit" form="{{ $outletEditFormId }}" class="text-[10px] px-2.5 py-1 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition font-bold">Save</button>
                                                         <button x-show="editing" type="button" @click="editing=false" class="text-[10px] px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 hover:bg-slate-200 transition font-bold">Cancel</button>
-                                                        <form method="POST" action="{{ route('merchandisers.admin.outlets.destroy', $outlet) }}" onsubmit="return confirm('Remove outlet?')">
+                                                        <form method="POST" action="{{ route('merchandisers.admin.outlets.destroy', $outlet) }}" data-confirm="Remove outlet?">
                                                             @csrf @method('DELETE')
                                                             <button type="submit" class="text-[10px] px-2.5 py-1 rounded-lg bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-500/30 hover:bg-red-200 transition font-bold">Remove</button>
                                                         </form>
@@ -439,7 +439,7 @@
                                         <td class="px-5 py-2 text-right">
                                             <div class="flex items-center justify-end gap-2">
                                                 <button @click="editing = !editing" class="text-[10px] px-2 py-1 rounded-lg bg-brand-white/10 text-brand-white hover:bg-brand-white/20 transition">Edit</button>
-                                                <form method="POST" action="{{ route('merchandisers.admin.outlets.destroy', $outlet) }}" onsubmit="return confirm('Remove outlet?')">
+                                                <form method="POST" action="{{ route('merchandisers.admin.outlets.destroy', $outlet) }}" data-confirm="Remove outlet?">
                                                     @csrf @method('DELETE')
                                                     <button type="submit" class="text-[10px] px-2 py-1 rounded-lg bg-brand-red/20 text-brand-red hover:bg-brand-red/40 transition">Remove</button>
                                                 </form>

@@ -22,15 +22,15 @@
     <!-- 3-Tab Switcher -->
     <div class="flex gap-1 rounded-xl border border-brand-white/10 bg-brand-black/50 p-1">
         @foreach([
-            ['key' => 'supervisor',   'label' => 'Supervisor',    'icon' => '👤'],
-            ['key' => 'regional',     'label' => 'RM & Admin',    'icon' => '📢'],
-            ['key' => 'system',       'label' => 'System',        'icon' => '🔔'],
+            ['key' => 'supervisor',   'label' => 'Supervisor',    'icon' => 'user'],
+            ['key' => 'regional',     'label' => 'RM & Admin',    'icon' => 'megaphone'],
+            ['key' => 'system',       'label' => 'System',        'icon' => 'bell'],
         ] as $t)
         <button type="button"
                 @click="msgTab = '{{ $t['key'] }}'"
                 :class="msgTab === '{{ $t['key'] }}' ? 'merch-primary-button shadow' : 'text-brand-ash hover:text-brand-white'"
                 class="flex-1 flex items-center justify-center gap-1.5 rounded-lg px-3 py-2.5 text-xs font-bold transition">
-            <span>{{ $t['icon'] }}</span>
+            <span><x-ui-icon :name="$t['icon']" /></span>
             <span class="hidden sm:inline">{{ $t['label'] }}</span>
         </button>
         @endforeach
@@ -44,7 +44,7 @@
         @endphp
         @forelse($supervisorMessages as $msg)
             <article class="merch-card p-4 flex gap-4">
-                <div class="h-9 w-9 shrink-0 rounded-full bg-brand-red/10 flex items-center justify-center text-sm">👤</div>
+                <div class="h-9 w-9 shrink-0 rounded-full bg-brand-red/10 flex items-center justify-center text-sm"><x-ui-icon name="user" /></div>
                 <div class="min-w-0 flex-1">
                     <div class="flex items-start justify-between gap-2">
                         <p class="text-sm font-bold text-brand-white">{{ $msg->title }}</p>
@@ -63,7 +63,7 @@
             </article>
         @empty
             <div class="merch-card py-10 text-center">
-                <p class="text-2xl mb-2">💬</p>
+                <p class="text-2xl mb-2"><x-ui-icon name="chat" /></p>
                 <p class="text-sm font-semibold text-brand-white">No supervisor messages yet</p>
                 <p class="mt-1 text-xs text-brand-ash">Direct messages from your supervisor will appear here.</p>
             </div>
@@ -78,7 +78,7 @@
         @endphp
         @forelse($rmAnnouncements as $msg)
             <article class="merch-card p-4 flex gap-4">
-                <div class="h-9 w-9 shrink-0 rounded-full bg-blue-500/10 flex items-center justify-center text-sm">📢</div>
+                <div class="h-9 w-9 shrink-0 rounded-full bg-blue-500/10 flex items-center justify-center text-sm"><x-ui-icon name="megaphone" /></div>
                 <div class="min-w-0 flex-1">
                     <div class="flex items-start justify-between gap-2">
                         <p class="text-sm font-bold text-brand-white">{{ $msg->title }}</p>
@@ -92,7 +92,7 @@
             </article>
         @empty
             <div class="merch-card py-10 text-center">
-                <p class="text-2xl mb-2">📢</p>
+                <p class="text-2xl mb-2"><x-ui-icon name="megaphone" /></p>
                 <p class="text-sm font-semibold text-brand-white">No regional announcements</p>
                 <p class="mt-1 text-xs text-brand-ash">Planogram updates, SKU instructions, and regional directives will appear here.</p>
             </div>
@@ -107,7 +107,7 @@
         @endphp
         @forelse($systemNotifications as $msg)
             <article class="merch-card p-4 flex gap-4">
-                <div class="h-9 w-9 shrink-0 rounded-full bg-emerald-500/10 flex items-center justify-center text-sm">🔔</div>
+                <div class="h-9 w-9 shrink-0 rounded-full bg-emerald-500/10 flex items-center justify-center text-sm"><x-ui-icon name="bell" /></div>
                 <div class="min-w-0 flex-1">
                     <div class="flex items-start justify-between gap-2">
                         <p class="text-sm font-bold text-brand-white">{{ $msg->title }}</p>
@@ -118,7 +118,7 @@
             </article>
         @empty
             <div class="merch-card py-10 text-center">
-                <p class="text-2xl mb-2">🔔</p>
+                <p class="text-2xl mb-2"><x-ui-icon name="bell" /></p>
                 <p class="text-sm font-semibold text-brand-white">No system notifications</p>
                 <p class="mt-1 text-xs text-brand-ash">New PJP assignments, schedule changes, sync status and alerts will appear here.</p>
             </div>
@@ -127,7 +127,7 @@
         <!-- Offline / Pending sync indicator -->
         <div class="merch-card p-4 flex items-center justify-between gap-4">
             <div class="flex items-center gap-3">
-                <span class="text-lg">☁️</span>
+                <span class="text-lg"><x-ui-icon name="refresh" /></span>
                 <div>
                     <p class="text-xs font-bold text-brand-white">Sync Status</p>
                     <p class="text-[10px] text-brand-ash" data-sync-indicator>Checking...</p>

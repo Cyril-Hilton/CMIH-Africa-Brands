@@ -136,7 +136,7 @@
                                                     <span class="mt-1 block">{{ $form->native_submissions_count }} Inbuilt</span>
                                                 </td>
                                                 <td class="px-5 py-3 text-right">
-                                                    <form method="POST" action="{{ route('merchandisers.admin.google-forms.destroy', $form) }}" onsubmit="return confirm('Deactivate this form assignment?')">
+                                                    <form method="POST" action="{{ route('merchandisers.admin.google-forms.destroy', $form) }}" data-confirm="Deactivate this form assignment?">
                                                         @csrf @method('DELETE')
                                                         <button type="submit" class="rounded-lg bg-red-100 dark:bg-red-500/20 px-2.5 py-1 text-[10px] font-bold text-red-700 dark:text-red-300 hover:bg-red-200 transition">Deactivate</button>
                                                     </form>
@@ -177,7 +177,7 @@
                                             <p class="text-sm font-bold text-slate-900 dark:text-white">{{ $planogram->title }}</p>
                                             <p class="text-[10px] text-slate-600 dark:text-slate-400 font-semibold">{{ $planogram->category ?? 'General' }} / {{ $planogram->channel_type ?? 'Any channel' }}</p>
                                         </div>
-                                        <form method="POST" action="{{ route('merchandisers.admin.planograms.destroy', $planogram) }}" onsubmit="return confirm('Remove this planogram?')">
+                                        <form method="POST" action="{{ route('merchandisers.admin.planograms.destroy', $planogram) }}" data-confirm="Remove this planogram?">
                                             @csrf @method('DELETE')
                                             <button type="submit" class="text-red-600 dark:text-red-400 text-xs font-bold hover:underline">Remove</button>
                                         </form>

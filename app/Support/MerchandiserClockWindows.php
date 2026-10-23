@@ -10,7 +10,7 @@ class MerchandiserClockWindows
     public const VISIT_DEFAULTS = [
         'label' => 'Outlet Visit Window',
         'short_label' => 'Visit Window',
-        'icon' => 'Field',
+        'icon' => 'clock',
         'start' => '08:00',
         'end' => '17:00',
         'late_start' => '09:00',
@@ -20,21 +20,21 @@ class MerchandiserClockWindows
         'morning' => [
             'label' => 'Morning Clock-in',
             'short_label' => 'Morning',
-            'icon' => '🌅',
+            'icon' => 'clock',
             'start' => '09:00',
             'end' => '10:00',
         ],
         'midday' => [
             'label' => 'Midday Check-in',
             'short_label' => 'Midday',
-            'icon' => '☀️',
+            'icon' => 'clock',
             'start' => '12:00',
             'end' => '13:00',
         ],
         'cob' => [
             'label' => 'Clock-out / COB',
             'short_label' => 'Clock-out',
-            'icon' => '🌇',
+            'icon' => 'clock',
             'start' => '16:30',
             'end' => '17:30',
         ],

@@ -13,7 +13,7 @@
             <div class="flex flex-wrap items-center gap-3">
                 @if($canExportAttendancePerformance)
                     <a href="{{ route('portal.attendance-performance.export') }}" class="inline-flex items-center justify-center rounded-xl border border-brand-red/40 bg-brand-red px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-brand-white transition hover:bg-brand-red-dark">
-                        Export Clock-In CSV
+                        Export Clock-In Excel
                     </a>
                 @endif
                 <div class="rounded-2xl border border-brand-white/10 bg-brand-white/5 px-4 py-2 text-xs uppercase tracking-[0.3em] text-brand-white/70">
@@ -180,7 +180,7 @@
             <div class="flex flex-wrap items-center justify-between gap-4 border-b border-brand-white/10 pb-4">
                 <div>
                     <p class="text-xs uppercase tracking-[0.2em] text-brand-ash">Financial Support</p>
-                    <h3 class="text-lg font-display text-brand-white uppercase">💵 My Salary Advance & Loan Status</h3>
+                    <h3 class="text-lg font-display text-brand-white uppercase"><x-ui-icon name="wallet" /> My Salary Advance & Loan Status</h3>
                 </div>
                 <a href="{{ route('portal.finance.advances.index') }}" class="rounded-xl border border-brand-white/20 bg-brand-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-brand-white hover:bg-brand-white/20 transition">
                     Manage / Apply New Advance
@@ -206,7 +206,7 @@
                             'pending_cvo' => 'Step 3: CVO Reviewing',
                             'repayment_active' => 'Paid Out & Active Repayment',
                             'disbursed' => 'Paid Out & Active Repayment',
-                            'fully_paid' => 'Fully Paid Off 🎉',
+                            'fully_paid' => 'Fully Paid Off ',
                             'returned_for_correction' => 'Returned for Correction',
                             'rejected' => 'Rejected',
                         ];
@@ -543,7 +543,7 @@
                                                class="rounded-lg bg-brand-white/5 border border-brand-white/10 px-2 py-1 text-[10px] text-brand-white/60 hover:text-brand-white hover:bg-brand-white/10 transition-all">
                                                 Edit
                                             </a>
-                                            <form method="POST" action="{{ route('portal.tasks.destroy', $task) }}" onsubmit="return confirm('Delete this task?')" class="inline">
+                                            <form method="POST" action="{{ route('portal.tasks.destroy', $task) }}" data-confirm="Delete this task?" class="inline">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit" title="Delete task" class="rounded-lg bg-brand-red/10 border border-brand-red/30 px-2 py-1 text-[10px] text-brand-red hover:bg-brand-red/20 transition-all">
@@ -864,7 +864,7 @@
                                 <input type="number" name="order" value="{{ $column->order }}" min="0" max="999" class="rounded-lg border border-brand-white/10 bg-brand-black/70 px-3 py-2 text-xs text-brand-white">
                                 <button type="submit" class="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs font-bold uppercase tracking-widest text-emerald-300">Save</button>
                             </form>
-                            <form method="POST" action="{{ route('portal.dashboard.weekly-consolidated.columns.destroy', $column) }}" onsubmit="return confirm('Remove this weekly column from your entries?')" class="mt-2">
+                            <form method="POST" action="{{ route('portal.dashboard.weekly-consolidated.columns.destroy', $column) }}" data-confirm="Remove this weekly column from your entries?" class="mt-2">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="rounded-lg border border-brand-red/30 bg-brand-red/10 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-brand-red">Remove Column</button>
@@ -1257,7 +1257,7 @@
                                             </form>
                                             </div>
                                         </details>
-                                        <form method="POST" action="{{ route('portal.dashboard.weekly-consolidated.destroy', $item) }}" onsubmit="return confirm('Remove this weekly consolidated row?')">
+                                        <form method="POST" action="{{ route('portal.dashboard.weekly-consolidated.destroy', $item) }}" data-confirm="Remove this weekly consolidated row?">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="weekly-consolidated-action-button weekly-consolidated-action-button--danger border border-brand-red/30 bg-brand-red/10 hover:border-brand-red/50 hover:bg-brand-red/20">
@@ -1290,7 +1290,7 @@
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
                 <div>
                     <div class="flex items-center gap-2">
-                        <span class="text-xl">📋</span>
+                        <span class="text-xl"><x-ui-icon name="clipboard" /></span>
                         <h3 class="text-lg font-bold text-brand-white">Meeting Action Points</h3>
                     </div>
                     <p class="mt-1 text-xs text-brand-ash">
@@ -1419,7 +1419,7 @@
                                                     <button type="submit" class="rounded-lg bg-brand-red px-3 py-1.5 text-[10px] font-bold uppercase text-white hover:bg-brand-red-dark">Update</button>
                                                 </div>
                                             </form>
-                                            <form method="POST" action="{{ route('portal.action-points.destroy', $point) }}" onsubmit="return confirm('Delete this action point?')" class="mt-2 text-right">
+                                            <form method="POST" action="{{ route('portal.action-points.destroy', $point) }}" data-confirm="Delete this action point?" class="mt-2 text-right">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit" class="text-[10px] text-red-400 hover:underline">Delete Action Point</button>
@@ -1564,7 +1564,7 @@
                             <p class="text-[10px] text-brand-ash">{{ $col->department }}  {{ $col->type }}</p>
                         </div>
                         @if($canRemove)
-                            <form method="POST" action="{{ route('portal.dashboard.columns.destroy', $col) }}" onsubmit="return confirm('Remove this column?')">
+                            <form method="POST" action="{{ route('portal.dashboard.columns.destroy', $col) }}" data-confirm="Remove this column?">
                                 @csrf @method('DELETE')
                                 <button type="submit" class="text-xs text-brand-red/70 hover:text-brand-red transition-colors"> Remove</button>
                             </form>
@@ -1687,7 +1687,7 @@
                     </button>
                     <button type="button" onclick="submitResendCertificates()"
                             class="flex-1 rounded-xl border border-sky-500/40 bg-sky-500/10 hover:bg-sky-500/20 py-2.5 text-xs uppercase tracking-widest font-semibold text-sky-300 transition-all">
-                        📨 Resend Emails
+                        <x-ui-icon name="upload" /> Resend Emails
                     </button>
                     <button type="submit"
                             class="flex-1 rounded-xl bg-amber-600 hover:bg-amber-700 py-2.5 text-xs uppercase tracking-widest font-semibold text-white transition-all">
@@ -1703,7 +1703,7 @@
             </form>
 
             <script>
-                function submitResendCertificates() {
+                async function submitResendCertificates() {
                     const awardType = document.getElementById('lock-award-type').value;
                     const period = document.getElementById('lock-period').value;
                     if (!awardType || !period) {
@@ -1712,7 +1712,7 @@
                     }
                     document.getElementById('resend-form-award-type').value = awardType;
                     document.getElementById('resend-form-period').value = period;
-                    if (confirm(`Resend certificate emails to winners for ${awardType.replace(/_/g, ' ')} (${period})?`)) {
+                    if (await window.cmihConfirm(`Resend certificate emails to winners for ${awardType.replace(/_/g, ' ')} (${period})?`, 'Resend Emails')) {
                         document.getElementById('resend-certificates-form').submit();
                     }
                 }
@@ -2093,7 +2093,7 @@
                         : 'border-emerald-500/30 bg-emerald-950/90 text-emerald-200'
                 }`;
 
-                const icon = type === 'error' ? '⚠️' : '✓';
+                const icon = type === 'error' ? '' : '';
                 toast.innerHTML = `<span class="text-sm">${icon}</span><span>${message}</span>`;
 
                 toastContainer.appendChild(toast);

@@ -19,29 +19,34 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class BrandsPlatformController extends Controller
 {
     private const CMIH_DEFAULT_LOCATION = 'Concepts Make It Happen (No. 7 Affum Street, North Legon, Haatso)';
+
     private const CMIH_DEFAULT_ADDRESS = 'No. 7 Affum Street, North Legon, Haatso, Accra';
+
     private const CMIH_DEFAULT_LATITUDE = 5.6817954;
+
     private const CMIH_DEFAULT_LONGITUDE = -0.1944273;
+
     private const AGENCY_NOTIFICATION_ROLES = [
         BrandStaffAssignment::ROLE_ADMIN,
         BrandStaffAssignment::ROLE_AGENCY,
         BrandStaffAssignment::ROLE_SUPERVISOR,
     ];
+
     private const FIELD_STAFF_ROLES = [
         BrandStaffAssignment::ROLE_PROMOTER,
         BrandStaffAssignment::ROLE_SUPPORT,
@@ -49,6 +54,7 @@ class BrandsPlatformController extends Controller
         BrandStaffAssignment::ROLE_RETAIL,
         BrandStaffAssignment::ROLE_MERCHANDISER,
     ];
+
     private const BRAND_PORTAL_TEST_EMAILS = [
         'agency@cmih.africa',
         'promoter@cmih.africa',
@@ -90,13 +96,13 @@ class BrandsPlatformController extends Controller
         $slugOrder = ['omo', 'lush-hair', 'guinness', 'rexona', 'dove', 'mtn', 'gino'];
         $orderedBrands = collect();
         foreach ($slugOrder as $slug) {
-            $matched = $brands->first(fn($b) => \Illuminate\Support\Str::slug($b->name) === $slug || $b->slug === $slug);
+            $matched = $brands->first(fn ($b) => \Illuminate\Support\Str::slug($b->name) === $slug || $b->slug === $slug);
             if ($matched) {
                 $orderedBrands->push($matched);
             }
         }
         foreach ($brands as $brand) {
-            if (!$orderedBrands->contains('id', $brand->id)) {
+            if (! $orderedBrands->contains('id', $brand->id)) {
                 $orderedBrands->push($brand);
             }
         }
@@ -251,8 +257,8 @@ class BrandsPlatformController extends Controller
             ->get();
 
         // Retail terminal users now share the promoter workspace and roster.
-        $enrolledPromoters   = $assignedStaff->filter(fn (BrandStaffAssignment $assignment) => $this->assignmentUsesGeofencedShift($assignment))->values();
-        $enrolledRetail      = collect();
+        $enrolledPromoters = $assignedStaff->filter(fn (BrandStaffAssignment $assignment) => $this->assignmentUsesGeofencedShift($assignment))->values();
+        $enrolledRetail = collect();
         $enrolledAgencyStaff = $assignedStaff->whereIn('enrollment_type', [BrandStaffAssignment::TYPE_AGENCY_STAFF, null]);
 
         // Users already enrolled for this brand (for the CMIH import tab — exclude from dropdown)
@@ -482,7 +488,14 @@ class BrandsPlatformController extends Controller
 
         $this->logBrandActivity($request, $brand, $activation, 'page_view', 'agency_dashboard');
 
+        $actorAssignment = $this->currentBrandAssignmentForUser($request->user(), $brand);
+        $fullAccess = $request->user()->isCvoOrSuperAdmin() || $request->user()->isLineManager();
+        $canExportReports = $fullAccess || ($actorAssignment?->canExport() ?? false);
+        $canManageBrandTeam = $fullAccess || ($actorAssignment?->canManageTeam() ?? false);
+        $canEditBrand = $canManageBrandTeam || ($actorAssignment?->hasPermission('can_edit') ?? false);
+
         return view('brands-platform.agency', compact(
+            'canExportReports', 'canManageBrandTeam', 'canEditBrand',
             'brand',
             'allBrands',
             'brandActivations',
@@ -589,6 +602,7 @@ class BrandsPlatformController extends Controller
     public function retail(Request $request, string $brand): View|RedirectResponse
     {
         $brand = $this->resolveBrand($brand);
+
         return redirect()
             ->route('brands-platform.support', $brand->slug ?: $brand->id)
             ->with('status', 'Retail scanning now lives inside the Promoter Portal.');
@@ -617,6 +631,27 @@ class BrandsPlatformController extends Controller
             ->withQueryString();
 
         return view('brands-platform.gallery', compact('brands', 'selectedBrand', 'activities'));
+    }
+
+    public function exportActivityLogs(Request $request)
+    {
+        $this->guardPlatformAdmin($request->user());
+        $logs = BrandActivityLog::with(['brand', 'user'])
+            ->when($request->filled('filter_brand'), fn ($q) => $q->where('brand_id', $request->input('filter_brand')))
+            ->when($request->filled('filter_action'), fn ($q) => $q->where('action', $request->input('filter_action')))
+            ->when($request->filled('search_log'), fn ($q) => $q->where(function ($sub) use ($request) {
+                $term = '%'.$request->input('search_log').'%';
+                $sub->where('action', 'like', $term)->orWhere('context', 'like', $term);
+            }))->latest()->get();
+        $rows = [['Timestamp', 'Account', 'Activity', 'Context', 'Brand']];
+        foreach ($logs as $log) {
+            $rows[] = [$log->created_at?->format('d M Y H:i'), $log->user?->name ?? 'Public / Guest', $log->action, $log->context, $log->brand?->name ?? 'All Brands'];
+        }
+
+        return response(app(\App\Services\BrandedSpreadsheet::class)->xlsx($rows))
+            ->header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            ->header('Content-Disposition', 'attachment; filename="cmih-brand-activity.xlsx"')
+            ->header('Cache-Control', 'private, no-store');
     }
 
     public function admin(Request $request): View
@@ -650,9 +685,9 @@ class BrandsPlatformController extends Controller
             ->when($request->filled('filter_brand'), fn ($q) => $q->where('brand_id', $request->input('filter_brand')))
             ->when($request->filled('filter_role'), fn ($q) => $q->where('role', $request->input('filter_role')))
             ->when($request->filled('filter_status'), fn ($q) => match ($request->input('filter_status')) {
-                'assigned'   => $q->where('is_active', true),
+                'assigned' => $q->where('is_active', true),
                 'unassigned' => $q->where('is_active', false),
-                default      => $q,
+                default => $q,
             })
             ->when($request->filled('search_staff'), fn ($q) => $q->where(function ($sub) use ($request) {
                 $term = '%'.$request->input('search_staff').'%';
@@ -688,17 +723,17 @@ class BrandsPlatformController extends Controller
             ->count('user_id'));
 
         // --- Overview stats ---
-        $totalActivations   = BrandActivation::count();
-        $promoterRoleSet    = self::FIELD_STAFF_ROLES;
-        $totalPromoters     = BrandStaffAssignment::where('is_active', true)->whereIn('role', $promoterRoleSet)->count();
-        $totalRetailStaff   = $totalPromoters;
-        $totalSupervisors   = BrandStaffAssignment::where('is_active', true)->whereIn('role', ['field_supervisor', 'supervisor'])->count();
+        $totalActivations = BrandActivation::count();
+        $promoterRoleSet = self::FIELD_STAFF_ROLES;
+        $totalPromoters = BrandStaffAssignment::where('is_active', true)->whereIn('role', $promoterRoleSet)->count();
+        $totalRetailStaff = $totalPromoters;
+        $totalSupervisors = BrandStaffAssignment::where('is_active', true)->whereIn('role', ['field_supervisor', 'supervisor'])->count();
         $totalMerchandisers = BrandStaffAssignment::where('is_active', true)->where('role', 'merchandiser')->count();
-        $activeAccounts     = User::where('status', 'active')->count();
+        $activeAccounts = User::where('status', 'active')->count();
         $availabilitySnapshot = [
-            'promoters'     => BrandStaffAssignment::where('is_active', false)->whereIn('role', $promoterRoleSet)->count(),
-            'retail'        => BrandStaffAssignment::where('is_active', false)->whereIn('role', $promoterRoleSet)->count(),
-            'supervisors'   => BrandStaffAssignment::where('is_active', false)->whereIn('role', ['field_supervisor', 'supervisor'])->count(),
+            'promoters' => BrandStaffAssignment::where('is_active', false)->whereIn('role', $promoterRoleSet)->count(),
+            'retail' => BrandStaffAssignment::where('is_active', false)->whereIn('role', $promoterRoleSet)->count(),
+            'supervisors' => BrandStaffAssignment::where('is_active', false)->whereIn('role', ['field_supervisor', 'supervisor'])->count(),
             'merchandisers' => BrandStaffAssignment::where('is_active', false)->where('role', 'merchandiser')->count(),
         ];
 
@@ -1172,7 +1207,7 @@ class BrandsPlatformController extends Controller
                     $discountPct = $brand->discount_percentage ?: ($brand->prototype_discount ?: '20% OFF');
                     \Illuminate\Support\Facades\Mail::to($entry->email)->send(new \App\Mail\ConsumerDiscountMail($brand, $entry, $discountPct));
                 } catch (\Throwable $e) {
-                    \Illuminate\Support\Facades\Log::warning("Failed to send consumer discount mail: " . $e->getMessage());
+                    \Illuminate\Support\Facades\Log::warning('Failed to send consumer discount mail: '.$e->getMessage());
                 }
             }
         }
@@ -1220,6 +1255,14 @@ class BrandsPlatformController extends Controller
             'Your brand assignment does not allow this staff role.'
         );
 
+        if (in_array($validated['activity_type'], ['consumer_registration', 'sample_distributed', 'bottle_sale', 'reward_issued'], true)
+            && (int) ($validated['units'] ?? 0) < 1 && (int) ($validated['conversion_count'] ?? 0) < 1) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['units' => 'Enter at least one unit, action or conversion for this activity.']);
+        }
+        if ($validated['activity_type'] === 'stock_issue' && trim($validated['notes'] ?? '') === '') {
+            throw \Illuminate\Validation\ValidationException::withMessages(['notes' => 'Describe the stock or availability issue.']);
+        }
+
         $evidencePath = $request->hasFile('evidence')
             ? $request->file('evidence')->store('brand-activities', 'public')
             : null;
@@ -1235,13 +1278,8 @@ class BrandsPlatformController extends Controller
             'evidence_path' => $evidencePath,
         ]);
 
-        if (! empty($validated['reference_code'])) {
-            $refCode = trim((string) $validated['reference_code']);
-            $matchedEntry = BrandConsumerEntry::where('reward_code', $refCode)->first();
-            if ($matchedEntry && ! $matchedEntry->redeemed_at) {
-                $matchedEntry->forceFill(['redeemed_at' => now()])->save();
-            }
-        }
+        // Activity references are notes only. Redemption uses the dedicated,
+        // brand-scoped validation flow and must not be changed by this endpoint.
 
         $this->logBrandActivity($request, $brand, $activation, 'field_activity_created', 'field', [
             'activity_id' => $activity->id,
@@ -1264,9 +1302,17 @@ class BrandsPlatformController extends Controller
     {
         $brand = $this->resolveBrand($brand);
         $this->guardBrandAccess($request->user(), $brand);
+        if (! $request->user()->isCvoOrSuperAdmin() && ! $request->user()->isLineManager()) {
+            $assignment = $brand->staffAssignments()->where('user_id', $request->user()->id)->where('is_active', true)->first();
+            abort_unless($assignment && $assignment->canExport(), 403, 'You do not have permission to export this brand report.');
+        }
 
-        $activation = $this->primaryActivation($brand);
+        $activation = $this->selectedActivation($brand, $request);
         $filters = $this->reportFilters($request);
+        if (! $filters['from'] && in_array($type, ['daily', 'weekly'])) {
+            $filters['from'] = $type === 'daily' ? now()->startOfDay() : now()->startOfWeek();
+            $filters['to'] ??= now()->endOfDay();
+        }
         $filename = Str::slug($brand->name.'-'.$type.'-report-'.now()->format('Ymd-His')).'.csv';
 
         $this->logBrandActivity($request, $brand, $activation, 'report_exported', 'agency', ['type' => $type]);
@@ -1302,6 +1348,8 @@ class BrandsPlatformController extends Controller
             } else {
                 fputcsv($handle, ['Time', 'Staff', 'Role', 'Activity', 'Status', 'Location', 'Units', 'Conversions', 'Value', 'Reference', 'Evidence Image', 'Notes']);
                 $this->fieldActivityQuery($brand, $activation, $filters)
+                    ->when($type === 'promoter', fn ($query) => $query->where('staff_role', BrandStaffAssignment::ROLE_PROMOTER))
+                    ->when($type === 'retail', fn ($query) => $query->where('staff_role', BrandStaffAssignment::ROLE_RETAIL))
                     ->with('user')
                     ->latest()
                     ->chunk(200, function ($activities) use ($handle) {
@@ -1950,13 +1998,9 @@ class BrandsPlatformController extends Controller
         }
 
         if ($request->filled('activation_id')) {
-            $activation = $brand->activations()
-                ->whereKey((int) $request->input('activation_id'))
-                ->first();
+            $request->validate(['activation_id' => 'required|integer|min:1']);
 
-            if ($activation) {
-                return $activation;
-            }
+            return $brand->activations()->whereKey((int) $request->input('activation_id'))->firstOrFail();
         }
 
         return $this->primaryActivation($brand);
@@ -2180,6 +2224,13 @@ class BrandsPlatformController extends Controller
 
     private function reportFilters(Request $request): array
     {
+        $request->validate([
+            'from' => 'nullable|date',
+            'to' => ['nullable', 'date', ...($request->filled('from') ? ['after_or_equal:from'] : [])],
+            'status' => 'nullable|string|max:50', 'location' => 'nullable|string|max:255',
+            'activity_type' => 'nullable|string|max:100', 'sort' => 'nullable|in:newest,oldest',
+        ]);
+
         return [
             'from' => $request->filled('from') ? Carbon::parse($request->input('from'))->startOfDay() : null,
             'to' => $request->filled('to') ? Carbon::parse($request->input('to'))->endOfDay() : null,
@@ -2557,6 +2608,7 @@ class BrandsPlatformController extends Controller
             if ($restricted) {
                 abort(403, 'Your access to this brand has been restricted.');
             }
+
             return;
         }
 
@@ -2657,18 +2709,18 @@ class BrandsPlatformController extends Controller
         $this->guardCanManageTeam($request->user(), $brand);
 
         $validated = $request->validate([
-            'user_id'                   => ['required', 'integer', 'exists:users,id'],
-            'role'                      => ['nullable', Rule::in([BrandStaffAssignment::ROLE_AGENCY])],
-            'access_level'              => ['nullable', Rule::in(['view', 'edit', 'archive'])],
-            'assigned_location'         => ['nullable', 'string', 'max:255'],
-            'assigned_address'          => ['nullable', 'string', 'max:255'],
-            'assigned_latitude'         => ['nullable', 'numeric', 'between:-90,90'],
-            'assigned_longitude'        => ['nullable', 'numeric', 'between:-180,180'],
-            'shift_start_time'          => ['nullable', 'string', 'max:10'],
-            'shift_end_time'            => ['nullable', 'string', 'max:10'],
-            'grace_period_minutes'      => ['nullable', 'integer', 'min:0', 'max:120'],
+            'user_id' => ['required', 'integer', 'exists:users,id'],
+            'role' => ['nullable', Rule::in([BrandStaffAssignment::ROLE_AGENCY])],
+            'access_level' => ['nullable', Rule::in(['view', 'edit', 'archive'])],
+            'assigned_location' => ['nullable', 'string', 'max:255'],
+            'assigned_address' => ['nullable', 'string', 'max:255'],
+            'assigned_latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'assigned_longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'shift_start_time' => ['nullable', 'string', 'max:10'],
+            'shift_end_time' => ['nullable', 'string', 'max:10'],
+            'grace_period_minutes' => ['nullable', 'integer', 'min:0', 'max:120'],
             'lateness_deduction_amount' => ['nullable', 'numeric', 'min:0'],
-            'notes'                     => ['nullable', 'string', 'max:1000'],
+            'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $user = User::findOrFail($validated['user_id']);
@@ -2717,32 +2769,32 @@ class BrandsPlatformController extends Controller
             ];
 
         BrandStaffAssignment::create([
-            'brand_id'                  => $brand->id,
-            'user_id'                   => $user->id,
-            'role'                      => $role,
-            'enrollment_source'         => BrandStaffAssignment::SOURCE_CMIH_API,
-            'enrollment_type'           => $enrollmentType,
-            'permissions'               => $permissions,
-            'assigned_location'         => $venue['location'],
-            'assigned_address'          => $venue['address'],
-            'assigned_latitude'         => $venue['latitude'],
-            'assigned_longitude'        => $venue['longitude'],
-            'shift_start_time'          => $usesGeofence ? ($validated['shift_start_time'] ?? '08:30') : null,
-            'shift_end_time'            => $usesGeofence ? ($validated['shift_end_time'] ?? '17:00') : null,
-            'grace_period_minutes'      => $usesGeofence ? (isset($validated['grace_period_minutes']) ? (int) $validated['grace_period_minutes'] : 10) : 0,
+            'brand_id' => $brand->id,
+            'user_id' => $user->id,
+            'role' => $role,
+            'enrollment_source' => BrandStaffAssignment::SOURCE_CMIH_API,
+            'enrollment_type' => $enrollmentType,
+            'permissions' => $permissions,
+            'assigned_location' => $venue['location'],
+            'assigned_address' => $venue['address'],
+            'assigned_latitude' => $venue['latitude'],
+            'assigned_longitude' => $venue['longitude'],
+            'shift_start_time' => $usesGeofence ? ($validated['shift_start_time'] ?? '08:30') : null,
+            'shift_end_time' => $usesGeofence ? ($validated['shift_end_time'] ?? '17:00') : null,
+            'grace_period_minutes' => $usesGeofence ? (isset($validated['grace_period_minutes']) ? (int) $validated['grace_period_minutes'] : 10) : 0,
             'lateness_deduction_amount' => $usesGeofence ? (isset($validated['lateness_deduction_amount']) ? (float) $validated['lateness_deduction_amount'] : 20.00) : 0.00,
-            'is_active'                 => true,
-            'is_current_venue'          => true,
-            'venue_assigned_at'         => now(),
-            'notes'                     => $validated['notes'] ?? null,
-            'assigned_by'               => $request->user()->id,
+            'is_active' => true,
+            'is_current_venue' => true,
+            'venue_assigned_at' => now(),
+            'notes' => $validated['notes'] ?? null,
+            'assigned_by' => $request->user()->id,
         ]);
 
         $this->logBrandActivity($request, $brand, null, 'agency_team_member_added', 'agency', [
             'staff_id' => $user->id,
-            'role'     => $role,
+            'role' => $role,
             'location' => $venue['location'],
-            'source'   => 'cmih_api',
+            'source' => 'cmih_api',
             'access_level' => $accessLevel,
         ]);
 
@@ -2767,26 +2819,26 @@ class BrandsPlatformController extends Controller
         $enrollmentType = BrandStaffAssignment::TYPE_PROMOTER;
 
         $validated = $request->validate([
-            'enrollment_type'           => ['nullable', Rule::in([BrandStaffAssignment::TYPE_PROMOTER])],
-            'external_name'             => ['required', 'string', 'max:120'],
-            'external_phone'            => ['required', 'string', 'max:30'],
-            'external_email'            => ['required', 'email', 'max:120'],
-            'date_of_birth'             => ['nullable', 'date'],
-            'education_level'           => ['nullable', 'string', 'max:120'],
+            'enrollment_type' => ['nullable', Rule::in([BrandStaffAssignment::TYPE_PROMOTER])],
+            'external_name' => ['required', 'string', 'max:120'],
+            'external_phone' => ['required', 'string', 'max:30'],
+            'external_email' => ['required', 'email', 'max:120'],
+            'date_of_birth' => ['nullable', 'date'],
+            'education_level' => ['nullable', 'string', 'max:120'],
             'previous_brand_experience' => ['nullable', 'string', 'max:30'],
-            'previous_brand_names'      => ['nullable', 'string', 'max:500'],
-            'external_id_type'          => ['required', Rule::in(BrandStaffAssignment::ID_TYPES)],
-            'external_id_number'        => ['required', 'string', 'max:80'],
-            'photo'                     => ['nullable', 'image', 'max:3072'],
-            'assigned_location'         => ['required', 'string', 'max:255'],
-            'assigned_address'          => ['nullable', 'string', 'max:255'],
-            'assigned_latitude'         => ['nullable', 'numeric', 'between:-90,90'],
-            'assigned_longitude'        => ['nullable', 'numeric', 'between:-180,180'],
-            'shift_start_time'          => ['nullable', 'string', 'max:10'],
-            'shift_end_time'            => ['nullable', 'string', 'max:10'],
-            'grace_period_minutes'      => ['nullable', 'integer', 'min:0', 'max:120'],
+            'previous_brand_names' => ['nullable', 'string', 'max:500'],
+            'external_id_type' => ['required', Rule::in(BrandStaffAssignment::ID_TYPES)],
+            'external_id_number' => ['required', 'string', 'max:80'],
+            'photo' => ['nullable', 'image', 'max:3072'],
+            'assigned_location' => ['required', 'string', 'max:255'],
+            'assigned_address' => ['nullable', 'string', 'max:255'],
+            'assigned_latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'assigned_longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'shift_start_time' => ['nullable', 'string', 'max:10'],
+            'shift_end_time' => ['nullable', 'string', 'max:10'],
+            'grace_period_minutes' => ['nullable', 'integer', 'min:0', 'max:120'],
             'lateness_deduction_amount' => ['nullable', 'numeric', 'min:0'],
-            'notes'                     => ['nullable', 'string', 'max:1000'],
+            'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $role = BrandStaffAssignment::ROLE_PROMOTER;
@@ -2806,7 +2858,7 @@ class BrandsPlatformController extends Controller
         }
 
         $temporaryPassword = 'CMIH-'.Str::upper(Str::random(5)).random_int(10, 99).'!';
-        $promoterUser = $existingUser ?: new User();
+        $promoterUser = $existingUser ?: new User;
         $promoterUser->fill([
             'name' => $validated['external_name'],
             'email' => $email,
@@ -2831,18 +2883,18 @@ class BrandsPlatformController extends Controller
         );
 
         BrandStaffAssignment::create([
-            'brand_id'                  => $brand->id,
-            'role'                      => $role,
-            'user_id'                   => $promoterUser->id,
-            'enrollment_source'         => BrandStaffAssignment::SOURCE_MANUAL,
-            'enrollment_type'           => $enrollmentType,
-            'external_name'             => $validated['external_name'],
-            'external_phone'            => $validated['external_phone'],
-            'external_email'            => $email,
-            'external_id_type'          => $validated['external_id_type'],
-            'external_id_number'        => $validated['external_id_number'],
-            'photo_path'                => $photoPath,
-            'permissions'               => [
+            'brand_id' => $brand->id,
+            'role' => $role,
+            'user_id' => $promoterUser->id,
+            'enrollment_source' => BrandStaffAssignment::SOURCE_MANUAL,
+            'enrollment_type' => $enrollmentType,
+            'external_name' => $validated['external_name'],
+            'external_phone' => $validated['external_phone'],
+            'external_email' => $email,
+            'external_id_type' => $validated['external_id_type'],
+            'external_id_number' => $validated['external_id_number'],
+            'photo_path' => $photoPath,
+            'permissions' => [
                 'can_record_activity' => true,
                 'can_manage_team' => false,
                 'can_export' => false,
@@ -2853,19 +2905,19 @@ class BrandsPlatformController extends Controller
                     'date_of_birth' => $validated['date_of_birth'] ?? null,
                 ],
             ],
-            'assigned_location'         => $venue['location'],
-            'assigned_address'          => $venue['address'],
-            'assigned_latitude'         => $venue['latitude'],
-            'assigned_longitude'        => $venue['longitude'],
-            'shift_start_time'          => $validated['shift_start_time'] ?? '08:30',
-            'shift_end_time'            => $validated['shift_end_time'] ?? '17:00',
-            'grace_period_minutes'      => isset($validated['grace_period_minutes']) ? (int) $validated['grace_period_minutes'] : 10,
+            'assigned_location' => $venue['location'],
+            'assigned_address' => $venue['address'],
+            'assigned_latitude' => $venue['latitude'],
+            'assigned_longitude' => $venue['longitude'],
+            'shift_start_time' => $validated['shift_start_time'] ?? '08:30',
+            'shift_end_time' => $validated['shift_end_time'] ?? '17:00',
+            'grace_period_minutes' => isset($validated['grace_period_minutes']) ? (int) $validated['grace_period_minutes'] : 10,
             'lateness_deduction_amount' => isset($validated['lateness_deduction_amount']) ? (float) $validated['lateness_deduction_amount'] : 20.00,
-            'is_active'                 => true,
-            'is_current_venue'          => true,
-            'venue_assigned_at'         => now(),
-            'notes'                     => $validated['notes'] ?? null,
-            'assigned_by'               => $request->user()->id,
+            'is_active' => true,
+            'is_current_venue' => true,
+            'venue_assigned_at' => now(),
+            'notes' => $validated['notes'] ?? null,
+            'assigned_by' => $request->user()->id,
         ]);
 
         try {
@@ -2881,7 +2933,8 @@ class BrandsPlatformController extends Controller
         }
 
         $typeLabel = 'Promoter';
-        return back()->with('status', "✅ {$validated['external_name']} enrolled as {$typeLabel} for {$brand->name} at {$validated['assigned_location']}.");
+
+        return back()->with('status', " {$validated['external_name']} enrolled as {$typeLabel} for {$brand->name} at {$validated['assigned_location']}.");
     }
 
     /**
@@ -2898,15 +2951,15 @@ class BrandsPlatformController extends Controller
         }
 
         $validated = $request->validate([
-            'assigned_location'         => ['required', 'string', 'max:255'],
-            'assigned_address'          => ['nullable', 'string', 'max:255'],
-            'assigned_latitude'         => ['nullable', 'numeric', 'between:-90,90'],
-            'assigned_longitude'        => ['nullable', 'numeric', 'between:-180,180'],
-            'shift_start_time'          => ['nullable', 'string', 'max:10'],
-            'shift_end_time'            => ['nullable', 'string', 'max:10'],
-            'grace_period_minutes'      => ['nullable', 'integer', 'min:0', 'max:120'],
+            'assigned_location' => ['required', 'string', 'max:255'],
+            'assigned_address' => ['nullable', 'string', 'max:255'],
+            'assigned_latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'assigned_longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'shift_start_time' => ['nullable', 'string', 'max:10'],
+            'shift_end_time' => ['nullable', 'string', 'max:10'],
+            'grace_period_minutes' => ['nullable', 'integer', 'min:0', 'max:120'],
             'lateness_deduction_amount' => ['nullable', 'numeric', 'min:0'],
-            'venue_changed_reason'      => ['nullable', 'string', 'max:255'],
+            'venue_changed_reason' => ['nullable', 'string', 'max:255'],
         ]);
 
         $venue = $this->resolveVenueCoordinates(
@@ -2918,20 +2971,20 @@ class BrandsPlatformController extends Controller
 
         $newAssignment = $assignment->changeVenueTo(
             venueData: [
-                'assigned_location'         => $venue['location'],
-                'assigned_address'          => $venue['address'],
-                'assigned_latitude'         => $venue['latitude'],
-                'assigned_longitude'        => $venue['longitude'],
-                'shift_start_time'          => $validated['shift_start_time'] ?? $assignment->shift_start_time,
-                'shift_end_time'            => $validated['shift_end_time'] ?? $assignment->shift_end_time,
-                'grace_period_minutes'      => isset($validated['grace_period_minutes']) ? (int) $validated['grace_period_minutes'] : $assignment->grace_period_minutes,
+                'assigned_location' => $venue['location'],
+                'assigned_address' => $venue['address'],
+                'assigned_latitude' => $venue['latitude'],
+                'assigned_longitude' => $venue['longitude'],
+                'shift_start_time' => $validated['shift_start_time'] ?? $assignment->shift_start_time,
+                'shift_end_time' => $validated['shift_end_time'] ?? $assignment->shift_end_time,
+                'grace_period_minutes' => isset($validated['grace_period_minutes']) ? (int) $validated['grace_period_minutes'] : $assignment->grace_period_minutes,
                 'lateness_deduction_amount' => isset($validated['lateness_deduction_amount']) ? (float) $validated['lateness_deduction_amount'] : $assignment->lateness_deduction_amount,
             ],
             reason: $validated['venue_changed_reason'] ?? 'Venue updated',
             changedByUserId: $request->user()->id,
         );
 
-        return back()->with('status', "📍 Venue updated to {$validated['assigned_location']} for {$assignment->display_name}. Previous venue archived in location history.");
+        return back()->with('status', " Venue updated to {$validated['assigned_location']} for {$assignment->display_name}. Previous venue archived in location history.");
     }
 
     /**
@@ -2951,23 +3004,23 @@ class BrandsPlatformController extends Controller
                 } else {
                     // Manual enrollees matched by external_phone since they have no user_id
                     $q->where('external_phone', $assignment->external_phone)
-                      ->whereNull('user_id');
+                        ->whereNull('user_id');
                 }
             })
             ->with('assigner:id,name')
             ->orderBy('venue_assigned_at')
             ->get()
             ->map(fn ($a) => [
-                'id'                => $a->id,
-                'venue'             => $a->assigned_location,
-                'address'           => $a->assigned_address,
-                'lat'               => $a->assigned_latitude,
-                'lng'               => $a->assigned_longitude,
-                'shift'             => $a->shift_start_time . ' – ' . $a->shift_end_time,
-                'assigned_at'       => $a->venue_assigned_at?->format('d M Y, h:i A') ?? $a->created_at->format('d M Y, h:i A'),
-                'is_current'        => (bool) $a->is_current_venue,
-                'changed_reason'    => $a->venue_changed_reason,
-                'assigned_by'       => $a->assigner?->name ?? 'System',
+                'id' => $a->id,
+                'venue' => $a->assigned_location,
+                'address' => $a->assigned_address,
+                'lat' => $a->assigned_latitude,
+                'lng' => $a->assigned_longitude,
+                'shift' => $a->shift_start_time.' – '.$a->shift_end_time,
+                'assigned_at' => $a->venue_assigned_at?->format('d M Y, h:i A') ?? $a->created_at->format('d M Y, h:i A'),
+                'is_current' => (bool) $a->is_current_venue,
+                'changed_reason' => $a->venue_changed_reason,
+                'assigned_by' => $a->assigner?->name ?? 'System',
             ]);
 
         return response()->json(['history' => $history]);
@@ -2980,8 +3033,10 @@ class BrandsPlatformController extends Controller
     {
         $brand = $this->resolveBrand($brand);
         $this->guardCanManageTeam($request->user(), $brand);
+        abort_unless((int) $assignment->brand_id === (int) $brand->id, 404);
 
         $assignment->update(['is_active' => false]);
+
         return back()->with('status', 'Staff brand access revoked.');
     }
 
@@ -3000,27 +3055,26 @@ class BrandsPlatformController extends Controller
         }
 
         $validated = $request->validate([
-            'shift_start_time'          => ['required', 'string', 'max:10'],
-            'shift_end_time'            => ['required', 'string', 'max:10'],
-            'grace_period_minutes'      => ['nullable', 'integer', 'min:0', 'max:120'],
+            'shift_start_time' => ['required', 'string', 'max:10'],
+            'shift_end_time' => ['required', 'string', 'max:10'],
+            'grace_period_minutes' => ['nullable', 'integer', 'min:0', 'max:120'],
             'lateness_deduction_amount' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $assignment->update([
-            'shift_start_time'          => $validated['shift_start_time'],
-            'shift_end_time'            => $validated['shift_end_time'],
-            'grace_period_minutes'      => isset($validated['grace_period_minutes']) ? (int) $validated['grace_period_minutes'] : $assignment->grace_period_minutes,
+            'shift_start_time' => $validated['shift_start_time'],
+            'shift_end_time' => $validated['shift_end_time'],
+            'grace_period_minutes' => isset($validated['grace_period_minutes']) ? (int) $validated['grace_period_minutes'] : $assignment->grace_period_minutes,
             'lateness_deduction_amount' => isset($validated['lateness_deduction_amount']) ? (float) $validated['lateness_deduction_amount'] : $assignment->lateness_deduction_amount,
         ]);
 
-        return back()->with('status', "⏱ Shift updated for {$assignment->display_name}: {$validated['shift_start_time']} – {$validated['shift_end_time']} (grace: " . ($validated['grace_period_minutes'] ?? $assignment->grace_period_minutes) . "m).");
+        return back()->with('status', " Shift updated for {$assignment->display_name}: {$validated['shift_start_time']} – {$validated['shift_end_time']} (grace: ".($validated['grace_period_minutes'] ?? $assignment->grace_period_minutes).'m).');
     }
 
     public function clockIn(Request $request, string $brand): RedirectResponse
     {
         $brand = $this->resolveBrand($brand);
         $this->guardBrandAccess($request->user(), $brand);
-
 
         $validated = $request->validate([
             'latitude' => ['required', 'numeric', 'between:-90,90'],
@@ -3067,8 +3121,9 @@ class BrandsPlatformController extends Controller
 
         if ($distance > $allowedRadiusMeters) {
             $diffRound = round($distance, 1);
+
             return back()->withErrors([
-                'geofence' => "Geofence Enforcement Error: You are {$diffRound} meters away from your assigned venue '{$assignedName}'. You must be within 300 meters to clock in."
+                'geofence' => "Geofence Enforcement Error: You are {$diffRound} meters away from your assigned venue '{$assignedName}'. You must be within 300 meters to clock in.",
             ]);
         }
 
@@ -3079,7 +3134,7 @@ class BrandsPlatformController extends Controller
         $staffRole = BrandStaffAssignment::ROLE_PROMOTER;
 
         $now = now();
-        $todayShiftStart = Carbon::parse($now->toDateString() . ' ' . $startTimeStr);
+        $todayShiftStart = Carbon::parse($now->toDateString().' '.$startTimeStr);
         $graceDeadline = (clone $todayShiftStart)->addMinutes($graceMins);
 
         $isLate = false;
@@ -3119,11 +3174,12 @@ class BrandsPlatformController extends Controller
         ]);
 
         if ($isLate) {
-            $msg = "Clock-In Recorded for {$assignedName} (Distance: " . round($distance, 1) . "m). WARNING: You clocked in {$latenessMinutes} minutes late (Grace period: {$graceMins}m). A lateness deduction of GHS " . number_format($appliedDeduction, 2) . " has been logged.";
+            $msg = "Clock-In Recorded for {$assignedName} (Distance: ".round($distance, 1)."m). WARNING: You clocked in {$latenessMinutes} minutes late (Grace period: {$graceMins}m). A lateness deduction of GHS ".number_format($appliedDeduction, 2).' has been logged.';
+
             return back()->with('status_warning', $msg);
         }
 
-        return back()->with('status', "On-Time Geofenced Clock-In Verified for {$assignedName}! (Distance: " . round($distance, 1) . "m). Have a great shift!");
+        return back()->with('status', "On-Time Geofenced Clock-In Verified for {$assignedName}! (Distance: ".round($distance, 1).'m). Have a great shift!');
     }
 
     public function clockOut(Request $request, string $brand): RedirectResponse
@@ -3157,8 +3213,9 @@ class BrandsPlatformController extends Controller
         $distance = $this->haversineDistance($userLat, $userLng, $assignedLat, $assignedLng);
         if ($distance > 300.0) {
             $diffRound = round($distance, 1);
+
             return back()->withErrors([
-                'geofence' => "Geofence Enforcement Error: You are {$diffRound} meters away from your assigned venue '{$attendance->assigned_location_name}'. You must be within 300 meters to clock out."
+                'geofence' => "Geofence Enforcement Error: You are {$diffRound} meters away from your assigned venue '{$attendance->assigned_location_name}'. You must be within 300 meters to clock out.",
             ]);
         }
 
@@ -3343,6 +3400,7 @@ class BrandsPlatformController extends Controller
              cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
              sin($dLon / 2) * sin($dLon / 2);
         $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+
         return $earthRadius * $c;
     }
 

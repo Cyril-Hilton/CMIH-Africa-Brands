@@ -5,6 +5,8 @@
 @push('head')
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        @media print { .big-side, .big-nav, .filter-btn-export, button, form, nav {display:none!important} .agency-tab-content {display:none!important} .agency-tab-content.active {display:block!important} body,main,.big-main {background:#fff!important;color:#111!important;margin:0!important;padding:0!important;width:100%!important} table{width:100%!important;font-size:10pt} tr{break-inside:avoid} thead{display:table-header-group} }
+
         .agency-tab-content { display: none; }
         .agency-tab-content.active { display: block; animation: fadeIn 0.25s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
@@ -264,6 +266,29 @@
             padding: 12px 14px;
             backdrop-filter: blur(10px);
         }
+        /* Keep wide reports inside their own scroll area, not the phone viewport. */
+        #view-agency .big-shell { grid-template-columns:245px minmax(0,1fr); }
+        #view-agency .big-main, #view-agency .agency-tab-content,
+        #view-agency .panel, #view-agency .table-wrap { min-width:0; max-width:100%; }
+        #view-agency .agency-tab-content > [style*="grid-template-columns"] { min-width:0; }
+        #view-agency .agency-tab-content > [style*="grid-template-columns"] > * { min-width:0; }
+        #view-agency .table-wrap { overflow-x:auto; }
+        #view-agency .agency-chart-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+        #view-agency .agency-chart-card, #view-agency .agency-chart-frame { min-width:0; max-width:100%; }
+        #view-agency .big-top > * { min-width:0; }
+        @media (max-width:650px) {
+            #view-agency .big-main { padding:16px; }
+            #view-agency .agency-chart-grid { grid-template-columns:minmax(0,1fr); }
+            #view-agency .agency-tab-content > [style*="grid-template-columns"],
+            #view-agency .agency-tab-content [style*="grid-template-columns:180px"],
+            #view-agency .agency-tab-content [style*="grid-template-columns: 380px"] { grid-template-columns:minmax(0,1fr)!important; }
+            #view-agency .agency-tab-content > [style*="repeat(6"],
+            #view-agency .agency-tab-content > [style*="repeat(4"] { grid-template-columns:repeat(2,minmax(0,1fr))!important; }
+            #view-agency .big-top > div, #view-agency .panel-head { flex-wrap:wrap; }
+            #view-agency .filter-select { min-width:0!important; max-width:100%; }
+            #view-agency .agency-chart-card { padding:12px; }
+            #view-agency .publication-list article > div { min-width:0; overflow-wrap:anywhere; }
+        }
         @media (max-width: 1100px) {
             .agency-chart-grid,
             .activation-step-grid,
@@ -321,7 +346,7 @@
             <!-- PORTFOLIO -->
             <div class="big-nav-label">PORTFOLIO</div>
             <a href="#overview" onclick="switchAgencyTab('overview'); return false;" id="nav-overview" class="big-nav active" style="text-decoration:none; display:block; text-align:left;">Overview</a>
-            <a href="#activation-setup" onclick="switchAgencyTab('activation-setup'); return false;" id="nav-activation-setup" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Activation Setup</a>
+            @if($canEditBrand)<a href="#activation-setup" onclick="switchAgencyTab('activation-setup'); return false;" id="nav-activation-setup" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Activation Setup</a>@endif
             <a href="#brands" onclick="switchAgencyTab('brands'); return false;" id="nav-brands" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Brands</a>
             <a href="#staff-db" onclick="switchAgencyTab('staff-db'); return false;" id="nav-staff-db" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Staff Database</a>
 
@@ -331,7 +356,7 @@
             <a href="#insights" onclick="switchAgencyTab('insights'); return false;" id="nav-insights" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Consumer Insights</a>
             <a href="#reports" onclick="switchAgencyTab('reports'); return false;" id="nav-reports" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Reports</a>
             <a href="#publications" onclick="switchAgencyTab('publications'); return false;" id="nav-publications" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Publications</a>
-            <a href="#enrollment" onclick="switchAgencyTab('enrollment'); return false;" id="nav-enrollment" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Team Enrollment</a>
+            @if($canManageBrandTeam)<a href="#enrollment" onclick="switchAgencyTab('enrollment'); return false;" id="nav-enrollment" class="big-nav" style="text-decoration:none; display:block; text-align:left;">Team Enrollment</a>@endif
 
             <!-- OTHER WORKSPACES -->
             @if(auth()->user()?->isCvoOrSuperAdmin() || auth()->user()?->isLineManager() || auth()->user()?->access_role === 'admin')
@@ -387,12 +412,11 @@
                                 <option value="{{ route('brands-platform.agency', [$brandKey, 'activation_id' => $optionActivation->id]).'#overview' }}" @selected($selectedActivationId === $optionActivation->id)>{{ $optionActivation->name }}</option>
                             @endforeach
                         </select>
-                        <select class="filter-select">
-                            <option value="30">Last 30 days</option>
-                            <option value="7">Last 7 days</option>
-                            <option value="90">Last 90 days</option>
+                        <select class="filter-select" aria-label="Reporting Period" onchange="const d=new Date();d.setDate(d.getDate()-Number(this.value||0));window.location.href='{{ route('brands-platform.agency', $brandKey) }}?'+@js($selectedActivationId ? 'activation_id='.(int)$selectedActivationId.'&' : '')+'from='+(this.value?d.toISOString().slice(0,10):'')+window.location.hash;">
+                            <option value="">{{ request('from') ? 'Custom Date Range' : 'All Dates' }}</option>
+                            <option value="7">Last 7 Days</option><option value="30">Last 30 Days</option><option value="90">Last 90 Days</option>
                         </select>
-                        <button class="filter-btn-export" onclick="window.print()">Export Current View</button>
+                        @if($canExportReports)<button class="filter-btn-export" onclick="window.print()">Print / Save PDF</button>@endif
                     </div>
                 </div>
 
@@ -445,7 +469,7 @@
                                 <small style="color:#8b747a;">Promoter Portal field and scanner activity</small>
                             </div>
                         </div>
-                        <table class="leader" style="width:100%; margin-top:15px; color:#171115;">
+                        <div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable report table"><table class="leader" style="width:100%; margin-top:15px; color:#171115;">
                             <thead>
                                 <tr style="border-bottom: 2px solid #e4dadd;">
                                     <th style="text-align:left; padding:8px 4px;">#</th>
@@ -468,7 +492,7 @@
                                     </tr>
                                 @endforelse
                             </tbody>
-                        </table>
+                        </table></div>
                     </div>
                 </div>
 
@@ -498,7 +522,7 @@
                             <small style="color:#8b747a;">{{ $portfolioBrandSummaries->count() }} active brands from live records</small>
                         </div>
                     </div>
-                    <table class="leader" style="width:100%; margin-top:15px; color:#171115;">
+                    <div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable report table"><table class="leader" style="width:100%; margin-top:15px; color:#171115;">
                         <thead>
                             <tr style="border-bottom: 2px solid #e4dadd; font-size:10px; color:#8b747a;">
                                 <th style="text-align:left; padding:10px 6px;">BRAND</th>
@@ -529,7 +553,7 @@
                                 </tr>
                             @endforelse
                         </tbody>
-                    </table>
+                    </table></div>
                 </div>
 
                 @if(false)
@@ -538,7 +562,7 @@
                     <div class="panel" style="grid-column: 1 / -1;">
                         <div class="panel-head" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
                             <div>
-                                <h3 style="color:#171115; font-size:18px; font-weight:900; margin:0;">🌐 Live Staff Attendance & Field GPS Map</h3>
+                                <h3 style="color:#171115; font-size:18px; font-weight:900; margin:0;"><x-ui-icon name="spark" /> Live Staff Attendance & Field GPS Map</h3>
                                 <small style="color:#8b747a;">Real-time 300m geofenced location tracking, shift punctuality, and staff map plotting</small>
                             </div>
                             <div style="display:flex; gap:10px;">
@@ -570,11 +594,11 @@
                                             </div>
                                             <div style="flex:1; min-width:0;">
                                                 <strong style="display:block; font-size:12px; color:#171115;">{{ $att->user?->name ?: 'Staff Member' }}</strong>
-                                                <small style="display:block; color:#8b747a; font-size:10px;">📍 {{ Str::limit($att->assigned_location_name ?: 'Venue', 25) }}</small>
+                                                <small style="display:block; color:#8b747a; font-size:10px;"><x-ui-icon name="pin" /> {{ Str::limit($att->assigned_location_name ?: 'Venue', 25) }}</small>
                                                 @if($att->is_late)
-                                                    <span style="display:inline-block; color:#ff1020; font-size:9px; font-weight:800; margin-top:2px;">🚨 LATE ({{ $att->lateness_minutes }}m) &bull; -GHS {{ $att->deduction_amount }}</span>
+                                                    <span style="display:inline-block; color:#ff1020; font-size:9px; font-weight:800; margin-top:2px;"><x-ui-icon name="spark" /> LATE ({{ $att->lateness_minutes }}m) &bull; -GHS {{ $att->deduction_amount }}</span>
                                                 @else
-                                                    <span style="display:inline-block; color:#0aa777; font-size:9px; font-weight:800; margin-top:2px;">✅ ON-TIME CLOCK-IN</span>
+                                                    <span style="display:inline-block; color:#0aa777; font-size:9px; font-weight:800; margin-top:2px;"><x-ui-icon name="check" /> ON-TIME CLOCK-IN</span>
                                                 @endif
                                             </div>
                                         </div>
@@ -660,7 +684,7 @@
             <!-- ========================================================================= -->
             <!-- TAB 2: ACTIVATION SETUP (AGENCY OWNED) -->
             <!-- ========================================================================= -->
-            <div id="tab-activation-setup" class="agency-tab-content">
+            @if($canEditBrand)<div id="tab-activation-setup" class="agency-tab-content">
                 @php
                     $plan = $activation?->activation_plan ?? [];
                     $planLocations = collect($plan['locations'] ?? $activation?->locations ?? [])->values();
@@ -842,7 +866,7 @@
                         <button type="submit" class="btn red">Save Activation Setup</button>
                     </div>
                 </form>
-            </div>
+            </div>@endif
 
 
             <!-- ========================================================================= -->
@@ -878,7 +902,7 @@
                             <small style="color:#8b747a;">Brand Account Manager and CMIH collaborators.</small>
                         </div>
                     </div>
-                    <table class="leader" style="width:100%; margin-top:15px; color:#171115;">
+                    <div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable report table"><table class="leader" style="width:100%; margin-top:15px; color:#171115;">
                         <thead><tr><th>Name</th><th>Email</th><th>Access</th><th>Assigned By</th><th style="text-align:right;">Status</th></tr></thead>
                         <tbody>
                         @forelse($agencyStaffRows as $assignment)
@@ -893,7 +917,7 @@
                             <tr><td colspan="5" style="padding:20px; text-align:center; color:#8b747a;">No agency staff match this filter.</td></tr>
                         @endforelse
                         </tbody>
-                    </table>
+                    </table></div>
                 </div>
 
                 <div class="panel">
@@ -904,7 +928,7 @@
                         </div>
                         <span class="chip ok">{{ $activationWorkStatus['label'] }}</span>
                     </div>
-                    <table class="leader" style="width:100%; margin-top:15px; color:#171115;">
+                    <div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable report table"><table class="leader" style="width:100%; margin-top:15px; color:#171115;">
                         <thead><tr><th>Name</th><th>Email / Phone</th><th>Venue</th><th>Shift</th><th>Today</th><th style="text-align:right;">Status</th></tr></thead>
                         <tbody>
                         @forelse($promoterWorkRows as $row)
@@ -924,7 +948,7 @@
                             <tr><td colspan="6" style="padding:20px; text-align:center; color:#8b747a;">No promoters match this filter.</td></tr>
                         @endforelse
                         </tbody>
-                    </table>
+                    </table></div>
                 </div>
             </div>
 
@@ -945,10 +969,11 @@
                         <select class="filter-select">
                             <option value="">All Activations</option>
                         </select>
-                        <select class="filter-select">
-                            <option value="30">Last 30 days</option>
+                        <select class="filter-select" aria-label="Reporting Period" onchange="const d=new Date();d.setDate(d.getDate()-Number(this.value||0));window.location.href='{{ route('brands-platform.agency', $brandKey) }}?'+@js($selectedActivationId ? 'activation_id='.(int)$selectedActivationId.'&' : '')+'from='+(this.value?d.toISOString().slice(0,10):'')+window.location.hash;">
+                            <option value="">{{ request('from') ? 'Custom Date Range' : 'All Dates' }}</option>
+                            <option value="7">Last 7 Days</option><option value="30">Last 30 Days</option><option value="90">Last 90 Days</option>
                         </select>
-                        <button class="filter-btn-export" onclick="window.print()">Export Current View</button>
+                        @if($canExportReports)<button class="filter-btn-export" onclick="window.print()">Print / Save PDF</button>@endif
                     </div>
                 </div>
 
@@ -978,7 +1003,7 @@
                             <small style="color:#8b747a;">Real brand, activation, assignment, consumer and field activity totals.</small>
                         </div>
                     </div>
-                    <table class="leader" style="width:100%; margin-top:15px; color:#171115;">
+                    <div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable report table"><table class="leader" style="width:100%; margin-top:15px; color:#171115;">
                         <thead>
                             <tr style="border-bottom: 2px solid #e4dadd; font-size:10px; color:#8b747a;">
                                 <th style="text-align:left; padding:10px 6px;">BRAND</th>
@@ -1011,7 +1036,7 @@
                                 </tr>
                             @endforelse
                         </tbody>
-                    </table>
+                    </table></div>
                 </div>
             </div>
 
@@ -1032,10 +1057,11 @@
                         <select class="filter-select">
                             <option value="">All Activations</option>
                         </select>
-                        <select class="filter-select">
-                            <option value="30">Last 30 days</option>
+                        <select class="filter-select" aria-label="Reporting Period" onchange="const d=new Date();d.setDate(d.getDate()-Number(this.value||0));window.location.href='{{ route('brands-platform.agency', $brandKey) }}?'+@js($selectedActivationId ? 'activation_id='.(int)$selectedActivationId.'&' : '')+'from='+(this.value?d.toISOString().slice(0,10):'')+window.location.hash;">
+                            <option value="">{{ request('from') ? 'Custom Date Range' : 'All Dates' }}</option>
+                            <option value="7">Last 7 Days</option><option value="30">Last 30 Days</option><option value="90">Last 90 Days</option>
                         </select>
-                        <button class="filter-btn-export" onclick="window.print()">Export Current View</button>
+                        @if($canExportReports)<button class="filter-btn-export" onclick="window.print()">Print / Save PDF</button>@endif
                     </div>
                 </div>
 
@@ -1073,7 +1099,7 @@
                             <small style="color:#8b747a;">Filter uses the selected brand and activation status above</small>
                         </div>
                     </div>
-                    <table class="leader" style="width:100%; margin-top:15px; color:#171115;">
+                    <div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable report table"><table class="leader" style="width:100%; margin-top:15px; color:#171115;">
                         <thead>
                             <tr style="border-bottom: 2px solid #e4dadd; font-size:10px; color:#8b747a;">
                                 <th style="text-align:left; padding:10px 6px;">PROMOTER</th>
@@ -1107,7 +1133,7 @@
                                 </tr>
                             @endforelse
                         </tbody>
-                    </table>
+                    </table></div>
                 </div>
             </div>
 
@@ -1129,10 +1155,11 @@
                         <select class="filter-select">
                             <option value="">All Activations</option>
                         </select>
-                        <select class="filter-select">
-                            <option value="30">Last 30 days</option>
+                        <select class="filter-select" aria-label="Reporting Period" onchange="const d=new Date();d.setDate(d.getDate()-Number(this.value||0));window.location.href='{{ route('brands-platform.agency', $brandKey) }}?'+@js($selectedActivationId ? 'activation_id='.(int)$selectedActivationId.'&' : '')+'from='+(this.value?d.toISOString().slice(0,10):'')+window.location.hash;">
+                            <option value="">{{ request('from') ? 'Custom Date Range' : 'All Dates' }}</option>
+                            <option value="7">Last 7 Days</option><option value="30">Last 30 Days</option><option value="90">Last 90 Days</option>
                         </select>
-                        <button class="filter-btn-export" onclick="window.print()">Export Current View</button>
+                        @if($canExportReports)<button class="filter-btn-export" onclick="window.print()">Print / Save PDF</button>@endif
                     </div>
                 </div>
 
@@ -1159,7 +1186,7 @@
                             <small style="color:#8b747a;">Redemptions, sales or reward activity by outlet</small>
                         </div>
                     </div>
-                    <table class="leader" style="width:100%; margin-top:15px; color:#171115;">
+                    <div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable report table"><table class="leader" style="width:100%; margin-top:15px; color:#171115;">
                         <thead>
                             <tr style="border-bottom: 2px solid #e4dadd; font-size:10px; color:#8b747a;">
                                 <th style="text-align:left; padding:10px 6px;">RETAILER / PARTNER</th>
@@ -1188,7 +1215,7 @@
                                 </tr>
                             @endforelse
                         </tbody>
-                    </table>
+                    </table></div>
                 </div>
             </div>
             @endif
@@ -1210,10 +1237,11 @@
                         <select class="filter-select">
                             <option value="">All Activations</option>
                         </select>
-                        <select class="filter-select">
-                            <option value="30">Last 30 days</option>
+                        <select class="filter-select" aria-label="Reporting Period" onchange="const d=new Date();d.setDate(d.getDate()-Number(this.value||0));window.location.href='{{ route('brands-platform.agency', $brandKey) }}?'+@js($selectedActivationId ? 'activation_id='.(int)$selectedActivationId.'&' : '')+'from='+(this.value?d.toISOString().slice(0,10):'')+window.location.hash;">
+                            <option value="">{{ request('from') ? 'Custom Date Range' : 'All Dates' }}</option>
+                            <option value="7">Last 7 Days</option><option value="30">Last 30 Days</option><option value="90">Last 90 Days</option>
                         </select>
-                        <button class="filter-btn-export" onclick="window.print()">Export Current View</button>
+                        @if($canExportReports)<button class="filter-btn-export" onclick="window.print()">Print / Save PDF</button>@endif
                     </div>
                 </div>
 
@@ -1317,19 +1345,12 @@
                         <div class="eyebrow" style="color:#ff1020;">AGENCY COMMAND CENTRE</div>
                         <h1 style="color:#171115; font-size:32px; font-weight:900; margin:4px 0 0;">Reports</h1>
                     </div>
-                    <div style="display:flex; gap:8px; align-items:center;">
-                        <select class="filter-select">
-                            <option value="">All Brands</option>
-                        </select>
-                        <select class="filter-select">
-                            <option value="">All Activations</option>
-                        </select>
-                        <select class="filter-select">
-                            <option value="30">Last 30 days</option>
-                        </select>
-                        <button class="filter-btn-export" onclick="window.print()">Export Current View</button>
-                        <button class="btn-custom-report">Build Custom Report</button>
-                    </div>
+                    <form method="GET" action="{{ route('brands-platform.agency',$brandKey) }}#reports" style="display:flex;gap:8px;align-items:end;flex-wrap:wrap">
+                        <label>Activation<select class="filter-select" name="activation_id">@foreach($brandActivations as $item)<option value="{{ $item->id }}" @selected($activation?->id===$item->id)>{{ $item->name }}</option>@endforeach</select></label>
+                        <label>From<input type="date" name="from" value="{{ request('from') }}"></label><label>To<input type="date" name="to" value="{{ request('to') }}"></label>
+                        <button class="btn-custom-report">Apply Report Filters</button>
+                        @if($canExportReports)<button type="button" class="filter-btn-export" onclick="window.print()">Print / Save PDF</button>@endif
+                    </form>
                 </div>
 
                 <div style="margin:16px 0 8px;">
@@ -1337,134 +1358,9 @@
                     <h2 style="margin:2px 0 16px; font-size:24px; font-weight:900; color:#171115;">Campaign Reports</h2>
                 </div>
 
-                <!-- 6 REPORT TYPE CARDS GRID -->
-                <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; margin-bottom:24px;">
-                    <!-- Daily Activation Report -->
-                    <div class="report-card-box">
-                        <div>
-                            <div class="report-icon-badge">D</div>
-                            <h3 style="font-size:16px; font-weight:900; color:#171115; margin:0 0 6px;">Daily Activation Report</h3>
-                            <p style="color:#8b747a; font-size:11px; line-height:1.45; margin:0;">
-                                Daily activation activity, consumers, support-staff productivity, location performance and operational exceptions.
-                            </p>
-                        </div>
-                        <div>
-                            <div style="display:flex; justify-content:space-between; font-size:10px; color:#8b747a; border-top:1px solid #f0e6e9; padding-top:10px; margin-bottom:12px;">
-                                <span>Current-day view</span>
-                                <span>CSV Export</span>
-                            </div>
-                            <div style="display:flex; gap:8px;">
-                                <button style="flex:1; padding:9px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:11px; font-weight:800; cursor:pointer;">Preview</button>
-                                <button style="flex:1; padding:9px; border-radius:8px; border:none; background:#171115; color:#fff; font-size:11px; font-weight:800; cursor:pointer;">Download</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Weekly Performance Report -->
-                    <div class="report-card-box">
-                        <div>
-                            <div class="report-icon-badge">W</div>
-                            <h3 style="font-size:16px; font-weight:900; color:#171115; margin:0 0 6px;">Weekly Performance Report</h3>
-                            <p style="color:#8b747a; font-size:11px; line-height:1.45; margin:0;">
-                                Brand and activation rankings, conversion trends, consumer insights and weekly target performance.
-                            </p>
-                        </div>
-                        <div>
-                            <div style="display:flex; justify-content:space-between; font-size:10px; color:#8b747a; border-top:1px solid #f0e6e9; padding-top:10px; margin-bottom:12px;">
-                                <span>7-day summary</span>
-                                <span>CSV Export</span>
-                            </div>
-                            <div style="display:flex; gap:8px;">
-                                <button style="flex:1; padding:9px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:11px; font-weight:800; cursor:pointer;">Preview</button>
-                                <button style="flex:1; padding:9px; border-radius:8px; border:none; background:#171115; color:#fff; font-size:11px; font-weight:800; cursor:pointer;">Download</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Retail / Sales Partner Report -->
-                    <div class="report-card-box">
-                        <div>
-                            <div class="report-icon-badge">R</div>
-                            <h3 style="font-size:16px; font-weight:900; color:#171115; margin:0 0 6px;">Retail / Sales Partner Report</h3>
-                            <p style="color:#8b747a; font-size:11px; line-height:1.45; margin:0;">
-                                Retailer, selected-bar and event-partner activity including redemptions, sales, rewards and invalid attempts.
-                            </p>
-                        </div>
-                        <div>
-                            <div style="display:flex; justify-content:space-between; font-size:10px; color:#8b747a; border-top:1px solid #f0e6e9; padding-top:10px; margin-bottom:12px;">
-                                <span>Live partner data</span>
-                                <span>CSV</span>
-                            </div>
-                            <div style="display:flex; gap:8px;">
-                                <button style="flex:1; padding:9px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:11px; font-weight:800; cursor:pointer;">Preview</button>
-                                <button style="flex:1; padding:9px; border-radius:8px; border:none; background:#171115; color:#fff; font-size:11px; font-weight:800; cursor:pointer;">Download</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Promoter Performance Report -->
-                    <div class="report-card-box">
-                        <div>
-                            <div class="report-icon-badge">P</div>
-                            <h3 style="font-size:16px; font-weight:900; color:#171115; margin:0 0 6px;">Promoter Performance Report</h3>
-                            <p style="color:#8b747a; font-size:11px; line-height:1.45; margin:0;">
-                                Individual and team rankings, conversion, attendance, productivity and activation assignment performance.
-                            </p>
-                        </div>
-                        <div>
-                            <div style="display:flex; justify-content:space-between; font-size:10px; color:#8b747a; border-top:1px solid #f0e6e9; padding-top:10px; margin-bottom:12px;">
-                                <span>Updated live</span>
-                                <span>CSV</span>
-                            </div>
-                            <div style="display:flex; gap:8px;">
-                                <button style="flex:1; padding:9px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:11px; font-weight:800; cursor:pointer;">Preview</button>
-                                <button style="flex:1; padding:9px; border-radius:8px; border:none; background:#171115; color:#fff; font-size:11px; font-weight:800; cursor:pointer;">Download</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Consumer Insight Report -->
-                    <div class="report-card-box">
-                        <div>
-                            <div class="report-icon-badge">I</div>
-                            <h3 style="font-size:16px; font-weight:900; color:#171115; margin:0 0 6px;">Consumer Insight Report</h3>
-                            <p style="color:#8b747a; font-size:11px; line-height:1.45; margin:0;">
-                                Demographics, gender, age groupings, current choice, acquisition audience, preferred outlet and purchase / conversion intent.
-                            </p>
-                        </div>
-                        <div>
-                            <div style="display:flex; justify-content:space-between; font-size:10px; color:#8b747a; border-top:1px solid #f0e6e9; padding-top:10px; margin-bottom:12px;">
-                                <span>Verified consumers</span>
-                                <span>CSV Export</span>
-                            </div>
-                            <div style="display:flex; gap:8px;">
-                                <button onclick="switchAgencyTab('insights')" style="flex:1; padding:9px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:11px; font-weight:800; cursor:pointer;">Open Insights</button>
-                                <button style="flex:1; padding:9px; border-radius:8px; border:none; background:#171115; color:#fff; font-size:11px; font-weight:800; cursor:pointer;">Download</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Campaign Closeout Report -->
-                    <div class="report-card-box">
-                        <div>
-                            <div class="report-icon-badge">C</div>
-                            <h3 style="font-size:16px; font-weight:900; color:#171115; margin:0 0 6px;">Campaign Closeout Report</h3>
-                            <p style="color:#8b747a; font-size:11px; line-height:1.45; margin:0;">
-                                Complete activation funnel, database growth, retail / sales attribution, consumer profile, performance summary and final recommendations.
-                            </p>
-                        </div>
-                        <div>
-                            <div style="display:flex; justify-content:space-between; font-size:10px; color:#8b747a; border-top:1px solid #f0e6e9; padding-top:10px; margin-bottom:12px;">
-                                <span>Close / Archive</span>
-                                <span>CSV Export</span>
-                            </div>
-                            <div style="display:flex; gap:8px;">
-                                <button style="flex:1; padding:9px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:11px; font-weight:800; cursor:pointer;">Preview</button>
-                                <button style="flex:1; padding:9px; border-radius:8px; border:none; background:#171115; color:#fff; font-size:11px; font-weight:800; cursor:pointer;">Download</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <div class="panel" style="overflow-x:auto"><table class="data-table" style="width:100%"><thead><tr><th>Report</th><th>Included Data</th><th>Actions</th></tr></thead><tbody>
+                @foreach(['daily'=>['Daily Activity','Today’s recorded field activity.'],'weekly'=>['Weekly Activity','Recorded field activity for this week.'],'retail'=>['Retail Activity','Recorded activity from retail staff.'],'promoter'=>['Promoter Activity','Recorded activity from promoters.'],'consumer-insights'=>['Consumer Insights','Verified consumer details and responses.'],'closeout'=>['Full Activity Ledger','All recorded activity for the selected activation and filters.']] as $type=>[$title,$description])<tr><th scope="row">{{ $title }}</th><td>{{ $description }}</td><td>@if($canExportReports)<a class="btn" href="{{ route('brands-platform.export',['brand'=>$brandKey,'type'=>$type,...request()->only('from','to','status','location','activity_type'),'activation_id'=>$activation?->id]) }}">Download Excel</a>@else<span>Export Permission Required</span>@endif</td></tr>@endforeach
+                </tbody></table></div>
             </div>
 
 
@@ -1489,7 +1385,7 @@
                                 <small style="color:#8b747a;">Published items show immediately on the public Publications page.</small>
                             </div>
                         </div>
-                        <form method="POST" action="{{ route('brands-platform.agency.publications.store', $brandKey) }}" enctype="multipart/form-data" style="display:flex; flex-direction:column; gap:12px;">
+                        @if($canEditBrand)<form method="POST" action="{{ route('brands-platform.agency.publications.store', $brandKey) }}" enctype="multipart/form-data" style="display:flex; flex-direction:column; gap:12px;">
                             @csrf
                             <input type="hidden" name="brand_activation_id" value="{{ $activation?->id }}">
                             <div class="field">
@@ -1528,7 +1424,7 @@
                                 <input type="file" name="image" accept="image/*">
                             </div>
                             <button type="submit" class="btn-custom-report" style="width:100%; padding:12px;">Post Publication</button>
-                        </form>
+                        </form>@else<p>You have view-only access. Ask your brand manager to publish an update.</p>@endif
                     </div>
 
                     <div class="panel">
@@ -1570,20 +1466,20 @@
             <!-- ========================================================================= -->
             <!-- TAB 8: STAFF ENROLLMENT (STAFF ENROLLMENT CENTRE) -->
             <!-- ========================================================================= -->
-            <div id="tab-enrollment" class="agency-tab-content">
+            @if($canManageBrandTeam)<div id="tab-enrollment" class="agency-tab-content">
                 <div id="team-privileges" class="dash-grid" style="margin-top:15px;">
                     <div class="panel" style="grid-column: 1 / -1; overflow:visible;">
                         <div class="panel-head" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
                             <div>
-                                <h3 style="color:#171115; font-size:18px; font-weight:900; margin:0;">👥 Staff Enrollment Centre</h3>
+                                <h3 style="color:#171115; font-size:18px; font-weight:900; margin:0;"><x-ui-icon name="users" /> Staff Enrollment Centre</h3>
                                 <small style="color:#8b747a;">Import CMIH staff as agency collaborators, or manually enrol promoters for field activation work and QR scanning.</small>
                             </div>
                             <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                                 <span style="background:#0055d4; color:#fff; font-weight:800; padding:5px 12px; border-radius:20px; font-size:11px;">
-                                    🏢 {{ $enrolledAgencyStaff->count() }} Agency Staff
+                                    <x-ui-icon name="building" /> {{ $enrolledAgencyStaff->count() }} Agency Staff
                                 </span>
                                 <span style="background:#7c3aed; color:#fff; font-weight:800; padding:5px 12px; border-radius:20px; font-size:11px;">
-                                    🎤 {{ $enrolledPromoters->count() }} Promoters
+                                    <x-ui-icon name="spark" /> {{ $enrolledPromoters->count() }} Promoters
                                 </span>
                                 <span style="display:none; background:#0aa777; color:#fff; font-weight:800; padding:5px 12px; border-radius:20px; font-size:11px;">
                                     {{ $enrolledPromoters->count() }} Promoter Portal Users
@@ -1595,11 +1491,11 @@
                         <div style="display:flex; gap:0; margin-top:20px; border-bottom:2px solid #e4dadd;">
                             <button onclick="switchEnrollTab('cmih')" id="tab-cmih"
                                 style="padding:10px 18px; font-size:12px; font-weight:800; border:none; border-bottom:3px solid #ff1020; background:none; cursor:pointer; color:#171115; margin-bottom:-2px;">
-                                🏢 Import CMIH Staff
+                                <x-ui-icon name="building" /> Import CMIH Staff
                             </button>
                             <button onclick="switchEnrollTab('promoter')" id="tab-promoter"
                                 style="padding:10px 18px; font-size:12px; font-weight:800; border:none; border-bottom:3px solid transparent; background:none; cursor:pointer; color:#8b747a; margin-bottom:-2px;">
-                                🎤 Enrol Promoter
+                                <x-ui-icon name="spark" /> Enrol Promoter
                             </button>
                             @if(false)
                             <button onclick="switchEnrollTab('retail')" id="tab-retail"
@@ -1617,7 +1513,7 @@
                                 <div id="panel-cmih">
                                     <div style="background:#f0f4ff; border:1px solid #c7d7ff; border-radius:12px; padding:16px; margin-bottom:12px;">
                                         <p style="margin:0; font-size:11px; color:#1e40af; font-weight:700;">
-                                            🔗 CMIH Portal API — This list shows internal CMIH staff-portal users only. Agency, supervisor, and brand admin users do not need geofenced clock-in.
+                                            <x-ui-icon name="link" /> CMIH Portal API — This list shows internal CMIH staff-portal users only. Agency, supervisor, and brand admin users do not need geofenced clock-in.
                                         </p>
                                     </div>
                                     <form method="POST" action="{{ route('brands-platform.team.store', $brandKey) }}" style="display:flex; flex-direction:column; gap:12px;">
@@ -1667,7 +1563,7 @@
                                             <input name="notes" placeholder="e.g. Assigned to Accra campaign" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
                                         </div>
                                         <button type="submit" style="background:#0055d4; color:#fff; padding:11px; border-radius:8px; font-size:12px; font-weight:800; border:none; cursor:pointer; width:100%;">
-                                            🏢 Import & Assign CMIH Staff
+                                            <x-ui-icon name="building" /> Import & Assign CMIH Staff
                                         </button>
                                     </form>
                                 </div>
@@ -1676,7 +1572,7 @@
                                 <div id="panel-promoter" style="display:none;">
                                     <div style="background:#f5f0ff; border:1px solid #c4b5fd; border-radius:12px; padding:16px; margin-bottom:12px;">
                                         <p style="margin:0; font-size:11px; color:#5b21b6; font-weight:700;">
-                                            🎤 Manual Enrollment — Promoters, brand advisors, ushers, and floor sales staff not in the CMIH portal.
+                                            <x-ui-icon name="spark" /> Manual Enrollment — Promoters, brand advisors, ushers, and floor sales staff not in the CMIH portal.
                                         </p>
                                     </div>
                                     <form method="POST" action="{{ route('brands-platform.staff.enroll', $brandKey) }}" enctype="multipart/form-data" style="display:flex; flex-direction:column; gap:12px;">
@@ -1764,7 +1660,7 @@
                                             <input name="notes" placeholder="e.g. Works at Accra Mall main entrance" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
                                         </div>
                                         <button type="submit" style="background:#7c3aed; color:#fff; padding:11px; border-radius:8px; font-size:12px; font-weight:800; border:none; cursor:pointer; width:100%;">
-                                            🎤 Enrol Promoter
+                                            <x-ui-icon name="spark" /> Enrol Promoter
                                         </button>
                                     </form>
                                 </div>
@@ -1886,9 +1782,9 @@
                                                 <td style="padding:10px 6px;">
                                                     <div style="display:flex; flex-direction:column; gap:3px;">
                                                         @if($assign->enrollment_source === 'cmih_api')
-                                                            <span style="background:#dbeafe; color:#1e40af; padding:2px 7px; border-radius:10px; font-size:9px; font-weight:800; display:inline-block;">🏢 CMIH API</span>
+                                                            <span style="background:#dbeafe; color:#1e40af; padding:2px 7px; border-radius:10px; font-size:9px; font-weight:800; display:inline-block;"><x-ui-icon name="building" /> CMIH API</span>
                                                         @else
-                                                            <span style="background:#fef3c7; color:#92400e; padding:2px 7px; border-radius:10px; font-size:9px; font-weight:800; display:inline-block;">✍️ Manual</span>
+                                                            <span style="background:#fef3c7; color:#92400e; padding:2px 7px; border-radius:10px; font-size:9px; font-weight:800; display:inline-block;"><x-ui-icon name="edit" /> Manual</span>
                                                         @endif
                                                         <span style="background:#f0e6e9; color:#171115; padding:2px 7px; border-radius:10px; font-size:9px; font-weight:800; display:inline-block;">
                                                             {{ $assign->enrollment_type_label }}
@@ -1898,7 +1794,7 @@
                                                 <td style="padding:10px 6px; max-width:180px;">
                                                     @if($needsFieldClockIn)
                                                     <div style="font-size:11px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                                                        📍 {{ Str::limit($assign->assigned_location ?: '—', 40) }}
+                                                        <x-ui-icon name="pin" /> {{ Str::limit($assign->assigned_location ?: '—', 40) }}
                                                     </div>
                                                     @if($assign->venue_assigned_at)
                                                         <small style="color:#8b747a; font-size:10px;">Since {{ $assign->venue_assigned_at->format('d M Y') }}</small>
@@ -1921,19 +1817,19 @@
                                                     <div style="display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap;">
                                                         @if($needsFieldClockIn)
                                                         <button onclick="openShiftModal({{ $assign->id }}, '{{ addslashes($assign->display_name) }}', '{{ $assign->shift_start_time }}', '{{ $assign->shift_end_time }}', {{ $assign->grace_period_minutes }}, {{ $assign->lateness_deduction_amount }})" style="background:#ff6f00; color:#fff; border:none; padding:4px 8px; border-radius:6px; font-size:10px; font-weight:800; cursor:pointer;">
-                                                            ⏱ Edit Shift
+                                                            <x-ui-icon name="clock" /> Edit Shift
                                                         </button>
                                                         <button onclick="openVenueModal({{ $assign->id }}, '{{ addslashes($assign->display_name) }}', '{{ addslashes($assign->assigned_location) }}')" style="background:none; border:1px solid #0055d4; color:#0055d4; padding:4px 8px; border-radius:6px; font-size:10px; font-weight:800; cursor:pointer;">
-                                                            📍 Edit Venue
+                                                            <x-ui-icon name="pin" /> Edit Venue
                                                         </button>
                                                         <button onclick="openHistoryModal({{ $assign->id }}, '{{ addslashes($assign->display_name) }}')" style="background:none; border:1px solid #8b747a; color:#8b747a; padding:4px 8px; border-radius:6px; font-size:10px; font-weight:800; cursor:pointer;">
-                                                            📋 History
+                                                            <x-ui-icon name="clipboard" /> History
                                                         </button>
                                                         @endif
                                                         <form method="POST" action="{{ route('brands-platform.team.destroy', [$brandKey, $assign->id]) }}" style="display:inline;">
                                                             @csrf
                                                             @method('DELETE')
-                                                            <button type="submit" onclick="return confirm('Remove {{ $assign->display_name }} from this brand?')" style="background:none; border:1px solid #ff1020; color:#ff1020; padding:4px 8px; border-radius:6px; font-size:10px; font-weight:800; cursor:pointer;">
+                                                            <button type="submit" data-confirm="Remove {{ $assign->display_name }} from this brand?" style="background:none; border:1px solid #ff1020; color:#ff1020; padding:4px 8px; border-radius:6px; font-size:10px; font-weight:800; cursor:pointer;">
                                                                 Deactivate
                                                             </button>
                                                         </form>
@@ -1953,13 +1849,13 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </div>@endif
 
             <!-- MODALS: SHIFT, VENUE, HISTORY -->
             <div id="shiftModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
                 <div style="background:#fff; border-radius:16px; padding:28px; width:420px; max-width:95vw; box-shadow:0 20px 60px rgba(0,0,0,0.3); position:relative;">
                     <button onclick="closeShiftModal()" style="position:absolute; top:14px; right:16px; background:none; border:none; font-size:20px; cursor:pointer; color:#8b747a;">×</button>
-                    <h3 style="margin:0 0 4px; color:#171115; font-size:16px; font-weight:900;">⏱ Edit Shift Times</h3>
+                    <h3 style="margin:0 0 4px; color:#171115; font-size:16px; font-weight:900;"><x-ui-icon name="clock" /> Edit Shift Times</h3>
                     <p id="shiftModalSubtitle" style="margin:0 0 18px; color:#8b747a; font-size:12px;"></p>
                     <form id="shiftModalForm" method="POST" style="display:flex; flex-direction:column; gap:14px;">
                         @csrf
@@ -1985,7 +1881,7 @@
                             </div>
                         </div>
                         <button type="submit" style="background:#ff6f00; color:#fff; padding:12px; border-radius:8px; font-size:13px; font-weight:800; border:none; cursor:pointer;">
-                            ⏱ Save Shift Times
+                            <x-ui-icon name="clock" /> Save Shift Times
                         </button>
                     </form>
                 </div>
@@ -1994,7 +1890,7 @@
             <div id="venueModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
                 <div style="background:#fff; border-radius:16px; padding:28px; width:480px; max-width:95vw; box-shadow:0 20px 60px rgba(0,0,0,0.3); position:relative;">
                     <button onclick="closeVenueModal()" style="position:absolute; top:14px; right:16px; background:none; border:none; font-size:20px; cursor:pointer; color:#8b747a;">×</button>
-                    <h3 style="margin:0 0 4px; color:#171115; font-size:16px; font-weight:900;">📍 Change Assigned Venue</h3>
+                    <h3 style="margin:0 0 4px; color:#171115; font-size:16px; font-weight:900;"><x-ui-icon name="pin" /> Change Assigned Venue</h3>
                     <p id="venueModalSubtitle" style="margin:0 0 18px; color:#8b747a; font-size:12px;"></p>
                     <form id="venueModalForm" method="POST" style="display:flex; flex-direction:column; gap:12px;">
                         @csrf
@@ -2012,7 +1908,7 @@
                             <input name="venue_changed_reason" placeholder="e.g. Campaign moved to new location" style="width:100%; padding:10px; border-radius:8px; border:1px solid #e4dadd; background:#fff; font-size:12px;">
                         </div>
                         <button type="submit" style="background:#0055d4; color:#fff; padding:11px; border-radius:8px; font-size:13px; font-weight:800; border:none; cursor:pointer;">
-                            📍 Save New Venue
+                            <x-ui-icon name="pin" /> Save New Venue
                         </button>
                     </form>
                 </div>
@@ -2021,7 +1917,7 @@
             <div id="historyModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
                 <div style="background:#fff; border-radius:16px; padding:28px; width:600px; max-width:95vw; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.3); position:relative;">
                     <button onclick="closeHistoryModal()" style="position:absolute; top:14px; right:16px; background:none; border:none; font-size:20px; cursor:pointer; color:#8b747a;">×</button>
-                    <h3 style="margin:0 0 4px; color:#171115; font-size:16px; font-weight:900;">📋 Venue Location History</h3>
+                    <h3 style="margin:0 0 4px; color:#171115; font-size:16px; font-weight:900;"><x-ui-icon name="clipboard" /> Venue Location History</h3>
                     <p id="historyModalSubtitle" style="margin:0 0 18px; color:#8b747a; font-size:12px;"></p>
                     <div id="historyModalContent" style="display:flex; flex-direction:column; gap:10px;">
                         <div style="text-align:center; padding:30px; color:#8b747a;">Loading history…</div>
@@ -2260,18 +2156,23 @@ function initAgencyCharts() {
 
 // ── GOOGLE MAP & AUTCOMPLETE ──────────────────────────────────────────────
 function initAgencyMapWhenReady() {
-    if (typeof google !== 'undefined' && google.maps) {
+    if (typeof google !== 'undefined' && typeof google.maps?.Map === 'function') {
         initAgencyMap();
         return;
     }
 
     window.addEventListener('brands:google-maps-ready', initAgencyMap, { once: true });
+    setTimeout(() => {
+        const mapEl = document.getElementById('agencyStaffMap');
+        if (!agencyMap && mapEl) { mapEl.textContent = 'The map is unavailable. You can still review the attendance and location list.'; mapEl.setAttribute('role','status'); }
+    }, 5000);
 }
 
 function initAgencyMap() {
     const mapEl = document.getElementById('agencyStaffMap');
     if (!mapEl) return;
-    if (agencyMap || typeof google === 'undefined' || !google.maps) return;
+    if (agencyMap || typeof google === 'undefined' || typeof google.maps?.Map !== 'function' || typeof google.maps?.InfoWindow !== 'function') return;
+    mapEl.textContent = '';
 
     agencyMap = new google.maps.Map(mapEl, {
         center: { lat: 5.6817954, lng: -0.1944273 },
@@ -2373,7 +2274,7 @@ function initAgencyMap() {
             });
 
             marker.addListener('click', () => {
-                const lateContent = isLate ? `<span style="color:#ef4444; font-weight:800;">🚨 LATE (${att.lateness_minutes}m) - Penalty GHS ${att.deduction_amount}</span>` : `<span style="color:#10b981; font-weight:800;">✅ ON-TIME CLOCK-IN</span>`;
+                const lateContent = isLate ? `<span style="color:#ef4444; font-weight:800;"> LATE (${att.lateness_minutes}m) - Penalty GHS ${att.deduction_amount}</span>` : `<span style="color:#10b981; font-weight:800;"> ON-TIME CLOCK-IN</span>`;
                 const content = `
                     <div style="padding:8px; font-family:sans-serif;">
                         <h4 style="margin:0 0 4px; font-size:14px; color:#171115;">${att.user ? att.user.name : 'Staff'}</h4>
@@ -2404,12 +2305,12 @@ function focusStaffOnMap(userId, lat, lng, name, locationName, clockInTime, isLa
     agencyMap.setZoom(20);
 
     const marker = agencyStaffMarkers[userId];
-    const lateText = isLate ? `<span style="color:#ef4444; font-weight:800;">🚨 LATE (${latenessMins}m) &bull; Penalty: GHS ${penalty}</span>` : `<span style="color:#10b981; font-weight:800;">✅ CLOCKED IN ON-TIME</span>`;
+    const lateText = isLate ? `<span style="color:#ef4444; font-weight:800;"> LATE (${latenessMins}m) &bull; Penalty: GHS ${penalty}</span>` : `<span style="color:#10b981; font-weight:800;"> CLOCKED IN ON-TIME</span>`;
     const infoContent = `
         <div style="padding:10px; font-family:sans-serif; max-width:220px;">
             <div style="font-size:11px; font-weight:800; color:#ff1020; text-transform:uppercase;">STAFF GPS LOCATION</div>
             <h3 style="margin:4px 0; font-size:15px; font-weight:900; color:#171115;">${name}</h3>
-            <div style="font-size:12px; color:#444; margin-bottom:4px;">📍 ${locationName}</div>
+            <div style="font-size:12px; color:#444; margin-bottom:4px;"> ${locationName}</div>
             <div style="font-size:12px; margin-bottom:4px;">${lateText}</div>
             <div style="font-size:11px; color:#666;">Clock-in Time: <strong>${clockInTime}</strong> (${distance}m away)</div>
         </div>
@@ -2530,14 +2431,14 @@ async function openHistoryModal(assignmentId, staffName) {
             <div style="background:${h.is_current ? '#f0f9ff' : '#fcf8f9'}; border:1px solid ${h.is_current ? '#0055d4' : '#e4dadd'}; border-radius:10px; padding:14px; position:relative;">
                 ${h.is_current ? '<span style="position:absolute; top:10px; right:12px; background:#0055d4; color:#fff; padding:2px 8px; border-radius:10px; font-size:9px; font-weight:800;">CURRENT</span>' : ''}
                 <div style="font-weight:800; font-size:13px; color:#171115; margin-bottom:3px;">
-                    ${i + 1}. 📍 ${h.venue || '—'}
+                    ${i + 1}.  ${h.venue || '—'}
                 </div>
                 ${h.address ? `<div style="font-size:11px; color:#8b747a; margin-bottom:5px;">${h.address}</div>` : ''}
                 <div style="display:flex; gap:16px; flex-wrap:wrap; font-size:11px; color:#8b747a;">
-                    <span>🕐 Shift: ${h.shift}</span>
-                    <span>📅 Assigned: ${h.assigned_at}</span>
-                    <span>👤 By: ${h.assigned_by}</span>
-                    ${h.changed_reason && !h.is_current ? `<span>🔄 Reason: ${h.changed_reason}</span>` : ''}
+                    <span> Shift: ${h.shift}</span>
+                    <span> Assigned: ${h.assigned_at}</span>
+                    <span> By: ${h.assigned_by}</span>
+                    ${h.changed_reason && !h.is_current ? `<span> Reason: ${h.changed_reason}</span>` : ''}
                 </div>
             </div>
         `).join('');

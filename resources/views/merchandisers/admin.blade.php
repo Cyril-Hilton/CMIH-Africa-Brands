@@ -36,7 +36,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @include('merchandisers.partials.tenant-theme')
-    <script src="{{ asset('vendor/chart.umd.min.js') }}" defer onload="window.dispatchEvent(new Event('cmih:charts-ready'))"></script>
+    <script src="{{ asset('vendor/chart.umd.min.js') }}" onload="window.dispatchEvent(new Event('cmih:charts-ready'))"></script>
     @if(in_array($activeAdminTab, ['tracking', 'supervisor-dashboard'], true))
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
         <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -667,7 +667,7 @@
          class="fixed right-4 top-4 z-[80] w-[min(92vw,24rem)] rounded-2xl border px-4 py-3 shadow-2xl backdrop-blur-xl"
          :class="toast.type === 'error' ? 'border-red-400/30 bg-red-950/90 text-red-100' : 'border-emerald-400/30 bg-emerald-950/90 text-emerald-100'">
         <div class="flex items-start gap-3">
-            <span class="mt-0.5 text-base" x-text="toast.type === 'error' ? '⚠️' : '✅'"></span>
+            <span class="mt-0.5 text-base"><x-ui-icon name="alert" /></span>
             <div class="min-w-0">
                 <p class="text-[10px] font-bold uppercase tracking-[0.25em] opacity-70" x-text="toast.type === 'error' ? 'Action needed' : 'Success'"></p>
                 <p class="mt-1 text-sm font-semibold leading-snug" x-text="toast.message"></p>
@@ -727,7 +727,7 @@
                             <span class="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-[#0A0D14] shadow-sm animate-pulse" title="Online"></span>
                         </div>
                         <label class="absolute bottom-0 right-0 h-6.5 w-6.5 rounded-full bg-brand-red text-white flex items-center justify-center text-xs shadow-lg hover:scale-110 transition cursor-pointer z-10 ring-2 ring-white/30" title="Upload Staff Photo">
-                            📷
+                            <x-ui-icon name="spark" />
                             <input type="file" name="profile_photo" accept="image/*" class="hidden" onchange="this.form.submit()">
                         </label>
                     </form>
@@ -975,7 +975,7 @@
                             <svg class="w-4 h-4 text-brand-red shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                             </svg>
-                            <span class="font-extrabold" x-text="sidebarCollapsed ? 'Show Sidebar ☰' : 'Hide Sidebar ◀'">Hide Sidebar ◀</span>
+                            <span class="font-extrabold" x-text="sidebarCollapsed ? 'Show Sidebar' : 'Hide Sidebar'">Hide Sidebar</span>
                         </button>
                         @if(auth()->user()->isMerchandiserPortalAdmin())
                             <div class="admin-tenant-switcher" aria-label="Tenant workspace">
@@ -1020,7 +1020,7 @@
                         <nav class="flex items-center gap-2 text-xs font-semibold text-slate-400 mb-1">
                             <span class="font-extrabold uppercase tracking-wider text-slate-400">{{ $clientWorkspace ? 'Client Portal' : 'Admin Hub' }}</span>
                             <svg class="w-3.5 h-3.5 text-slate-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-                            <span class="text-slate-600 dark:text-slate-300 font-bold uppercase tracking-wider" x-text="activeTab.replace('-', ' ')"></span>
+                            <span class="text-slate-600 dark:text-slate-300 font-bold uppercase tracking-wider" x-text="activeTab.replace('-', ' ')">{{ \Illuminate\Support\Str::headline($activeAdminTab) }}</span>
                         </nav>
                         <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white" x-text="{
                             overview: 'Dashboard Overview',
@@ -1042,14 +1042,14 @@
                             'price-promo': 'Price & Promo Intelligence',
                             'supervisor-dashboard': 'Supervisor Command Workspace',
                             'client-dashboard': 'Client & Trade Marketing Portal'
-                        }[activeTab] || activeTab.replaceAll('-', ' ').toUpperCase()"></h1>
+                        }[activeTab] || activeTab.replaceAll('-', ' ').toUpperCase()">{{ ['executive'=>'Executive Summary','regional-kd'=>'Regional & KD Performance','category-kpi'=>'Category Performance','brand-execution'=>'Brand & Merchandiser Execution','client-dashboard'=>'Client & Trade Marketing Portal'][$clientWorkspace ? $clientView : $activeAdminTab] ?? \Illuminate\Support\Str::headline($activeAdminTab) }}</h1>
                     </div>
                 </div>
 
                 <!-- Flash -->
                 @if(session('success'))
                     <div class="flex items-center gap-3 rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3 text-green-400 text-sm">
-                        <span>✅</span> {{ session('success') }}
+                        <span><x-ui-icon name="check" /></span> {{ session('success') }}
                     </div>
                 @endif
                 @if(($errors ?? null) && $errors->any())
@@ -1901,12 +1901,12 @@ function merchandiserInfoHtml(m, color) {
     return `
         <div style="font-family:'Sora',sans-serif; padding:8px 4px; min-width:180px; background:#0f0f0f; color:#fff; border-radius:10px;">
             <p style="font-weight:700; font-size:14px; margin:0 0 6px;">${m.name}</p>
-            <p style="font-size:11px; color:rgba(255,255,255,0.6); margin:2px 0;">📞 ${m.phone}</p>
-            <p style="font-size:11px; color:rgba(255,255,255,0.6); margin:2px 0;">⏱️ ${m.last_seen}</p>
+            <p style="font-size:11px; color:rgba(255,255,255,0.6); margin:2px 0;"> ${m.phone}</p>
+            <p style="font-size:11px; color:rgba(255,255,255,0.6); margin:2px 0;"> ${m.last_seen}</p>
             <p style="font-size:10px; color:rgba(255,255,255,0.45); margin:6px 0 0;">${Number(m.latitude).toFixed(6)}, ${Number(m.longitude).toFixed(6)}</p>
             <p style="margin-top:8px;">
                 <span style="background:${m.clocked_in ? '#16a34a33' : '#92400e33'};color:${color};border:1px solid ${color}55;padding:3px 10px;border-radius:999px;font-size:10px;font-weight:700;">
-                    ${m.clocked_in ? '✅ Clocked In' : '⏳ Not Clocked In'}
+                    ${m.clocked_in ? ' Clocked In' : ' Not Clocked In'}
                 </span>
             </p>
         </div>

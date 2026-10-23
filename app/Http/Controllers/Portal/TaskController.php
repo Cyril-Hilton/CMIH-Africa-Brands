@@ -966,7 +966,7 @@ class TaskController extends Controller
 
     private function canSelfApproveAssociatedCompletion(Task $task, User $user): bool
     {
-        if (! $user->isCyrilHilton()) {
+        if (! $user->isLineManager()) {
             return false;
         }
 

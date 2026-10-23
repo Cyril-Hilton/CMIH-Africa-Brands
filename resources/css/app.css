@@ -654,3 +654,14 @@
         transition: background-color 5000s ease-in-out 0s;
     }
 }
+
+.cmih-confirmation { margin: auto; position: fixed; inset: 0; width: min(440px, calc(100vw - 32px)); padding: 28px; border: 1px solid #dce4ee; border-radius: 20px; background: #fff; color: #17243a; box-shadow: 0 24px 80px #0005; }
+.cmih-confirmation::backdrop { background: #08101d99; backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px); }
+.cmih-confirmation h2 { font-size: 21px; font-weight: 700; margin-bottom: 12px; }
+.cmih-confirmation p { font-size: 14px; line-height: 1.6; color: #526278; }
+.cmih-confirmation-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
+.cmih-confirmation button { min-height: 44px; padding: 10px 20px; border: 1px solid #dce4ee; border-radius: 10px; font-weight: 600; }
+.cmih-confirmation .cmih-confirmation-primary { background: #d9252a; border-color: #d9252a; color: white; }
+.cmih-confirmation button:focus-visible { outline: 3px solid #639de6; outline-offset: 3px; }
+
+body.cmih-confirmation-open > :not(.cmih-confirmation) { filter: blur(4px); }

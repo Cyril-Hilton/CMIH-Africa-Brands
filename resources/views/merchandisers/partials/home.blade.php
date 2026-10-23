@@ -16,7 +16,7 @@
                     <path d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
                 <div class="min-w-0 flex-1">
-                    <p class="text-xs font-black uppercase tracking-wider text-amber-900 dark:text-amber-200">⚠️ Outstanding Outlets Carried Over</p>
+                    <p class="text-xs font-black uppercase tracking-wider text-amber-900 dark:text-amber-200"><x-ui-icon name="alert" /> Outstanding Outlets Carried Over</p>
                     <p class="mt-0.5 text-xs text-amber-900/90 dark:text-amber-200/90 font-semibold">You have <strong>{{ $carriedOverCount }}</strong> pending carryover visit(s) from earlier PJP dates.</p>
                 </div>
                 <button type="button" @click="activeTab = 'schedule'" class="rounded-lg bg-amber-600 dark:bg-amber-500 px-3 py-1.5 text-xs font-extrabold text-white hover:bg-amber-700 transition">View Schedule</button>
