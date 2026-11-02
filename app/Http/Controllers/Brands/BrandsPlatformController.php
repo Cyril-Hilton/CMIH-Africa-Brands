@@ -91,7 +91,7 @@ class BrandsPlatformController extends Controller
             ->withCount(['activations', 'consumerEntries', 'fieldActivities', 'staffAssignments'])
             ->orderBy('name')
             ->get();
-        $brands = $this->preparePublicBrands($brands);
+        $brands = $this->preparePublicBrands(\App\Support\BrandLogoCatalog::forDisplay($brands));
 
         $slugOrder = ['omo', 'lush-hair', 'guinness', 'rexona', 'dove', 'mtn', 'gino'];
         $orderedBrands = collect();
@@ -1457,6 +1457,13 @@ class BrandsPlatformController extends Controller
         $brand->setAttribute('prototype_ink', $presentation['ink'] ?? '#082126');
         $brand->setAttribute('prototype_display_font', $presentation['display'] ?? 'Arial, Helvetica, sans-serif');
 
+        if ($logo = \App\Support\BrandLogoCatalog::logo($brand->name)) {
+            $brand->setAttribute('public_logo_url', $logo);
+            $brand->setAttribute('public_logo_dark_url', $logo);
+            $brand->setAttribute('prototype_logo_url', $logo);
+            $brand->setAttribute('display_name', \App\Support\BrandLogoCatalog::entry($brand->name)['name']);
+        }
+
         return $brand;
     }
 
@@ -1465,7 +1472,7 @@ class BrandsPlatformController extends Controller
         $slug = Str::slug($brand->slug ?: $brand->name);
 
         return match ($slug) {
-            'cm' => 'castle-milk-stout',
+            'cm' => 'captain-morgan',
             'jw' => 'johnnie-walker',
             'lush-hair', 'lush' => 'lush-hair',
             'malta-guinness' => 'malta-guinness',
