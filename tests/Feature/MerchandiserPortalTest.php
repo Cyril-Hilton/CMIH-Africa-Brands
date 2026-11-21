@@ -47,6 +47,9 @@ class MerchandiserPortalTest extends TestCase
     {
         parent::setUp();
 
+        // Clock-in scenarios need a scheduled working day, independent of the day CI runs.
+        $this->travelTo(Carbon::parse('2026-11-18 09:00:00', 'Africa/Accra'));
+
         // Ensure user with ID 1 exists and is a super_admin.
         // Seed migrations may have already created users, so we upgrade
         // the existing user at ID 1 (or create one if none exists).

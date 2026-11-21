@@ -103,6 +103,11 @@ class MerchandiserAdminHubController extends Controller
     /**
      * Main Admin Hub Dashboard
      */
+    public function merchandisers(Request $request)
+    {
+        return $this->dashboard($request, 'merchandisers');
+    }
+
     public function dashboard(Request $request, ?string $adminTab = null, bool $roleDashboard = false)
     {
         $this->guardHubView($request);

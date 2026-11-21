@@ -3036,6 +3036,39 @@ class BrandsPlatformController extends Controller
     /**
      * Archive a manually enrolled or CMIH staff member's brand access.
      */
+    public function updateAgencyTeamMember(Request $request, string $brand, BrandStaffAssignment $assignment): RedirectResponse
+    {
+        $brand = $this->resolveBrand($brand);
+        $this->guardCanManageTeam($request->user(), $brand);
+        abort_unless((int) $assignment->brand_id === (int) $brand->id, 404);
+        abort_unless($assignment->is_active && $assignment->is_current_venue, 422, 'Edit the current active assignment; historical venue records remain unchanged.');
+        $validated = $request->validate([
+            'access_level' => ['sometimes', 'required', Rule::in(['view', 'edit', 'archive'])],
+            'notes' => ['sometimes', 'nullable', 'string', 'max:1000'],
+        ]);
+        $before = ['permissions' => $assignment->permissions, 'notes' => $assignment->notes];
+        $changes = array_key_exists('notes', $validated) ? ['notes' => $validated['notes']] : [];
+        if (isset($validated['access_level'])) {
+            $level = $validated['access_level'];
+            $changes['permissions'] = array_replace($assignment->permissions ?? [], [
+                'access_level' => $level,
+                'can_manage_team' => in_array($level, ['edit', 'archive'], true),
+                'can_record_activity' => $level !== 'archive',
+                'can_export' => in_array($level, ['edit', 'archive'], true),
+                'can_edit' => in_array($level, ['edit', 'archive'], true),
+                'can_archive' => $level === 'archive',
+            ]);
+        }
+        if ($changes) {
+            $assignment->update($changes);
+            $this->logBrandActivity($request, $brand, null, 'agency_team_member_updated', 'agency', [
+                'assignment_id' => $assignment->id, 'staff_id' => $assignment->user_id,
+                'before' => $before, 'after' => ['permissions' => $assignment->permissions, 'notes' => $assignment->notes],
+            ]);
+        }
+        return back()->with('status', 'Team member updated. Venue and shift history remain unchanged.');
+    }
+
     public function archiveAgencyTeamMember(Request $request, string $brand, BrandStaffAssignment $assignment): RedirectResponse
     {
         $brand = $this->resolveBrand($brand);
